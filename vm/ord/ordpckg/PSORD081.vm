@@ -1,0 +1,669 @@
+<!doctype html>
+<html LANG="ja">
+<head>
+<title>#customSpringMessage('ORDER_PACKAGE_REG')</title>
+<meta http-equiv="Content-type" content="text/html; charset=UTF-8">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Content-script-type" content="text/javascript">
+<link id="CSS_FONT" rel="stylesheet" href="../../include/FontS.css" type="text/css">
+<link rel="stylesheet" href="../../include/Layout.css" type="text/css">
+
+<link rel="stylesheet" href="../../include/searchbox.css" type="text/css">
+<link rel="stylesheet" href="../../include/Color.css" type="text/css">
+<script language="javascript" type="text/javascript" src="../../include/jquery-1.7.2.min.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/jquery.tablefix.js"></script>
+<script language="javascript" TYPE="text/javascript" src="../../include/common.js"></script>
+<script language="javascript" TYPE="text/javascript" src="../../include/check.js"></script>
+<script language="javascript" TYPE="text/javascript" src="../../include/date.js"></script>
+<script language="javascript" TYPE="text/javascript" src="../../include/tablesort.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/searchbox.js"></script>
+<script language="javascript" TYPE="text/javascript">
+<!--
+
+#set($isActiveProfileBudget = "#isActiveProfile('budget')")
+#set($searchCondition = $orderPackageRegSearchCondition)
+
+#parse("./common/common_js.vm")
+
+function onLoad() {
+    top.document.title=parent.document.title;
+    parentButtonEnable();
+    dataLoadHasPage();
+
+    var isSuccess = '#jsEscape($!isSuccess)';
+    if(isSuccess == 'true'){
+        #set( $paramApr1 = ["#customSpringMessage('ORDER_PACKAGE_REG')"] )
+        alert("#customMessageArgs("I005",$paramApr1)");
+    }
+    
+    
+    #if("$!errorMessage" != "" && "$!isSuccess" != "true" )
+        ## エラーメッセージがある、かつ処理成功でない場合は何もしない
+        return;    
+    
+    #elseif("$!alertMessage" != "")
+
+        // メッセージ表示
+        var alertMessage = "$!alertMessage";
+
+        #if($!alertMessage.indexOf("E035") != -1 || $!alertMessage.indexOf("I012") != -1)
+            buttonUsableForList(alertMessage);
+            alert(alertMessage);
+        #else
+            if (confirm(alertMessage)) {
+                buttonDisable();
+                parentButtonDisable();
+                #foreach($!orderPackageRegItem in $!{itemList.orderPackageRegItemList})
+                    getObj("orderPackageRegItemList[$foreach.index].checkStatus").value="$!orderPackageRegItem.checkStatus";
+                #end
+
+                getObj("BodyForm").action="${flowExecutionUrl}&_eventId=packageReg&checkPass=1";
+                getObj("BodyForm").submit();
+                return;
+            }
+        #end
+
+    #end
+    
+    
+    var errorMsg = "$!errorMessage";
+    var count = #jsEscape($!itemList.orderPackageRegItemList.size());
+    
+    if(count == 0 && errorMsg == ""){
+        var errorMsg = '#customMessageArgs("I004","")';
+    }else if(count != 0 && errorMsg.indexOf("I004") != -1){
+        var errorMsg = "";
+    }
+    
+    if (errorMsg != ""){
+        return;
+    }
+    
+    window.parent.getObj("registArea").style.display = "";
+    
+    var isShowDetail = "#jsEscape($isShowDetail)";
+    if (isShowDetail == 'true'){
+        poppage('${flowExecutionUrl}&_eventId=detail','DETAIL','800','600');
+    }
+    
+    var isShowOrderModify = "#jsEscape($isShowOrderModify)";
+    if (isShowOrderModify == 'true'){
+        top.iframeChange("${flowExecutionUrl}&_eventId=orderModify");
+    }
+    
+    var isShowQuote = "#jsEscape($isShowQuote)";
+    if (isShowQuote == 'true'){
+        top.iframeChange("${flowExecutionUrl}&_eventId=quote");
+    }
+    
+    var isShowQuotReqInput = "#jsEscape($isShowQuotReqInput)";
+    if (isShowQuotReqInput == 'true'){
+        top.iframeChange("${flowExecutionUrl}&_eventId=quotReqInput");
+    }
+    
+    #if ($isShowDetailCat == 'true')
+        poppage('${flowExecutionUrl}&_eventId=detailCat','DETAIL','800','700');
+    #end
+    #if ($isShowDetailPurReq == 'true')
+        poppage('${flowExecutionUrl}&_eventId=detailPur','DETAIL','800','700');
+    #end
+}
+
+/* 一括選択 */
+$(function(){
+    $(document).delegate('#ParentCheck','change',function() {
+        var chk = $(this).prop("checked");
+        var status = 0;
+        if (chk){
+            status = 1;
+        }
+        $("input:[type=checkbox][name^=check_status_]").prop("checked",chk)
+        
+        $("tr:[id^=Row_]").each(function(){
+            var count = $(this).attr("id").substring(4);
+            if (document.getElementById("check_status_" + count) != null){
+                if(chk){
+                    $(this).css("background-color","#ffff99");
+                }else{
+                    if (Number(count) % 2 != 0) {
+                        $(this).css("background-color","#ffffff");
+                    } else {
+                        $(this).css("background-color","#dce4ef");
+                    }
+                }
+                document.getElementById("orderPackageRegItemList[" + count + "].checkStatus").value = status;
+            }
+        });
+    });
+});
+
+// 行チェックボックス選択
+function selectRow(no, obj) {
+    var status = "0";
+    var backgroundColor;
+    if(no % 2 == 0) {
+        backgroundColor = "#dce4ef";
+    } else {
+        backgroundColor = "#ffffff";
+    }
+    if( obj.checked ) {
+        backgroundColor = "#ffff99";
+        status = "1";
+    }
+    $("[id=" + 'Row_' + no + "]").css({"backgroundColor":backgroundColor});
+    document.getElementById("orderPackageRegItemList[" + no + "].checkStatus").value = status;
+}
+
+// チェックボックスを再設定
+function setCheckBoxList() {
+
+    var maxNo = $("input:[type=checkbox][name^=check_status_]").length;
+    for (i=0; i<maxNo; i++) {
+    
+        var hiddenObj = document.getElementById("orderPackageRegItemList[" + i + "].checkStatus");
+        if(hiddenObj.value == "1") {
+            var obj = document.getElementById("check_status_" + i);
+            obj.checked = true;
+            selectRow(i, obj);
+        }
+    }
+
+}
+
+/* 一括登録 */
+function exec() {
+//    parent.getObj("ERRORAREA").src="../../layout/error.vm";
+    var count=0;
+    $("input:[type=checkbox][name^=check_status_]").each(function(){
+        if($(this).prop("checked"))
+            count ++;
+    });
+
+    if (count==0) {
+         alert("#nothingSelectedMessage()");
+    } else {
+        // 確認メッセージ
+        #set( $purOrdMsg = "#customSpringMessage('PUR_ORDER')" )
+        #set( $packageRegMsg = "#customSpringMessage('PACAGE_REG')" )
+        if( !confirm('#customMessageArgs("W001",[$purOrdMsg, $packageRegMsg])') ) {
+            return;
+        } 
+        buttonDisable();
+        parentButtonDisable();
+        // 一括登録の場合
+        getObj("BodyForm").action = "${flowExecutionUrl}&_eventId=packageReg";
+        getObj('BodyForm').submit();
+    }
+}
+
+/* 注文入力画面へ遷移 */
+function openOrderInput(purReqSeq, lastUpdDate, exclusiveSlipNo, exclusiveLastUpdDate) {
+    buttonDisable();
+    parent.iframeChange("${flowExecutionUrl}&_eventId=acceptModifyValidate"
+        , 'purReqSeq',purReqSeq
+        , 'lastUpdDate',lastUpdDate
+        , 'exclusiveSlipNo',exclusiveSlipNo
+        , 'exclusiveLastUpdDate',exclusiveLastUpdDate
+        , "HIDDENAREA");
+}
+
+
+/* 詳細画面表示 */
+function openDetail(reqTypeInd, purAplSeq, purReqNo, purReqSeq, purReqNoNotUnit, quotReqNo, exclusiveSlipNo, exclusiveLastUpdDate) {
+    if (reqTypeInd == '2') {
+        parent.iframeChange("${flowExecutionUrl}&_eventId=detailCatValidate"
+            ,'purAplSeq',purAplSeq,'purReqNo'
+            , purReqNo,'purReqSeq',purReqSeq
+            , 'purReqNoNotUnit',purReqNoNotUnit
+            , 'quotReqNo', quotReqNo
+            , 'exclusiveSlipNo',exclusiveSlipNo
+            , 'exclusiveLastUpdDate',exclusiveLastUpdDate
+            , "HIDDENAREA");
+    } else if (reqTypeInd == '3' || reqTypeInd == '9') {
+        parent.iframeChange("${flowExecutionUrl}&_eventId=detailPurReqValidate"
+            , 'purAplSeq',purAplSeq
+            , 'purReqNo',purReqNo
+            , 'purReqSeq',purReqSeq
+            , 'purReqNoNotUnit',purReqNoNotUnit
+            , 'quotReqNo', quotReqNo
+            , 'exclusiveSlipNo',exclusiveSlipNo
+            , 'exclusiveLastUpdDate',exclusiveLastUpdDate
+            , "HIDDENAREA");
+    }
+}
+
+/* 承認ルート表示 */
+function appRoutePopup(Number) { 
+    var companyCd = "#jsEscape($!loginUserCompanyCd)";
+    var sectionCd = "#jsEscape($!loginUserSectionCd)";
+    var appRouteNo = document.getElementById("orderPackageRegItemList["+Number+"].appRoute.appRouteNo").value;
+    appRouteDetailPopup.setParam(companyCd,sectionCd,'2',appRouteNo);
+    masterSearch('../../src/apr/PSCMN030?pageid=appRouteDetailPopup','PLACESEARCHBOX','700','300');
+}
+
+//-->
+</script>
+$!PSORD081PageCreaterForList.build('_th_style_lbl', 'class="BoxDetailLeft FontList"') 
+</head>
+<body id="BODY" topmargin="0" leftmargin="0" marginwidth="0" marginheight="0" align="left" onload="onLoad();setTablefix('#TABLE', 1, 4+$!PSORD081PageCreaterForList.printLockColumn());">
+#if($!errorMessage && $!errorMessage !="")
+<div class="error">
+    $!errorMessage
+</div>
+#end
+<form id="BodyForm" name="Body" method="post">
+#foreach($!orderPackageRegItem in $!{itemList.orderPackageRegItemList})
+    #customFormHiddenInput("orderPackageRegItemList[$velocityCount].checkStatus" "")
+    #customFormHiddenInput("orderPackageRegItemList[$velocityCount].orderPackageRegIdentify.orderPackageRegIdentify.exclusiveSlipId.slipNo" "$!{orderPackageRegItem.orderPackageRegIdentify.orderPackageRegIdentify.slipNo}")
+    #customFormHiddenInput("orderPackageRegItemList[$velocityCount].orderPackageRegIdentify.orderPackageRegIdentify.exclusiveSlipId.lastUpdDate" "$!{orderPackageRegItem.orderPackageRegIdentify.orderPackageRegIdentify.lastUpdDate}")
+    #customFormHiddenInput("orderPackageRegItemList[$velocityCount].appRoute.appRouteNo" "$!{orderPackageRegItem.appRoute.appRouteNo}")
+#end
+<table id="TABLE" class="ListArea" WIDTH="100%">
+    #if($!itemList.orderPackageRegItemList.size() > 0)
+    <thead>
+        <tr id="Header">
+            <th class="BoxHeaderCenter FontSmall">No.<!-- No. --></th>
+            <th class="BoxHeaderCenter FontSmall">#customSpringMessage('DETAIL')<!-- 詳細 --></th>
+            <th label="chk" class="BoxHeaderCenter FontSmall">
+                <input id="ParentCheck" name="ParentCheck" type="checkbox">
+            </th>
+            #foreach($!item in $!PSORD081PageCreaterForList.getItemListForBody())
+                #set($currentOneColumnFlag = $!PSORD081PageCreaterForList.getOneColumnFlag($!item))
+                #if($velocityCount == 0)
+                    $!PSORD081PageCreaterForList.printTHtag($!item,'class="BoxHeaderCenter FontSmall"')
+                #elseif($currentOneColumnFlag)
+                    $!PSORD081PageCreaterForList.printBRtag($!item)
+                #else
+                    $!PSORD081PageCreaterForList.printTHtagClose()
+                    $!PSORD081PageCreaterForList.printTHtag($!item,'class="BoxHeaderCenter FontSmall"')
+                #end
+                ## 購入依頼番号
+                #if($!item.getColumnName()=="T_PUR_REQUEST.PUR_REQ_NO")
+                    $!PSORD081PageCreaterForList.printHead($!item)
+                ## 依頼日
+                #elseif($!item.getColumnName()=="T_PUR_APL.PUR_REQ_DATE")
+                    $!PSORD081PageCreaterForList.printHead($!item)
+                ## 依頼区分
+                #elseif($!item.getColumnName()=="T_PUR_APL.REQ_TYPE_IND")
+                    $!PSORD081PageCreaterForList.printHead($!item)
+                ## 緊急
+                #elseif($!item.getColumnName()=="T_PUR_APL.URGENT_IND")
+                    $!PSORD081PageCreaterForList.printHead($!item)
+                ## 見積採用
+                #elseif($!item.getColumnName()=="T_PUR_APL.QUOT_RESP_SEQ")
+                    $!PSORD081PageCreaterForList.printHead($!item)
+                ## コメント
+                #elseif($!item.getColumnName()=="DUMMY.COMMENT")
+                    $!PSORD081PageCreaterForList.printHead("COMMENT",$!item)
+                ## 添付
+                #elseif($!item.getColumnName()=="T_ATTACH_MNG.ATTACH_SCOPE")
+                    $!PSORD081PageCreaterForList.printHead($!item)
+                ## 件名
+                #elseif($!item.getColumnName()=="T_PUR_APL.TITLE_NAME")
+                    $!PSORD081PageCreaterForList.printHead($!item)
+                ## 品名コード
+                #elseif($!item.getColumnName()=="T_PUR_REQUEST.ITEM_CD")
+                    $!PSORD081PageCreaterForList.printHead($!item)
+                ## 品名
+                #elseif($!item.getColumnName()=="T_PUR_REQUEST.ITEM_NAME")
+                    $!PSORD081PageCreaterForList.printHead($!item)
+                ## 型式
+                #elseif($!item.getColumnName()=="T_PUR_REQUEST.KATASHIKI")
+                    $!PSORD081PageCreaterForList.printHead($!item)
+                ## メーカーコード
+                #elseif($!item.getColumnName()=="T_PUR_REQUEST.MANUFACT_CD")
+                    $!PSORD081PageCreaterForList.printHead("MANUFACT_CD",$!item)
+                ## メーカー名
+                #elseif($!item.getColumnName()=="T_PUR_REQUEST.MANUFACT_NAME")
+                    $!PSORD081PageCreaterForList.printHead($!item)
+                ## 取引先コード
+                #elseif($!item.getColumnName()=="T_PUR_REQUEST.SUP_CD")
+                    $!PSORD081PageCreaterForList.printHead($!item)
+                ## 取引先名
+                #elseif($!item.getColumnName()=="T_PUR_REQUEST.SUP_ABBR_NAME")
+                    $!PSORD081PageCreaterForList.printHead($!item)
+                ## EDI転送方法
+                #elseif($!item.getColumnName()=="M_SUPPLIER.EDI_IND")
+                    $!PSORD081PageCreaterForList.printHead($!item)
+                ## 下請事業者
+                #elseif($!item.getColumnName()=="M_SUPPLIER.SUBCON_IND")
+                    $!PSORD081PageCreaterForList.printHead($!item)
+                ## 注文納期
+                #elseif($!item.getColumnName()=="T_PUR_REQUEST.REQ_DELIV_DATE")
+                    $!PSORD081PageCreaterForList.printHead("ORDER_DELIV_DATE",$!item)
+                ## 注文数量
+                #elseif($!item.getColumnName()=="T_PUR_REQUEST.REQ_VOL")
+                    $!PSORD081PageCreaterForList.printHead("ORDER_VOL",$!item)
+                ## 単位
+                #elseif($!item.getColumnName()=="T_PUR_REQUEST.UNIT_NAME")
+                    $!PSORD081PageCreaterForList.printHead($!item)
+                ## 注文単価
+                #elseif($!item.getColumnName()=="T_PUR_REQUEST.UNIT_PRICE")
+                    $!PSORD081PageCreaterForList.printHead("ORDER_UNIT_PRICE",$!item)
+                ## 注文金額
+                #elseif($!item.getColumnName()=="T_PUR_REQUEST.TOTAL_AMOUNT")
+                    $!PSORD081PageCreaterForList.printHead("ORDER_AMOUNT",$!item)
+                ## 通貨コード
+                #elseif($!item.getColumnName()=="T_PUR_REQUEST.CURRENCY_CD")
+                    $!PSORD081PageCreaterForList.printHead($!item)
+                ## 課税区分
+                #elseif($!item.getColumnName()=="T_PUR_REQUEST.TAX_IND")
+                    $!PSORD081PageCreaterForList.printHead($!item)
+                ## 消費税区分
+                #elseif($!item.getColumnName()=="T_PUR_REQUEST.CONSUMPT_IND")
+                    $!PSORD081PageCreaterForList.printHead($!item)
+                ## 負担部門コード
+                #elseif($!item.getColumnName()=="T_PUR_APL.LOAD_SECTION_CD")
+                    $!PSORD081PageCreaterForList.printHead("LOAD_SECTION_CD",$!item)
+                ## 負担部門名
+                #elseif($!item.getColumnName()=="T_PUR_APL.LOAD_SECTION_NAME")
+                    $!PSORD081PageCreaterForList.printHead($!item)
+                ## 納入先コード
+                #elseif($!item.getColumnName()=="T_PUR_APL.DELIV_PLACE_CD")
+                    $!PSORD081PageCreaterForList.printHead($!item)
+                ## 納入先名
+                #elseif($!item.getColumnName()=="T_PUR_APL.DELIV_PLACE_NAME")
+                    $!PSORD081PageCreaterForList.printHead($!item)
+                ## 科目コード
+                #elseif($!item.getColumnName()=="T_PUR_REQUEST.SUBJECT_CD")
+                    $!PSORD081PageCreaterForList.printHead("SUBJECT_CD",$!item)
+                ## 科目名
+                #elseif($!item.getColumnName()=="T_PUR_REQUEST.SUBJECT_NAME")
+                    $!PSORD081PageCreaterForList.printHead($!item)
+                ## 支払条件コード
+                #elseif($!item.getColumnName()=="M_SUPPLIER.PAY_CONDITION_CD")
+                    $!PSORD081PageCreaterForList.printHead("PAY_CONDITION_CD",$!item)
+                ## 支払条件名
+                #elseif($!item.getColumnName()=="DUMMY.PAY_CONDITION_NAME")
+                    $!PSORD081PageCreaterForList.printHead($!item)
+                ## 予算番号
+                #elseif($!item.getColumnName()=="T_PUR_APL.BUDGET_NO")
+                    $!PSORD081PageCreaterForList.printHead($!item)
+                ## 予算名
+                #elseif($!item.getColumnName()=="DUMMY.BUDGET_NAME")
+                    $!PSORD081PageCreaterForList.printHead($!item)
+                ## 大分類
+                #elseif($!item.getColumnName()=="T_PUR_REQUEST.ITEM_CLASS_L_NAME")
+                    $!PSORD081PageCreaterForList.printHead($!item)
+                ## 中分類
+                #elseif($!item.getColumnName()=="T_PUR_REQUEST.ITEM_CLASS_M_NAME")
+                    $!PSORD081PageCreaterForList.printHead($!item)
+                ## 小分類
+                #elseif($!item.getColumnName()=="T_PUR_REQUEST.ITEM_CLASS_S_NAME")
+                    $!PSORD081PageCreaterForList.printHead($!item)
+                ## 注文承認ルート
+                #elseif($!item.getColumnName()=="T_ORDER.APP_ROUTE_NO")
+                    $!PSORD081PageCreaterForList.printHead($!item)
+                ## 検索区分
+                #elseif($!item.getColumnName()=="T_PUR_REQUEST.INSPECT_IND")
+                    $!PSORD081PageCreaterForList.printHead($!item)
+                ## 依頼部門コード
+                #elseif($!item.getColumnName()=="T_PUR_APL.REQ_SECTION_CD")
+                    $!PSORD081PageCreaterForList.printHead($!item)
+                ## 依頼部門名
+                #elseif($!item.getColumnName()=="T_PUR_APL.REQ_SECTION_NAME")
+                    $!PSORD081PageCreaterForList.printHead($!item)
+                ## 依頼者コード
+                #elseif($!item.getColumnName()=="T_PUR_APL.REQ_USER_ID")
+                    $!PSORD081PageCreaterForList.printHead($!item)
+                ## 依頼者名
+                #elseif($!item.getColumnName()=="T_PUR_APL.REQ_USER_NAME")
+                    $!PSORD081PageCreaterForList.printHead($!item)
+                ## 内線番号
+                #elseif($!item.getColumnName()=="T_PUR_APL.REQ_USER_EXTENSION_NO")
+                    $!PSORD081PageCreaterForList.printHead($!item)
+                ## 外線番号
+                #elseif($!item.getColumnName()=="T_PUR_APL.REQ_USER_TEL_NO")
+                    $!PSORD081PageCreaterForList.printHead($!item)
+                ## メールアドレス
+                #elseif($!item.getColumnName()=="DUMMY.MAIL_ADDR")
+                    $!PSORD081PageCreaterForList.printHead($!item)
+                #else
+                    $!PSORD081PageCreaterForList.printHead($!item)
+                #end
+            #end
+            $!PSORD081PageCreaterForList.printTHtagClose()
+        </tr>
+    </thead>
+    <tbody>
+        #foreach($!orderPackageRegItem in $!{itemList.orderPackageRegItemList})
+        #set( $item_no = $velocityCount )
+        <tr id="Row_$velocityCount" #if($velocityCount % 2 == 0) bgcolor="#dce4ef" #else bgcolor="#ffffff" #end>
+            <td class="BoxDetailCenter FontList">#set( $no = $velocityCount + 1 )$no</td>
+            <td class="BoxDetailCenter">
+                <img id="DetailButton_0" class="Icon" src="../../image/btnDetailDisp.gif" onclick="openDetail('#jsEscapeInHTML($!orderPackageRegItem.reqTypeInd)','#jsEscapeInHTML($!orderPackageRegItem.orderPackageRegIdentify.purAplSeq)','#jsEscapeInHTML($!orderPackageRegItem.appUnitNo)','#jsEscapeInHTML($!orderPackageRegItem.orderPackageRegIdentify.purReqSeq)','#jsEscapeInHTML($!orderPackageRegItem.purReqNo)','#jsEscapeInHTML($!orderPackageRegItem.quotReqNo)', '#jsEscapeInHTML($!orderPackageRegItem.slipMngIdentify.slipNo)', '#jsEscapeInHTML($!orderPackageRegItem.slipMngIdentify.lastUpdDate)')"></td>
+            </td>
+            <td class="BoxDetailCenter">
+                #if($!orderPackageRegItem.supplierCd != ""
+                    && $!orderPackageRegItem.appRoute.appRouteNo != ""
+                    && $!orderPackageRegItem.ForeignCurrencyInd != "0")
+                    <input type="checkbox" onclick="selectRow($velocityCount, this)" class="Icon" id="check_status_$velocityCount" name="check_status_$velocityCount"><br/>
+                #else
+                    <div>&nbsp</div>
+                #end
+                <input type="button" class="SmallButton" value="#customSpringMessage('ORDER_INPUT')" onclick="openOrderInput('#jsEscapeInHTML($!orderPackageRegItem.orderPackageRegIdentify.purReqSeq)', '#jsEscapeInHTML($!orderPackageRegItem.orderPackageRegIdentify.lastUpdDate)', '#jsEscapeInHTML($!orderPackageRegItem.slipMngIdentify.slipNo)', '#jsEscapeInHTML($!orderPackageRegItem.slipMngIdentify.lastUpdDate)');"><!--注文入力-->
+            </td>
+            #foreach($!item in $!PSORD081PageCreaterForList.getItemListForBody($velocityCount))
+                #set($currentOneColumnFlag = $!PSORD081PageCreaterForList.getOneColumnFlag($!item))
+                #if($velocityCount == 0)
+                    $!PSORD081PageCreaterForList.printTDtag('class="BoxDetailLeft FontList"')
+                #elseif(!$currentOneColumnFlag)
+                    $!PSORD081PageCreaterForList.printTDtagClose()
+                    $!PSORD081PageCreaterForList.printTDtag('class="BoxDetailLeft FontList"')
+                #end
+                ## 購入依頼番号
+                #if($!item.getColumnName()=="T_PUR_REQUEST.PUR_REQ_NO")
+                    $!PSORD081PageCreaterForList.printDefault($!item,"_data_style",'class="FontSlipNo"')
+                ## 依頼日
+                #elseif($!item.getColumnName()=="T_PUR_APL.PUR_REQ_DATE")
+                    $!PSORD081PageCreaterForList.printDefault($!item,"_data_style",'align="center"')
+                ## 依頼区分
+                #elseif($!item.getColumnName()=="T_PUR_APL.REQ_TYPE_IND")
+                    $!PSORD081PageCreaterForList.printSpecial("s25_codeName", $!item, 'REQ_TYPE_IND','',"_data_style",'align="center"')
+                ## 緊急
+                #elseif($!item.getColumnName()=="T_PUR_APL.URGENT_IND")
+                    #if ($!orderPackageRegItem.emergency == '1')
+                        $!PSORD081PageCreaterForList.printSpecial("s25_codeNameRed", $!item, 'URGENT_IND','',"_data_style",'align="center"','_redValue','1','_boldStyle','"FontList Red"','_needBold','0')
+                    #end
+                ## 見積採用
+                #elseif($!item.getColumnName()=="T_PUR_APL.QUOT_RESP_SEQ")
+                    #if($!orderPackageRegItem.quotAdo == "1")
+                        <div align="center">#customSpringMessage('QUOT_ADO_EXIST')</div>
+                    #else
+                        <div align="center">#customSpringMessage('QUOT_ADO_NOTHING')</div>
+                    #end
+                ## コメント
+                #elseif($!item.getColumnName()=="DUMMY.COMMENT")
+                    $!PSORD081PageCreaterForList.printSpecial("s08_comment", $!item)
+                ## 添付
+                #elseif($!item.getColumnName()=="T_ATTACH_MNG.ATTACH_SCOPE")
+                    $!PSORD081PageCreaterForList.printSpecial("s09_attach", $!item)
+                ## 件名
+                #elseif($!item.getColumnName()=="T_PUR_APL.TITLE_NAME")
+                    $!PSORD081PageCreaterForList.printDefault($!item)
+                ## 品名コード
+                #elseif($!item.getColumnName()=="T_PUR_REQUEST.ITEM_CD")
+                    $!PSORD081PageCreaterForList.printDefault($!item,"_data_style",'align="left"')
+                ## 品名
+                #elseif($!item.getColumnName()=="T_PUR_REQUEST.ITEM_NAME")
+                    $!PSORD081PageCreaterForList.printDefault($!item)
+                ## 型式
+                #elseif($!item.getColumnName()=="T_PUR_REQUEST.KATASHIKI")
+                    #if("$orderPackageRegItem.katashiki"=="")
+                        <div>&nbsp;</div>
+                    #else
+                        $!PSORD081PageCreaterForList.printDefault($!item)
+                    #end
+                ## メーカーコード
+                #elseif($!item.getColumnName()=="T_PUR_REQUEST.MANUFACT_CD")
+                    #if("$orderPackageRegItem.manufactCd"=="")
+                        <div>&nbsp;</div>
+                    #else
+                        $!PSORD081PageCreaterForList.printDefault($!item)
+                    #end
+                ## メーカー名
+                #elseif($!item.getColumnName()=="T_PUR_REQUEST.MANUFACT_NAME")
+                    #if("$orderPackageRegItem.manufactName"=="")
+                        <div>&nbsp;</div>
+                    #else
+                        $!PSORD081PageCreaterForList.printDefault($!item)
+                    #end
+                ## 取引先コード
+                #elseif($!item.getColumnName()=="T_PUR_REQUEST.SUP_CD")
+                    #if($!orderPackageRegItem.supplierCd == "")
+                        <div class="Red">#customSpringMessage('UNSPECIFIED')</div>
+                    #else
+                        $!PSORD081PageCreaterForList.printDefault($!item,"_data_style",'align="left"')
+                    #end
+                ## 取引先名
+                #elseif($!item.getColumnName()=="T_PUR_REQUEST.SUP_ABBR_NAME")
+                    $!PSORD081PageCreaterForList.printDefault($!item,"_data_style",'align="left"')
+                ## EDI転送方法
+                #elseif($!item.getColumnName()=="M_SUPPLIER.EDI_IND")
+                    $!PSORD081PageCreaterForList.printSpecial("s25_codeName",$!item,'EDI_IND','',"_data_style",'align="left"')
+                ## 下請事業者
+                #elseif($!item.getColumnName()=="M_SUPPLIER.SUBCON_IND")
+                    #if("$orderPackageRegItem.subcontractor"=="1")
+                        <div align="left">$!subcontractor</div>
+                    #end
+                ## 注文納期
+                #elseif($!item.getColumnName()=="T_PUR_REQUEST.REQ_DELIV_DATE")
+                    $!PSORD081PageCreaterForList.printDefault($!item,"_data_style",'align="center"')
+                ## 注文数量
+                #elseif($!item.getColumnName()=="T_PUR_REQUEST.REQ_VOL")
+                    $!PSORD081PageCreaterForList.printDefault($!item,"_data_style",'align="right"')
+                ## 単位
+                #elseif($!item.getColumnName()=="T_PUR_REQUEST.UNIT_NAME")
+                    $!PSORD081PageCreaterForList.printDefault($!item,"_data_style",'align="right"')
+                ## 注文単価
+                #elseif($!item.getColumnName()=="T_PUR_REQUEST.UNIT_PRICE")
+                    #if($!orderPackageRegItem.supplierCd == "" || $!orderPackageRegItem.ForeignCurrencyInd == "0")
+                        <div align="right" class="Red">#customSpringMessage('UNSPECIFIED')</div>
+                    #else
+                        $!PSORD081PageCreaterForList.printSpecial("s27_list_data_currency",$!item,"_data_style",'class="FontCurrSmall" align="right"')
+                    #end
+                ## 注文金額
+                #elseif($!item.getColumnName()=="T_PUR_REQUEST.TOTAL_AMOUNT")
+                    #if($!orderPackageRegItem.supplierCd == "" || $!orderPackageRegItem.ForeignCurrencyInd == "0")
+                        <div align="right" class="Red">#customSpringMessage('UNSPECIFIED')</div>
+                    #else
+                        $!PSORD081PageCreaterForList.printSpecial("s27_list_data_currency",$!item,"_data_style",'class="FontCurrSmall" align="right"')
+                    #end
+                ## 通貨コード
+                #elseif($!item.getColumnName()=="T_PUR_REQUEST.CURRENCY_CD")
+                    #if($!orderPackageRegItem.currencyCd == "")
+                        <div align="right" class="Red">#customSpringMessage('UNSPECIFIED')</div>
+                    #else
+                        $!PSORD081PageCreaterForList.printDefault($!item,"_data_style",'align="right"')
+                    #end
+                ## 課税区分
+                #elseif($!item.getColumnName()=="T_PUR_REQUEST.TAX_IND")
+                    $!PSORD081PageCreaterForList.printSpecial("s25_codeName",$!item,'TAX_CD','',"_data_style",' align="center"')
+                ## 消費税区分
+                #elseif($!item.getColumnName()=="T_PUR_REQUEST.CONSUMPT_IND")
+                    $!PSORD081PageCreaterForList.printSpecial("s25_codeName",$!item,'CONSUMPT_IND','',"_data_style",'align="center"')
+                ## 負担部門コード
+                #elseif($!item.getColumnName()=="T_PUR_APL.LOAD_SECTION_CD")
+                    $!PSORD081PageCreaterForList.printDefault($!item)
+                ## 負担部門名
+                #elseif($!item.getColumnName()=="T_PUR_APL.LOAD_SECTION_NAME")
+                    $!PSORD081PageCreaterForList.printDefault($!item)
+                ## 納入先コード
+                #elseif($!item.getColumnName()=="T_PUR_APL.DELIV_PLACE_CD")
+                    $!PSORD081PageCreaterForList.printDefault($!item)
+                ## 納入先名
+                #elseif($!item.getColumnName()=="T_PUR_APL.DELIV_PLACE_NAME")
+                    $!PSORD081PageCreaterForList.printDefault($!item)
+                ## 科目コード
+                #elseif($!item.getColumnName()=="T_PUR_REQUEST.SUBJECT_CD")
+                    $!PSORD081PageCreaterForList.printDefault($!item)
+                ## 科目名
+                #elseif($!item.getColumnName()=="T_PUR_REQUEST.SUBJECT_NAME")
+                    $!PSORD081PageCreaterForList.printDefault($!item)
+                ## 支払条件コード
+                #elseif($!item.getColumnName()=="M_SUPPLIER.PAY_CONDITION_CD")
+                    $!PSORD081PageCreaterForList.printDefault($!item)
+                ## 支払条件名
+                #elseif($!item.getColumnName()=="DUMMY.PAY_CONDITION_NAME")
+                    $!PSORD081PageCreaterForList.printDefault($!item)
+                ## 予算番号
+                #elseif($!item.getColumnName()=="T_PUR_APL.BUDGET_NO")
+                    #if($!orderPackageRegItem.budgetNo == "")
+                        <div>&nbsp</div>
+                    #else
+                        $!PSORD081PageCreaterForList.printDefault($!item)
+                    #end
+                ## 予算名
+                #elseif($!item.getColumnName()=="DUMMY.BUDGET_NAME")
+                    #if($!orderPackageRegItem.budgetTitleName == "")
+                        <div>&nbsp</div>
+                    #else
+                        $!PSORD081PageCreaterForList.printDefault($!item)
+                    #end
+                ## 大分類
+                #elseif($!item.getColumnName()=="T_PUR_REQUEST.ITEM_CLASS_L_NAME")
+                    $!PSORD081PageCreaterForList.printDefault($!item)
+                ## 中分類
+                #elseif($!item.getColumnName()=="T_PUR_REQUEST.ITEM_CLASS_M_NAME")
+                    $!PSORD081PageCreaterForList.printDefault($!item)
+                ## 小分類
+                #elseif($!item.getColumnName()=="T_PUR_REQUEST.ITEM_CLASS_S_NAME")
+                    $!PSORD081PageCreaterForList.printDefault($!item)
+                ## 注文承認ルート
+                #elseif($!item.getColumnName()=="T_ORDER.APP_ROUTE_NO")
+                    <table style="border: none;"><tr>
+                        <td class="FontList" style="white-space: nowrap;padding: 0px; margin: 0px;">
+                        #if($!orderPackageRegItem.appRoute.appRouteNo == "")
+                            <div class="Red">#customSpringMessage('UNSPECIFIED')</div>
+                        #else
+                            $!PSORD081PageCreaterForList.printDefault($!item)
+                        #end
+                        </td>
+                        <td style="padding: 0px;">
+                        #if($!orderPackageRegItem.appRoute.appRouteNo != "")
+                            <!--表示-->
+                            <input id="DispButton_$item_no" name="DispButton_$item_no" type="button" class="SmallButton" value="#customSpringMessage('SHOW')" onclick="appRoutePopup($item_no);">
+                        #end
+                        </td>
+                    </tr></table>
+                ## 検索区分
+                #elseif($!item.getColumnName()=="T_PUR_REQUEST.INSPECT_IND")
+                    $!PSORD081PageCreaterForList.printSpecial("s25_codeName",$!item,'INSPECT_IND','',"_data_style",'align="left" style="padding-left: 3px;"')
+                ## 依頼部門コード
+                #elseif($!item.getColumnName()=="T_PUR_APL.REQ_SECTION_CD")
+                    $!PSORD081PageCreaterForList.printDefault($!item)
+                ## 依頼部門名
+                #elseif($!item.getColumnName()=="T_PUR_APL.REQ_SECTION_NAME")
+                    $!PSORD081PageCreaterForList.printDefault($!item)
+                ## 依頼者コード
+                #elseif($!item.getColumnName()=="T_PUR_APL.REQ_USER_ID")
+                    $!PSORD081PageCreaterForList.printDefault($!item)
+                ## 依頼者名
+                #elseif($!item.getColumnName()=="T_PUR_APL.REQ_USER_NAME")
+                    $!PSORD081PageCreaterForList.printDefault($!item)
+                ## 内線番号
+                #elseif($!item.getColumnName()=="T_PUR_APL.REQ_USER_EXTENSION_NO")
+                    $!PSORD081PageCreaterForList.printDefault($!item)
+                ## 外線番号
+                #elseif($!item.getColumnName()=="T_PUR_APL.REQ_USER_TEL_NO")
+                    $!PSORD081PageCreaterForList.printDefault($!item)
+                ## メールアドレス
+                #elseif($!item.getColumnName()=="DUMMY.MAIL_ADDR")
+                    $!PSORD081PageCreaterForList.printDefault($!item)
+                #else
+                    $!PSORD081PageCreaterForList.printDefault($!item)
+                #end
+            #end
+            $!PSORD081PageCreaterForList.printTDtagClose()
+        </tr>
+        #end
+    </tbody>
+    #end
+</table>
+<br>
+<table id="WAIT" class="NoBorder" style="display:none;width:100%;"><tr><td style="text-align:center;"><br><br>
+<img src="../../image/wait.gif"><br><span class="FontMini"><br>#customSpringMessage('SEARCH_MESSAGE')</span></td></tr></table><!--問い合わせ中...-->
+</form>
+</body>
+</html>
+

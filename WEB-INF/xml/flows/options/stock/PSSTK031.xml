@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<flow xmlns="http://www.springframework.org/schema/webflow"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.springframework.org/schema/webflow
+        http://www.springframework.org/schema/webflow/spring-webflow-2.0.xsd"
+    parent="base">
+
+    <var name="identify" class="fw.domain.options.stock.strgship.strgshipresults.StrgShipResultsIdentify" />
+
+    <input name="searchCondition" />
+    <input name="isCurrentPageSearch" />
+
+    <decision-state id="isSearchByKey">
+        <if test="flowScope.isCurrentPageSearch" then="searchByKey" else="searchByCondition" />
+    </decision-state>
+
+    <action-state id="searchByCondition">
+        <evaluate expression="PSSTK031Service.init(searchCondition)" result="flowScope.itemList" />
+        <transition to="PSSTK031" />
+    </action-state>
+
+    <action-state id="searchByKey">
+        <evaluate expression="PSSTK031Service.page(searchCondition)" result="flowScope.itemList" />
+        <transition to="PSSTK031" />
+    </action-state>
+
+    <view-state id="PSSTK031" view="options/stock/PSSTK031" model="identify">
+        <transition on="order" validate="false">
+            <evaluate expression="PSSTK031Service.order(searchCondition)" result="flowScope.itemList" />
+        </transition>
+        <transition on="page" validate="false">
+            <evaluate expression="PSSTK031Service.page(searchCondition)" result="flowScope.itemList" />
+        </transition>
+        <transition on="cancel" to="searchByKey" validate="false">
+            <evaluate expression="PSSTK031Service.cancel(identify)" />
+            <set name="flashScope.isCancelSuccess" value="true" />
+        </transition>
+        <transition on="strgValidate" validate="false">
+            <set name="flashScope.isShowStrgDetail" value="true" />
+        </transition>
+        <transition on="strgDetail" to="PSSTK040TOP" validate="false" />
+        <transition on="shipValidate" validate="false">
+            <set name="flashScope.isShowShipDetail" value="true" />
+        </transition>
+        <transition on="shipDetail" to="PSSTK050TOP" validate="false" />
+        <transition on="back" to="home" validate="false" />
+    </view-state>
+
+    <subflow-state id="PSSTK040TOP" subflow="options/stock/PSSTK040TOP">
+        <input name="identify" value="identify" />
+    </subflow-state>
+
+    <subflow-state id="PSSTK050TOP" subflow="options/stock/PSSTK050TOP">
+        <input name="identify" value="identify" />
+    </subflow-state>
+
+</flow>

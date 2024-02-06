@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<flow xmlns="http://www.springframework.org/schema/webflow"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.springframework.org/schema/webflow
+        http://www.springframework.org/schema/webflow/spring-webflow-2.0.xsd"
+    parent="base">
+
+    <!-- 初期検索条件 -->
+    <input name="purAplIdentify" />
+    <input name="isInitIndividualApr" />
+    <input name="SessionKey" />
+    <input name="searchCondition" />
+
+    <decision-state id="isInitIndividualApr">
+        <if test="flowScope.isExclusiveCheck != null and flowScope.isExclusiveCheck" then="PSAPR022" />
+        <if test="flowScope.isInitIndividualApr == null or flowScope.isInitIndividualApr" then="initDetail" else="back" />
+    </decision-state>
+
+    <action-state id="initDetail">
+        <evaluate expression="PSAPR022Service.init(purAplIdentify)" result="flowScope.domain" />
+        <transition to="PSAPR022"/> 
+    </action-state>
+
+    <view-state id="PSAPR022" view="apr/pur/PSAPR022" model="domain">
+        <!-- 差戻し  -->
+        <transition on="sendBack" validate="true" >
+            <evaluate expression="PSAPR022Service.sendBack(domain)" />
+            <set name="flashScope.isReturnSuccess" value="true"></set>
+        </transition>
+        <!-- 承認  -->
+        <transition on="approval" validate="true" >
+            <evaluate expression="PSAPR022Service.approval(domain)"/>
+            <set name="flashScope.isApprovalSuccess" value="true"></set>
+        </transition>
+        <transition on="next" validate="false" to="isInitIndividualApr">
+             <evaluate expression="PSAPR022Service.next()" result="flowScope.purAplIdentify"/> 
+             <set name="flashScope.isSuccessForApproval" value="false"></set> 
+             <set name="flashScope.isSuccessForSendBack" value="false"></set> 
+        </transition>
+        <!-- 承認者の追加  -->
+        <transition on="addAuthorizer" validate="false">
+             <evaluate expression="PSAPR022Service.addAuthorizer(domain)" result="flowScope.domain"/> 
+        </transition>
+        <!-- 承認者の削除  -->
+        <transition on="removeAuthorizer" validate="false">
+             <evaluate expression="PSAPR022Service.removeAuthorizer(domain)" result="flowScope.domain"/> 
+        </transition>
+        <transition on="page" validate="false" to="isInitIndividualApr">
+             <evaluate expression="PSAPR022Service.page()" result="flowScope.purAplIdentify"/> 
+        </transition>
+        <transition on="download" validate="false" >
+            <evaluate expression="PSAPR022Service.download(requestParameters.seqNo)"/>
+        </transition>
+        <transition on="downloadext" validate="false">
+            <evaluate expression="PSAPR022Service.downloadFileExt(domain)"/>
+        </transition>
+    </view-state>
+</flow>

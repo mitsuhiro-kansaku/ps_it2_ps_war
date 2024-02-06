@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<flow xmlns="http://www.springframework.org/schema/webflow"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.springframework.org/schema/webflow
+        http://www.springframework.org/schema/webflow/spring-webflow-2.0.xsd"
+    parent="base">
+
+    <var name="domain" class="fw.domain.slip.receive.receive.rcvpckg.ReceivePackageRegItem" />
+    <var name="identify050" class="fw.domain.slip.receive.receive.unreceivelist.UnReceiveIdentify" />
+    <var name="identify090" class="fw.domain.slip.order.order.OrderIdentify" />
+    <var name="identify" class="fw.domain.slip.common.identify.OrderNo" />
+
+    <input name="searchCondition" />
+    <input name="isCurrentPageSearch" />
+    
+    <decision-state id="isSearchByKey">
+       <if test="flowScope.isCurrentPageSearch" then="searchByKey" else="searchByCondition" />
+    </decision-state>
+    
+    <action-state id="searchByCondition">
+        <evaluate expression="PSRCV061Service.init(searchCondition)" result="flowScope.itemList" />
+        <transition to="PSRCV061"/> 
+    </action-state>
+
+    <action-state  id="searchByKey" >
+        <evaluate expression="PSRCV061Service.page(searchCondition)" result="flowScope.itemList" />
+        <transition to="PSRCV061"/>
+    </action-state>
+
+    <view-state id="PSRCV061" view="rcv/rcvpckg/PSRCV061" model="itemList">
+        <!-- ソート -->
+        <transition on="order" validate="false">
+            <evaluate expression="PSRCV061Service.order(searchCondition)" result="flowScope.itemList" />
+        </transition>
+        <!-- ページング -->
+        <transition on="page" validate="false">
+             <evaluate expression="PSRCV061Service.page(searchCondition)" result="flowScope.itemList" /> 
+        </transition>
+        <!-- Back -->
+        <transition on="back" to="home" validate="false" />
+        <!-- 詳細 -->
+        <transition on="detailValidate" validate="true">
+            <set name="identify.orderNo" value="requestParameters.orderNo" />
+            <set name="identify090.orderSeq" value="requestParameters.orderSeq" />
+            <set name="flashScope.isShowDetail" value="true" />
+        </transition>
+        <transition on="detail" to="PSRCV050TOP" validate="false" />
+        <!-- 入力 -->
+        <transition on="openRcvValidate" validate="true" >
+            <set name="identify050.unReceiveIdentify.orderSeq" value="requestParameters.orderSeq" />
+            <set name="identify050.unReceiveIdentify.delivKeyNo.delivKeyNo" value="requestParameters.delivKeyNo" />
+            <set name="flashScope.isShowInput" value="true" />
+        </transition>
+        <transition on="openRcvInput" to="PSRCV030" validate="false" />
+        <!-- 一括登録 -->
+        <transition on="packageReg" validate="false" to="searchByKey">
+            <evaluate expression="PSRCV061Service.packageReg(itemList)"/>
+            <set name="flashScope.isSuccess" value="true"/>
+        </transition>
+    </view-state>
+    
+    <!-- 詳細画面へ -->
+    <subflow-state id="PSRCV050TOP" subflow="rcv/rcv/PSRCV050TOP">
+        <input name="identify050" value="identify" />
+        <input name="identify090" value="identify090" />
+    </subflow-state>
+    
+    <!-- 入力画面へ -->
+    <subflow-state id="PSRCV030" subflow="rcv/rcv/PSRCV030">
+        <input name="identify" value="identify050" />
+        <input name="processFlg" value="1" />
+    </subflow-state>
+</flow>

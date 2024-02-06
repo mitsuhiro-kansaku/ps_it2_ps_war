@@ -1,0 +1,140 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="ps.dataaccess.options.stock.common.autoacceptance.AutoAcceptanceMapperForStock">
+
+    <!-- 検収シーケンス番号を元に入出庫実績テーブルから変更前の入出庫実績シーケンス番号を取得します。 -->
+    <select id="getStrgShipResultsSeqByAcceptSeq" resultType="String">
+      SELECT MAX(T_STRG_SHIP_RESULTS.STRG_SHIP_RESULTS_SEQ)
+        FROM T_ACCEPTANCE
+       INNER JOIN T_STRG_SHIP_RESULTS
+          ON T_ACCEPTANCE.PRE_SEQ = T_STRG_SHIP_RESULTS.ACCEPT_SEQ
+       WHERE T_ACCEPTANCE.ACCEPT_SEQ = #{acceptSeq, jdbcType=NUMERIC}
+    </select>
+    <!-- 赤黒相手シーケンス番号を元に検収テーブルから検収シーケンス番号を取得します。 -->
+    <select id="getAcceptSeqByRbSeq" resultType="String">
+      SELECT ACCEPT_SEQ
+        FROM T_ACCEPTANCE
+       WHERE RB_SEQ = #{rbSeq, jdbcType=NUMERIC}
+         AND RB_IND = '1'
+    </select>
+    <!-- 検収シーケンス番号を元に検収テーブルから変更前シーケンス番号を取得します。 -->
+    <select id="getPreSeqByAcceptSeq" resultType="String">
+      SELECT PRE_SEQ
+        FROM T_ACCEPTANCE
+       WHERE ACCEPT_SEQ = #{acceptSeq, jdbcType=NUMERIC}
+    </select>
+    <!-- 納品キー番号を元に受入管理テーブルから検収済の承認済検収シーケンス番号を取得します。 -->
+    <select id="getAppAcceptSeqByDelivKeyNo" resultType="String">
+      SELECT T_RECEIVE_MNG.APP_ACCEPTANCE_SEQ
+        FROM T_RECEIVE_MNG
+       INNER JOIN T_ACCEPTANCE
+          ON T_RECEIVE_MNG.APP_ACCEPTANCE_SEQ = T_ACCEPTANCE.ACCEPT_SEQ
+       WHERE T_RECEIVE_MNG.DELIV_KEY_NO = #{delivKeyNo, jdbcType=VARCHAR}
+         AND T_RECEIVE_MNG.DELIV_STATUS = '4104'<!-- 4104:検収済 -->
+    </select>
+    <!-- 注文シーケンス番号を元に受入管理テーブルから検収済の承認済検収シーケンス番号を取得します。 -->
+    <select id="getAppAcceptSeqByOrderSeq" resultType="String">
+      SELECT T_ACCEPTANCE.ACCEPT_SEQ
+        FROM T_ORDER
+       INNER JOIN T_RECEIVE_MNG
+          ON T_ORDER.ORDER_NO = T_RECEIVE_MNG.ORDER_NO
+         AND T_RECEIVE_MNG.DELIV_STATUS = '4104'<!-- 4104:検収済 -->
+       INNER JOIN T_ACCEPTANCE
+          ON T_RECEIVE_MNG.APP_ACCEPTANCE_SEQ = T_ACCEPTANCE.ACCEPT_SEQ
+       WHERE T_ORDER.ORDER_SEQ = #{orderSeq, jdbcType=NUMERIC}
+    </select>
+
+    <resultMap id="expectedAutoAccept_Map" type="fw.domain.options.stock.unit.ExpectedAutoAccept">
+        <id column="STOCK_COMPANY_CD"       property="companyCd" />
+        <id column="STOCK_SECTION_PLACE_CD" property="sectionPlaceCd" />
+        <id column="STOCK_PLACE_CD"         property="stockPlaceCd" />
+        <id column="HAVE_IN_STOCK_FLG"      property="haveInStockFlg.haveInStockFlg" />
+        <id column="ACCEPT_EXP_DATE"        property="acceptExpDate.dateOfymd" />
+        <id column="ACCEPT_EXP_VOL"         property="acceptExpVol.vol" />
+        <id column="DELIV_KEY_NO"           property="delivKeyNo" />
+    </resultMap>
+
+    <!-- 注文シーケンス番号を元に入荷テーブルから検収予定情報を取得します。 -->
+    <select id="getExpectedAutoAcceptByOrderSeq" resultMap="expectedAutoAccept_Map">
+      SELECT T_ARRIVAL.STOCK_COMPANY_CD
+           , T_ARRIVAL.STOCK_SECTION_PLACE_CD
+           , T_ARRIVAL.STOCK_PLACE_CD
+           , T_ARRIVAL.HAVE_IN_STOCK_FLG
+           ,(CASE WHEN T_INSPECT.INSPECT_SEQ IS NULL
+                  THEN T_ARRIVAL.ARRIV_EXP_DATE
+                  ELSE T_INSPECT.INSPECT_DATE
+             END) AS ACCEPT_EXP_DATE
+           , T_ARRIVAL.DELIV_VOL AS ACCEPT_EXP_VOL
+           , T_RECEIVE_MNG.DELIV_KEY_NO
+        FROM T_ORDER
+       INNER JOIN T_RECEIVE_MNG
+          ON T_ORDER.ORDER_NO = T_RECEIVE_MNG.ORDER_NO
+        LEFT OUTER JOIN T_ARRIVAL
+          ON T_RECEIVE_MNG.APP_ARRIVAL_SEQ = T_ARRIVAL.ARRIVAL_SEQ
+         AND T_ARRIVAL.ARRIVAL_STATUS = '04'<!-- 04:受入済 -->
+        LEFT OUTER JOIN T_INSPECT
+          ON T_RECEIVE_MNG.APP_INSPECT_SEQ = T_INSPECT.INSPECT_SEQ
+         AND T_INSPECT.INSPECT_STATUS = '04'<!-- 04:検査済 -->
+             <!-- 2104:受入済 尚且つ 0:検査なし 若しくは、3104:検査済 尚且つ 1:検査あり -->
+       WHERE(T_RECEIVE_MNG.DELIV_STATUS = '2104' AND T_ARRIVAL.INSPECT_IND = '0'
+          OR T_RECEIVE_MNG.DELIV_STATUS = '3104' AND T_ARRIVAL.INSPECT_IND = '1')
+         AND T_ORDER.ORDER_SEQ = #{orderSeq, jdbcType=NUMERIC}
+    </select>
+    <!-- 検収シーケンス番号を元に検収テーブルから検収情報を取得します。 -->
+    <select id="getHaveInStockPlaceByAcceptSeq" resultMap="expectedAutoAccept_Map">
+      SELECT STOCK_COMPANY_CD
+           , STOCK_SECTION_PLACE_CD
+           , STOCK_PLACE_CD
+           , HAVE_IN_STOCK_FLG
+           , ACCEPT_DATE AS ACCEPT_EXP_DATE
+           , ACCEPT_VOL  AS ACCEPT_EXP_VOL
+           , DELIV_KEY_NO
+        FROM T_ACCEPTANCE
+       WHERE ACCEPT_SEQ = #{acceptSeq, jdbcType=NUMERIC}
+    </select>
+
+    <!-- 入荷シーケンス番号を元に入荷テーブルの在庫場所情報を検収テーブルへ更新します。 -->
+    <update id="updateAcceptanceForStockByArrivalSeq">
+      UPDATE T_ACCEPTANCE SET
+      ( HAVE_IN_STOCK_FLG
+      , STOCK_COMPANY_CD
+      , STOCK_SECTION_PLACE_CD
+      , STOCK_PLACE_CD
+      , STOCK_PLACE_NAME
+      ) = (SELECT T_ARRIVAL.HAVE_IN_STOCK_FLG
+                , T_ARRIVAL.STOCK_COMPANY_CD
+                , T_ARRIVAL.STOCK_SECTION_PLACE_CD
+                , T_ARRIVAL.STOCK_PLACE_CD
+                , T_ARRIVAL.STOCK_PLACE_NAME
+             FROM T_ARRIVAL
+            INNER JOIN T_RECEIVE_MNG
+               ON T_ARRIVAL.ARRIVAL_SEQ = T_RECEIVE_MNG.APP_ARRIVAL_SEQ
+            WHERE T_ARRIVAL.ARRIVAL_SEQ = #{arrivalSeq, jdbcType=NUMERIC}
+              AND T_ACCEPTANCE.ACCEPT_SEQ = T_RECEIVE_MNG.APP_ACCEPTANCE_SEQ)
+     WHERE EXISTS
+          (SELECT 1 FROM T_ARRIVAL
+            INNER JOIN T_RECEIVE_MNG
+               ON T_ARRIVAL.ARRIVAL_SEQ = T_RECEIVE_MNG.APP_ARRIVAL_SEQ
+            WHERE T_ARRIVAL.ARRIVAL_SEQ = #{arrivalSeq, jdbcType=NUMERIC}
+              AND T_ACCEPTANCE.ACCEPT_SEQ = T_RECEIVE_MNG.APP_ACCEPTANCE_SEQ)
+    </update>
+    <!-- 入荷シーケンス番号を元に入荷取引先言語テーブルの在庫場所情報を検収テーブルへ更新します。 -->
+    <update id="updateAcceptanceSupLanForStockByArrivalSeq">
+      UPDATE T_ACCEPTANCE_SUP_LNG SET
+      ( STOCK_PLACE_NAME
+      ) = (SELECT T_ARRIVAL_SUP_LNG.STOCK_PLACE_NAME
+             FROM T_ARRIVAL_SUP_LNG
+            INNER JOIN T_RECEIVE_MNG
+               ON T_ARRIVAL_SUP_LNG.ARRIVAL_SEQ = T_RECEIVE_MNG.APP_ARRIVAL_SEQ
+            WHERE T_ARRIVAL_SUP_LNG.ARRIVAL_SEQ = #{arrivalSeq, jdbcType=NUMERIC}
+              AND T_ACCEPTANCE_SUP_LNG.ACCEPT_SEQ = T_RECEIVE_MNG.APP_ACCEPTANCE_SEQ)
+     WHERE EXISTS
+          (SELECT 1 FROM T_ARRIVAL_SUP_LNG
+            INNER JOIN T_RECEIVE_MNG
+               ON T_ARRIVAL_SUP_LNG.ARRIVAL_SEQ = T_RECEIVE_MNG.APP_ARRIVAL_SEQ
+            WHERE T_ARRIVAL_SUP_LNG.ARRIVAL_SEQ = #{arrivalSeq, jdbcType=NUMERIC}
+              AND T_ACCEPTANCE_SUP_LNG.ACCEPT_SEQ = T_RECEIVE_MNG.APP_ACCEPTANCE_SEQ)
+    </update>
+
+</mapper>

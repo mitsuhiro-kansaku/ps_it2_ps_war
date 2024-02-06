@@ -1,0 +1,827 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<title>
+#customSpringMessage('CATALOG_PUR_REQ_APP')</title>
+<meta http-equiv="Content-type" content="text/html; charset=UTF-8">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Content-script-type" content="text/javascript">
+<link id="CSS_FONT" rel="stylesheet" href="../../include/FontS.css" type="text/css">
+<link rel="stylesheet" href="../../include/Layout.css" type="text/css">
+<link rel="stylesheet" href="../../include/Color.css" type="text/css">
+<link rel="stylesheet" href="../../include/searchbox.css" type="text/css">
+<script language="javascript" type="text/javascript" src="../../include/common.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/check.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/date.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/tablesort.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/searchbox.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/jquery-1.7.2.min.js"></script>
+<script language="javascript" type="text/javascript">
+<!--
+
+#set($isActiveProfileBudget = "#isActiveProfile('budget')")
+#parse("./common/common_js.vm")
+#set($commonTitle = "#customSpringMessage('CATALOG_PUR_REQ_APP')")
+var isFinalAppUser = "false";
+
+var isClickable = false;
+
+function onLoad() {
+
+    top.document.title = document.title;
+
+    var isSuccessForApproval = '#jsEscape($!isSuccessForApproval)';
+    var errorMsg = "$!errorMessage";
+    var alertMessage = "$!alertMessage";
+
+    if( errorMsg == "" && alertMessage != "") {
+        if(alertMessage.indexOf('W042') != -1) {
+            if (confirm(alertMessage)) {
+                getObj("Body").action="${flowExecutionUrl}&_eventId=approval&checkPass=1";
+                buttonDisable();
+                getObj("Body").submit();
+                return;
+            }
+        } else {
+
+            #if($isActiveProfileBudget=="true")
+                if(alertMessage.indexOf("W601")== -1) {
+                    alert(alertMessage);
+                }
+            #else
+                alert(alertMessage);
+            #end
+            if(alertMessage.indexOf("#customSpringMessage('E035')") != -1){
+                buttonDisable();
+                parent.iframeChange("${flowExecutionUrl}&_eventId=next");
+                return;
+            }
+        }
+    }
+    #if($isActiveProfileBudget=="true")
+        if(alertMessage.indexOf("W601") != -1 && alertMessage.indexOf('W042') == -1){
+            if(alertMessage != "" && errorMsg == "" ) {
+                if(confirm(alertMessage)) {
+                    getObj("Body").action="${flowExecutionUrl}&_eventId=approval&checkPass=1";
+                    buttonDisable();
+                    getObj("Body").submit();
+                    return;
+                }
+            }
+        }
+    #end
+    if (errorMsg == ""){
+        var isSuccessForApproval = '#jsEscape($!isSuccessForApproval)';
+        if(isSuccessForApproval == 'true' && typeof(isSuccessForApproval) != "undefined"){
+            alert('#customMessageArgs("I028",["#customSpringMessage('CATALOG_PUR_REQ')"])');
+            buttonDisable();
+            parent.iframeChange("${flowExecutionUrl}&_eventId=next");
+            return;
+        }
+        var isSuccessForSendBack = '#jsEscape($!isSuccessForSendBack)';
+        if(isSuccessForSendBack == 'true' && typeof(isSuccessForSendBack) != "undefined"){
+            alert('#customMessageArgs("I029",["#customSpringMessage('CATALOG_PUR_REQ')"])');
+            buttonDisable();
+            parent.iframeChange("${flowExecutionUrl}&_eventId=next");
+            return;
+        }
+    } else{
+        getObj("TR_ERROR").style.display = "";
+    }
+    approvalPaging();
+    
+    isClickable = true;
+}
+
+//差戻し
+function sendBack(){
+    if(!isClickable) {
+        return;
+    }
+    
+    #set( $mmCatalogPurReq = "#customSpringMessage('CATALOG_PUR_REQ')" )
+    #set( $appOval = "#customSpringMessage('RETURN')" )
+    if( !confirm("#customMessageArgs("W001",[$mmCatalogPurReq,$appOval])") ) {
+        return;
+    }
+    buttonDisable();
+    getObj("Body").action="${flowExecutionUrl}&_eventId=sendBack";
+    getObj("Body").submit();
+}
+//承認
+function approval(){
+    if(!isClickable) {
+        return;
+    }
+
+    #set( $mmCatalogPurReq = "#customSpringMessage('CATALOG_PUR_REQ')" )
+    #set( $appOval = "#customSpringMessage('APPROVAL')" )
+    if( !confirm("#customMessageArgs("W001",[$mmCatalogPurReq,$appOval])") ) {
+        return;
+    }
+    buttonDisable();
+    getObj("Body").action="${flowExecutionUrl}&_eventId=approval";
+    getObj("Body").submit();
+}
+
+
+function forward() {
+    setDisplay("DetailArea",false);
+    setDisplay("ForwardArea",true);
+    getObj("DetailTab").className = "DetailTabsOff";
+    getObj("ForwardTab").className = "DetailTabsOn";
+    getObj("Detail").href = "javascript:detail();";
+    parent.adjustArea(ROWNUM);
+}
+
+function detail() {
+    setDisplay("DetailArea",true);
+    setDisplay("ForwardArea",false);
+    getObj("DetailTab").className = "DetailTabsOn";
+    getObj("ForwardTab").className = "DetailTabsOff";
+    getObj("Forward").href = "javascript:forward();";
+    parent.adjustArea(ROWNUM);
+}
+
+function changeFontSize() {
+    changeFontSize0();
+    getObj("DATAAREA").contentWindow.changeFontSize();
+}
+
+
+//承認者の削除
+function removeAuthorizer(obj) {    
+    if(!isClickable) {
+        return;
+    }
+    buttonDisable();
+    var appSeq = obj.parentNode.parentNode.children[0].innerHTML;
+    getObj("Body").action="${flowExecutionUrl}&_eventId=removeAuthorizer&appSeq="+appSeq;
+    getObj("Body").submit();
+}
+
+//承認者の追加
+function addAuthorizer() {
+    if(!isClickable) {
+        return;
+    }
+    buttonDisable();
+    getObj("Body").action="${flowExecutionUrl}&_eventId=addAuthorizer";
+    getObj("Body").submit();
+}
+
+//承認者を検索
+function searchAuthorizer() {
+    var userId = getObj('purAplManagement.appManagement.appList.appUserName.userID');
+    var userName = getObj('purAplManagement.appManagement.appList.appUserName.userName');
+    var sectionCd = getObj('purAplManagement.appManagement.appList.appUserName.section.sectionCd');
+    var sectionName = getObj('purAplManagement.appManagement.appList.appUserName.section.sectionName');
+    var officialName = getObj('purAplManagement.appManagement.appList.appUserName.official.officialName');
+    var sectionPlaceCd = getObj('purAplManagement.appManagement.appList.appUserName.section.sectionPlace.sectionPlaceCd');
+    var sectionPlaceName = getObj('purAplManagement.appManagement.appList.appUserName.section.sectionPlace.sectionPlaceName');
+    var mail = getObj('purAplManagement.appManagement.appList.appUserName.mailAddr.mail');
+    var extensionNo = getObj('purAplManagement.appManagement.appList.appUserName.extNo.extensionNo');
+    var externalNo = getObj('purAplManagement.appManagement.appList.appUserName.externalNo.externalNo');
+
+    userPopup.setObject(userId, userName, sectionCd, sectionName, officialName, sectionPlaceCd, sectionPlaceName, mail, extensionNo, externalNo); 
+    masterSearch('../../src/userPopup/search?pageid=userPopupSearch&popupPageid=PSAPR012','UserSearch','750','500');
+}
+
+function downloadExt(filename, file) {
+    iframeChange("${flowExecutionUrl}&_eventId=downloadext", 'filename', filename, 'file', file);
+}
+
+// 予算表示（部門）
+function sectionDetail(companyCd, sectionPlaceCd, sectionCd, purReqDate, subjectCdparam) {
+    var subjectCds = subjectCdparam.substring(1, subjectCdparam.length).split(',');
+    var subjectCd = "";
+    for(var i = 0; i < subjectCds.length; i++){
+        subjectCd += "&subjectCds=" + encodeURIComponent(subjectCds[i]);
+    }
+    poppage('../../budget/sectionDetail/list?companyCode=' + encodeURIComponent(companyCd) + '&sectionPlaceCode=' + encodeURIComponent(sectionPlaceCd) + '&sectionCode=' + encodeURIComponent(sectionCd) + '&perReqDate=' + purReqDate + subjectCd, 'sectionBudgetDetail', 700, 500)
+}
+
+// 予算表示（稟議）
+function ringiDetail(companyCd, sectionPlaceCd, budgetNumber) {
+    poppage('../../budget/ringiDetail?companyCode=' + encodeURIComponent(companyCd) + '&sectionPlaceCode=' + encodeURIComponent(sectionPlaceCd) + '&budgetDetailNo=' + encodeURIComponent(budgetNumber), 'ringiBudgetDetail', 700, 500)
+}
+
+//-->
+</script>
+<style>
+table.HomeBox {
+    background-color:#FFFFFF;
+    border: 1px solid #333333;
+    -moz-border-radius: 16px;
+    -webkit-border-radius: 16px;
+    border-radius: 16px;
+    behavior: url("../../include/ie-css3.htc");
+    zoom:1;
+    position: relative;
+    z-index:200;
+    padding:16px;
+    box-shadow: 3px 3px 0px #000000;
+    margin-left:auto;
+    margin-right:auto;
+}
+body.CreateArea {
+background-color: #CCC;
+padding-top: 1077px;
+padding-right: 107px;
+padding-bottom: 170px;
+padding-left: 10px;
+text-align: center;
+vertical-align: top;
+}
+
+</style>
+</head>
+<body topmargin="0" leftmargin="0" marginwidth="0" marginheight="0" align="center" onload="onLoad();" style="overflow-y:hidden">
+
+<form name="Body" id="Body" method="post" enctype="multipart/form-data">
+    <table class="SearchBody">
+        <tr>
+            <td id="SEARCH_AREA" class="SearchArea"><!-- onLoadで変更 -->
+                
+                #parse("./common/common_title_tran_with_individual_approval.vm")
+                
+            </td>
+        </tr>
+        <tr>
+            <td class="NoBorder" style="height:auto; background-color:#CCC;">
+                <div id="Area" style="OVERFLOW-Y: scroll;HEIGHT: 100%;display:none;padding:5px,5px,5px,5px">
+                    <table class="HomeBox" align = "center">
+                        <tr>
+                            <td>
+                                <table>
+                                    <tr>
+                                        <td style="padding:50px,15px,0px,15px;text-align:left;">
+                                            <br>
+                                            <table class="NoBorder" width="98%">
+                                                <tr>
+                                                    <td>
+                                                        <u><img src="../../image/mrkCircle.gif"><span id="StepTitle" class="FontStepTitle">#customSpringMessage('CATALOG_PUR_REQ_APP')<!-- カタログ購入依頼承認--></span></u><br><br>
+                                                            <span id="ReqNo" class="FontSmallBold DarkBlue">#customSpringMessage('PSAPR012_HEADER_COMMENT')</span>
+                                                    </td>
+                                                    <td align="right" valign="middle">
+                                                        <input type="button" nowrap class="LargeButton Red" value="#customSpringMessage('RETURN')" onclick="sendBack();">&nbsp;&nbsp;<!-- 差戻し-->
+                                                        <input id="button" type="button" class="LargeButton" value="#customSpringMessage('APPROVAL')" onclick="javascript:approval();"><!-- 承認 -->
+                                                        #if($customMacroRequestContext.isActiveProfile('budget'))
+                                                        <br><br>
+	                                                        #if($domain.purAplManagement.budgetNumber.budgetNumber == '')
+	                                                        <input type="button" class="LargeButton" value="#customSpringMessage('SHOW_BUDGET')" onclick="sectionDetail('#jsEscapeInHTML($!domain.purAplManagement.loadSection.loadSection.company.companyCd)', '#jsEscapeInHTML($!domain.purAplManagement.loadSection.loadSection.sectionPlace.sectionPlaceCd)', '#jsEscapeInHTML($!domain.purAplManagement.loadSection.loadSection.sectionCd)', '#jsEscapeInHTML($!domain.purAplManagement.purReqDate.purReqDate.reqDate.dateOfymd)', '#foreach($!catalogPurReq in $!domain.purAplManagement.catalogPurReqList),#jsEscapeInHTML($!catalogPurReq.subject.subjectCd)#end');">
+	                                                        #else
+	                                                        <input type="button" class="LargeButton" value="#customSpringMessage('SHOW_BUDGET')" onclick="ringiDetail('#jsEscapeInHTML($!domain.purAplManagement.loadSection.loadSection.company.companyCd)', '#jsEscapeInHTML($!domain.purAplManagement.loadSection.loadSection.sectionPlace.sectionPlaceCd)', '#jsEscapeInHTML($!domain.purAplManagement.budgetNumber.budgetNumber)');">
+	                                                        #end
+                                                        #end
+                                                    </td>
+                                                </tr>
+                                                <tr id ="TR_ERROR" style="display:none;">
+                                                    <td class="error" style="height:0px;">
+                                                        $!errorMessage
+                                                    </td>
+                                                </tr>
+                                            </table>
+                                            <br>
+
+                                            <table class="NoBorder Box1G" width="100%">
+                                                <tbody class="ListBorderWidth">
+                                                    <tr>
+                                                        <td class="Box1H FontBoxHeader"> 
+                                                            #customSpringMessage('PUR_APL_NO') <!-- 購入申請番号--> 
+                                                        </td>
+                                                        <td nowrap class="Box1D FontSlipNo">
+                                                            #out($!domain.purAplManagement.catalogIdentify.purAplNo.purAplNo) &nbsp;
+                                                            #if($!{domain.purAplManagement.urgentInd.urgentInd} == "1")
+                                                                <span class="FontStatus Red">#out($!domain.purAplManagement.urgentInd.urgentInd_PageValue)</span>
+                                                            #end
+                                                        </td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td class="Box1H FontBoxHeader">
+                                                            #customSpringMessage('REQ_DATE')<!-- 依頼日-->
+                                                        </td>
+                                                        <td nowrap class="Box1D FontSmall">
+                                                            #out($!domain.purAplManagement.purReqDate.purReqDate.reqDate.dateOfymdFormat)
+                                                        </td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td class="Box1H FontBoxHeader" WIDTH="20%">
+                                                            #customSpringMessage('TITLE_NAME')<!-- 件名-->
+                                                        </td>
+                                                        <td nowrap class="Box1D FontSmall">
+                                                            #out($!domain.purAplManagement.titleName.titleName)
+                                                        </td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td class="Box1H FontBoxHeader">#customSpringMessage('CLIENT')<!-- 依頼者--></td>
+                                                        <td class="Box1D FontSmall">
+                                                            <table class="NoBorder">
+                                                                <tr>
+                                                                    <td valign="top" rowspan="2"><img class="Mark" src="../../image/mrkHuman.gif"></td>
+                                                                    <td rowspan="2" nowrap>
+                                                                        <span class="FontSmall">#out($!domain.purAplManagement.reqUser.reqUser.section.sectionCd)  #out($!domain.purAplManagement.reqUser.reqUser.section.sectionName)</span><br>
+                                                                        <span class="FontSmall">#out($!domain.purAplManagement.reqUser.reqUser.userID)</span>&nbsp;<span class="FontUserName">#out($!domain.purAplManagement.reqUser.reqUser.userName) &nbsp;&nbsp;</span>
+                                                                    </td>
+                                                                    <td><img class="Mark" src="../../image/mrkTel.gif"></td>
+                                                                    <td class="FontMini" nowrap>
+                                                                        #customSpringMessage('EXTENSION_NO')：<!-- 内線番号--><span class="FontSmallAnk">#out($!domain.purAplManagement.reqUser.reqUser.extNo.extensionNo)</span>&nbsp;&nbsp;#customSpringMessage('EXTERNAL_NO')：<!-- 外線番号--><span class="FontSmallAnk">#out($!domain.purAplManagement.reqUser.reqUser.externalNo.externalNo)</span>
+                                                                    </td>
+                                                                </tr>
+                                                                <tr>
+                                                                    <td><img class="Mark" src="../../image/mrkMail.gif"></td>
+                                                                    <td nowrap>
+                                                                        <span class="FontMiniAnk"><A HREF='mailto:"#out($!domain.purAplManagement.reqUser.reqUser.mailAddr.mail)"'>#out($!domain.purAplManagement.reqUser.reqUser.mailAddr.mail)</A></span></td><td align="right" valign="bottom">
+                                                                    </td>
+                                                                </tr>
+                                                            </table>
+                                                        </td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td class="Box1H FontBoxHeader">#customSpringMessage('SECTION_TYPE_PLANNED')<!--負担部門--></td>
+                                                        <td class="Box1D FontSmall">
+                                                            #out($!domain.purAplManagement.loadSection.loadSection.sectionCd) &nbsp;#out($!domain.purAplManagement.loadSection.loadSection.sectionName)
+                                                        </td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td nowrap class="Box1H FontBoxHeader">
+                                                            #customSpringMessage('DELIVERY_PLACE')<!--納入先-->
+                                                        </td>
+                                                        <td nowrap class="Box1D FontSmall">
+                                                            #out($!domain.purAplManagement.delivPlace.delivPlaceCd) &nbsp;#out($!domain.purAplManagement.delivPlace.delivPlaceName)
+                                                        </td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td nowrap class="Box1H FontBoxHeader">
+                                                            #customSpringMessage('BUDGET_NO')<!--予算番号-->
+                                                        </td>
+                                                        <td nowrap class="Box1D FontSmall">
+                                                            #out($!domain.purAplManagement.budgetNumber.budgetNumber)
+                                                            #if($isActiveProfileBudget=="true")
+                                                                #out($!domain.purAplManagement.budgetNumber.titleName.titleName)
+                                                            #end
+                                                        </td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td class="Box1H FontBoxHeader">#customSpringMessage('FOR_BOSS_COMMENT')</td><!--承認者向けコメント-->
+                                                        <td class="Box1D FontSmall">#out($!domain.purAplManagement.forAppComment.forAppComment.comment)</td>
+                                                    </tr>
+                                                    #if("1" == "$!catalogSupplierCommentInd")
+                                                        <tr>
+                                                            <td class="Box1H FontBoxHeader">#customSpringMessage('FOR_SUPPRIER_COMMENT')</td><!--取引先向けコメント-->
+                                                            <td class="Box1D FontSmall">#out($!domain.purAplManagement.forSupplierComment.forSupplierComment.comment)</td>
+                                                        </tr>
+                                                    #end
+                                                    <tr>
+                                                        <td nowrap class="Box1H FontBoxHeader">
+                                                            #customSpringMessage('APL_AMOUNT')<!--申請金額-->
+                                                        </td>
+                                                        <td nowrap class="Box1D FontCurrSmall">
+                                                            #if($!domain.purAplManagement.catalogPurReqList.size()!=0 && "$!domain.purAplManagement.catalogPurReqList[0].priceArticle.supplierFrom.currency.currencyMark" == "\")
+                                                                &yen;
+                                                            #else
+                                                                #if($!domain.purAplManagement.catalogPurReqList.size()!=0)
+                                                                    #out($!domain.purAplManagement.catalogPurReqList[0].priceArticle.supplierFrom.currency.currencyMark)
+                                                                #end
+                                                            #end
+                                                            
+                                                            #out($!domain.purAplManagement.aplAmount.amountFormat)
+                                                            
+                                                            <span class="FontMiniAnkBold">
+                                                                &nbsp;
+                                                                #if($!domain.purAplManagement.catalogPurReqList.size()!=0)
+                                                                    #out($!domain.purAplManagement.catalogPurReqList[0].priceArticle.supplierFrom.currency.currencyCd)
+                                                                #end
+                                                            </span>
+
+                                                            #if($domain.purAplManagement.foreignCurrency)
+                                                                &nbsp;(
+                                                                #if($!domain.purAplManagement.catalogPurReqList.size()!=0 && "$!domain.purAplManagement.reqUser.reqUser.section.company.currency.currencyMark" == "\")
+                                                                    &yen;
+                                                                #else
+                                                                    #out($!domain.purAplManagement.reqUser.reqUser.section.company.currency.currencyMark)
+                                                                #end
+
+                                                                #out($!domain.purAplManagement.convAplAmount.amountFormat)
+                                                                <span class="FontMiniAnkBold">&nbsp;
+                                                                    #out($!domain.purAplManagement.reqUser.reqUser.section.company.currency.currencyCd)
+                                                                </span>
+                                                                )
+                                                            #end
+                                                        </td>
+                                                    </tr>
+                                                    
+                                                    ## 拡張項目
+                                                    $!PSAPR012PageCreater.build('reg','_tr_style', '', '_td_style_left', 'class="Box1H FontBoxHeader"','_td_style_right', 'class="Box1D FontSmall"')
+                                                    #foreach($!item in $!PSAPR012PageCreater.getItemListForBody())
+                                                        $!PSAPR012PageCreater.printDefaultForCancel($!item)
+                                                    #end
+                                                    
+                                                </tbody>
+                                            </table>
+                                            <br>
+
+                                            <table class="Box1G" width="100%">
+                                                #if($!domain.purAplManagement.catalogPurReqList.size()!=0)
+                                                #foreach($!catalogPurReq in $!domain.purAplManagement.catalogPurReqList)
+                                                <tr>
+                                                    
+                                                #if("$!domain.purAplManagement.catalogPurReqList[$velocityCount].externalCatalogDataList.display1" != "" ||
+                                                    "$!domain.purAplManagement.catalogPurReqList[$velocityCount].externalCatalogDataList.display2" != "" ||
+                                                    "$!domain.purAplManagement.catalogPurReqList[$velocityCount].externalCatalogDataList.display3" != "" ||
+                                                    "$!domain.purAplManagement.catalogPurReqList[$velocityCount].externalCatalogDataList.display4" != "" ||
+                                                    "$!domain.purAplManagement.catalogPurReqList[$velocityCount].externalCatalogDataList.display5" != "")
+                                                    <td class="ProductArea FontSlipNo" align="left" valign="top" nowrap rowspan="2">
+                                                #end
+                                                #if("$!domain.purAplManagement.catalogPurReqList[$velocityCount].externalCatalogDataList.display1" == "" &&
+                                                    "$!domain.purAplManagement.catalogPurReqList[$velocityCount].externalCatalogDataList.display2" == "" &&
+                                                    "$!domain.purAplManagement.catalogPurReqList[$velocityCount].externalCatalogDataList.display3" == "" &&
+                                                    "$!domain.purAplManagement.catalogPurReqList[$velocityCount].externalCatalogDataList.display4" == "" &&
+                                                    "$!domain.purAplManagement.catalogPurReqList[$velocityCount].externalCatalogDataList.display5" == "")
+                                                    <td class="ProductArea FontSlipNo" align="left" valign="top" nowrap>
+                                                #end
+                                                        #out($!domain.purAplManagement.catalogPurReqList[$velocityCount].purReqNo.purReqNo)
+                                                    </td>
+                                                    <td class="ProductArea" align="left" valign="top">
+                                                        <table class="NoBorder">
+                                                            <tr>
+                                                                <td nowrap><span class="FontMini">#customSpringMessage('PRODUCT_CLASS')：<!-- 品名分類--></span></td>
+                                                                <td nowrap><div class="ItemKind">#customSpringMessage('ITEM_CLASS_L_ABBR')</div></td>
+                                                                <td class="FontCategolyName" nowrap id="ClassL">#out($!domain.purAplManagement.catalogPurReqList[$velocityCount].priceArticle.item.itemClass.itemClassNameL) </td>
+                                                                <td nowrap><div class="ItemKind">#customSpringMessage('ITEM_CLASS_M_ABBR')</div></td>
+                                                                <td class="FontCategolyName" nowrap id="ClassM"> #out($!domain.purAplManagement.catalogPurReqList[$velocityCount].priceArticle.item.itemClass.itemClassNameM)</td>
+                                                                <td nowrap><div class="ItemKind">#customSpringMessage('ITEM_CLASS_S_ABBR')</div></td>
+                                                                <td class="FontCategolyName" nowrap id="ClassS">#out($!domain.purAplManagement.catalogPurReqList[$velocityCount].priceArticle.item.itemClass.itemClassNameS)</td>
+                                                            </tr>
+                                                        </table>
+                                                        <table>
+                                                            <tr>
+                                                                <td nowrap><span class="FontMini">#customSpringMessage('ITEM_CD'):</span></td><!--品名コード-->
+                                                                <td><span class="FontSmallAnk Brown">#out($!domain.purAplManagement.catalogPurReqList[$velocityCount].priceArticle.item.itemCd)</span></td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td nowrap><span class="FontMini">#customSpringMessage('ITEM_NAME'):</span></td><!--品名-->
+                                                                <td nowrap>
+                                                                    <span class="FontMiddleAnkBold">
+                                                                        #if("$!domain.purAplManagement.catalogPurReqList[$velocityCount].priceArticle.refUrl" != "")
+                                                                            <a href="javascript:void(0)" onclick="javascript:poppage('#jsEscapeInHTML($!domain.purAplManagement.catalogPurReqList[$velocityCount].priceArticle.refUrl)','_blank','600','600')">
+                                                                                #out($!domain.purAplManagement.catalogPurReqList[$velocityCount].priceArticle.item.itemName)
+                                                                            </a>
+                                                                        #elseif("$!domain.purAplManagement.catalogPurReqList[$velocityCount].externalCatalogDataList.detailURL" != "")
+                                                                            <a href="javascript:void(0)" onclick="javascript:poppage('#jsEscapeInHTML($!domain.purAplManagement.catalogPurReqList[$velocityCount].externalCatalogDataList.detailURL)','_blank','600','600')">
+                                                                                #out($!domain.purAplManagement.catalogPurReqList[$velocityCount].priceArticle.item.itemName)
+                                                                            </a>
+                                                                        #else
+                                                                                #out($!domain.purAplManagement.catalogPurReqList[$velocityCount].priceArticle.item.itemName)
+                                                                        #end
+                                                                    </span>
+                                                                </td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td nowrap><span class="FontMini">#customSpringMessage('SUPPLIER'):</span></td><!--取引先-->
+                                                                <td><span class="FontSmallBold Green">#out($!domain.purAplManagement.catalogPurReqList[$velocityCount].priceArticle.supplierFrom.supCd) #out($!domain.purAplManagement.catalogPurReqList[$velocityCount].priceArticle.supplierFrom.supplierName.supplierAbbrName)</span></td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td nowrap><span class="FontMini">#customSpringMessage('KATASHIKI'):</span></td><!--型式-->
+                                                                <td><span class="FontMini">#out($!domain.purAplManagement.catalogPurReqList[$velocityCount].priceArticle.item.katashiki)</span></td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td nowrap><span class="FontMini">#customSpringMessage('MANUFACT'):</span></td><!--メーカー-->
+                                                                <td><span class="FontMini">#out($!domain.purAplManagement.catalogPurReqList[$velocityCount].priceArticle.item.manufact.manufactCd) #out($!domain.purAplManagement.catalogPurReqList[$velocityCount].priceArticle.item.manufact.manufactName)</span></td>
+                                                            </tr>
+                                                        </table>
+                                                    </td>
+                                                    <td align="center" valign="middle">
+                                                        <table>
+                                                            <tr>
+                                                                <td nowrap align="left"><span class="FontMini">#customSpringMessage('DELIV_DATE')：</span></td><!--納期-->
+                                                                <td nowrap>
+                                                                    <span class="FontMiddleAnkBold">#out($!domain.purAplManagement.catalogPurReqList[$velocityCount].hopeDlvEst.hopeDlvEst.dateOfymdFormat)</span>&nbsp;
+                                                                </td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td nowrap align="left"><span class="FontMini">#customSpringMessage('SUBJECT'):</span></td><!--科目-->
+                                                                <td align="left" nowrap>
+                                                                    <span class="FontSmall">#out($!domain.purAplManagement.catalogPurReqList[$velocityCount].subject.subjectCd) &nbsp; #out($!domain.purAplManagement.catalogPurReqList[$velocityCount].subject.subjectName) </span>
+                                                                </td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td nowrap align="left"><span class="FontMini">#customSpringMessage('INSPECT_IND')：</span></td><!--検査区分-->
+                                                                <td align="left" nowrap>
+                                                                    <span class="FontSmall">#out($!domain.purAplManagement.catalogPurReqList[$velocityCount].priceArticle.inspectInd.inspectInd_PageValue)</span>
+                                                                </td>
+                                                            </tr>
+                                                        </table>
+                                                    </td>
+                                                    <td align="center" valign="middle">
+                                                        <table>
+                                                            <tr>
+                                                                <td nowrap width="60px;" align="left"><span class="FontMini">#customSpringMessage('UNIT_PRICE')：</span></td><!-- 単価 -->
+                                                                <td nowrap align="right">
+                                                                    <span class="FontCurrMini">
+                                                                        #if("$!domain.purAplManagement.catalogPurReqList[$velocityCount].priceArticle.supplierFrom.currency.currencyMark" == "\")
+                                                                            &yen;
+                                                                        #else
+                                                                            #out($!domain.purAplManagement.catalogPurReqList[$velocityCount].priceArticle.supplierFrom.currency.currencyMark)
+                                                                        #end
+
+                                                                        #out($!domain.purAplManagement.catalogPurReqList[$velocityCount].unitPrice.amount.amountFormat)
+                                                                    </span>
+                                                                    <span class="FontMiniAnkBold">
+                                                                        #out($!domain.purAplManagement.catalogPurReqList[$velocityCount].priceArticle.supplierFrom.currency.currencyCd)
+                                                                    </span>
+                                                                    <br />&nbsp;<span class="FontMini Green">
+                                                                        #if("$!domain.purAplManagement.catalogPurReqList[$velocityCount].priceArticle.taxCalculationInd.consumptInd.consumptInd" !="")
+                                                                            (&nbsp;#out($!domain.purAplManagement.catalogPurReqList[$velocityCount].amountMng.taxCalculationInd.taxInd.taxInd_PageValue) #out($!domain.purAplManagement.catalogPurReqList[$velocityCount].priceArticle.taxCalculationInd.consumptInd.consumptInd_PageValue))
+                                                                        #end
+                                                                    </span>
+                                                                </td>
+                                                            </tr>
+                                                            
+                                                            <tr>
+                                                                <td width="60px;" align="left"><span class="FontMini">#customSpringMessage('VOL')：</span></td><!-- 数量 -->
+                                                                <td nowrap align="right"><span class="FontSmallAnk">#out($!domain.purAplManagement.catalogPurReqList[$velocityCount].hopeVol.hopeVol.volFormat)</span>&nbsp;<span class="FontMini">#out($!domain.purAplManagement.catalogPurReqList[$velocityCount].priceArticle.item.unit.unitName)</span>&nbsp;&nbsp;&nbsp;</td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td nowrap width="60px;" align="left"><span class="FontMini">#customSpringMessage('AMOUNT')：</span></td><!--金額-->
+                                                                <td nowrap align="right">
+                                                                    <span class="FontCurrSmall">
+                                                                        #if("$!domain.purAplManagement.catalogPurReqList[$velocityCount].priceArticle.supplierFrom.currency.currencyMark" == "\")
+                                                                            &yen;
+                                                                        #else
+                                                                            #out($!domain.purAplManagement.catalogPurReqList[$velocityCount].priceArticle.supplierFrom.currency.currencyMark)
+                                                                        #end
+                                                                        
+                                                                        #out($!domain.purAplManagement.catalogPurReqList[$velocityCount].reqAmount.amountFormat)
+                                                                    </span>
+                                                                    <span class="FontMiniAnkBold">#out($!domain.purAplManagement.catalogPurReqList[$velocityCount].priceArticle.supplierFrom.currency.currencyCd)</span>
+                                                                </td>
+                                                            </tr>
+                                                            #if("$!domain.purAplManagement.reqUser.reqUser.section.company.currency.currencyCd" != "$!domain.purAplManagement.catalogPurReqList[$velocityCount].priceArticle.supplierFrom.currency.currencyCd"
+                                                                && "$!domain.purAplManagement.catalogPurReqList[$velocityCount].priceArticle.supplierFrom.currency.currencyCd" != "")
+                                                            <tr>
+                                                                ##換算金額
+                                                                <td nowrap align="left"><span class="FontMini">#customSpringMessage('CONVERTED_AMOUNT')：</span></td>
+                                                                <td nowrap align="right">
+                                                                    <span class="FontCurrMini">&nbsp;
+                                                                        #if("$!domain.purAplManagement.reqUser.reqUser.section.company.currency.currencyMark" == "\")
+                                                                            &yen;
+                                                                        #else
+                                                                            #out($!domain.purAplManagement.reqUser.reqUser.section.company.currency.currencyMark)
+                                                                        #end
+                                                                        #out($!domain.purAplManagement.catalogPurReqList[$velocityCount].cnvAmount.cnvAmount.amountFormat)
+                                                                    </span>
+                                                                    <span class="FontMiniAnkBold">#out($!domain.purAplManagement.reqUser.reqUser.section.company.currency.currencyCd)</span>
+                                                                </td>
+                                                            </tr>
+                                                            #end
+                                                        </table>
+                                                    </td>
+                                                </tr>
+                                                #if("$!domain.purAplManagement.catalogPurReqList[$velocityCount].externalCatalogDataList.display1" != "" ||
+                                                    "$!domain.purAplManagement.catalogPurReqList[$velocityCount].externalCatalogDataList.display2" != "" ||
+                                                    "$!domain.purAplManagement.catalogPurReqList[$velocityCount].externalCatalogDataList.display3" != "" ||
+                                                    "$!domain.purAplManagement.catalogPurReqList[$velocityCount].externalCatalogDataList.display4" != "" ||
+                                                    "$!domain.purAplManagement.catalogPurReqList[$velocityCount].externalCatalogDataList.display5" != "")
+                                                <tr>
+                                                    <td class="ProductArea" align="left" valign="top" colspan="3" >
+                                                        <table>
+                                                            #if("$!domain.purAplManagement.catalogPurReqList[$velocityCount].externalCatalogDataList.display1" != "")
+                                                            <tr>
+                                                                <td nowrap valign="top"><span class="FontMini">#customSpringMessage('DISPLAY1'):</span></td><!--カタログ情報1-->
+                                                                <td><span class="FontMini">#out("$!domain.purAplManagement.catalogPurReqList[$velocityCount].externalCatalogDataList.display1")</span></td>
+                                                            </tr>
+                                                            #end
+                                                            #if("$!domain.purAplManagement.catalogPurReqList[$velocityCount].externalCatalogDataList.display2" != "")
+                                                            <tr>
+                                                                <td nowrap valign="top"><span class="FontMini">#customSpringMessage('DISPLAY2'):</span></td><!--カタログ情報2-->
+                                                                <td><span class="FontMini">#out("$!domain.purAplManagement.catalogPurReqList[$velocityCount].externalCatalogDataList.display2")</span></td>
+                                                            </tr>
+                                                            #end
+                                                            #if("$!domain.purAplManagement.catalogPurReqList[$velocityCount].externalCatalogDataList.display3" != "")
+                                                            <tr>
+                                                                <td nowrap valign="top"><span class="FontMini">#customSpringMessage('DISPLAY3'):</span></td><!--カタログ情報3-->
+                                                                <td><span class="FontMini">#out("$!domain.purAplManagement.catalogPurReqList[$velocityCount].externalCatalogDataList.display3")</span></td>
+                                                            </tr>
+                                                            #end
+                                                            #if("$!domain.purAplManagement.catalogPurReqList[$velocityCount].externalCatalogDataList.display4" != "")
+                                                            <tr>
+                                                                <td nowrap valign="top"><span class="FontMini">#customSpringMessage('DISPLAY4'):</span></td><!--カタログ情報4-->
+                                                                <td><span class="FontMini">#out("$!domain.purAplManagement.catalogPurReqList[$velocityCount].externalCatalogDataList.display4")</span></td>
+                                                            </tr>
+                                                            #end
+                                                            #if("$!domain.purAplManagement.catalogPurReqList[$velocityCount].externalCatalogDataList.display5" != "")
+                                                            <tr>
+                                                                <td nowrap valign="top"><span class="FontMini">#customSpringMessage('DISPLAY5'):</span></td><!--カタログ情報5-->
+                                                                <td><span class="FontMini">#out("$!domain.purAplManagement.catalogPurReqList[$velocityCount].externalCatalogDataList.display5")</span></td>
+                                                            </tr>
+                                                            #end
+                                                        </table>
+                                                    </td>
+                                                </tr>
+                                                #end
+
+                                                ## 拡張項目
+                                                #if($!PSAPR012PageCreater.getDetailSize() > 0)
+                                                <tr>
+                                                    <td></td>
+                                                    <td class="ProductArea" colspan="3">
+                                                        <table class="NoBorder">
+                                                            <tbody class="NoBorder">
+                                                    $!PSAPR012PageCreater.build('reg', '_tr_style', '', '_td_style_left', 'class="FontMini" style="width:60px;padding-right:0px"', '_td_style_right', 'class="FontMini" style="width:500px;padding-left:0px"')
+                                                    #foreach($!item in $!PSAPR012PageCreater.getItemListForDetail($velocityCount))
+                                                        $!PSAPR012PageCreater.printDefaultForCancel($!item)
+                                                    #end
+                                                            </tbody>
+                                                        </table>
+                                                    </td>
+                                                </tr>
+                                                #end
+                                                <tr><td colspan="4" style="border-bottom:1px dotted #669999;"></td></tr>
+                                                #end
+                                                #end
+
+                                            </table>
+                                            <br>
+                                            <table class="Box1G" width="100%">
+                                                <tr>
+                                                    <td class="Box1H FontBoxHeader">#customSpringMessage('APP_ROUTE_NAME')<!--承認ルート名--></td>
+                                                    <td align="left" nowrap>
+                                                        <span class="FontSmall">#out($!domain.purAplManagement.appRouteName)</span>
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <td class="Box1H FontBoxHeader">#customSpringMessage('APP_USER')</td><!--承認者-->
+                                                    <td class="Box1D">
+
+                                                        <table id="authorizer" class="AppSheet" width="98%" style="-webkit-box-shadow:2px 2px 0px #000000">
+
+                                                            #if($!domain.purAplManagement.appManagement.appList.appItemList.size()!=0)
+                                                            #foreach($!appItem in $!domain.purAplManagement.appManagement.appList.appItemList)
+                                                            <tr id = "row_$velocityCount" name = "row_$velocityCount">
+
+                                                                <td class="AppNoArea FontNumber">#out($!domain.purAplManagement.appManagement.appList.appItemList[$velocityCount].appSeq)</td>
+                                                                <td class="AppPersonArea" nowrap>
+                                                                    <span class="FontSmall">
+                                                                        #if("$!appItem.subAppFlg" == "1")
+                                                                            #out($!domain.purAplManagement.appManagement.appList.appItemList[$velocityCount].subAppUserName.section.sectionCd) 
+                                                                            #out($!domain.purAplManagement.appManagement.appList.appItemList[$velocityCount].subAppUserName.section.sectionName)
+                                                                        #else
+                                                                            #out($!domain.purAplManagement.appManagement.appList.appItemList[$velocityCount].appUserName.section.sectionCd) 
+                                                                            #out($!domain.purAplManagement.appManagement.appList.appItemList[$velocityCount].appUserName.section.sectionName)
+                                                                        #end
+                                                                    </span><br>
+                                                                    #if("$!appItem.subAppFlg" == "1")
+                                                                        <span class="FontSmall">#out($!domain.purAplManagement.appManagement.appList.appItemList[$velocityCount].subAppUserName.userID) </span>&nbsp;<span class="FontUserName"><b class="FontUserName">#out($!domain.purAplManagement.appManagement.appList.appItemList[$velocityCount].subAppUserName.userName)</b></span>
+                                                                        &nbsp;<span class="FontMini">#out($!domain.purAplManagement.appManagement.appList.appItemList[$velocityCount].subAppUserName.official.officialName)</span>
+                                                                    #else
+                                                                        <span class="FontSmall">#out($!domain.purAplManagement.appManagement.appList.appItemList[$velocityCount].appUserName.userID) </span>&nbsp;<span class="FontUserName"><b class="FontUserName">#out($!domain.purAplManagement.appManagement.appList.appItemList[$velocityCount].appUserName.userName)</b></span>
+                                                                        &nbsp;<span class="FontMini">#out($!domain.purAplManagement.appManagement.appList.appItemList[$velocityCount].appUserName.official.officialName)</span>
+                                                                    #end
+                                                                </td>
+                                                                <td class="AppPersonArea">
+                                                                    <table class="NoBorder">
+                                                                        <tr>
+                                                                            <td><img src="../../image/mrkTel.gif" ></td>
+                                                                            <td class="FontMini" nowrap>
+                                                                                #customSpringMessage('EXTENSION_NO')：<!-- 内線番号-->
+                                                                                <span class="FontSmallAnk">
+                                                                                    #if("$!appItem.subAppFlg" == "1")
+                                                                                        #out($!domain.purAplManagement.appManagement.appList.appItemList[$velocityCount].subAppUserName.extNo.extensionNo)
+                                                                                    #else
+                                                                                        #out($!domain.purAplManagement.appManagement.appList.appItemList[$velocityCount].appUserName.extNo.extensionNo)
+                                                                                    #end
+                                                                                </span>&nbsp;&nbsp;#customSpringMessage('EXTERNAL_NO')：<!-- 外線番号-->
+                                                                                <span class="FontSmallAnk">
+                                                                                    #if("$!appItem.subAppFlg" == "1")
+                                                                                        #out($!domain.purAplManagement.appManagement.appList.appItemList[$velocityCount].subAppUserName.externalNo.externalNo)
+                                                                                    #else
+                                                                                        #out($!domain.purAplManagement.appManagement.appList.appItemList[$velocityCount].appUserName.externalNo.externalNo)
+                                                                                    #end
+                                                                                </span>
+                                                                            </td>
+                                                                        </tr>
+                                                                        <tr>
+                                                                            <td><img src="../../image/mrkMail.gif"></td><!-- メールアドレス-->
+                                                                            <td class="FontMiniAnkBold" nowrap>
+                                                                                <span class="FontMiniAnk">
+                                                                                    #if("$!appItem.subAppFlg" == "1")
+                                                                                        <A HREF='mailto: <#out($!domain.purAplManagement.appManagement.appList.appItemList[$velocityCount].subAppUserName.mailAddr.mail)>'>
+                                                                                        #out($!domain.purAplManagement.appManagement.appList.appItemList[$velocityCount].subAppUserName.mailAddr.mail)
+                                                                                    #else
+                                                                                        <A HREF='mailto: <#out($!domain.purAplManagement.appManagement.appList.appItemList[$velocityCount].appUserName.mailAddr.mail)>'>
+                                                                                        #out($!domain.purAplManagement.appManagement.appList.appItemList[$velocityCount].appUserName.mailAddr.mail)
+                                                                                    #end
+                                                                                    </A>
+                                                                                </span>
+                                                                            </td>
+                                                                            <td align="right" valign="bottom"></td>
+                                                                        </tr>
+                                                                    </table>
+                                                                </td>
+                                                                #if("$!domain.purAplManagement.appManagement.appList.appItemList[$velocityCount].appItemStatus.appItemStatus"=="3"||
+                                                                    "$!domain.purAplManagement.appManagement.appList.appItemList[$velocityCount].appItemStatus.appItemStatus"=="2")
+                                                                <td nowrap class="AppStampArea">
+                                                                    <span class="ScreenName">$!domain.purAplManagement.appManagement.appList.appItemList[$velocityCount].appItemStatus.appItemStatus_PageValue</span><!--承認-->
+                                                                    <span class="FontMiniAnkBold"><br>#out($!domain.purAplManagement.appManagement.appList.appItemList[$velocityCount].appDate.appDate.dateOfymdDispYMD)</span>
+                                                                </td>
+                                                                #elseif("$!domain.purAplManagement.appManagement.appList.appItemList[$velocityCount].appItemStatus.appItemStatus"=="4")
+                                                                <td nowrap class="AppStampArea">
+                                                                    <span class="FontBigBold Red">$!domain.purAplManagement.appManagement.appList.appItemList[$velocityCount].appItemStatus.appItemStatus_PageValue</span><!--差戻し-->
+                                                                    <span class="FontMiniAnkBold"><br>#out($!domain.purAplManagement.appManagement.appList.appItemList[$velocityCount].appDate.appDate.dateOfymdDispYMD)</span>
+                                                                </td>
+                                                                #elseif($!domain.purAplManagement.appManagement.appList.appItemList[$velocityCount].appSeq!=$!domain.purAplManagement.appManagement.appList.appSeq && $!domain.purAplManagement.appManagement.appList.appItemList[$velocityCount].canDelete())
+                                                                <td class="AppStampArea">
+                                                                    <input type="button" class="MiniButton" value="#customSpringMessage('ACTION_DELETE')" onclick="removeAuthorizer(this);">
+                                                                </td>
+                                                                #else
+                                                                <td class="AppStampArea">
+                                                                    <span>&nbsp;</span>
+                                                                </td>
+                                                                #end
+                                                            </tr>
+                                                            #if($velocityCount+1 <$!domain.purAplManagement.appManagement.appList.appItemList.size())
+                                                            <tr id = "row_$velocityCount" name = "row_$velocityCount"><td colspan="4" class="AppBorder">&nbsp;</td></tr>
+                                                            #end
+                                                            
+                                                            #end
+                                                            #end
+                                                        </table>
+                                                        <br>
+                                                        <table>
+                                                            <tr>
+                                                                <td valign="top"><img src="../../image/mrkGuide.gif">&nbsp;</td>
+                                                                <td class="FontMini">
+                                                                    #customSpringMessage('APP_ADD_BUTTON_COMMENT')
+                                                                    ## 承認者を追加したい場合は、追加したい承認者とその順序を指定して、「承認者の追加」ボタンをクリックしてください。<br>自分の承認した後の順序に追加できます。
+                                                                    <br>
+                                                                </td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td nowrap colspan="2" align="center">
+                                                                    <table>
+                                                                        <tr>
+                                                                            <td class="FontMini" align="left" valign="middle" nowrap>#customSpringMessage('ADD_APP_USER'):</td>  <!--追加する承認者-->
+                                                                            <td>
+                                                                                #springFormInput("domain.purAplManagement.appManagement.appList.appUserName.userID" "class='SmallDsp' maxlength='12' type='text' size='14' readonly tabIndex='-1' ondblclick='searchAuthorizer();'")
+                                                                                #springFormInput("domain.purAplManagement.appManagement.appList.appUserName.userName" "class='SmallDsp' type='text' size='20' readonly tabIndex='-1' ondblclick='searchAuthorizer();'")
+                                                                                <img class="Icon" name="UserSearch" src="../../image/btnLupe.gif" onclick="searchAuthorizer();">
+                                                                                
+                                                                                #springFormHiddenInput("domain.purAplManagement.appManagement.appList.appUserName.section.sectionCd" "")
+                                                                                #springFormHiddenInput("domain.purAplManagement.appManagement.appList.appUserName.section.sectionName" "")
+                                                                                #springFormHiddenInput("domain.purAplManagement.appManagement.appList.appUserName.official.officialName" "")
+                                                                                #springFormHiddenInput("domain.purAplManagement.appManagement.appList.appUserName.section.sectionPlace.sectionPlaceCd" "")
+                                                                                #springFormHiddenInput("domain.purAplManagement.appManagement.appList.appUserName.section.sectionPlace.sectionPlaceName" "")
+                                                                                #springFormHiddenInput("domain.purAplManagement.appManagement.appList.appUserName.mailAddr.mail" "")
+                                                                                #springFormHiddenInput("domain.purAplManagement.appManagement.appList.appUserName.extNo.extensionNo" "")
+                                                                                #springFormHiddenInput("domain.purAplManagement.appManagement.appList.appUserName.externalNo.externalNo" "")
+                                                                            </td>
+                                                                            <td class="FontMini" align="left" valign="middle" nowrap>#customSpringMessage('ORDER'):</td><!--順序-->
+                                                                            <td class="FontMini" align="left" valign="middle" nowrap>
+                                                                                #customFormSingleSelectForApproval("domain.purAplManagement.appManagement.appList.appSeqByAdd" $!approvalList "class='Small'")
+                                                                            </td>   
+                                                                            <td>
+                                                                                <input type="button" class="MiniButton" value="#customSpringMessage('ACTION_ADD_APP_USER')" onclick="addAuthorizer()"><!--承認者の追加-->
+                                                                            </td>
+                                                                        </tr>
+                                                                    </table>
+                                                                </td>
+                                                            </tr>
+                                                        </table>
+                                                    </td>
+                                                </tr>
+                                            </table>
+                                            <br>
+                                            <table class="NoBorder Box1G" width="100%">
+                                                #set($backUserName = $!domain.purAplManagement.appManagement.backApp.backAppFirstUser.userName)
+                                                #set($domainPath = "domain.purAplManagement.appManagement")
+                                                #set($delComment = "APL_USER_COMMENT")
+                                                #parse("./common/common_back.vm")
+                                            </table>
+                                            <br>
+                                            <table class="NoBorder" width="98%">
+                                                    <tr>
+                                                        <br>
+                                                        <td>#customSpringMessage('PSAPR012_FOOTER_COMMENT')</td>
+                                                        <td align="right" valign="middle">
+                                                            <input type="button" nowrap class="LargeButton Red" value="#customSpringMessage('RETURN')" onclick="sendBack();">&nbsp;&nbsp;<input id="Submit" type="button" nowrap class="LargeButton" value="#customSpringMessage('APPROVAL')" onclick="approval();"><!--差戻し--><!--承　認-->
+                                                        </td>
+                                                    </tr>
+                                            </table>
+                                        </td>
+                                    </tr>
+                                </table>
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+            </td>
+        </tr>
+    </table>
+</form>
+</body>
+</html>
+
+<script>
+    getObj("Area").style.display = "block";
+</script>

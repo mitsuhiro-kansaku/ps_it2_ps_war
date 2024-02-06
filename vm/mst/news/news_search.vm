@@ -1,0 +1,186 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta http-equiv="Content-type" content="text/html; charset=UTF-8">
+<title>#customSpringMessage('T_NEWS')</title><!--お知らせ情報 -->
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Content-script-type" content="text/javascript">
+<link id="CSS_FONT" rel="stylesheet" href="../../include/FontS.css" type="text/css">
+<link rel="stylesheet" href="../../include/Layout.css" type="text/css">
+<link rel="stylesheet" href="../../include/Color.css" type="text/css">
+<link rel="stylesheet" href="../../include/searchbox.css" type="text/css">
+<link rel="stylesheet" href="../../include/ime.css" type="text/css">
+<script language="javascript" type="text/javascript" src="../../include/common.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/date.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/check.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/searchbox.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/jquery-1.7.2.min.js"></script>
+
+<script language="javascript" type="text/javascript">
+<!--
+#set($commonTitle = "#customSpringMessage('SCREEN_T_NEWS_LIST')")
+## +++++ 強化-00832-000 2013/05/02 ADD SBO_wangzf START +++++
+## ----- 強化-01301-000 2013/05/08 DEL SBO_wangzf START -----
+## #set($authNoFlag="true")
+## ----- 強化-01301-000 2013/05/08 DEL SBO_wangzf END -----
+## +++++ 強化-00832-000 2013/05/02 ADD SBO_wangzf END +++++
+## +++++ 強化-01301-000 2013/05/08 ADD SBO_wangzf START +++++
+#set($authNoFlag=$LoginUser.hasAuth(${AuthNoConstant.getValue("NEWS_UPDATE_GRANT")}))
+## +++++ 強化-01301-000 2013/05/08 ADD SBO_wangzf END +++++
+var pinName="MstNews_Pin";
+var newPageId="newsRegist";
+
+#parse("./common/common_js.vm")
+function onLoad(){
+    bodyLoad();
+    var alertMessage = "$!alertMessage";
+    if (alertMessage != ""){
+        alert(alertMessage);
+    }
+    var errorMsg = "$!errorMessage";
+    if (errorMsg != ""){
+        document.getElementById("TR_ERROR").style.display = "";
+        ## ----- ＩＴ３-00024-000 2013/06/29 DEL SBO_pangzhen START -----
+        ## document.getElementById("DATAAREA").src="";
+        ## ----- ＩＴ３-00024-000 2013/06/29 DEL SBO_pangzhen -END- -----
+        ## +++++ ＩＴ３-00024-000 2013/06/29 ADD SBO_pangzhen START +++++
+        document.getElementById("DATAAREA").contentWindow.document.body.innerText = ""; 
+        ## +++++ ＩＴ３-00024-000 2013/06/29 ADD SBO_pangzhen -END- +++++
+        return;
+    }
+        var isShowList = "#jsEscape($isShowList)";
+        if (isShowList == 'true'){
+            iframeChange("${flowExecutionUrl}&_eventId=search","pageid","newsList");
+        }
+    
+    
+}
+function doSearch() {
+    buttonDisable();
+    getObj("BodyForm").action = "${flowExecutionUrl}&_eventId=validate";
+    getObj("BodyForm").submit();
+}
+
+
+//-->
+
+</script>
+</head>
+<body topmargin="0" leftmargin="0" marginwidth="0" marginheight="0" align="center" width="100%" height="100%" onload="onLoad();" style="overflow-y:hidden;">
+<form id="BodyForm" name="Body" action="${flowExecutionUrl}&_eventId=validate" method="post"><!-- target="DATAAREA" -->
+    <!-- ＊＊＊＊＊　カレンダーボックス　＊＊＊＊＊ -->
+	<iframe id="CALENDARBOX" class="CALENDARBOX" framespacing="0"scrolling="no" frameborder="0" src="../../sbxCalendar/body.vm"></iframe>
+        #customFormHiddenInput("searchCondition.page.pageRecorders.hidden" "$!defaultSearchCondition.searchCondition.page.pageRecorders")
+        #customFormHiddenInput("validStartDateTo.dateOfymd.hidden" "$!defaultSearchCondition.validStartDateTo.dateOfymd")
+        #customFormHiddenInput("validEndDateFrom.dateOfymd.hidden" "$!defaultSearchCondition.validEndDateFrom.dateOfymd")
+        #customFormHiddenInput("sendUserName.hidden" "$!defaultSearchCondition.sendUserName")
+        #customFormHiddenInput("userKbn.recvUserInd.hidden" "$!defaultSearchCondition.userKbn.recvUserInd")
+        <!--todo閲覧範囲 #customFormHiddenInput()-->
+        <!--todo発信者 #customFormHiddenInput()-->
+        
+    <!--検索部テーブル開始-->
+	<table class="NoBorder" width="100%" height="100%">
+		<tr>
+			<td id="SEARCH_AREA" class="SearchArea"><!-- onLoadで変更 -->
+                #parse("./common/common_title.vm")
+				<span class="CornerBtmGray">
+	  			<span class="Corner4"></span> <span class="Corner3"></span> <span class="Corner2"></span><span class="Corner1"></span>
+				</span>
+
+				<table width="100%">
+					<tr id="SEARCH_AREA2">
+						<td id="Adjust">
+							<!-- 検索条件入力部 -->
+							<table class="Noborder" width="100%">
+                                <tr><td align="left" colspan="4" nowrap>#customSpringMessage('PSMST320_HEADER_COMMENT')</td></tr>
+								<tr>
+									<td >
+										<table class="Noborder" width="100%">
+                                            <tr>
+                                                <td nowrap class="FontSmallBold" align="right">
+                                                     #if("$!isUseAll"=="false")
+                                                         #customSpringMessage('COMPANY_NAME')<!-- 会社名 --><span class="FontWarn">&nbsp;※</span>
+                                                     #end
+                                                 </td>
+                                                 <td nowrap class="FontSmallBold" align="left">
+                                                     #if("$!isUseAll"=="true")
+                                                         #customFormHiddenInput("companyCd" "ALL")
+                                                     #else
+                                                         #customFormSingleSelect("searchCondition.companyCd" $companyList "class='Small'")
+                                                         #customFormHiddenInput("companyCd.hidden" "$!defaultSearchCondition.companyCd")
+                                                     #end
+                                                </td>
+                                            </tr>
+                                            
+                                            
+											<tr>
+												<td nowrap class="FontSmallBold" align="right">#customSpringMessage('SEND_USER')<!--発信者--><span class="FontComment">％</span></td>
+												<td nowrap class="FontSmallBold" align="left">
+                                                    #springFormInput("searchCondition.sendUserName" "class='Small' maxlength=30 type='text' size=40")
+                                                </td>
+
+												<td nowrap class="FontSmallBold" align="right">#customSpringMessage('VIEW_SIGHT')<!--閲覧範囲--></td>
+												<td nowrap class="FontSmall" align="left">
+                                                    #customFormRadioButtons("searchCondition.userKbn.recvUserInd" $userKbnList "" "")
+												</td>
+											</tr>
+											<tr>
+												<td nowrap class="FontSmallBold" align="right">#customSpringMessage('PUBLICATION_PERIOD_FROM')</td><!--掲載期間（開始）-->
+												<td nowrap class="FontSmallBold" align="left">
+													 #springFormInput("searchCondition.validStartDateFrom.dateOfymdFormat" "maxLength=8 size=12 class='Small noIME' onblur='dateOnBlur(this);' onfocus='dateOnFocus(this);' ")<!--ここをダブルクリックすると、カレンダーを開きます。-->
+                                                    <img class="Icon" src="../../image/btnCalendar.gif" onclick="initSearchBox(1,getObj('validStartDateFrom.dateOfymdFormat'));"><!--カレンダー-->
+                                                    &nbsp;～&nbsp;
+                                                    #springFormInput("searchCondition.validStartDateTo.dateOfymdFormat" "maxLength=8 size=12 class='Small noIME' onblur='dateOnBlur(this);' onfocus='dateOnFocus(this);' ")<!--ここをダブルクリックすると、カレンダーを開きます。-->
+                                                    <img class="Icon" src="../../image/btnCalendar.gif" onclick="initSearchBox(1,getObj('validStartDateTo.dateOfymdFormat'));"><!--カレンダー-->
+												</td>
+												<td nowrap class="FontSmallBold" align="right">#customSpringMessage('PUBLICATION_PERIOD_TO')<!--掲載期間（終了）--></td>
+												<td nowrap class="FontSmallBold" align="left">
+													#springFormInput("searchCondition.validEndDateFrom.dateOfymdFormat" "maxLength=8 size=12 class='Small noIME' onblur='dateOnBlur(this);' onfocus='dateOnFocus(this);' ")<!--ここをダブルクリックすると、カレンダーを開きます。-->
+                                                    <img class="Icon" src="../../image/btnCalendar.gif" onclick="initSearchBox(1,getObj('validEndDateFrom.dateOfymdFormat'));"><!--カレンダー-->
+                                                    &nbsp;～&nbsp;
+                                                    #springFormInput("searchCondition.validEndDateTo.dateOfymdFormat" "maxLength=8 size=12 class='Small noIME' onblur='dateOnBlur(this);' onfocus='dateOnFocus(this);' ")<!--ここをダブルクリックすると、カレンダーを開きます。-->
+                                                    <img class="Icon" src="../../image/btnCalendar.gif" onclick="initSearchBox(1,getObj('validEndDateTo.dateOfymdFormat'));"><!--カレンダー-->
+												</td>
+											</tr>
+										</table>
+									</td>
+									<td nowrap class="FontSmallBold" align="right">
+										#customSpringMessage('DISPLAY_COUNT')<!-- 表示件数 -->&nbsp;
+                                        #customFormRadioButtons("searchCondition.searchCondition.page.pageRecorders" $pageRecordersList "" "")
+										<br>
+										<input type="button" class="LargeButton" value="#customSpringMessage('ACTION_SEARCH')" onclick="javascript:doSearch()"><!-- 検索 -->
+										<br>
+										<br>
+                                        ## 強化-00928-000 20130624 SBO_SOKOU MODIFY START
+										<a href="javascript:clear();">#customSpringMessage('ACTION_CLEAR_SEARCH_CRITERIA')<!-- 検索条件をクリアする --></a>
+                                        ## 強化-00928-000 20130624 SBO_SOKOU MODIFY -END-
+									</td>
+								</tr>
+								<tr>
+									<td align="left" colspan="4" nowrap class="FontComment">
+                                        #customSpringMessage('PSMST320_FOOTER_COMMENT') ## ＊:前方一致 / ％:中間一致 / なし:完全一致
+                                    </td>
+								</tr>
+							</table>
+						</td>
+					</tr>
+				</table>
+			</td>
+		</tr>
+		<tr id ="TR_ERROR" style="display:none;">
+            <td class="error" style="height:0px;">
+                $!errorMessage
+            </td>
+        </tr>
+        <tr>
+            <td class="NoBorder" style="height:auto;">
+                <iframe id="DATAAREA" name="DATAAREA" framespacing="0" frameborder="0" src="../../layout/default.vm" scrolling="no" frameborder="no" style="position:static;width:100%;border:0px solid #999999;height:100%;z-index:0;"></iframe>
+            </td>
+        </tr>
+    </table>
+    <iframe id="HIDDENAREA" name="HIDDENAREA" framespacing="0" frameborder="0" src="" scrolling="no" frameborder="no" style="display:none"></iframe>
+
+</form>
+
+</body>
+</html>

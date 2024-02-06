@@ -1,0 +1,1284 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="ps.dataaccess.mst.section.SectionMapper">
+    <resultMap type="fw.domain.mst.organization.section.SectionManagement" id="SectionManagement_Map">
+        <id  column="M_SECTION$VALID_START_DATE" property="identify.validStartDate.dateOfymd"/>
+        <id  column="M_SECTION$VALID_END_DATE" property="identify.validEndDate.dateOfymd"/>
+        <id  column="BUYER_SECTION_FLG" property="business.type.sectionTypeBuyer"/>
+        <id  column="ACC_SECTION_FLG" property="business.type.sectionTypeAcc"/>
+        <id  column="PLANNED_SECTION_FLG" property="business.type.sectionTypePlanned"/>
+        <id  column="UPPER_SECTION_CD" property="orga.upSection.upperSectionCd"/>
+        <id  column="UPPER_SECTION_NAME" property="orga.upSection.upperSectionName"/>
+        <id  column="TOTAL_SECTION_CD" property="business.totalCd.totalSectionCd"/>
+        <id  column="TOTAL_SECTION_NAME" property="business.totalCd.totalSectionName"/>
+    </resultMap>
+    <select id="listSectionManagement" parameterType="fw.domain.mst.organization.section.SectionSearchCondition"
+        resultMap="SectionManagement_Map">
+        <include refid="pageHeader"/>
+            SELECT
+                M_SECTION.COMPANY_CD as "identify.companyCd",
+                M_SECTION.SECTION_CD as "identify.sectionCd",
+                M_SECTION_LANG.LANGUAGE_IND as "companySummary.languageInd",
+                M_SECTION_LANG.SECTION_NAME AS "sectionName",
+                M_SECTION.VALID_START_DATE as "M_SECTION$VALID_START_DATE",
+                M_SECTION.VALID_END_DATE as "M_SECTION$VALID_END_DATE",
+                M_SECTION.SECTION_PLACE_CD "sectionPlaceCd",
+                M_SECTION.UPPER_SECTION_CD as "UPPER_SECTION_CD",
+                M_SECTION.Extension_No as "orga.contact.extNo.extensionNo",
+                M_SECTION.TEL_NO as "orga.contact.telNo.telNo",   
+                M_SECTION.FAX_NO as "orga.contact.faxNo.faxNo",  
+                M_SECTION.TOTAL_SECTION_CD as "TOTAL_SECTION_CD",
+                M_SECTION.BUYER_SECTION_FLG as "BUYER_SECTION_FLG",
+                M_SECTION.ACC_SECTION_FLG as "ACC_SECTION_FLG",
+                M_SECTION.PLANNED_SECTION_FLG as "PLANNED_SECTION_FLG",
+                M_SECTION.TERM_FLG as "term.termFlg"
+            FROM 
+                M_SECTION
+            INNER JOIN (
+                  SELECT
+                    M_COMPANY.COMPANY_CD,
+                    COMPANY_USE_LANGUAGE_IND
+                  FROM M_COMPANY 
+                    INNER JOIN M_COMPANY_LANG
+                    ON M_COMPANY.COMPANY_CD = M_COMPANY_LANG.COMPANY_CD
+                    AND M_COMPANY.COMPANY_USE_LANGUAGE_IND = M_COMPANY_LANG.LANGUAGE_IND
+                    AND M_COMPANY.COMPANY_CD = #{companyCd, jdbcType=VARCHAR}
+             ) M_COMPAN 
+                    ON  M_SECTION.COMPANY_CD=M_COMPAN.COMPANY_CD
+            
+            INNER JOIN M_SECTION_LANG M_SECTION_LANG
+                ON M_SECTION.SECTION_CD=M_SECTION_LANG.SECTION_CD
+                AND M_SECTION.COMPANY_CD = M_SECTION_LANG.COMPANY_CD
+                AND M_SECTION.VALID_START_DATE = M_SECTION_LANG.VALID_START_DATE
+                AND M_SECTION.VALID_END_DATE = M_SECTION_LANG.VALID_END_DATE
+           <where>
+                <if test="@org.apache.commons.lang.StringUtils@isNotBlank(companyCd)">
+                  AND M_SECTION.COMPANY_CD = #{companyCd, jdbcType=VARCHAR}
+                 </if> 
+                 <if test="@org.apache.commons.lang.StringUtils@isNotBlank(sectionCd)">
+                  AND M_SECTION.SECTION_CD ${@fw.common.util.SearchModeUtil@getSearchSQL("fw.domain.mst.organization.section.SectionSearchCondition","sectionCd")}
+                 </if>
+                 <if test="@org.apache.commons.lang.StringUtils@isNotBlank(sectionName)">
+                  AND M_SECTION_LANG.SECTION_NAME ${@fw.common.util.SearchModeUtil@getSearchSQL("fw.domain.mst.organization.section.SectionSearchCondition","sectionName")}
+                 </if>
+                 <if test="@org.apache.commons.lang.StringUtils@isNotBlank(upperSectionCd)">
+                  AND M_SECTION.UPPER_SECTION_CD = #{upperSectionCd, jdbcType=VARCHAR}
+                 </if>            
+                 <if test="@org.apache.commons.lang.StringUtils@isNotBlank(sectionPlaceCd)">
+                  AND M_SECTION.SECTION_PLACE_CD = #{sectionPlaceCd, jdbcType=VARCHAR}
+                 </if>      
+                 <if test="@org.apache.commons.lang.StringUtils@isNotBlank(validStartDateFrom.dateOfymd)">
+                  AND M_SECTION.VALID_START_DATE >= #{validStartDateFrom.dateOfymd}
+                 </if>
+                 <if test="@org.apache.commons.lang.StringUtils@isNotBlank(validStartDateTo.dateOfymd)">
+                  AND M_SECTION.VALID_START_DATE &lt;= #{validStartDateTo.dateOfymd}
+                 </if>
+                 <if test="@org.apache.commons.lang.StringUtils@isNotBlank(validEndDateFrom.dateOfymd)">
+                  AND M_SECTION.VALID_END_DATE >= #{validEndDateFrom.dateOfymd}
+                 </if>
+                 <if test="@org.apache.commons.lang.StringUtils@isNotBlank(validEndDateTo.dateOfymd)">
+                  AND M_SECTION.VALID_END_DATE &lt;= #{validEndDateTo.dateOfymd}
+                 </if>       
+                 <if test="@fw.domain.mst.searchcondition.SearchCondition@termFlgIsNotEmpty(searchCondition.termFlg)">
+                  AND M_SECTION.TERM_FLG = #{searchCondition.termFlg, jdbcType=VARCHAR}
+              </if>
+        </where> 
+        ORDER BY M_SECTION.SECTION_CD ASC
+                , M_SECTION.VALID_START_DATE DESC
+                , M_SECTION_LANG.LANGUAGE_IND ASC
+        <include refid="pageRoot"/>
+    </select>
+    <select id="downloadCount" parameterType="fw.domain.mst.organization.section.SectionSearchCondition"
+        resultType="java.lang.Long">
+            SELECT
+                COUNT(*)
+            FROM 
+                M_SECTION
+            INNER JOIN (
+                  SELECT
+                    M_COMPANY.COMPANY_CD,
+                    COMPANY_USE_LANGUAGE_IND
+                  FROM M_COMPANY 
+                    INNER JOIN M_COMPANY_LANG
+                    ON M_COMPANY.COMPANY_CD = M_COMPANY_LANG.COMPANY_CD
+                    AND M_COMPANY.COMPANY_USE_LANGUAGE_IND = M_COMPANY_LANG.LANGUAGE_IND
+                    AND M_COMPANY.COMPANY_CD = #{companyCd, jdbcType=VARCHAR}
+             ) M_COMPAN 
+                    ON  M_SECTION.COMPANY_CD=M_COMPAN.COMPANY_CD
+            
+            INNER JOIN M_SECTION_LANG M_SECTION_LANG
+                ON M_SECTION.SECTION_CD=M_SECTION_LANG.SECTION_CD
+                AND M_SECTION.COMPANY_CD = M_SECTION_LANG.COMPANY_CD
+                AND M_SECTION.VALID_START_DATE = M_SECTION_LANG.VALID_START_DATE
+                AND M_SECTION.VALID_END_DATE = M_SECTION_LANG.VALID_END_DATE
+           <where>
+                <if test="@org.apache.commons.lang.StringUtils@isNotBlank(companyCd)">
+                  AND M_SECTION.COMPANY_CD = #{companyCd, jdbcType=VARCHAR}
+                 </if> 
+                 <if test="@org.apache.commons.lang.StringUtils@isNotBlank(sectionCd)">
+                  AND M_SECTION.SECTION_CD ${@fw.common.util.SearchModeUtil@getSearchSQL("fw.domain.mst.organization.section.SectionSearchCondition","sectionCd")}
+                 </if>
+                 <if test="@org.apache.commons.lang.StringUtils@isNotBlank(sectionName)">
+                  AND M_SECTION_LANG.SECTION_NAME ${@fw.common.util.SearchModeUtil@getSearchSQL("fw.domain.mst.organization.section.SectionSearchCondition","sectionName")}
+                 </if>
+                 <if test="@org.apache.commons.lang.StringUtils@isNotBlank(upperSectionCd)">
+                  AND M_SECTION.UPPER_SECTION_CD = #{upperSectionCd, jdbcType=VARCHAR}
+                 </if>            
+                 <if test="@org.apache.commons.lang.StringUtils@isNotBlank(sectionPlaceCd)">
+                  AND M_SECTION.SECTION_PLACE_CD = #{sectionPlaceCd, jdbcType=VARCHAR}
+                 </if>      
+                 <if test="@org.apache.commons.lang.StringUtils@isNotBlank(validStartDateFrom.dateOfymd)">
+                  AND M_SECTION.VALID_START_DATE >= #{validStartDateFrom.dateOfymd}
+                 </if>
+                 <if test="@org.apache.commons.lang.StringUtils@isNotBlank(validStartDateTo.dateOfymd)">
+                  AND M_SECTION.VALID_START_DATE &lt;= #{validStartDateTo.dateOfymd}
+                 </if>
+                 <if test="@org.apache.commons.lang.StringUtils@isNotBlank(validEndDateFrom.dateOfymd)">
+                  AND M_SECTION.VALID_END_DATE >= #{validEndDateFrom.dateOfymd} 
+                 </if>
+                 <if test="@org.apache.commons.lang.StringUtils@isNotBlank(validEndDateTo.dateOfymd)">
+                  AND M_SECTION.VALID_END_DATE &lt;= #{validEndDateTo.dateOfymd}
+                 </if>
+                 <if test="@fw.domain.mst.searchcondition.SearchCondition@termFlgIsNotEmpty(searchCondition.termFlg)">
+                  AND M_SECTION.TERM_FLG = #{searchCondition.termFlg, jdbcType=VARCHAR}
+              </if>
+        </where> 
+        ORDER BY ${searchCondition.columnOrder.columnOrder()}
+    </select>
+
+    <!-- SRC-00115-00 include化共通-->
+    <sql id="listKeyIdentityWhereCondition">
+        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(companyCd)">
+            AND M_SECTION.COMPANY_CD = #{companyCd, jdbcType=VARCHAR}
+        </if>
+        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(sectionCd)">
+            AND M_SECTION.SECTION_CD ${@fw.common.util.SearchModeUtil@getSearchSQL("fw.domain.mst.organization.section.SectionSearchCondition","sectionCd")}
+        </if>
+        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(sectionName)">
+            AND (SECTION_LANG.SECTION_NAME ${@fw.common.util.SearchModeUtil@getSearchSQL("fw.domain.mst.organization.section.SectionSearchCondition","sectionName")}
+             OR SECTION_LANG_SYSTEM.SECTION_NAME ${@fw.common.util.SearchModeUtil@getSearchSQL("fw.domain.mst.organization.section.SectionSearchCondition","sectionName")})
+        </if>
+        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(upperSectionCd)">
+            AND M_SECTION.UPPER_SECTION_CD = #{upperSectionCd}
+        </if>
+        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(sectionPlaceCd)">
+            AND M_SECTION.SECTION_PLACE_CD = #{sectionPlaceCd}
+        </if>
+        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(validStartDateFrom.dateOfymd)">
+            AND M_SECTION.VALID_START_DATE >= #{validStartDateFrom.dateOfymd}
+        </if>
+        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(validStartDateTo.dateOfymd)">
+            AND M_SECTION.VALID_START_DATE &lt;= #{validStartDateTo.dateOfymd}
+        </if>
+        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(validEndDateFrom.dateOfymd)">
+            AND M_SECTION.VALID_END_DATE >= #{validEndDateFrom.dateOfymd}
+        </if>
+        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(validEndDateTo.dateOfymd)">
+            AND M_SECTION.VALID_END_DATE &lt;= #{validEndDateTo.dateOfymd}
+        </if>
+        <if test="@fw.domain.mst.searchcondition.SearchCondition@termFlgIsNotEmpty(searchCondition.termFlg)">
+            AND M_SECTION.TERM_FLG = #{searchCondition.termFlg, jdbcType=VARCHAR}
+        </if>
+    </sql>
+
+    <select id="listKeyIdentity"
+        resultType="fw.domain.mst.organization.section.SectionIdentify">
+        SELECT 
+                M_SECTION.SECTION_CD as "sectionCd",
+            M_SECTION.COMPANY_CD as "companyCd",
+            M_SECTION.VALID_START_DATE as "validStartDate.dateOfymd", 
+            M_SECTION.VALID_END_DATE as "validEndDate.dateOfymd",
+                CASE
+                  WHEN M_SECTION_LANG_NAME.SECTION_NAME IS NOT NULL THEN
+                    M_SECTION_LANG_NAME.SECTION_NAME
+                  WHEN M_SECTION_LANG_NAME_SYSTEM.SECTION_NAME IS NOT NULL THEN
+                    M_SECTION_LANG_NAME_SYSTEM.SECTION_NAME
+                  WHEN section_lang_name.SECTION_NAME IS NOT NULL THEN
+                    section_lang_name.SECTION_NAME
+                  ELSE
+                    section_lang_name_system.SECTION_NAME
+                  END AS "UPPER_SECTION_NAME",
+            CASE
+                 WHEN SECTION_LANG.SECTION_NAME IS NOT NULL THEN
+                   SECTION_LANG.SECTION_NAME
+                 ELSE
+                   SECTION_LANG_SYSTEM.SECTION_NAME
+                 END AS sectionName,
+            CASE
+                  WHEN M_SECTION_PLACE.SECTION_PLACE_NAME IS NOT NULL THEN
+                    M_SECTION_PLACE.SECTION_PLACE_NAME
+                  ELSE
+                    M_SECTION_PLACE_SYSTEM.SECTION_PLACE_NAME
+            END AS sectionPlaceName
+            FROM 
+                M_SECTION M_SECTION 
+                INNER JOIN (
+                  SELECT
+                    M_COMPANY.COMPANY_CD,
+                    COMPANY_USE_LANGUAGE_IND
+                  FROM M_COMPANY 
+                    INNER JOIN M_COMPANY_LANG
+                    ON M_COMPANY.COMPANY_CD = M_COMPANY_LANG.COMPANY_CD
+                    AND M_COMPANY.COMPANY_USE_LANGUAGE_IND = M_COMPANY_LANG.LANGUAGE_IND
+                ) M_COMPAN 
+                    ON  M_SECTION.COMPANY_CD=M_COMPAN.COMPANY_CD
+
+                LEFT JOIN M_SECTION_LANG SECTION_LANG
+                    ON M_SECTION.SECTION_CD = SECTION_LANG.SECTION_CD 
+                    AND M_SECTION.COMPANY_CD=SECTION_LANG.COMPANY_CD 
+                    AND M_SECTION.VALID_START_DATE =SECTION_LANG.VALID_START_DATE 
+                    AND M_SECTION.VALID_END_DATE=SECTION_LANG.VALID_END_DATE
+                    AND SECTION_LANG.LANGUAGE_IND = M_COMPAN.COMPANY_USE_LANGUAGE_IND
+                    
+                LEFT JOIN M_SECTION_LANG SECTION_LANG_SYSTEM
+                    ON M_SECTION.SECTION_CD = SECTION_LANG_SYSTEM.SECTION_CD 
+                    AND M_SECTION.COMPANY_CD=SECTION_LANG_SYSTEM.COMPANY_CD 
+                    AND M_SECTION.VALID_START_DATE =SECTION_LANG_SYSTEM.VALID_START_DATE 
+                    AND M_SECTION.VALID_END_DATE=SECTION_LANG_SYSTEM.VALID_END_DATE
+                    AND SECTION_LANG_SYSTEM.LANGUAGE_IND = '${@fw.common.util.AppUtil@getSysLanguageByEscapeSql()}'
+                    
+                LEFT JOIN (
+                    SELECT 
+                        M_SECTION_PLACE.COMPANY_CD,
+                        M_SECTION_PLACE.SECTION_PLACE_CD,
+                        M_SECTION_PLACE_LANG.SECTION_PLACE_NAME ,
+                        M_SECTION_PLACE_LANG.LANGUAGE_IND
+                    FROM M_SECTION_PLACE
+                    INNER JOIN M_SECTION_PLACE_LANG
+                        ON M_SECTION_PLACE.COMPANY_CD=M_SECTION_PLACE_LANG.COMPANY_CD
+                        AND M_SECTION_PLACE.SECTION_PLACE_CD=M_SECTION_PLACE_LANG.SECTION_PLACE_CD
+                ) M_SECTION_PLACE
+                     ON M_SECTION_PLACE.SECTION_PLACE_CD = M_SECTION.SECTION_PLACE_CD
+                     AND M_SECTION_PLACE.COMPANY_CD = M_SECTION.COMPANY_CD
+                     AND M_SECTION_PLACE.LANGUAGE_IND = M_COMPAN.COMPANY_USE_LANGUAGE_IND
+
+                 LEFT JOIN (
+                    SELECT 
+                        M_SECTION_PLACE.COMPANY_CD,
+                        M_SECTION_PLACE.SECTION_PLACE_CD,
+                        M_SECTION_PLACE_LANG.SECTION_PLACE_NAME ,
+                        M_SECTION_PLACE_LANG.LANGUAGE_IND
+                    FROM M_SECTION_PLACE
+                    INNER JOIN M_SECTION_PLACE_LANG
+                        ON M_SECTION_PLACE.COMPANY_CD=M_SECTION_PLACE_LANG.COMPANY_CD
+                        AND M_SECTION_PLACE.SECTION_PLACE_CD=M_SECTION_PLACE_LANG.SECTION_PLACE_CD
+                ) M_SECTION_PLACE_SYSTEM 
+                     ON M_SECTION_PLACE_SYSTEM.SECTION_PLACE_CD = M_SECTION.SECTION_PLACE_CD
+                     AND M_SECTION_PLACE_SYSTEM.COMPANY_CD = M_SECTION.COMPANY_CD
+                     AND M_SECTION_PLACE_SYSTEM.LANGUAGE_IND = '${@fw.common.util.AppUtil@getSysLanguageByEscapeSql()}'
+                LEFT JOIN (
+                    SELECT
+                       M_SECTION.COMPANY_CD,
+                       M_SECTION.SECTION_CD,
+                       M_SECTION_LANG.SECTION_Name,
+                       M_SECTION_LANG.LANGUAGE_IND
+                    FROM M_SECTION 
+                    INNER JOIN M_SECTION_LANG
+                        ON M_SECTION.SECTION_CD = M_SECTION_LANG.SECTION_CD 
+                        AND M_SECTION.COMPANY_CD=M_SECTION_LANG.COMPANY_CD 
+                        AND M_SECTION.VALID_START_DATE =M_SECTION_LANG.VALID_START_DATE 
+                        AND M_SECTION.VALID_END_DATE=M_SECTION_LANG.VALID_END_DATE  
+                    WHERE
+                        '${@fw.common.util.AppUtil@getSysDate()}' between M_SECTION.VALID_START_DATE and M_SECTION.VALID_END_DATE
+                ) M_SECTION_LANG_NAME
+                    ON M_SECTION.Upper_SECTION_CD = M_SECTION_LANG_NAME.SECTION_CD
+                    AND M_SECTION_LANG_NAME.LANGUAGE_IND=M_COMPAN.COMPANY_USE_LANGUAGE_IND
+                    AND M_SECTION.COMPANY_CD= M_SECTION_LANG_NAME.COMPANY_CD 
+                LEFT JOIN (
+                    SELECT
+                       M_SECTION.COMPANY_CD,
+                       M_SECTION.SECTION_CD,
+                       M_SECTION_LANG.SECTION_Name,
+                       M_SECTION_LANG.LANGUAGE_IND
+                    FROM M_SECTION 
+                    INNER JOIN M_SECTION_LANG
+                        ON M_SECTION.SECTION_CD = M_SECTION_LANG.SECTION_CD 
+                        AND M_SECTION.COMPANY_CD=M_SECTION_LANG.COMPANY_CD 
+                        AND M_SECTION.VALID_START_DATE =M_SECTION_LANG.VALID_START_DATE 
+                        AND M_SECTION.VALID_END_DATE=M_SECTION_LANG.VALID_END_DATE  
+                    WHERE
+                        '${@fw.common.util.AppUtil@getSysDate()}' between M_SECTION.VALID_START_DATE and M_SECTION.VALID_END_DATE
+                ) M_SECTION_LANG_NAME_SYSTEM
+                    ON M_SECTION.Upper_SECTION_CD = M_SECTION_LANG_NAME_SYSTEM.SECTION_CD
+                    AND M_SECTION_LANG_NAME_SYSTEM.LANGUAGE_IND='${@fw.common.util.AppUtil@getSysLanguageByEscapeSql()}'
+                    AND M_SECTION.COMPANY_CD= M_SECTION_LANG_NAME_SYSTEM.COMPANY_CD 
+                    
+                LEFT JOIN (
+                    SELECT
+                       M_SECTION.COMPANY_CD,
+                       M_SECTION.SECTION_CD,
+                       M_SECTION_LANG.SECTION_Name,
+                       M_SECTION_LANG.LANGUAGE_IND,
+                       ROW_NUMBER() OVER (PARTITION BY M_SECTION.COMPANY_CD, M_SECTION.SECTION_CD ORDER BY M_SECTION.VALID_START_DATE DESC) AS NO
+                    FROM M_SECTION 
+                    INNER JOIN M_SECTION_LANG
+                        ON M_SECTION.SECTION_CD = M_SECTION_LANG.SECTION_CD 
+                        AND M_SECTION.COMPANY_CD=M_SECTION_LANG.COMPANY_CD 
+                        AND M_SECTION.VALID_START_DATE =M_SECTION_LANG.VALID_START_DATE 
+                        AND M_SECTION.VALID_END_DATE=M_SECTION_LANG.VALID_END_DATE  
+                ) section_lang_name
+                    ON M_SECTION.Upper_SECTION_CD = section_lang_name.SECTION_CD
+                    AND section_lang_name.LANGUAGE_IND=M_COMPAN.COMPANY_USE_LANGUAGE_IND
+                    AND M_SECTION.COMPANY_CD= section_lang_name.COMPANY_CD 
+                    AND section_lang_name.NO = '1'
+                LEFT JOIN (
+                    SELECT
+                       M_SECTION.COMPANY_CD,
+                       M_SECTION.SECTION_CD,
+                       M_SECTION_LANG.SECTION_Name,
+                       M_SECTION_LANG.LANGUAGE_IND,
+                       ROW_NUMBER() OVER (PARTITION BY M_SECTION.COMPANY_CD, M_SECTION.SECTION_CD ORDER BY M_SECTION.VALID_START_DATE DESC) AS NO
+                    FROM M_SECTION 
+                    INNER JOIN M_SECTION_LANG
+                        ON M_SECTION.SECTION_CD = M_SECTION_LANG.SECTION_CD 
+                        AND M_SECTION.COMPANY_CD=M_SECTION_LANG.COMPANY_CD 
+                        AND M_SECTION.VALID_START_DATE =M_SECTION_LANG.VALID_START_DATE 
+                        AND M_SECTION.VALID_END_DATE=M_SECTION_LANG.VALID_END_DATE  
+                ) section_lang_name_system
+                    ON M_SECTION.Upper_SECTION_CD = section_lang_name_system.SECTION_CD
+                    AND section_lang_name_system.LANGUAGE_IND='${@fw.common.util.AppUtil@getSysLanguageByEscapeSql()}'
+                    AND M_SECTION.COMPANY_CD= section_lang_name_system.COMPANY_CD 
+                    AND section_lang_name_system.NO = '1'
+             <where>
+                <include refid="listKeyIdentityWhereCondition"/>
+             </where>
+             ORDER BY ${searchCondition.columnOrder.columnOrder()}
+    </select>
+    <resultMap type="fw.domain.mst.organization.section.SectionItem" id="SectionItem_Map">
+        <id  column="M_SECTION$VALID_START_DATE" property="sectionIdentify.validStartDate.dateOfymd"/>
+        <id  column="M_SECTION$VALID_END_DATE" property="sectionIdentify.validEndDate.dateOfymd"/>
+        <id  column="UPPER_SECTION_CD" property="upperSectionCd.upperSectionCd"/>
+        <id  column="UPPER_SECTION_NAME" property="upperSectionCd.upperSectionName"/>
+   </resultMap>
+
+    <select id="listPageItem" parameterType="fw.domain.mst.searchcondition.SearchCondition"
+        resultMap="SectionItem_Map">
+              SELECT 
+                M_SECTION.COMPANY_CD as "sectionIdentify.companyCd",
+                M_SECTION.SECTION_CD as "sectionIdentify.sectionCd",
+                CASE
+                 WHEN SECTION_LANG.SECTION_NAME IS NOT NULL THEN
+                   SECTION_LANG.SECTION_NAME
+                 ELSE
+                   SECTION_LANG_SYSTEM.SECTION_NAME
+                 END AS sectionName,
+                M_SECTION.SECTION_PLACE_CD as "sectionPlaceCd",
+                CASE
+                  WHEN M_SECTION_PLACE.SECTION_PLACE_NAME IS NOT NULL THEN
+                    M_SECTION_PLACE.SECTION_PLACE_NAME
+                  ELSE
+                    M_SECTION_PLACE_SYSTEM.SECTION_PLACE_NAME
+                  END AS sectionPlaceName,
+                M_SECTION.UPPER_SECTION_CD as "UPPER_SECTION_CD",               
+                CASE
+                  WHEN M_SECTION_LANG_NAME.SECTION_NAME IS NOT NULL THEN
+                    M_SECTION_LANG_NAME.SECTION_NAME
+                  WHEN M_SECTION_LANG_NAME_SYSTEM.SECTION_NAME IS NOT NULL THEN
+                    M_SECTION_LANG_NAME_SYSTEM.SECTION_NAME
+                  WHEN section_lang_name.SECTION_NAME IS NOT NULL THEN
+                    section_lang_name.SECTION_NAME
+                  ELSE
+                    section_lang_name_system.SECTION_NAME
+                  END AS "UPPER_SECTION_NAME",
+                M_SECTION.VALID_START_DATE as "M_SECTION$VALID_START_DATE",
+                M_SECTION.VALID_END_DATE as "M_SECTION$VALID_END_DATE",
+                M_SECTION.TERM_FLG as "term.termFlg",
+                M_SECTION.LAST_UPD_DATE as "sectionIdentify.lastUpdDate"
+            FROM 
+                M_SECTION M_SECTION 
+                INNER JOIN (
+                  SELECT
+                    M_COMPANY.COMPANY_CD,
+                    COMPANY_USE_LANGUAGE_IND
+                  FROM M_COMPANY 
+                    INNER JOIN M_COMPANY_LANG
+                    ON M_COMPANY.COMPANY_CD = M_COMPANY_LANG.COMPANY_CD
+                    AND M_COMPANY.COMPANY_USE_LANGUAGE_IND = M_COMPANY_LANG.LANGUAGE_IND
+                ) M_COMPAN 
+                    ON  M_SECTION.COMPANY_CD=M_COMPAN.COMPANY_CD
+
+                LEFT JOIN M_SECTION_LANG SECTION_LANG
+                    ON M_SECTION.SECTION_CD = SECTION_LANG.SECTION_CD 
+                    AND M_SECTION.COMPANY_CD=SECTION_LANG.COMPANY_CD 
+                    AND M_SECTION.VALID_START_DATE =SECTION_LANG.VALID_START_DATE 
+                    AND M_SECTION.VALID_END_DATE=SECTION_LANG.VALID_END_DATE
+                    AND SECTION_LANG.LANGUAGE_IND = M_COMPAN.COMPANY_USE_LANGUAGE_IND
+                    
+                LEFT JOIN M_SECTION_LANG SECTION_LANG_SYSTEM
+                    ON M_SECTION.SECTION_CD = SECTION_LANG_SYSTEM.SECTION_CD 
+                    AND M_SECTION.COMPANY_CD=SECTION_LANG_SYSTEM.COMPANY_CD 
+                    AND M_SECTION.VALID_START_DATE =SECTION_LANG_SYSTEM.VALID_START_DATE 
+                    AND M_SECTION.VALID_END_DATE=SECTION_LANG_SYSTEM.VALID_END_DATE
+                    AND SECTION_LANG_SYSTEM.LANGUAGE_IND = '${@fw.common.util.AppUtil@getSysLanguageByEscapeSql()}'
+                    
+                LEFT JOIN (
+                    SELECT 
+                        M_SECTION_PLACE.COMPANY_CD,
+                        M_SECTION_PLACE.SECTION_PLACE_CD,
+                        M_SECTION_PLACE_LANG.SECTION_PLACE_NAME ,
+                        M_SECTION_PLACE_LANG.LANGUAGE_IND
+                    FROM M_SECTION_PLACE
+                    INNER JOIN M_SECTION_PLACE_LANG
+                        ON M_SECTION_PLACE.COMPANY_CD=M_SECTION_PLACE_LANG.COMPANY_CD
+                        AND M_SECTION_PLACE.SECTION_PLACE_CD=M_SECTION_PLACE_LANG.SECTION_PLACE_CD
+                ) M_SECTION_PLACE
+                     ON M_SECTION_PLACE.SECTION_PLACE_CD = M_SECTION.SECTION_PLACE_CD
+                     AND M_SECTION_PLACE.COMPANY_CD = M_SECTION.COMPANY_CD
+                     AND M_SECTION_PLACE.LANGUAGE_IND = M_COMPAN.COMPANY_USE_LANGUAGE_IND
+
+                 LEFT JOIN (
+                    SELECT 
+                        M_SECTION_PLACE.COMPANY_CD,
+                        M_SECTION_PLACE.SECTION_PLACE_CD,
+                        M_SECTION_PLACE_LANG.SECTION_PLACE_NAME ,
+                        M_SECTION_PLACE_LANG.LANGUAGE_IND
+                    FROM M_SECTION_PLACE
+                    INNER JOIN M_SECTION_PLACE_LANG
+                        ON M_SECTION_PLACE.COMPANY_CD=M_SECTION_PLACE_LANG.COMPANY_CD
+                        AND M_SECTION_PLACE.SECTION_PLACE_CD=M_SECTION_PLACE_LANG.SECTION_PLACE_CD
+                ) M_SECTION_PLACE_SYSTEM 
+                     ON M_SECTION_PLACE_SYSTEM.SECTION_PLACE_CD = M_SECTION.SECTION_PLACE_CD
+                     AND M_SECTION_PLACE_SYSTEM.COMPANY_CD = M_SECTION.COMPANY_CD
+                     AND M_SECTION_PLACE_SYSTEM.LANGUAGE_IND = '${@fw.common.util.AppUtil@getSysLanguageByEscapeSql()}'
+               LEFT JOIN (
+                    SELECT
+                       M_SECTION.COMPANY_CD,
+                       M_SECTION.SECTION_CD,
+                       M_SECTION_LANG.SECTION_Name,
+                       M_SECTION_LANG.LANGUAGE_IND
+                    FROM M_SECTION 
+                    INNER JOIN M_SECTION_LANG
+                        ON M_SECTION.SECTION_CD = M_SECTION_LANG.SECTION_CD 
+                        AND M_SECTION.COMPANY_CD=M_SECTION_LANG.COMPANY_CD 
+                        AND M_SECTION.VALID_START_DATE =M_SECTION_LANG.VALID_START_DATE 
+                        AND M_SECTION.VALID_END_DATE=M_SECTION_LANG.VALID_END_DATE  
+                    WHERE
+                        '${@fw.common.util.AppUtil@getSysDate()}' between M_SECTION.VALID_START_DATE and M_SECTION.VALID_END_DATE
+                ) M_SECTION_LANG_NAME
+                    ON M_SECTION.Upper_SECTION_CD = M_SECTION_LANG_NAME.SECTION_CD
+                    AND M_SECTION_LANG_NAME.LANGUAGE_IND=M_COMPAN.COMPANY_USE_LANGUAGE_IND
+                    AND M_SECTION.COMPANY_CD= M_SECTION_LANG_NAME.COMPANY_CD 
+                    
+                LEFT JOIN (
+                    SELECT
+                       M_SECTION.COMPANY_CD,
+                       M_SECTION.SECTION_CD,
+                       M_SECTION_LANG.SECTION_Name,
+                       M_SECTION_LANG.LANGUAGE_IND
+                    FROM M_SECTION 
+                    INNER JOIN M_SECTION_LANG
+                        ON M_SECTION.SECTION_CD = M_SECTION_LANG.SECTION_CD 
+                        AND M_SECTION.COMPANY_CD=M_SECTION_LANG.COMPANY_CD 
+                        AND M_SECTION.VALID_START_DATE =M_SECTION_LANG.VALID_START_DATE 
+                        AND M_SECTION.VALID_END_DATE=M_SECTION_LANG.VALID_END_DATE  
+                    WHERE
+                        '${@fw.common.util.AppUtil@getSysDate()}' between M_SECTION.VALID_START_DATE and M_SECTION.VALID_END_DATE
+                ) M_SECTION_LANG_NAME_SYSTEM
+                    ON M_SECTION.Upper_SECTION_CD = M_SECTION_LANG_NAME_SYSTEM.SECTION_CD
+                    AND M_SECTION_LANG_NAME_SYSTEM.LANGUAGE_IND='${@fw.common.util.AppUtil@getSysLanguageByEscapeSql()}'
+                    AND M_SECTION.COMPANY_CD= M_SECTION_LANG_NAME_SYSTEM.COMPANY_CD 
+                     
+                LEFT JOIN (
+                    SELECT
+                       M_SECTION.COMPANY_CD,
+                       M_SECTION.SECTION_CD,
+                       M_SECTION_LANG.SECTION_Name,
+                       M_SECTION_LANG.LANGUAGE_IND,
+                       ROW_NUMBER() OVER (PARTITION BY M_SECTION.COMPANY_CD, M_SECTION.SECTION_CD ORDER BY M_SECTION.VALID_START_DATE DESC) AS NO
+                    FROM M_SECTION 
+                    INNER JOIN M_SECTION_LANG
+                        ON M_SECTION.SECTION_CD = M_SECTION_LANG.SECTION_CD 
+                        AND M_SECTION.COMPANY_CD=M_SECTION_LANG.COMPANY_CD 
+                        AND M_SECTION.VALID_START_DATE =M_SECTION_LANG.VALID_START_DATE 
+                        AND M_SECTION.VALID_END_DATE=M_SECTION_LANG.VALID_END_DATE  
+                ) section_lang_name
+                    ON M_SECTION.Upper_SECTION_CD = section_lang_name.SECTION_CD
+                    AND section_lang_name.LANGUAGE_IND=M_COMPAN.COMPANY_USE_LANGUAGE_IND
+                    AND M_SECTION.COMPANY_CD= section_lang_name.COMPANY_CD 
+                    AND section_lang_name.NO = '1'
+                LEFT JOIN (
+                    SELECT
+                       M_SECTION.COMPANY_CD,
+                       M_SECTION.SECTION_CD,
+                       M_SECTION_LANG.SECTION_Name,
+                       M_SECTION_LANG.LANGUAGE_IND,
+                       ROW_NUMBER() OVER (PARTITION BY M_SECTION.COMPANY_CD, M_SECTION.SECTION_CD ORDER BY M_SECTION.VALID_START_DATE DESC) AS NO
+                    FROM M_SECTION 
+                    INNER JOIN M_SECTION_LANG
+                        ON M_SECTION.SECTION_CD = M_SECTION_LANG.SECTION_CD 
+                        AND M_SECTION.COMPANY_CD=M_SECTION_LANG.COMPANY_CD 
+                        AND M_SECTION.VALID_START_DATE =M_SECTION_LANG.VALID_START_DATE 
+                        AND M_SECTION.VALID_END_DATE=M_SECTION_LANG.VALID_END_DATE  
+                ) section_lang_name_system
+                    ON M_SECTION.Upper_SECTION_CD = section_lang_name_system.SECTION_CD
+                    AND section_lang_name_system.LANGUAGE_IND='${@fw.common.util.AppUtil@getSysLanguageByEscapeSql()}'
+                    AND M_SECTION.COMPANY_CD= section_lang_name_system.COMPANY_CD 
+                    AND section_lang_name_system.NO = '1'
+             <where>
+                (M_SECTION.SECTION_CD,M_SECTION.COMPANY_CD,M_SECTION.VALID_START_DATE,M_SECTION.VALID_END_DATE) in 
+                <foreach collection="searchCondition.page.keyDomainEntityList" item="keyList"  open="(" separator="," close=")">  
+                    (#{keyList.sectionCd},#{keyList.companyCd},#{keyList.validStartDate.dateOfymd},#{keyList.validEndDate.dateOfymd}) 
+                </foreach>
+                <include refid="listKeyIdentityWhereCondition"/>
+             </where>
+             ORDER BY ${searchCondition.columnOrder.columnOrder()}
+    </select>    
+    <select id="search" parameterType="fw.domain.mst.organization.section.SectionIdentify" resultMap="SectionManagement_Map">
+       SELECT 
+            M_SECTION.COMPANY_CD as "identify.companyCd",
+            M_SECTION.SECTION_CD as "identify.sectionCd",
+            M_SECTION.VALID_START_DATE as "M_SECTION$VALID_START_DATE",
+            M_SECTION.VALID_END_DATE as "M_SECTION$VALID_END_DATE",
+            M_SECTION.VALID_START_DATE as "startDate.dateOfymd",
+            M_SECTION.VALID_END_DATE as "endDate.dateOfymd", 
+           CASE
+              WHEN SECTION_LANG.SECTION_NAME IS NOT NULL THEN
+                SECTION_LANG.SECTION_NAME
+              ELSE
+                SECTION_LANG_SYSTEM.SECTION_NAME
+            END AS "sectionName",
+            CASE
+              WHEN A.SECTION_NAME IS NOT NULL THEN
+                A.SECTION_NAME
+              WHEN A_SYSTEM.SECTION_NAME IS NOT NULL THEN
+                A_SYSTEM.SECTION_NAME
+              WHEN A_LAST.SECTION_NAME IS NOT NULL THEN
+                A_LAST.SECTION_NAME
+              ELSE
+                A_LAST_SYSTEM.SECTION_NAME
+            END AS "UPPER_SECTION_NAME",
+            CASE
+              WHEN B.SECTION_NAME IS NOT NULL THEN
+                B.SECTION_NAME
+              WHEN B_SYSTEM.SECTION_NAME IS NOT NULL THEN
+                B_SYSTEM.SECTION_NAME
+              WHEN B_LAST.SECTION_NAME IS NOT NULL THEN
+                B_LAST.SECTION_NAME
+              ELSE
+                B_LAST_SYSTEM.SECTION_NAME
+            END AS "TOTAL_SECTION_NAME",
+            M_SECTION.LAST_UPD_DATE as "identify.lastUpdDate" ,           
+            M_SECTION.SECTION_PLACE_CD as "sectionPlaceCd", 
+            CASE
+              WHEN A.SECTION_NAME IS NOT NULL THEN
+                A.SECTION_CD
+              WHEN A_SYSTEM.SECTION_NAME IS NOT NULL THEN
+                A_SYSTEM.SECTION_CD
+              WHEN A_LAST.SECTION_NAME IS NOT NULL THEN
+                A_LAST.SECTION_CD
+              ELSE
+                A_LAST_SYSTEM.SECTION_CD
+            END AS "UPPER_SECTION_CD",
+            
+            M_SECTION.Extension_No as "orga.contact.extNo.extensionNo",
+            M_SECTION.TEL_NO as "orga.contact.telNo.telNo",
+            M_SECTION.FAX_NO as "orga.contact.faxNo.faxNo",
+            CASE
+              WHEN B.SECTION_NAME IS NOT NULL THEN
+                B.SECTION_CD
+              WHEN B_SYSTEM.SECTION_NAME IS NOT NULL THEN
+                B_SYSTEM.SECTION_CD
+              WHEN B_LAST.SECTION_NAME IS NOT NULL THEN
+                 B_LAST.SECTION_CD
+              ELSE
+                B_LAST_SYSTEM.SECTION_CD
+            END AS "TOTAL_SECTION_CD",
+            CASE
+                  WHEN M_SECTION_PLACE.SECTION_PLACE_NAME IS NOT NULL THEN
+                    M_SECTION_PLACE.SECTION_PLACE_NAME
+                  ELSE
+                    M_SECTION_PLACE_SYSTEM.SECTION_PLACE_NAME
+            END AS sectionPlaceName,
+            M_SECTION.BUYER_SECTION_FLG as "BUYER_SECTION_FLG",
+            M_SECTION.ACC_SECTION_FLG as "ACC_SECTION_FLG",
+            M_SECTION.PLANNED_SECTION_FLG as "PLANNED_SECTION_FLG", 
+            M_SECTION.TERM_FLG as "term.termFlg",
+            M_COMPANY.COMPANY_USE_LANGUAGE_IND as "companySummary.languageInd",
+            M_COMPANY_LANG.COMPANY_NAME as "companySummary.companyName"
+        FROM M_SECTION 
+            INNER JOIN M_COMPANY
+                ON M_SECTION.COMPANY_CD = M_COMPANY.COMPANY_CD
+            LEFT JOIN M_COMPANY_LANG
+                ON M_COMPANY.COMPANY_CD = M_COMPANY_LANG.COMPANY_CD
+                AND M_COMPANY_LANG.LANGUAGE_IND = M_COMPANY.COMPANY_USE_LANGUAGE_IND
+            LEFT JOIN M_SECTION_LANG SECTION_LANG         
+                ON M_SECTION.SECTION_CD = SECTION_LANG.SECTION_CD
+                AND M_SECTION.COMPANY_CD = SECTION_LANG.COMPANY_CD
+                AND M_SECTION.VALID_START_DATE = SECTION_LANG.VALID_START_DATE
+                AND M_SECTION.VALID_END_DATE = SECTION_LANG.VALID_END_DATE
+                AND SECTION_LANG.LANGUAGE_IND = M_COMPANY.COMPANY_USE_LANGUAGE_IND
+            LEFT JOIN (
+                    SELECT 
+                        M_SECTION_PLACE.COMPANY_CD,
+                        M_SECTION_PLACE.SECTION_PLACE_CD,
+                        M_SECTION_PLACE_LANG.SECTION_PLACE_NAME ,
+                        M_SECTION_PLACE_LANG.LANGUAGE_IND
+                    FROM M_SECTION_PLACE
+                    INNER JOIN M_SECTION_PLACE_LANG
+                        ON M_SECTION_PLACE.COMPANY_CD=M_SECTION_PLACE_LANG.COMPANY_CD
+                        AND M_SECTION_PLACE.SECTION_PLACE_CD=M_SECTION_PLACE_LANG.SECTION_PLACE_CD
+                ) M_SECTION_PLACE
+                     ON M_SECTION_PLACE.SECTION_PLACE_CD = M_SECTION.SECTION_PLACE_CD
+                     AND M_SECTION_PLACE.COMPANY_CD = M_SECTION.COMPANY_CD
+                     AND M_SECTION_PLACE.LANGUAGE_IND = M_COMPANY.COMPANY_USE_LANGUAGE_IND
+
+                 LEFT JOIN (
+                    SELECT 
+                        M_SECTION_PLACE.COMPANY_CD,
+                        M_SECTION_PLACE.SECTION_PLACE_CD,
+                        M_SECTION_PLACE_LANG.SECTION_PLACE_NAME ,
+                        M_SECTION_PLACE_LANG.LANGUAGE_IND
+                    FROM M_SECTION_PLACE
+                    INNER JOIN M_SECTION_PLACE_LANG
+                        ON M_SECTION_PLACE.COMPANY_CD=M_SECTION_PLACE_LANG.COMPANY_CD
+                        AND M_SECTION_PLACE.SECTION_PLACE_CD=M_SECTION_PLACE_LANG.SECTION_PLACE_CD
+                ) M_SECTION_PLACE_SYSTEM 
+                     ON M_SECTION_PLACE_SYSTEM.SECTION_PLACE_CD = M_SECTION.SECTION_PLACE_CD
+                     AND M_SECTION_PLACE_SYSTEM.COMPANY_CD = M_SECTION.COMPANY_CD
+                     AND M_SECTION_PLACE_SYSTEM.LANGUAGE_IND = '${@fw.common.util.AppUtil@getSysLanguageByEscapeSql()}'
+            LEFT JOIN M_SECTION_LANG SECTION_LANG_SYSTEM        
+                ON M_SECTION.SECTION_CD = SECTION_LANG_SYSTEM.SECTION_CD
+                AND M_SECTION.COMPANY_CD = SECTION_LANG_SYSTEM.COMPANY_CD
+                AND M_SECTION.VALID_START_DATE = SECTION_LANG_SYSTEM.VALID_START_DATE
+                AND M_SECTION.VALID_END_DATE = SECTION_LANG_SYSTEM.VALID_END_DATE
+                AND SECTION_LANG_SYSTEM.LANGUAGE_IND = '${@fw.common.util.AppUtil@getSysLanguageByEscapeSql()}'
+            LEFT JOIN M_SECTION_LANG A         
+                ON M_SECTION.UPPER_SECTION_CD = A.SECTION_CD
+                AND M_SECTION.COMPANY_CD = A.COMPANY_CD
+                AND A.VALID_START_DATE &lt;= '${@fw.common.util.AppUtil@getSysDate()}'
+                AND A.VALID_END_DATE >= '${@fw.common.util.AppUtil@getSysDate()}'
+                AND A.LANGUAGE_IND = M_COMPANY.COMPANY_USE_LANGUAGE_IND
+            LEFT JOIN M_SECTION_LANG A_SYSTEM        
+                ON M_SECTION.UPPER_SECTION_CD = A_SYSTEM.SECTION_CD
+                AND M_SECTION.COMPANY_CD = A_SYSTEM.COMPANY_CD
+                AND A_SYSTEM.VALID_START_DATE &lt;= '${@fw.common.util.AppUtil@getSysDate()}'
+                AND A_SYSTEM.VALID_END_DATE >= '${@fw.common.util.AppUtil@getSysDate()}'
+                AND A_SYSTEM.LANGUAGE_IND = '${@fw.common.util.AppUtil@getSysLanguageByEscapeSql()}'
+            LEFT JOIN M_SECTION_LANG B         
+                ON M_SECTION.TOTAL_SECTION_CD = B.SECTION_CD
+                AND M_SECTION.COMPANY_CD = B.COMPANY_CD
+                AND B.VALID_START_DATE &lt;= '${@fw.common.util.AppUtil@getSysDate()}'
+                AND B.VALID_END_DATE >= '${@fw.common.util.AppUtil@getSysDate()}'
+                AND B.LANGUAGE_IND = M_COMPANY.COMPANY_USE_LANGUAGE_IND
+            LEFT JOIN M_SECTION_LANG B_SYSTEM        
+                ON M_SECTION.TOTAL_SECTION_CD = B_SYSTEM.SECTION_CD
+                AND M_SECTION.COMPANY_CD = B_SYSTEM.COMPANY_CD
+                AND B_SYSTEM.VALID_START_DATE &lt;= '${@fw.common.util.AppUtil@getSysDate()}'
+                AND B_SYSTEM.VALID_END_DATE >= '${@fw.common.util.AppUtil@getSysDate()}'
+                AND B_SYSTEM.LANGUAGE_IND = '${@fw.common.util.AppUtil@getSysLanguageByEscapeSql()}'
+
+            LEFT JOIN (SELECT COMPANY_CD,
+                    SECTION_CD,
+                    SECTION_NAME,
+                    LANGUAGE_IND,
+                    ROW_NUMBER() OVER (PARTITION BY COMPANY_CD, SECTION_CD ORDER BY VALID_START_DATE DESC) AS NO
+              FROM  M_SECTION_LANG) A_LAST
+                ON M_SECTION.COMPANY_CD = A_LAST.COMPANY_CD
+                AND M_SECTION.UPPER_SECTION_CD = A_LAST.SECTION_CD
+                AND A_LAST.LANGUAGE_IND=M_COMPANY.COMPANY_USE_LANGUAGE_IND
+                AND A_LAST.NO = '1'
+            LEFT JOIN (SELECT COMPANY_CD,
+                    SECTION_CD,
+                    SECTION_NAME,
+                    LANGUAGE_IND,
+                    ROW_NUMBER() OVER (PARTITION BY COMPANY_CD, SECTION_CD ORDER BY VALID_START_DATE DESC) AS NO
+              FROM  M_SECTION_LANG) A_LAST_SYSTEM
+                ON M_SECTION.COMPANY_CD = A_LAST_SYSTEM.COMPANY_CD
+                AND M_SECTION.UPPER_SECTION_CD = A_LAST_SYSTEM.SECTION_CD
+                AND A_LAST_SYSTEM.LANGUAGE_IND='${@fw.common.util.AppUtil@getSysLanguageByEscapeSql()}'
+                AND A_LAST_SYSTEM.NO = '1'
+            LEFT JOIN (SELECT COMPANY_CD,
+                    SECTION_CD,
+                    SECTION_NAME,
+                    LANGUAGE_IND,
+                    ROW_NUMBER() OVER (PARTITION BY COMPANY_CD, SECTION_CD ORDER BY VALID_START_DATE DESC) AS NO
+              FROM  M_SECTION_LANG) B_LAST
+                ON M_SECTION.COMPANY_CD = B_LAST.COMPANY_CD
+                AND M_SECTION.TOTAL_SECTION_CD = B_LAST.SECTION_CD
+                AND B_LAST.LANGUAGE_IND=M_COMPANY.COMPANY_USE_LANGUAGE_IND
+                AND B_LAST.NO = '1'
+           LEFT JOIN (SELECT COMPANY_CD,
+                    SECTION_CD,
+                    SECTION_NAME,
+                    LANGUAGE_IND,
+                    ROW_NUMBER() OVER (PARTITION BY COMPANY_CD, SECTION_CD ORDER BY VALID_START_DATE DESC) AS NO
+              FROM  M_SECTION_LANG) B_LAST_SYSTEM
+                ON M_SECTION.COMPANY_CD = B_LAST_SYSTEM.COMPANY_CD
+                AND M_SECTION.TOTAL_SECTION_CD = B_LAST_SYSTEM.SECTION_CD
+                AND B_LAST_SYSTEM.LANGUAGE_IND='${@fw.common.util.AppUtil@getSysLanguageByEscapeSql()}'
+                AND B_LAST_SYSTEM.NO = '1'
+
+        WHERE  M_SECTION.SECTION_CD = #{sectionCd,jdbcType=VARCHAR}
+                AND M_SECTION.COMPANY_CD = #{companyCd,jdbcType=VARCHAR}
+                AND M_SECTION.VALID_START_DATE = '${@fw.common.util.AppUtil@convertDateForValid(validStartDate.dateOfymd,@fw.common.util.AppUtil@VALID_START_DATE)}'
+                AND M_SECTION.VALID_END_DATE = '${@fw.common.util.AppUtil@convertDateForValid(validEndDate.dateOfymd,@fw.common.util.AppUtil@VALID_END_DATE)}'
+    </select>  
+    
+    <select id="searchAccDept" parameterType="fw.domain.mst.organization.section.SectionIdentify" 
+            resultType="fw.domain.mst.organization.section.AccountRemodelDestination">
+        SELECT M_ACC_DEPT.ACCOUNT_SECTION_CD AS "section.sectionCd",
+               CASE WHEN M_SECTION_LANG.SECTION_NAME IS NOT NULL THEN
+                  M_SECTION_LANG.SECTION_NAME 
+               ELSE
+                  section_lang.SECTION_NAME
+               END AS "section.sectionName"     
+        FROM M_ACC_DEPT
+               LEFT JOIN M_SECTION
+                    ON M_SECTION.COMPANY_CD = M_ACC_DEPT.ACCOUNT_COMPANY_CD
+                       AND M_SECTION.SECTION_CD = M_ACC_DEPT.ACCOUNT_SECTION_CD
+                       AND M_SECTION.VALID_START_DATE &lt;= '${@fw.common.util.AppUtil@getSysDate()}'
+                       AND M_SECTION.Valid_End_Date >= '${@fw.common.util.AppUtil@getSysDate()}'
+               LEFT JOIN M_SECTION_LANG
+                    ON M_SECTION_LANG.COMPANY_CD = M_SECTION.COMPANY_CD
+                       AND M_SECTION_LANG.SECTION_CD = M_SECTION.SECTION_CD
+                       AND M_SECTION_LANG.VALID_START_DATE = M_SECTION.VALID_START_DATE
+                       AND M_SECTION_LANG.VALID_END_DATE = M_SECTION.VALID_END_DATE
+                       AND M_SECTION_LANG.LANGUAGE_IND = '${@fw.common.util.AppUtil@getSysLanguageByEscapeSql()}'
+               LEFT JOIN  (SELECT COMPANY_CD,
+                    SECTION_CD,
+                    VALID_START_DATE,
+                    VALID_END_DATE,
+                    ROW_NUMBER() OVER (PARTITION BY COMPANY_CD, SECTION_CD ORDER BY VALID_START_DATE DESC) AS NO
+                    FROM  M_SECTION) section
+                    ON section.COMPANY_CD = M_ACC_DEPT.ACCOUNT_COMPANY_CD
+                    AND section.SECTION_CD = M_ACC_DEPT.ACCOUNT_SECTION_CD
+                    AND section.NO = 1
+               LEFT JOIN  M_SECTION_LANG section_lang
+                    ON section_lang.COMPANY_CD = section.COMPANY_CD
+                       AND section_lang.SECTION_CD = section.SECTION_CD
+                       AND section_lang.VALID_START_DATE = section.VALID_START_DATE
+                       AND section_lang.VALID_END_DATE = section.VALID_END_DATE
+                       AND section_lang.LANGUAGE_IND = '${@fw.common.util.AppUtil@getSysLanguageByEscapeSql()}'
+        WHERE 
+            M_ACC_DEPT.REQ_COMPANY_CD = #{companyCd, jdbcType=VARCHAR}
+            AND M_ACC_DEPT.REQ_SECTION_CD = #{sectionCd, jdbcType=VARCHAR}
+    </select>
+    
+    <select id="searchProcDept" parameterType="fw.domain.mst.organization.section.SectionIdentify" 
+            resultType="fw.domain.mst.organization.section.PurchasRemodelDestination">
+        SELECT M_PROC_DEPT.BUYER_SECTION_CD AS "section.sectionCd",
+               CASE WHEN M_SECTION_LANG.SECTION_NAME IS NOT NULL THEN
+                  M_SECTION_LANG.SECTION_NAME 
+               ELSE
+                  section_lang.SECTION_NAME
+               END AS "section.sectionName"     
+        FROM M_PROC_DEPT
+             LEFT JOIN M_SECTION
+                    ON M_SECTION.COMPANY_CD = m_Proc_Dept.BUYER_COMPANY_CD
+                       AND M_SECTION.SECTION_CD = m_Proc_Dept.BUYER_SECTION_CD
+                       AND M_SECTION.VALID_START_DATE &lt;= '${@fw.common.util.AppUtil@getSysDate()}'
+                       AND M_SECTION.Valid_End_Date >= '${@fw.common.util.AppUtil@getSysDate()}'
+             LEFT JOIN M_SECTION_LANG
+                    ON M_SECTION_LANG.COMPANY_CD = M_SECTION.COMPANY_CD
+                       AND M_SECTION_LANG.SECTION_CD = M_SECTION.SECTION_CD
+                       AND M_SECTION_LANG.VALID_START_DATE = M_SECTION.VALID_START_DATE
+                       AND M_SECTION_LANG.VALID_END_DATE = M_SECTION.VALID_END_DATE
+                       AND M_SECTION_LANG.LANGUAGE_IND = '${@fw.common.util.AppUtil@getSysLanguageByEscapeSql()}'
+             LEFT JOIN  (SELECT COMPANY_CD,
+                    SECTION_CD,
+                    VALID_START_DATE,
+                    VALID_END_DATE,
+                    ROW_NUMBER() OVER (PARTITION BY COMPANY_CD, SECTION_CD ORDER BY VALID_START_DATE DESC) AS NO
+                    FROM  M_SECTION) section
+                    ON section.COMPANY_CD = m_Proc_Dept.BUYER_COMPANY_CD
+                    AND section.SECTION_CD = m_Proc_Dept.BUYER_SECTION_CD
+                    AND section.NO = 1
+              LEFT JOIN  M_SECTION_LANG section_lang
+                    ON section_lang.COMPANY_CD = section.COMPANY_CD
+                       AND section_lang.SECTION_CD = section.SECTION_CD
+                       AND section_lang.VALID_START_DATE = section.VALID_START_DATE
+                       AND section_lang.VALID_END_DATE = section.VALID_END_DATE
+                       AND section_lang.LANGUAGE_IND = '${@fw.common.util.AppUtil@getSysLanguageByEscapeSql()}'
+        WHERE 
+            M_PROC_DEPT.REQ_COMPANY_CD = #{companyCd, jdbcType=VARCHAR}
+            AND M_PROC_DEPT.REQ_SECTION_CD = #{sectionCd, jdbcType=VARCHAR}
+    </select>
+    
+    <select id="searchExclusive" parameterType="fw.domain.mst.organization.section.SectionIdentify" resultType="fw.domain.mst.organization.section.SectionIdentify">
+        SELECT
+            M_SECTION.SECTION_CD as "sectionCd",
+            M_SECTION.COMPANY_CD as "companyCd",
+            M_SECTION.VALID_START_DATE as "validStartDate.dateOfymd",
+            M_SECTION.VALID_END_DATE as "validEndDate.dateOfymd"
+        FROM M_SECTION 
+        WHERE
+            M_SECTION.SECTION_CD = #{sectionCd, jdbcType=VARCHAR}
+            AND M_SECTION.COMPANY_CD = #{companyCd, jdbcType=VARCHAR}
+            AND M_SECTION.VALID_START_DATE = '${@fw.common.util.AppUtil@convertDateForValid(validStartDate.dateOfymd,@fw.common.util.AppUtil@VALID_START_DATE)}'
+            AND M_SECTION.VALID_END_DATE = '${@fw.common.util.AppUtil@convertDateForValid(validEndDate.dateOfymd,@fw.common.util.AppUtil@VALID_END_DATE)}'
+            AND M_SECTION.LAST_UPD_DATE = #{lastUpdDate, jdbcType=VARCHAR}
+    </select>
+    <select id="searchIdentifyAll" parameterType="fw.domain.mst.organization.section.SectionManagement" resultType="fw.domain.mst.organization.section.SectionIdentify">
+        SELECT
+            M_SECTION.SECTION_CD as "sectionCd",
+            M_SECTION.COMPANY_CD as "companyCd",
+            M_SECTION.VALID_START_DATE as "validStartDate.dateOfymd",
+            M_SECTION.VALID_END_DATE as "validEndDate.dateOfymd"
+        FROM M_SECTION 
+        WHERE
+            M_SECTION.SECTION_CD = #{identify.sectionCd, jdbcType=VARCHAR}
+            AND M_SECTION.COMPANY_CD = #{identify.companyCd, jdbcType=VARCHAR}
+    </select>
+    <select id="searchForUploadRevision" parameterType="fw.domain.mst.organization.section.SectionManagement" resultType="fw.domain.mst.organization.section.SectionIdentify">
+        SELECT
+            M_SECTION.SECTION_CD as "sectionCd",
+            M_SECTION.COMPANY_CD as "companyCd",
+            M_SECTION.VALID_START_DATE as "validStartDate.dateOfymd",
+            M_SECTION.VALID_END_DATE as "validEndDate.dateOfymd"
+        FROM M_SECTION 
+        WHERE
+            M_SECTION.SECTION_CD = #{identify.sectionCd, jdbcType=VARCHAR}
+            AND M_SECTION.COMPANY_CD = #{identify.companyCd, jdbcType=VARCHAR}
+            AND M_SECTION.VALID_START_DATE &lt;= '${@fw.common.util.AppUtil@convertDateForValid(startDate.dateOfymd,@fw.common.util.AppUtil@VALID_START_DATE)}'
+            AND M_SECTION.Valid_End_Date >= '${@fw.common.util.AppUtil@convertDateForValid(startDate.dateOfymd,@fw.common.util.AppUtil@VALID_START_DATE)}'
+    </select>
+    <select id="searchCountSection" parameterType="fw.domain.mst.organization.section.SectionIdentify" resultType="int">
+        SELECT 
+            COUNT(1)
+        FROM M_SECTION
+        WHERE COMPANY_CD = #{companyCd,jdbcType=VARCHAR}
+            AND SECTION_CD = #{sectionCd, jdbcType=VARCHAR}
+            AND M_SECTION.VALID_START_DATE &lt;= '${@fw.common.util.AppUtil@getSysDate()}'
+            AND M_SECTION.Valid_End_Date >= '${@fw.common.util.AppUtil@getSysDate()}'
+    </select>
+    <select id="sectionCount" parameterType="fw.domain.mst.organization.section.SectionIdentify" resultType="int">
+        SELECT 
+            COUNT(1)
+        FROM M_SECTION
+        WHERE COMPANY_CD = #{companyCd,jdbcType=VARCHAR}
+            AND SECTION_CD = #{sectionCd, jdbcType=VARCHAR}
+    </select>
+    <select id="sectionCountStrict" parameterType="fw.domain.mst.organization.section.SectionIdentify" resultType="int">
+        SELECT 
+            COUNT(1)
+        FROM M_SECTION
+        WHERE COMPANY_CD = #{companyCd,jdbcType=VARCHAR}
+            AND SECTION_CD = #{sectionCd, jdbcType=VARCHAR}
+            AND M_SECTION.VALID_START_DATE = '${@fw.common.util.AppUtil@convertDateForValid(validStartDate.dateOfymd,@fw.common.util.AppUtil@VALID_START_DATE)}'
+            AND M_SECTION.Valid_End_Date = '${@fw.common.util.AppUtil@convertDateForValid(validEndDate.dateOfymd,@fw.common.util.AppUtil@VALID_END_DATE)}'
+    </select>
+    <select id="searchCountOtherSection" parameterType="fw.domain.mst.organization.section.SectionIdentify" resultType="int">
+            SELECT
+                COUNT(*)
+            FROM M_SECTION 
+            WHERE
+                COMPANY_CD = #{companyCd,jdbcType=VARCHAR}
+                AND UPPER_SECTION_CD = #{sectionCd,jdbcType=VARCHAR}
+                AND SECTION_CD != #{sectionCd,jdbcType=VARCHAR}
+                AND M_SECTION.VALID_START_DATE &lt;= '${@fw.common.util.AppUtil@getSysDate()}'
+                AND M_SECTION.Valid_End_Date >= '${@fw.common.util.AppUtil@getSysDate()}'
+    </select>
+   
+    <select id="searchCountUpperSection" parameterType="fw.domain.mst.organization.section.SectionManagement" resultType="int">
+           SELECT
+                COUNT(1)
+            FROM (
+              SELECT 
+                 * 
+              FROM M_SECTION A
+                   START WITH A.SECTION_CD = #{identify.sectionCd,jdbcType=VARCHAR}　AND A.COMPANY_CD=　#{identify.companyCd,jdbcType=VARCHAR}
+                   CONNECT BY PRIOR A.SECTION_CD = A.UPPER_SECTION_CD
+            ) M_SECTION
+            WHERE
+                M_SECTION.SECTION_CD = #{orga.upSection.upperSectionCd,jdbcType=VARCHAR}
+                AND M_SECTION.VALID_START_DATE &lt;= '${@fw.common.util.AppUtil@getSysDate()}'
+                AND M_SECTION.Valid_End_Date >= '${@fw.common.util.AppUtil@getSysDate()}'
+    </select>
+    
+     <select id="searchCountLowSection" parameterType="fw.domain.mst.organization.section.SectionManagement" resultType="int">
+           SELECT
+                COUNT(1)
+            FROM M_SECTION
+            WHERE
+                M_SECTION.UPPER_SECTION_CD = #{identify.sectionCd,jdbcType=VARCHAR}
+                AND M_SECTION.COMPANY_CD = #{identify.companyCd,jdbcType=VARCHAR}
+                AND M_SECTION.TERM_FLG = '0'
+                AND M_SECTION.VALID_START_DATE &lt;= '${@fw.common.util.AppUtil@getSysDate()}'
+                AND M_SECTION.VALID_END_DATE >= '${@fw.common.util.AppUtil@getSysDate()}'
+    </select>
+
+    <resultMap id="sectionLanguageMap"
+               type="fw.domain.mst.organization.section.SectionLanguage">
+        <id column="COMPANY_CD" property="identify.companyCd"/>
+        <id column="SECTION_CD" property="identify.sectionCd"/>
+        <id column="VALID_START_DATE" property="identify.validStartDate.dateOfymd"/>
+        <id column="VALID_END_DATE" property="identify.validEndDate.dateOfymd"/>
+        <id column="LANGUAGE_IND" property="languageInd.languageInd"/>
+        <id column="SECTION_NAME" property="sectionName"/>
+    </resultMap>
+    <select id="listSectionLanguage"
+            parameterType="fw.domain.mst.organization.section.SectionIdentify"
+            resultMap="sectionLanguageMap">
+        SELECT     
+            M_SECTION.COMPANY_CD as "COMPANY_CD",
+            M_SECTION.SECTION_CD as "SECTION_CD",
+            M_SECTION.VALID_START_DATE as "VALID_START_DATE",
+            M_SECTION.VALID_END_DATE as "VALID_END_DATE",
+            M_SECTION_LANG.LANGUAGE_IND as "LANGUAGE_IND",
+            M_SECTION_LANG.SECTION_NAME as "SECTION_NAME"
+        FROM M_SECTION
+        INNER JOIN M_SECTION_LANG
+          ON  M_SECTION.COMPANY_CD=M_SECTION_LANG.COMPANY_CD
+          AND M_SECTION.SECTION_CD=M_SECTION_LANG.SECTION_CD
+          AND M_SECTION.VALID_START_DATE=M_SECTION_LANG.VALID_START_DATE
+          AND M_SECTION.VALID_END_DATE=M_SECTION_LANG.VALID_END_DATE
+        INNER JOIN (
+          SELECT
+            M_COMPANY.COMPANY_CD,
+            COMPANY_USE_LANGUAGE_IND
+          FROM M_COMPANY 
+            INNER JOIN M_COMPANY_LANG
+            ON M_COMPANY.COMPANY_CD = M_COMPANY_LANG.COMPANY_CD
+            AND M_COMPANY.COMPANY_USE_LANGUAGE_IND = M_COMPANY_LANG.LANGUAGE_IND
+            AND M_COMPANY.COMPANY_CD = #{companyCd,jdbcType=VARCHAR}
+            ) M_COMPAN 
+            ON M_SECTION.COMPANY_CD=M_COMPAN.COMPANY_CD
+            AND M_SECTION_LANG.LANGUAGE_IND != M_COMPAN.COMPANY_USE_LANGUAGE_IND
+        INNER JOIN M_CODE_NAME
+                 ON M_SECTION_LANG.LANGUAGE_IND = M_CODE_NAME.CODE_VALUE
+                 AND M_CODE_NAME.CODE_KEY = 'LANGUAGE_IND'
+        WHERE
+            M_SECTION.COMPANY_CD = #{companyCd,jdbcType=VARCHAR}
+            AND M_SECTION.SECTION_CD = #{sectionCd, jdbcType=VARCHAR}
+            AND M_SECTION.VALID_START_DATE = '${@fw.common.util.AppUtil@convertDateForValid(validStartDate.dateOfymd,@fw.common.util.AppUtil@VALID_START_DATE)}'
+            AND M_SECTION.VALID_END_DATE = '${@fw.common.util.AppUtil@convertDateForValid(validEndDate.dateOfymd,@fw.common.util.AppUtil@VALID_END_DATE)}'
+        ORDER BY M_CODE_NAME.DSP_ORDER
+    </select>
+    
+    <insert id="insert" parameterType="fw.domain.mst.organization.section.SectionManagement">
+        INSERT INTO M_SECTION
+        (              
+            COMPANY_CD,
+            SECTION_CD,
+            VALID_START_DATE,
+            VALID_END_DATE,
+            SECTION_PLACE_CD,
+            UPPER_SECTION_CD,
+            EXTENSION_NO,
+            TEL_NO,
+            FAX_NO,
+            TOTAL_SECTION_CD,
+            BUYER_SECTION_FLG,
+            ACC_SECTION_FLG,
+            PLANNED_SECTION_FLG,
+            TERM_FLG,
+            REG_USER_ID,
+            REG_SECTION_CD,
+            REG_DATE,
+            REG_COMPANY_CD,
+            LAST_UPD_USER_ID,
+            LAST_UPD_SECTION_CD,
+            LAST_UPD_DATE,
+            LAST_UPD_COMPANY_CD
+        ) VALUES (
+            #{identify.companyCd, jdbcType=VARCHAR},
+            #{identify.sectionCd, jdbcType=VARCHAR},
+            '${@fw.common.util.AppUtil@convertDateForValid(startDate.dateOfymd,@fw.common.util.AppUtil@VALID_START_DATE)}',
+            '${@fw.common.util.AppUtil@convertDateForValid(endDate.dateOfymd,@fw.common.util.AppUtil@VALID_END_DATE)}',
+            #{sectionPlaceCd, jdbcType=VARCHAR},
+            #{orga.upSection.upperSectionCd, jdbcType=VARCHAR},
+            #{orga.contact.extNo.extensionNo, jdbcType=VARCHAR},
+            #{orga.contact.telNo.telNo, jdbcType=VARCHAR},
+            #{orga.contact.faxNo.faxNo, jdbcType=VARCHAR},
+            <if test="@org.apache.commons.lang.StringUtils@isNotBlank(business.totalCd.totalSectionCd)">
+                  #{business.totalCd.totalSectionCd, jdbcType=VARCHAR},
+            </if>
+            <if test="@org.apache.commons.lang.StringUtils@isBlank(business.totalCd.totalSectionCd)">
+                  #{identify.sectionCd, jdbcType=VARCHAR},
+            </if>
+            #{business.type.sectionTypeBuyer, jdbcType=VARCHAR},
+            #{business.type.sectionTypeAcc, jdbcType=VARCHAR},
+            #{business.type.sectionTypePlanned, jdbcType=VARCHAR},
+            #{term.termFlg, jdbcType=VARCHAR},
+            #{registInfo.regUserId, jdbcType=VARCHAR},
+            #{registInfo.regSectionCd, jdbcType=VARCHAR},
+            #{registInfo.regDate, jdbcType=VARCHAR},
+            #{registInfo.regCompanyCd, jdbcType=VARCHAR},
+            #{registInfo.lastUpdUserId, jdbcType=VARCHAR},
+            #{registInfo.lastUpdSectionCd, jdbcType=VARCHAR},
+            #{registInfo.lastUpdDate, jdbcType=VARCHAR},
+            #{registInfo.lastUpdCompanyCd, jdbcType=VARCHAR}
+        )
+    </insert>
+    
+    <insert id="insertAccDept">
+        INSERT INTO M_ACC_DEPT
+        (
+            REQ_COMPANY_CD,
+            REQ_SECTION_CD,
+            ACCOUNT_COMPANY_CD,
+            ACCOUNT_SECTION_CD,
+            LAST_UPD_DATE,
+            LAST_UPD_COMPANY_CD,
+            LAST_UPD_SECTION_CD,
+            LAST_UPD_USER_ID,
+            REG_DATE,
+            REG_SECTION_CD,
+            REG_COMPANY_CD,
+            REG_USER_ID
+        )VALUES(
+            #{sectionManagement.identify.companyCd, jdbcType=VARCHAR},
+            #{sectionManagement.identify.sectionCd, jdbcType=VARCHAR},
+            #{accountRemodelDestination.companyCd, jdbcType=VARCHAR},
+            #{accountRemodelDestination.section.sectionCd, jdbcType=VARCHAR},
+            #{sectionManagement.registInfo.lastUpdDate, jdbcType=VARCHAR},
+            #{sectionManagement.registInfo.lastUpdCompanyCd, jdbcType=VARCHAR},
+            #{sectionManagement.registInfo.lastUpdSectionCd, jdbcType=VARCHAR},
+            #{sectionManagement.registInfo.lastUpdUserId, jdbcType=VARCHAR},
+            #{sectionManagement.registInfo.regDate, jdbcType=VARCHAR},
+            #{sectionManagement.registInfo.regSectionCd, jdbcType=VARCHAR},
+            #{sectionManagement.registInfo.regCompanyCd, jdbcType=VARCHAR},
+            #{sectionManagement.registInfo.regUserId, jdbcType=VARCHAR}
+        )
+    </insert>
+    
+    <insert id="insertProcDept">
+        INSERT INTO M_PROC_DEPT
+        (
+            REQ_COMPANY_CD,
+            REQ_SECTION_CD,
+            BUYER_COMPANY_CD,
+            BUYER_SECTION_CD,
+            LAST_UPD_DATE,
+            LAST_UPD_COMPANY_CD,
+            LAST_UPD_SECTION_CD,
+            LAST_UPD_USER_ID,
+            REG_DATE,
+            REG_SECTION_CD,
+            REG_COMPANY_CD,
+            REG_USER_ID
+        )VALUES(
+            #{sectionManagement.identify.companyCd, jdbcType=VARCHAR},
+            #{sectionManagement.identify.sectionCd, jdbcType=VARCHAR},
+            #{purchasRemodelDestination.companyCd, jdbcType=VARCHAR},
+            #{purchasRemodelDestination.section.sectionCd, jdbcType=VARCHAR},
+            #{sectionManagement.registInfo.lastUpdDate, jdbcType=VARCHAR},
+            #{sectionManagement.registInfo.lastUpdCompanyCd, jdbcType=VARCHAR},
+            #{sectionManagement.registInfo.lastUpdSectionCd, jdbcType=VARCHAR},
+            #{sectionManagement.registInfo.lastUpdUserId, jdbcType=VARCHAR},
+            #{sectionManagement.registInfo.regDate, jdbcType=VARCHAR},
+            #{sectionManagement.registInfo.regSectionCd, jdbcType=VARCHAR},
+            #{sectionManagement.registInfo.regCompanyCd, jdbcType=VARCHAR},
+            #{sectionManagement.registInfo.regUserId, jdbcType=VARCHAR}
+        )
+    </insert>
+
+    <insert id="insertSectionLanguage" parameterType="fw.domain.mst.organization.section.SectionLanguage">
+        INSERT INTO M_SECTION_LANG
+        (
+            COMPANY_CD,
+            SECTION_CD,
+            VALID_START_DATE,
+            VALID_END_DATE,
+            LANGUAGE_IND,
+            SECTION_NAME,
+            LAST_UPD_DATE,
+            LAST_UPD_COMPANY_CD,
+            LAST_UPD_SECTION_CD,
+            LAST_UPD_USER_ID,
+            REG_DATE,
+            REG_SECTION_CD,
+            REG_COMPANY_CD,
+            REG_USER_ID
+        )VALUES(
+            #{identify.companyCd, jdbcType=VARCHAR},
+            #{identify.sectionCd, jdbcType=VARCHAR},
+            '${@fw.common.util.AppUtil@convertDateForValid(identify.validStartDate.dateOfymd,@fw.common.util.AppUtil@VALID_START_DATE)}',
+            '${@fw.common.util.AppUtil@convertDateForValid(identify.validEndDate.dateOfymd,@fw.common.util.AppUtil@VALID_END_DATE)}',
+            #{languageInd.languageInd, jdbcType=VARCHAR},
+            #{sectionName, jdbcType=VARCHAR},
+            #{registInfo.lastUpdDate, jdbcType=VARCHAR},
+            #{registInfo.lastUpdCompanyCd, jdbcType=VARCHAR},
+            #{registInfo.lastUpdSectionCd, jdbcType=VARCHAR},
+            #{registInfo.lastUpdUserId, jdbcType=VARCHAR},
+            #{registInfo.regDate, jdbcType=VARCHAR},
+            #{registInfo.regSectionCd, jdbcType=VARCHAR},
+            #{registInfo.regCompanyCd, jdbcType=VARCHAR},
+            #{registInfo.regUserId, jdbcType=VARCHAR}
+        )
+    </insert>
+    
+    <update id="updateSectionLanguage" parameterType="fw.domain.mst.organization.section.SectionManagement">
+        UPDATE M_SECTION_LANG
+        SET VALID_END_DATE = #{endDate.dateOfymd},
+            LAST_UPD_DATE = #{registInfo.lastUpdDate},
+            LAST_UPD_COMPANY_CD = #{registInfo.lastUpdCompanyCd},
+            LAST_UPD_SECTION_CD = #{registInfo.lastUpdSectionCd},
+            LAST_UPD_USER_ID = #{registInfo.lastUpdUserId}
+        WHERE 
+            COMPANY_CD = #{identify.companyCd, jdbcType=VARCHAR}
+            AND SECTION_CD = #{identify.sectionCd, jdbcType=VARCHAR}
+            AND VALID_START_DATE = '${@fw.common.util.AppUtil@convertDateForValid(identify.validStartDate.dateOfymd,@fw.common.util.AppUtil@VALID_START_DATE)}'
+            AND VALID_END_DATE = '${@fw.common.util.AppUtil@convertDateForValid(identify.validEndDate.dateOfymd,@fw.common.util.AppUtil@VALID_END_DATE)}'
+    </update>
+
+    <update id="update" parameterType="fw.domain.mst.organization.section.SectionManagement">
+        UPDATE M_SECTION
+        SET
+            VALID_START_DATE ='${@fw.common.util.AppUtil@convertDateForValid(startDate.dateOfymd,@fw.common.util.AppUtil@VALID_START_DATE)}',
+            VALID_END_DATE ='${@fw.common.util.AppUtil@convertDateForValid(endDate.dateOfymd,@fw.common.util.AppUtil@VALID_END_DATE)}',
+            SECTION_PLACE_CD = #{sectionPlaceCd},
+            UPPER_SECTION_CD = #{orga.upSection.upperSectionCd},
+            EXTENSION_NO=#{orga.contact.extNo.extensionNo},
+            TEL_NO = #{orga.contact.telNo.telNo},
+            FAX_NO = #{orga.contact.faxNo.faxNo},
+            TOTAL_SECTION_CD =
+            <if test="@org.apache.commons.lang.StringUtils@isNotBlank(business.totalCd.totalSectionCd)">
+                  #{business.totalCd.totalSectionCd, jdbcType=VARCHAR},
+            </if>
+            <if test="@org.apache.commons.lang.StringUtils@isBlank(business.totalCd.totalSectionCd)">
+                  #{identify.sectionCd, jdbcType=VARCHAR},
+            </if>
+            BUYER_SECTION_FLG = #{business.type.sectionTypeBuyer},
+            ACC_SECTION_FLG =  #{business.type.sectionTypeAcc},
+            PLANNED_SECTION_FLG =  #{business.type.sectionTypePlanned}, 
+            TERM_FLG =  #{term.termFlg},
+            LAST_UPD_DATE = #{registInfo.lastUpdDate},
+            LAST_UPD_COMPANY_CD = #{registInfo.lastUpdCompanyCd},
+            LAST_UPD_SECTION_CD = #{registInfo.lastUpdSectionCd},
+            LAST_UPD_USER_ID = #{registInfo.lastUpdUserId}        
+        WHERE 
+            SECTION_CD = #{identify.sectionCd,jdbcType=VARCHAR}
+            AND M_SECTION.COMPANY_CD = #{identify.companyCd, jdbcType=VARCHAR}
+            AND M_SECTION.VALID_START_DATE = '${@fw.common.util.AppUtil@convertDateForValid(identify.validStartDate.dateOfymd,@fw.common.util.AppUtil@VALID_START_DATE)}'
+            AND M_SECTION.VALID_END_DATE = '${@fw.common.util.AppUtil@convertDateForValid(identify.validEndDate.dateOfymd,@fw.common.util.AppUtil@VALID_END_DATE)}'
+            
+    </update>
+    <update id="updateForUpload" parameterType="fw.domain.mst.organization.section.SectionManagement">
+        UPDATE M_SECTION
+        SET
+            VALID_START_DATE ='${@fw.common.util.AppUtil@convertDateForValid(startDate.dateOfymd,@fw.common.util.AppUtil@VALID_START_DATE)}',
+            VALID_END_DATE ='${@fw.common.util.AppUtil@convertDateForValid(endDate.dateOfymd,@fw.common.util.AppUtil@VALID_END_DATE)}',
+            SECTION_PLACE_CD = #{sectionPlaceCd},
+            UPPER_SECTION_CD = #{orga.upSection.upperSectionCd},
+            EXTENSION_NO=#{orga.contact.extNo.extensionNo},
+            TEL_NO = #{orga.contact.telNo.telNo},
+            FAX_NO = #{orga.contact.faxNo.faxNo},
+            TOTAL_SECTION_CD =
+            <if test="@org.apache.commons.lang.StringUtils@isNotBlank(business.totalCd.totalSectionCd)">
+                  #{business.totalCd.totalSectionCd, jdbcType=VARCHAR},
+            </if>
+            <if test="@org.apache.commons.lang.StringUtils@isBlank(business.totalCd.totalSectionCd)">
+                  #{identify.sectionCd, jdbcType=VARCHAR},
+            </if>
+            BUYER_SECTION_FLG = #{business.type.sectionTypeBuyer},
+            ACC_SECTION_FLG =  #{business.type.sectionTypeAcc},
+            PLANNED_SECTION_FLG =  #{business.type.sectionTypePlanned}, 
+            TERM_FLG =  #{term.termFlg},
+            LAST_UPD_DATE = #{registInfo.lastUpdDate},
+            LAST_UPD_COMPANY_CD = #{registInfo.lastUpdCompanyCd},
+            LAST_UPD_SECTION_CD = #{registInfo.lastUpdSectionCd},
+            LAST_UPD_USER_ID = #{registInfo.lastUpdUserId}        
+        WHERE 
+            SECTION_CD = #{identify.sectionCd,jdbcType=VARCHAR}
+            AND M_SECTION.COMPANY_CD = #{identify.companyCd, jdbcType=VARCHAR}
+            AND M_SECTION.VALID_START_DATE = '${@fw.common.util.AppUtil@convertDateForValid(startDate.dateOfymd,@fw.common.util.AppUtil@VALID_START_DATE)}'
+            AND M_SECTION.VALID_END_DATE = '${@fw.common.util.AppUtil@convertDateForValid(endDate.dateOfymd,@fw.common.util.AppUtil@VALID_END_DATE)}'
+            
+    </update>
+    <update id="updateSectionForRevision" parameterType="fw.domain.mst.organization.section.SectionManagement">
+        UPDATE M_SECTION
+        SET
+            VALID_END_DATE ='${@fw.common.util.AppUtil@convertDateForValid(endDate.dateOfymd,@fw.common.util.AppUtil@VALID_END_DATE)}',
+            LAST_UPD_DATE = #{registInfo.lastUpdDate},
+            LAST_UPD_COMPANY_CD = #{registInfo.lastUpdCompanyCd},
+            LAST_UPD_SECTION_CD = #{registInfo.lastUpdSectionCd},
+            LAST_UPD_USER_ID = #{registInfo.lastUpdUserId}
+        WHERE 
+            SECTION_CD = #{identify.sectionCd,jdbcType=VARCHAR}
+            AND M_SECTION.COMPANY_CD = #{identify.companyCd, jdbcType=VARCHAR}
+            AND M_SECTION.VALID_START_DATE = '${@fw.common.util.AppUtil@convertDateForValid(identify.validStartDate.dateOfymd,@fw.common.util.AppUtil@VALID_START_DATE)}'
+            AND M_SECTION.VALID_END_DATE = '${@fw.common.util.AppUtil@convertDateForValid(identify.validEndDate.dateOfymd,@fw.common.util.AppUtil@VALID_END_DATE)}'
+    </update>
+    
+    <delete id="delete" parameterType="fw.domain.mst.organization.section.SectionIdentify">    
+        DELETE FROM M_SECTION
+        WHERE 
+            M_SECTION.COMPANY_CD = #{companyCd,jdbcType=VARCHAR}
+            AND M_SECTION.SECTION_CD = #{sectionCd, jdbcType=VARCHAR}
+            AND M_SECTION.VALID_START_DATE = '${@fw.common.util.AppUtil@convertDateForValid(validStartDate.dateOfymd,@fw.common.util.AppUtil@VALID_START_DATE)}'
+            AND M_SECTION.VALID_END_DATE = '${@fw.common.util.AppUtil@convertDateForValid(validEndDate.dateOfymd,@fw.common.util.AppUtil@VALID_END_DATE)}'
+                           
+    </delete>
+    
+    <delete id="deleteSectionLanguage" parameterType="fw.domain.mst.organization.section.SectionIdentify">
+        DELETE FROM M_SECTION_LANG
+        WHERE 
+            M_SECTION_LANG.COMPANY_CD = #{companyCd,jdbcType=VARCHAR}
+            AND M_SECTION_LANG.SECTION_CD = #{sectionCd, jdbcType=VARCHAR}
+            AND M_SECTION_LANG.VALID_START_DATE = '${@fw.common.util.AppUtil@convertDateForValid(validStartDate.dateOfymd,@fw.common.util.AppUtil@VALID_START_DATE)}'
+            AND M_SECTION_LANG.VALID_END_DATE = '${@fw.common.util.AppUtil@convertDateForValid(validEndDate.dateOfymd,@fw.common.util.AppUtil@VALID_END_DATE)}'
+                 
+    </delete>
+    <delete id="deleteSectionLanguageForUpload" parameterType="fw.domain.mst.organization.section.SectionManagement">
+        DELETE FROM M_SECTION_LANG
+        WHERE 
+            M_SECTION_LANG.COMPANY_CD = #{identify.companyCd,jdbcType=VARCHAR}
+            AND M_SECTION_LANG.SECTION_CD = #{identify.sectionCd, jdbcType=VARCHAR}
+            AND M_SECTION_LANG.VALID_START_DATE = '${@fw.common.util.AppUtil@convertDateForValid(startDate.dateOfymd,@fw.common.util.AppUtil@VALID_START_DATE)}'
+            AND M_SECTION_LANG.VALID_END_DATE = '${@fw.common.util.AppUtil@convertDateForValid(endDate.dateOfymd,@fw.common.util.AppUtil@VALID_END_DATE)}'
+            AND M_SECTION_LANG.LANGUAGE_IND = #{companySummary.languageInd, jdbcType=VARCHAR}
+    </delete>
+    <delete id="deleteAccDept">
+        DELETE FROM M_ACC_DEPT
+        WHERE 
+            M_ACC_DEPT.REQ_COMPANY_CD = #{sectionManagement.identify.companyCd,jdbcType=VARCHAR}
+            AND M_ACC_DEPT.REQ_SECTION_CD = #{sectionManagement.identify.sectionCd, jdbcType=VARCHAR}
+    </delete>
+   <delete id="deleteProcDept">
+        DELETE FROM M_PROC_DEPT
+        WHERE 
+            M_PROC_DEPT.REQ_COMPANY_CD = #{sectionManagement.identify.companyCd,jdbcType=VARCHAR}
+            AND M_PROC_DEPT.REQ_SECTION_CD = #{sectionManagement.identify.sectionCd, jdbcType=VARCHAR}
+  </delete> 
+  
+  <select id="searchValidate" parameterType="fw.domain.mst.organization.section.SectionIdentify" resultType="fw.domain.mst.organization.section.SectionIdentify">
+        SELECT
+            M_SECTION.SECTION_CD as "sectionCd",
+            M_SECTION.COMPANY_CD as "companyCd",
+            M_SECTION.VALID_START_DATE as "validStartDate.dateOfymd", 
+            M_SECTION.VALID_END_DATE as "validEndDate.dateOfymd" 
+        FROM M_SECTION 
+        WHERE 
+            M_SECTION.COMPANY_CD = #{companyCd,jdbcType=VARCHAR}
+            AND M_SECTION.SECTION_CD = #{sectionCd, jdbcType=VARCHAR}
+  </select>  
+
+    <select id="countAccDept"  parameterType="fw.domain.mst.organization.section.SectionIdentify" resultType="int">
+        SELECT COUNT(1) FROM M_ACC_DEPT
+        WHERE
+                ACCOUNT_COMPANY_CD = #{companyCd, jdbcType=VARCHAR}
+            AND ACCOUNT_SECTION_CD = #{sectionCd, jdbcType=VARCHAR}
+    </select>
+
+    <select id="countProcDept"  parameterType="fw.domain.mst.organization.section.SectionIdentify" resultType="int">
+        SELECT COUNT(1) FROM M_PROC_DEPT
+        WHERE
+                BUYER_COMPANY_CD = #{companyCd, jdbcType=VARCHAR}
+            AND BUYER_SECTION_CD = #{sectionCd, jdbcType=VARCHAR}
+    </select>
+
+    <sql id="pageHeader">
+       SELECT * FROM (
+    </sql>
+    <sql id="pageRoot">
+        ) WHERE  ROWNUM &lt;=${@fw.common.util.PropertiesUtil@getLong("DOWNLOAD_MAXCNT")}
+    </sql>
+    <!-- 部門存在しないの場合、廻送先会計と廻送先購買を削除する。 -->
+    <select id="searchCountSectionByDel" parameterType="fw.domain.mst.organization.section.SectionIdentify" resultType="int">
+        SELECT 
+            COUNT(1)
+        FROM M_SECTION
+        WHERE COMPANY_CD = #{companyCd,jdbcType=VARCHAR}
+            AND SECTION_CD = #{sectionCd, jdbcType=VARCHAR}
+    </select>
+    <select id="getNewVersionRecordCount" parameterType="fw.domain.mst.organization.section.SectionManagement" resultType="int">
+        SELECT      COUNT(*)
+        FROM        M_SECTION
+        WHERE       COMPANY_CD = #{identify.companyCd, jdbcType=VARCHAR}
+        AND         SECTION_CD = #{identify.sectionCd, jdbcType=VARCHAR}
+        AND         VALID_START_DATE > '${@fw.common.util.AppUtil@convertDateForValid(identify.validStartDate.dateOfymd,@fw.common.util.AppUtil@VALID_START_DATE)}'
+    </select>
+</mapper>

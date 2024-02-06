@@ -1,0 +1,367 @@
+<!doctype html>
+<html LANG="ja">
+<head>
+<title>#customSpringMessage("RECIVE_APP_LIST")</title><!--受入承認一覧-->
+<meta http-equiv="Content-type" content="text/html; charset=UTF-8">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Content-script-type" content="text/javascript">
+<link id="CSS_FONT" rel="stylesheet" href="../../include/FontS.css" type="text/css">
+<link rel="stylesheet" href="../../include/Layout.css" type="text/css">
+<link rel="stylesheet" href="../../include/Color.css" type="text/css">
+<script language="javascript" TYPE="text/javascript" src="../../include/common.js"></script>
+<script language="javascript" TYPE="text/javascript" src="../../include/check.js"></script>
+<script language="javascript" TYPE="text/javascript" src="../../include/date.js"></script>
+<script language="javascript" TYPE="text/javascript" src="../../include/tablesort.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/searchbox.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/jquery-1.7.2.min.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/jquery.tablefix.js"></script>
+<script language="javascript" TYPE="text/javascript">
+<!--
+#set($isActiveProfileStock = "#isActiveProfile('stock')")
+#parse("./common/common_js.vm")
+//初期
+function onLoad() {
+    parentButtonEnable();
+    dataLoadHasPage();
+
+    var isSuccess = '#jsEscape($!isSuccess)';
+    if(isSuccess == 'true'){
+        #set( $paramApr1 = ["#customSpringMessage('RECEIVE')"] )
+        alert("#customMessageArgs("I028",$paramApr1)");
+    }
+
+    var alertMessage = "$!alertMessage";
+    if (alertMessage != ""){
+        buttonUsableForList(alertMessage);
+        alert(alertMessage);
+    }
+
+    var errorMsg = "$!errorMessage";
+    if (errorMsg != ""){
+        return;
+    }
+
+    window.parent.getObj("APPROVALAREA").style.display = "";
+    var isShowApproval = "#jsEscape($isShowApproval)";
+    if (isShowApproval == 'true'){
+       top.iframeChange("${flowExecutionUrl}&_eventId=individualApproval");
+    }
+    
+    var isShowDetail = "#jsEscape($isShowDetail)";
+    if (isShowDetail == 'true'){
+       poppage("${flowExecutionUrl}&_eventId=detail",'DETAIL','800','700');
+    }
+}
+
+//chkHead
+$(function(){
+    $(document).delegate('#ParentCheck','change',function() {
+        var chk = $(this).prop("checked");
+        var status = 0;
+        $("input:[type=checkbox][name^=status_]").prop("checked",chk)
+
+        if(chk){
+            $("tr:[id^=Row_]").css("background-color","#ffff99");
+            status = 1;
+        }else{
+            $("tr:[id^=Row_]").each(function(){
+                var count = $(this).attr("id").substring(4);
+                if (Number(count) % 2 != 0) {
+                    $(this).css("background-color","#ffffff");
+                } else {
+                    $(this).css("background-color","#dce4ef");
+                }
+            });
+        }
+        $("input:[type=hidden][id^=receiveAppList][id$=checkStatus]").val(status);
+    });
+});
+
+//check one 
+function chkData(obj, index){
+    var status = 0;
+    if(obj.checked == true){
+        $("tr:[id=Row_" + index + "]").css("backgroundColor","#ff9");
+        status = 1;
+    }else{
+        if (index % 2 != 0) {
+            $("tr:[id=Row_" + index + "]").css("backgroundColor","#fff");
+        } else {
+            $("tr:[id=Row_" + index + "]").css("backgroundColor","#dce4ef");
+        }
+    }
+    $("input:[type=hidden][id^='receiveAppList[" + index + "]'][id$=checkStatus]").val(status);
+}
+
+//個別承認
+function individualApproval(delivKeyNo,orderSeq,lastUpdDate,arrivalSeqNo,exclusiveSlipNo,exclusiveLastUpdDate) {
+    buttonDisable();
+    parent.iframeChange('${flowExecutionUrl}&_eventId=individualApprovalValidate','delivKeyNo',delivKeyNo,'orderSeq',orderSeq,'lastUpdDate',lastUpdDate,'arrivalSeqNo',arrivalSeqNo,'exclusiveSlipNo',exclusiveSlipNo,'exclusiveLastUpdDate',exclusiveLastUpdDate,"HIDDENAREA");
+}
+
+// 一括承認
+function exec() {
+    var count = 0;
+    $("input:[type=checkbox][name^=status_]").each(function(){
+        if($(this).prop("checked"))
+            count ++;
+    });
+    if(count==0){
+         alert("#nothingSelectedMessage()");
+    }else{
+        #set( $orderApp = "#customSpringMessage('RECEIVE')" )   
+        #set( $appOval = "#customSpringMessage('PACKAGE_APP')" ) 
+        if( !confirm("#customMessageArgs("W001",[$orderApp,$appOval])") ) {
+            return;
+        }
+        buttonDisable();
+        parentButtonDisable();
+        getObj("BodyForm").action="${flowExecutionUrl}&_eventId=packageApproval";
+        getObj("BodyForm").submit();
+    }
+}
+
+//受入詳細
+function openDetail(orderSeq, orderNo,delivKeyNo,lastUpdDate,exclusiveSlipNo,exclusiveLastUpdDate) {
+    parent.iframeChange("${flowExecutionUrl}&_eventId=detailValidate","orderSeq",orderSeq,"orderNo",orderNo,"delivKeyNo",delivKeyNo,"lastUpdDate",lastUpdDate,"exclusiveSlipNo",exclusiveSlipNo,"exclusiveLastUpdDate",exclusiveLastUpdDate,"HIDDENAREA");
+}
+//-->
+</script>
+
+</head>
+<body id="BODY" topmargin="0" leftmargin="0" marginwidth="0" marginheight="0" align="left" onload="onLoad();setTablefix('#TABLE', 1, 4+$!PSAPR071PageCreaterForList.printLockColumn());">
+#if($!errorMessage && $!errorMessage!="")
+<div class="error">
+    $!errorMessage
+</div>
+#end
+<form id="BodyForm" name="BodyForm"  method="post">
+#foreach($!receiveAppListItem in $!itemList.receiveAppList)
+    #customFormHiddenInput("receiveAppList[$velocityCount].checkStatus" "")
+    #customFormHiddenInput("receiveAppList[$velocityCount].receiveAppIdentify.receiveAppIdentify.exclusiveSlipId.slipNo" "$!receiveAppListItem.receiveAppIdentify.receiveAppIdentify.exclusiveSlipId.slipNo")
+    #customFormHiddenInput("receiveAppList[$velocityCount].receiveAppIdentify.receiveAppIdentify.exclusiveSlipId.lastUpdDate" "$!receiveAppListItem.receiveAppIdentify.receiveAppIdentify.exclusiveSlipId.lastUpdDate")
+#end
+<table id="TABLE" class="ListArea" WIDTH="100%">
+    #if($!itemList.receiveAppList.size() > 0)
+    <thead>
+        <tr id="Header">
+            <th class="BoxHeaderCenter FontSmall">No.<!--No.--></th>
+            <th id="CheckCol_H" label="chk" class="BoxHeaderCenter FontSmall"><input name="ParentCheck" id="ParentCheck" type="checkbox"></th><!--全選択/全選択解除-->
+            <th class="BoxHeaderCenter FontSmall">#customSpringMessage("DETAIL")<!--詳細--></th>
+            <th class="BoxHeaderCenter FontSmall">#customSpringMessage("INDIVIDUAL_APP")<!--個別承認--></th>
+            #foreach($!item in $!PSAPR071PageCreaterForList.getItemListForBody())
+              #if($isActiveProfileStock == "false"
+                  &&($!item.getColumnName()=="T_ARRIVAL.HAVE_IN_STOCK_FLG"
+                  || $!item.getColumnName()=="T_ARRIVAL.STOCK_PLACE_CD"
+                  || $!item.getColumnName()=="T_ARRIVAL.STOCK_PLACE_NAME"
+                 ))## 在庫オプション
+              #else
+                #set($currentOneColumnFlag = $!PSAPR071PageCreaterForList.getOneColumnFlag($!item))
+                #if($velocityCount == 0)
+                    $!PSAPR071PageCreaterForList.printTHtag($!item,'class="BoxHeaderCenter FontSmall"')
+                #elseif($currentOneColumnFlag)
+                    $!PSAPR071PageCreaterForList.printBRtag($!item)
+                #else
+                    $!PSAPR071PageCreaterForList.printTHtagClose()
+                    $!PSAPR071PageCreaterForList.printTHtag($!item,'class="BoxHeaderCenter FontSmall"')
+                #end
+              #end
+                #if($!item.getColumnName()=="T_RECEIVE_MNG.DELIV_KEY_NO")
+                    $!PSAPR071PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName()=="T_APPROVAL.NOW_APP_USER_NAME")
+                    $!PSAPR071PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName()=="T_APPROVAL.NEXT_APP_USER_NAME")
+                    $!PSAPR071PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName()=="T_ARRIVAL.CORRECT_CD")
+                    $!PSAPR071PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName()=="T_ARRIVAL.ARRIVAL_VERSION")
+                    $!PSAPR071PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName()=="T_ORDER.ITEM_CD")
+                    $!PSAPR071PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName()=="T_ORDER.ITEM_NAME")
+                    $!PSAPR071PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName()=="T_ORDER.DELIV_PLACE_CD")
+                    $!PSAPR071PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName()=="T_ORDER.DELIV_PLACE_NAME")
+                    $!PSAPR071PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName()=="T_ORDER.ORDER_VOL")
+                    $!PSAPR071PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName()=="T_RECEIVE_MNG.DELIV_VOL")
+                    $!PSAPR071PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName()=="DUMMY.RCV_REMAIN_AMOUNT")
+                    $!PSAPR071PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName()=="T_ARRIVAL.DELIV_VOL")
+                    $!PSAPR071PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName()=="T_ORDER.UNIT_NAME")
+                    $!PSAPR071PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName()=="T_ORDER.ORDER_DELIV_DATE")
+                    $!PSAPR071PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName()=="T_ARRIVAL.ARRIV_EXP_DATE")
+                    $!PSAPR071PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName()=="T_ARRIVAL.HAVE_IN_STOCK_FLG" && $isActiveProfileStock == "true")## 在庫オプション
+                    $!PSAPR071PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName()=="T_ARRIVAL.STOCK_PLACE_CD" && $isActiveProfileStock == "true")## 在庫オプション
+                    $!PSAPR071PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName()=="T_ARRIVAL.STOCK_PLACE_NAME" && $isActiveProfileStock == "true")## 在庫オプション
+                    $!PSAPR071PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName()=="T_ARRIVAL.ARRIV_SECTION_CD")
+                    $!PSAPR071PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName()=="T_ARRIVAL.ARRIV_SECTION_NAME")
+                    $!PSAPR071PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName()=="T_ARRIVAL.ARRIV_USER_ID")
+                    $!PSAPR071PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName()=="T_ARRIVAL.ARRIV_USER_NAME")
+                    $!PSAPR071PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName()=="T_ORDER.SUP_CD")
+                    $!PSAPR071PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName()=="T_ORDER.SUP_ABBR_NAME")
+                    $!PSAPR071PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName()=="T_ORDER.SUBCON_IND")
+                    $!PSAPR071PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName()=="T_ORDER.EDI_IND")
+                    $!PSAPR071PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName()=="T_ORDER.ORDER_FIRST_DATE")
+                    $!PSAPR071PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName()=="T_ORDER.REQ_SECTION_CD")
+                    $!PSAPR071PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName()=="T_ORDER.REQ_SECTION_NAME")
+                    $!PSAPR071PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName()=="T_ORDER.REQ_USER_ID")
+                    $!PSAPR071PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName()=="T_ORDER.REQ_USER_NAME")
+                    $!PSAPR071PageCreaterForList.printHead($!item)
+                #else
+                  #if($isActiveProfileStock == "false"
+                      &&($!item.getColumnName()=="T_ARRIVAL.HAVE_IN_STOCK_FLG"
+                      || $!item.getColumnName()=="T_ARRIVAL.STOCK_PLACE_CD"
+                      || $!item.getColumnName()=="T_ARRIVAL.STOCK_PLACE_NAME"
+                     ))## 在庫オプション
+                  #else
+                    $!PSAPR071PageCreaterForList.printHead($!item)
+                  #end
+                #end
+            #end
+            $!PSAPR071PageCreaterForList.printTHtagClose()
+        </tr>
+    </thead>
+       #end
+    <tbody id="Tbody">
+  
+    #foreach($!receiveAppListItem in $!itemList.receiveAppList)
+        <tr id="Row_$velocityCount" #if($velocityCount % 2 == 0) bgcolor="#dce4ef" #else bgcolor="#ffffff" #end>
+            <td class="BoxDetailCenter FontList">#set( $index = $velocityCount + 1 )$index</td>
+            <td id="CheckCol_$velocityCount" class="BoxDetailCenter FontList">
+                <input type="checkbox" onclick="chkData(this,$velocityCount)" class="Icon" name="status_$velocityCount">
+            </td>
+            <td class="BoxDetailCenter">
+                ## 詳細
+                <img id="DetailButton_0" class="Icon" src="../../image/btnDetailDisp.gif" onclick="openDetail('#jsEscapeInHTML($!receiveAppListItem.receiveAppIdentify.receiveAppIdentify.orderSeq)','#jsEscapeInHTML($!receiveAppListItem.orderNo)','#jsEscapeInHTML($!receiveAppListItem.receiveAppIdentify.receiveAppIdentify.delivKeyNo.delivKeyNo)','#jsEscapeInHTML($!receiveAppListItem.receiveAppIdentify.receiveAppIdentify.lastUpdDate)','#jsEscapeInHTML($!receiveAppListItem.receiveAppIdentify.receiveAppIdentify.exclusiveSlipId.slipNo)','#jsEscapeInHTML($!receiveAppListItem.receiveAppIdentify.receiveAppIdentify.exclusiveSlipId.lastUpdDate)')"></td>
+            <td class="BoxDetailCenter">
+                ## 個別承認
+                <input type="button" class="SmallButton" value="#customSpringMessage('INDIVIDUAL_APP')" onclick="individualApproval('#jsEscapeInHTML($!receiveAppListItem.receiveAppIdentify.receiveAppIdentify.delivKeyNo.delivKeyNo)','#jsEscapeInHTML($!receiveAppListItem.receiveAppIdentify.receiveAppIdentify.orderSeq)','#jsEscapeInHTML($!receiveAppListItem.receiveAppIdentify.receiveAppIdentify.lastUpdDate)','#jsEscapeInHTML($!receiveAppListItem.receiveAppIdentify.receiveAppIdentify.arrivalSeqNo)','#jsEscapeInHTML($!receiveAppListItem.receiveAppIdentify.receiveAppIdentify.exclusiveSlipId.slipNo)','#jsEscapeInHTML($!receiveAppListItem.receiveAppIdentify.receiveAppIdentify.exclusiveSlipId.lastUpdDate)')">
+            </td>
+            #foreach($!item in $!PSAPR071PageCreaterForList.getItemListForBody($velocityCount))
+              #if($isActiveProfileStock == "false"
+                  &&($!item.getColumnName()=="T_ARRIVAL.HAVE_IN_STOCK_FLG"
+                  || $!item.getColumnName()=="T_ARRIVAL.STOCK_PLACE_CD"
+                  || $!item.getColumnName()=="T_ARRIVAL.STOCK_PLACE_NAME"
+                 ))## 在庫オプション
+              #else
+                #set($currentOneColumnFlag = $!PSAPR071PageCreaterForList.getOneColumnFlag($!item))
+                #if($velocityCount == 0)
+                    $!PSAPR071PageCreaterForList.printTDtag('class="BoxDetailLeft FontList"')
+                #elseif(!$currentOneColumnFlag)
+                    $!PSAPR071PageCreaterForList.printTDtagClose()
+                    $!PSAPR071PageCreaterForList.printTDtag('class="BoxDetailLeft FontList"')
+                #end
+              #end
+                #if($!item.getColumnName()=="T_RECEIVE_MNG.DELIV_KEY_NO")
+                    $!PSAPR071PageCreaterForList.printDefault($!item,"_data_style",'class="FontSlipNo"')
+                #elseif($!item.getColumnName()=="T_APPROVAL.NOW_APP_USER_NAME")
+                    $!PSAPR071PageCreaterForList.printDefault($!item)
+                #elseif($!item.getColumnName()=="T_APPROVAL.NEXT_APP_USER_NAME")
+                    $!PSAPR071PageCreaterForList.printDefault($!item)
+                #elseif($!item.getColumnName()=="T_ARRIVAL.CORRECT_CD")
+                    $!PSAPR071PageCreaterForList.printSpecial("s25_codeNameRed",$!item,'CORRECT_CD','',"_data_style",'align="center"','_redValue','3','_boldStyle','"FontStatus Red"','_needBold','1')
+                #elseif($!item.getColumnName()=="T_ARRIVAL.ARRIVAL_VERSION")
+                    $!PSAPR071PageCreaterForList.printDefault($!item,"_data_style",'align="center"')
+                #elseif($!item.getColumnName()=="T_ORDER.ITEM_CD")
+                    $!PSAPR071PageCreaterForList.printDefault($!item)
+                #elseif($!item.getColumnName()=="T_ORDER.ITEM_NAME")
+                    $!PSAPR071PageCreaterForList.printDefault($!item)
+                #elseif($!item.getColumnName()=="T_ORDER.DELIV_PLACE_CD")
+                    $!PSAPR071PageCreaterForList.printDefault($!item)
+                #elseif($!item.getColumnName()=="T_ORDER.DELIV_PLACE_NAME")
+                    $!PSAPR071PageCreaterForList.printDefault($!item)
+                #elseif($!item.getColumnName()=="T_ORDER.ORDER_VOL")
+                    $!PSAPR071PageCreaterForList.printDefault($!item,"_data_style",'align="right"')
+                #elseif($!item.getColumnName()=="T_RECEIVE_MNG.DELIV_VOL")
+                    $!PSAPR071PageCreaterForList.printDefault($!item,"_data_style",'align="right"')
+                #elseif($!item.getColumnName()=="DUMMY.RCV_REMAIN_AMOUNT")
+                    $!PSAPR071PageCreaterForList.printDefault($!item,"_data_style",'align="right"')
+                #elseif($!item.getColumnName()=="T_ARRIVAL.DELIV_VOL")
+                    $!PSAPR071PageCreaterForList.printDefault($!item,"_data_style",'class="FontList" align="right"')
+                #elseif($!item.getColumnName()=="T_ORDER.UNIT_NAME")
+                    $!PSAPR071PageCreaterForList.printDefault($!item)
+                #elseif($!item.getColumnName()=="T_ORDER.ORDER_DELIV_DATE")
+                    $!PSAPR071PageCreaterForList.printDefault($!item,"_data_style",'align="center"')
+                #elseif($!item.getColumnName()=="T_ARRIVAL.ARRIV_EXP_DATE")
+                    $!PSAPR071PageCreaterForList.printDefault($!item,"_data_style",'align="center"')
+                #elseif($!item.getColumnName()=="T_ARRIVAL.ARRIV_SECTION_CD")
+                    $!PSAPR071PageCreaterForList.printDefault($!item)
+                #elseif($!item.getColumnName()=="T_ARRIVAL.ARRIV_SECTION_NAME")
+                    $!PSAPR071PageCreaterForList.printDefault($!item)
+                #elseif($!item.getColumnName()=="T_ARRIVAL.ARRIV_USER_ID")
+                    $!PSAPR071PageCreaterForList.printDefault($!item)
+                #elseif($!item.getColumnName()=="T_ARRIVAL.ARRIV_USER_NAME")
+                    $!PSAPR071PageCreaterForList.printDefault($!item)
+                #elseif($!item.getColumnName()=="T_ORDER.SUP_CD")
+                    $!PSAPR071PageCreaterForList.printDefault($!item)
+                #elseif($!item.getColumnName()=="T_ORDER.SUP_ABBR_NAME")
+                    $!PSAPR071PageCreaterForList.printDefault($!item)
+                #elseif($!item.getColumnName()=="T_ORDER.SUBCON_IND")
+                    #if("$receiveAppListItem.getSubcontract()"=="1")
+                     <div align="center">$!receiveAppListItem.subcontract_PageValue</div>
+                    #end
+                #elseif($!item.getColumnName()=="T_ORDER.EDI_IND")
+                    $!PSAPR071PageCreaterForList.printSpecial("s25_codeName", $!item, 'QUOT_EDI_IND','',"_data_style",'align="center"')
+                #elseif($!item.getColumnName()=="T_ORDER.ORDER_FIRST_DATE")
+                    $!PSAPR071PageCreaterForList.printDefault($!item,"_data_style",'align="center"')
+                #elseif($!item.getColumnName()=="T_ARRIVAL.HAVE_IN_STOCK_FLG" && $isActiveProfileStock == "true")## 在庫オプション
+                    $!PSAPR071PageCreaterForList.printSpecial("s25_codeName", $!item, 'HAVE_IN_STOCK_FLG', '', "_data_style", 'align="center"')
+                #elseif($!item.getColumnName()=="T_ARRIVAL.STOCK_PLACE_CD" && $isActiveProfileStock == "true")## 在庫オプション
+                    $!PSAPR071PageCreaterForList.printDefault($!item,"_data_style",'align="center"')
+                #elseif($!item.getColumnName()=="T_ARRIVAL.STOCK_PLACE_NAME" && $isActiveProfileStock == "true")## 在庫オプション
+                    $!PSAPR071PageCreaterForList.printDefault($!item)
+                #elseif($!item.getColumnName()=="T_ORDER.REQ_SECTION_CD")
+                    $!PSAPR071PageCreaterForList.printDefault($!item)
+                #elseif($!item.getColumnName()=="T_ORDER.REQ_SECTION_NAME")
+                    $!PSAPR071PageCreaterForList.printDefault($!item)
+                #elseif($!item.getColumnName()=="T_ORDER.REQ_USER_ID")
+                    $!PSAPR071PageCreaterForList.printDefault($!item)
+                #elseif($!item.getColumnName()=="T_ORDER.REQ_USER_NAME")
+                    $!PSAPR071PageCreaterForList.printDefault($!item)
+                #else
+                  #if($isActiveProfileStock == "false"
+                      &&($!item.getColumnName()=="T_ARRIVAL.HAVE_IN_STOCK_FLG"
+                      || $!item.getColumnName()=="T_ARRIVAL.STOCK_PLACE_CD"
+                      || $!item.getColumnName()=="T_ARRIVAL.STOCK_PLACE_NAME"
+                     ))## 在庫オプション
+                  #else
+                    $!PSAPR071PageCreaterForList.printDefault($!item)
+                  #end
+                #end
+            #end
+            $!PSAPR071PageCreaterForList.printTDtagClose()
+        </tr>
+    #end
+    </tbody>
+</table>
+<br>
+
+<table id="WAIT" class="NoBorder" style="display:none;width:100%;"><tr><td style="text-align:center;"><br><br>
+<img src="../../image/wait.gif"><br><span class="FontMini"><br>#customSpringMessage('SEARCH_MESSAGE')</span></td></tr></table>
+</form>
+<br>
+</body>
+</html>

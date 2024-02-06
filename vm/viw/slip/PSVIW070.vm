@@ -1,0 +1,289 @@
+<!doctype html>
+<html LANG="ja">
+<head>
+<meta http-equiv="Content-type" content="text/html; charset=UTF-8">
+<title>#customSpringMessage('VOUCHER_REFE_ALL')</title><!--伝票照会（全検索）-->
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Content-script-type" content="text/javascript">
+<link id="CSS_FONT" rel="stylesheet" href="../../include/FontS.css" type="text/css">
+<link rel="stylesheet" href="../../include/Layout.css" type="text/css">
+<link rel="stylesheet" href="../../include/Color.css" type="text/css">
+<link rel="stylesheet" href="../../include/ime.css" type="text/css">
+<link rel="stylesheet" href="../../include/searchbox.css" type="text/css">
+<script language="javascript" type="text/javascript" src="../../include/jquery-1.7.2.min.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/common.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/check.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/date.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/searchbox.js"></script>
+<script language="javascript" type="text/javascript">
+<!--
+#set($commonTitle = "#customSpringMessage('VOUCHER_REFE_ALL')")
+var classList = new Array($!itemClassTreeArrayData); 
+var pinName = "PSVIW070_Pin";
+#set($listViewStateID='PSVIW080')
+#set($searchViewStateID='PSVIW070')
+#parse("./common/common_js.vm")
+function onLoad() {
+    bodyLoad();
+    
+    top.document.title = document.title;
+    setPin(getCookie(pinName));
+    
+    var alertMessage = "$!alertMessage";
+    if (alertMessage != ""){
+        alert(alertMessage);
+    }
+    var errorMsg = "$!errorMessage";
+    if (errorMsg != ""){
+        setErrorMessage("ERRORDIV", errorMsg, "DATAAREA");
+        return;
+    }
+    var isDownload = "#jsEscape($!isDownLoadValidate)";
+    if (isDownload == 'true') {
+        iframeChange("${flowExecutionUrl}&_eventId=download","pageid","PSVIW070","HIDDENAREA");
+    } else {
+        var isShowList = "#jsEscape($isShowList)";
+        if (isShowList == 'true'){
+            iframeChange("${flowExecutionUrl}&_eventId=search","pageid","PriceList");
+        }
+    }
+}
+
+function execSearch() {
+    setItemDisabled("itemClassM","itemClassS");
+    setItemDisabled("itemProductClassM","itemProductClassS");
+    getObj("Body").target="_self";
+    buttonDisable();
+    getObj("Body").action = "${flowExecutionUrl}&_eventId=validate";
+    getObj('Body').submit();
+}
+
+function doDownload() {
+    setItemDisabled("itemClassM","itemClassS");
+    setItemDisabled("itemProductClassM","itemProductClassS");
+     //メッセージは空設定
+    getObj("TR_ERROR").style.display = "none";
+    getObj("ERRORDIV").innerHTML="";
+    getObj("Body").target = "HIDDENAREA";
+    buttonDisable();
+    setTimeout(buttonUsable,1000);
+    getObj("Body").action = "${flowExecutionUrl}&_eventId=downloadValidate";
+    
+    getObj("Body").submit();
+}
+function clearIssueVousherName() {
+        getObj('issueVousherName').value='';
+}
+
+function clearPurReqUserName() {
+        getObj('purReqUserName').value='';
+}
+
+function clearSupplierName() {
+        getObj('supplierName').value='';
+}
+function clearDelivPlaceName() {
+        getObj('delivPlaceName').value='';
+}
+//-->
+</script>
+
+</head>
+
+<body topmargin="0" leftmargin="0" marginwidth="0" marginheight="0" align="center" width="100%" height="100%" onload="onLoad();" style="overflow-y:hidden;">
+<form id="Body" name="Body" action="${flowExecutionUrl}&_eventId=validate" method="post">
+    <!-- ＊＊＊＊＊　カレンダーボックス　＊＊＊＊＊ -->
+#customFormHiddenInput("reqInd.hidden" "8")
+#customFormHiddenInput("orderSituation.hidden" "0")
+<!-- ＊＊＊＊＊　品名コード使用　＊＊＊＊＊ -->
+ #customFormHiddenInput("isClassify" "false")
+<!-- ＊＊＊＊＊　カレンダーボックス　＊＊＊＊＊ -->
+    <iframe id="CALENDARBOX" class="CALENDARBOX" framespacing="0"scrolling="no" frameborder="0" src="../../sbxCalendar/body.vm"></iframe>
+    <!--検索部テーブル開始-->
+    <table  class="NoBorder" width="100%" height="100%">
+        <tr>
+            <td id="SEARCH_AREA" class="SearchArea"><!-- onLoadで変更 -->
+                #parse("./common/common_title_tran_with_personal_setting.vm")
+                <table width="100%">
+                    <tr id="SEARCH_AREA2">
+                        <td id="Adjust" align="right" valign="top">
+                            
+                            <!-- 検索条件入力部 -->
+                            <table class="NoBorder" width="100%">
+                                <tr><td align="left" colspan="4" nowrap>#customSpringMessage('PSVIW070_HEADER_COMMENT')</td></tr>
+                                 $!PSVIW070PageCreaterForSearch.build('_td_style_left','class="FontSmallBold" align="right"','_td_style_right','class="FontSmall" align="left"','_item_style','Small')
+                                 #set($isFirstItem = true)
+                                 #foreach($item in $PSVIW070PageCreaterForSearch.getItemListForBody())
+                                    #set($currentOneRowFlag = $!PSVIW070PageCreaterForSearch.getOneRowFlag($!item))
+                                    #if($isFirstItem)
+                                        $!PSVIW070PageCreaterForSearch.printTRtag()
+                                    #elseif($currentOneRowFlag)
+                                        $!PSVIW070PageCreaterForSearch.printTDtag()
+                                        $!PSVIW070PageCreaterForSearch.printTRtagClose()
+                                        #set($isFirstItem = true)
+                                        $!PSVIW070PageCreaterForSearch.printTRtag()
+                                    #end
+                                    #if($!item.getColumnName() == "V_SLIP_REQ.PUR_REQ_NO")
+                                        $!PSVIW070PageCreaterForSearch.printDefault($!item)
+                                    #elseif($!item.getColumnName() == "V_SLIP_REQ.PUR_APL_NO")
+                                        $!PSVIW070PageCreaterForSearch.printDefault($!item)
+                                    #elseif($!item.getColumnName() == "V_SLIP_REQ.TITLE_NAME")
+                                        $!PSVIW070PageCreaterForSearch.printDefault($!item)
+                                    #elseif($!item.getColumnName() == "V_SLIP_REQ.INPUT_USER_ID")
+                                        #if($!searchCondition.slipSearchReqAllGrantFlg == "1")
+                                            $!PSVIW070PageCreaterForSearch.printSpecial("m13_inputUserForSearch",$!item,"popupPageid","PSVIW070",
+                                                "projectId","issueVousherForAllGrant",'_masterCdIme','Small noIME')
+                                        #else
+                                            $!PSVIW070PageCreaterForSearch.printSpecial("m13_inputUserForSearch",$!item,"popupPageid","PSVIW070",
+                                                "projectId","issueVousher",'_masterCdIme','Small noIME')
+                                        #end
+                                    #elseif($!item.getColumnName() == "V_SLIP_REQ.ITEM_CLASS_S")
+                                        $!PSVIW070PageCreaterForSearch.printSpecial("m14_inputItemKindSelect",$!item,'_termFlag',"0",'_sectionTypeCode','1') 
+                                    #elseif($!item.getColumnName() == "V_SLIP_REQ.PRODUCT_CLASS")
+                                        $!PSVIW070PageCreaterForSearch.printSpecial("m29_inputItemProductClassSelect",$!item) 
+                                    #elseif($!item.getColumnName() == "V_SLIP_REQ.REQ_SECTION_CD")
+                                        #if($!searchCondition.slipSearchReqAllGrantFlg == "1")
+                                        $!PSVIW070PageCreaterForSearch.printSpecial("m03_inputSection",$!item ,'popupPageid','PSVIW070','projectId','reqSection','_masterCdIme','noIME')
+                                        #end
+                                    #elseif($!item.getColumnName() == "V_SLIP_REQ.REQ_USER_ID")
+                                        #if($!searchCondition.slipSearchReqAllGrantFlg == "1")
+                                            $!PSVIW070PageCreaterForSearch.printSpecial("m13_inputUserForSearch",$!item,"popupPageid","PSVIW070",
+                                                "projectId","purReqUserForAllGrant",'_masterCdIme','Small noIME')
+                                        #else
+                                            $!PSVIW070PageCreaterForSearch.printSpecial("m13_inputUserForSearch",$!item,"popupPageid","PSVIW070",
+                                                "projectId","purReqUser",'_masterCdIme','Small noIME')
+                                        #end
+                                    #elseif($!item.getColumnName() == "V_SLIP_REQ.ITEM_CD")
+                                        $!PSVIW070PageCreaterForSearch.printSpecial("m11_inputItemCodeOnly",$!item,"popupPageid","PSVIW070",'_masterCdIme','Small noIME')
+                                    #elseif($!item.getColumnName() == "V_SLIP_REQ.PUR_REQ_DATE")
+                                        $!PSVIW070PageCreaterForSearch.printDefault($!item)
+                                    #elseif($!item.getColumnName() == "V_SLIP_REQ.ITEM_NAME")
+                                        $!PSVIW070PageCreaterForSearch.printDefault($!item)
+                                    #elseif($!item.getColumnName() == "V_SLIP_REQ.REQ_DELIV_DATE")
+                                        $!PSVIW070PageCreaterForSearch.printDefault($!item)
+                                    #elseif($!item.getColumnName() == "V_SLIP_REQ.SUP_CD")
+                                        $!PSVIW070PageCreaterForSearch.printSpecial("m05_inputSupplier",$!item,"popupPageid","PSVIW070",'_masterCdIme','noIME')
+                                    #elseif($!item.getColumnName() == "V_SLIP_REQ.DELIV_PLACE_CD")
+                                        $!PSVIW070PageCreaterForSearch.printSpecial("m04_inputDelivery",$!item,'popupPageid','PSVIW070','_masterCdIme','noIME')
+                                    #elseif($!item.getColumnName() == "V_SLIP_REQ.LOAD_SECTION_CD")
+                                        $!PSVIW070PageCreaterForSearch.printSpecial("m03_inputSection",$!item,'popupPageid','PSVIW070','_masterCdIme','noIME','projectId','loadSection')
+                                    #elseif($!item.getColumnName() == "V_SLIP_REQ.BUDGET_NO")
+                                        $!PSVIW070PageCreaterForSearch.printDefault($!item)
+                                    #elseif($!item.getColumnName() == "V_SLIP_REQ.KATASHIKI")
+                                        $!PSVIW070PageCreaterForSearch.printDefault($!item)
+                                    #elseif($!item.getColumnName() == "V_SLIP_REQ.SUBJECT_CD")
+                                        $!PSVIW070PageCreaterForSearch.printSpecial("m07_inputSubject",$!item,'popupPageid','PSVIW070','_masterCdIme','noIME')
+                                    <!--拡張項目-->
+                                    #else
+                                        $!PSVIW070PageCreaterForSearch.printDefault($!item)
+                                    #end
+                                    #if($currentOneRowFlag)
+                                        $!PSVIW070PageCreaterForSearch.printTRtagClose()
+                                        #set($isFirstItem = true)
+                                    #else
+                                        #if($isFirstItem)
+                                            #set($isFirstItem = false)
+                                        #else
+                                            $!PSVIW070PageCreaterForSearch.printTRtagClose()
+                                            #set($isFirstItem = true)
+                                        #end
+                                    #end
+                                 #end
+                                 #if(!$isFirstItem)
+                                    $!PSVIW070PageCreaterForSearch.printTDtag()
+                                    $!PSVIW070PageCreaterForSearch.printTRtagClose()
+                                 #end
+                                            <tr>
+                                                <td class="FontSmallBold" align="right" nowrap>#customSpringMessage('REQ_TYPE_IND')</td>
+                                                <td class="FontSmall" align="left" nowrap>
+                                                    #customFormRadioButtons("searchCondition.reqInd" $REQ_TYPE_IND "" "")
+                                                </td>
+                                                <td>&nbsp;</td>
+                                                <td>&nbsp;</td>
+                                            </tr>
+                                            
+                                            <tr>
+                                                <td class="FontSmallBold" align="right" nowrap>#customSpringMessage('ORDER_SITUATION')</td>
+                                                <td class="FontSmall" align="left" nowrap>
+                                                    <input name="orderSituation" type="radio" value="0" #if($!searchCondition.orderSituation == '0') checked #end
+                                                    #if($!searchCondition.orderSituation == '') checked #end >#customSpringMessage('SEARCH_TERM_ALL')&nbsp;</input>
+                                                    <input name="orderSituation" type="radio" value="1" #if($!searchCondition.orderSituation == '1') checked #end>#customSpringMessage('NOT_ISSUE_ONLY')&nbsp;</input><!-- 未発注-->
+                                                    <input name="orderSituation" type="radio" value="2" #if($!searchCondition.orderSituation == '2') checked #end>#customSpringMessage('ONLY_ORDERED')&nbsp;</input><!--注文済-->
+                                                    
+                                                </td>
+                                                <td>&nbsp;</td>
+                                                <td>&nbsp;</td>
+                                            </tr>
+                                            <tr>
+                                                <td nowrap class="FontSmallBold" align="right">#customSpringMessage('RCV_STATUS')</td>## 受入状況
+                                                <td nowrap align="left" class="FontSmall">
+                                                    #customFormCheckboxes("searchCondition.receiveStates.list" $RECIVE_IND "" "class='FontSmall'")
+                                                    <input type="hidden" name="_${status.expression}" value="on"/>
+                                                </td>
+                                                <td>&nbsp;</td>
+                                                <td>&nbsp;</td>
+                                            </tr>
+                                            <tr>
+                                                <td nowrap class="FontSmallBold" align="right">#customSpringMessage('ACCEPT_SITUATION')</td>## 検収状況
+                                                <td nowrap align="left" class="FontSmall">
+                                                    #customFormCheckboxes("searchCondition.acceptanceStates.list" $ACCEPTANCE_STATUS_IND "" "class='FontSmall'")
+                                                    <input type="hidden" name="_${status.expression}" value="on"/>
+                                                </td>
+                                                <td>&nbsp;</td>
+                                                <td>&nbsp;</td>
+                                            </tr>
+                                            <tr>
+			                                    <td class="FontComment" colspan="4" align="left">
+                                                    #customSpringMessage('PSVIW070_FOOTER_COMMENT')
+                                                </td>
+			                                </tr>
+                                        </table>
+                                    </td> 
+                                    <td nowrap class="FontSmallBold" align="right" valign="top">
+                                        <br>
+                                        <input type="button"  class="LargeButton" value="#customSpringMessage('ACTION_SEARCH')" onclick="javascript:execSearch();"><!-- 検索 -->
+                                        <br>
+                                        <br>
+                                        <a href="javascript:clear();
+                                                 resetItemKindBySession('itemClassL', 'itemClassM', 'itemClassS', '$!searchCondition.itemClassL', '$!searchCondition.itemClassM', '$!searchCondition.itemClassS', '1');
+                                                 resetProductClassBySession('itemProductClassL', 'itemProductClassM', 'itemProductClassS', '$!searchCondition.itemProductClassL', '$!searchCondition.itemProductClassM', '$!searchCondition.itemProductClassS', '1');" id="clearSearch">#customSpringMessage('ACTION_CLEAR_SEARCH_CRITERIA')<!-- 検索条件をクリアする --></a>
+                                    </td>
+                                </tr>
+                            </table>
+                            <!-- 検索条件入力部 -->
+            </td>
+        </tr>
+        <tr>
+            <td id="UPLOAD_AREA" class="NoBorder" style="background-color:#eaeaea;height:35px;border-bottom:1px solid #999999;text-align:left;vertical-align:top;">
+                 #parse("./common/common_download.vm")
+            </td>
+        </tr>
+        <tr id ="TR_ERROR" style="display:none;">
+            <td class="error" style="height:0px;">
+                <div id="ERRORDIV">$!errorMessage </div>
+            </td>
+        </tr>
+        <tr><td class="NoBorder" style="height:auto;">
+                <iframe id="DATAAREA" name="DATAAREA" framespacing="0" frameborder="0"  src="../../layout/default.vm" scrolling="no" frameborder="no" style="position:static;width:100%;border:0px solid #999999;height:100%;z-index:0;"></iframe>
+            </td>
+        </tr>
+    </table>
+<iframe id="HIDDENAREA" name="HIDDENAREA" framespacing="0" frameborder="0" src="" scrolling="no" frameborder="no" style="display:none"></iframe>
+</form>
+<script type="text/javascript">
+    document.getElementById("clearSearch").onclick = function (){
+    	if (getObj("itemClassL") != null) {
+            getObj("itemClassL").selectedIndex = 0;
+        }
+    	if (getObj("itemClassM") != null) {
+            getObj("itemClassM").selectedIndex = 0;
+            getObj("itemClassM").disabled = true;
+        }
+        if (getObj("itemClassS") != null) {
+            getObj("itemClassS").selectedIndex = 0;
+        	getObj("itemClassS").disabled = true;
+        }
+    }
+</script>
+</body>
+</html>

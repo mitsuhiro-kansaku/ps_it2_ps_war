@@ -1,0 +1,514 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="ps.check.impl.exist.ExistCheckCommonMapper">
+
+    <select id="searchUserCount" resultType="Integer">
+        SELECT COUNT(1)
+        FROM M_USER
+        LEFT JOIN M_COMPANY
+        ON M_COMPANY.COMPANY_CD =
+        M_USER.COMPANY_CD
+        <!-- 強化-01374-000 2013/05/10 DEL SBO_pangzhen START -->
+        <!-- AND M_COMPANY.TERM_FLG = '0' -->
+        <!-- 強化-01374-000 2013/05/10 DEL SBO_pangzhen -END- -->
+        <where>
+            M_USER.COMPANY_CD = #{companyCd}
+            AND M_USER.SECTION_CD = #{sectionCd}
+            AND M_USER.USER_ID = #{userId}
+        </where>
+    </select>
+    <select id="searchUserTermFlgCount" resultType="Integer">
+        SELECT COUNT(1)
+        FROM M_USER
+        LEFT JOIN M_COMPANY
+        ON M_COMPANY.COMPANY_CD =
+        M_USER.COMPANY_CD
+        AND M_COMPANY.TERM_FLG = '0'
+        <where>
+            M_USER.COMPANY_CD = #{companyCd}
+            AND M_USER.SECTION_CD = #{sectionCd}
+            AND M_USER.USER_ID = #{userId}
+            AND M_USER.TERM_FLG = '0'
+        </where>
+    </select>
+    
+    <select id="searchUserValidDateCount" resultType="Integer">
+        SELECT COUNT(1)
+        FROM M_USER
+        LEFT JOIN M_COMPANY
+        ON M_COMPANY.COMPANY_CD =
+        M_USER.COMPANY_CD
+        AND M_COMPANY.TERM_FLG = '0'
+        <where>
+            M_USER.COMPANY_CD = #{companyCd}
+            AND M_USER.SECTION_CD = #{sectionCd}
+            AND M_USER.USER_ID = #{userId}
+            AND M_USER.VALID_START_DATE &lt;= #{validStartDate}
+            AND M_USER.VALID_END_DATE &gt;= #{validEndDate}
+        </where>
+    </select>
+
+    <!-- 強化-00180-000 2013/03/14 MODIFY SBO_SOKOU START -->
+    <select id="searchSupplierCount" resultType="Integer">
+        SELECT COUNT(1)
+          FROM M_SUPPLIER
+          LEFT JOIN M_COMPANY
+                 ON M_COMPANY.COMPANY_CD = M_SUPPLIER.COMPANY_CD
+                AND M_COMPANY.TERM_FLG = '0'
+        <where>
+                (M_SUPPLIER.COMPANY_CD = #{companyCd}
+             OR M_SUPPLIER.COMPANY_CD = '${@fw.common.constant.ApplicationConstant@COMPANY_CD_ALL}')
+            AND M_SUPPLIER.SUP_CD = #{supCd}
+            AND M_SUPPLIER.TERM_FLG = '0'
+        </where>
+    </select>
+    <!-- 強化-00180-000 2013/03/14 MODIFY SBO_SOKOU END -->
+
+    <!-- 強化-00180-000 2013/03/12 MODIFY SBO_SOKOU START -->
+    <select id="searchSubjectCount" resultType="Integer">
+        SELECT COUNT(1)
+          FROM M_SUBJECT
+          LEFT JOIN M_COMPANY
+                 ON M_COMPANY.COMPANY_CD = M_SUBJECT.COMPANY_CD
+                AND M_COMPANY.TERM_FLG = '0'
+        <where>
+               (M_SUBJECT.COMPANY_CD = #{companyCd}
+            OR M_SUBJECT.COMPANY_CD = '${@fw.common.constant.ApplicationConstant@COMPANY_CD_ALL}')
+           AND M_SUBJECT.SUBJECT_CD = #{subjectCd}
+        </where>
+    </select>
+    <select id="searchSubjectTermFlgCount" resultType="Integer">
+        SELECT COUNT(1)
+          FROM M_SUBJECT
+          LEFT JOIN M_COMPANY
+                 ON M_COMPANY.COMPANY_CD = M_SUBJECT.COMPANY_CD
+                AND M_COMPANY.TERM_FLG = '0'
+        <where>
+               (M_SUBJECT.COMPANY_CD = #{companyCd}
+            OR M_SUBJECT.COMPANY_CD = '${@fw.common.constant.ApplicationConstant@COMPANY_CD_ALL}')
+           AND M_SUBJECT.SUBJECT_CD = #{subjectCd}
+           AND M_SUBJECT.TERM_FLG = '0'
+        </where>
+    </select>
+    <select id="searchSubjectValidDateCount" resultType="Integer">
+        SELECT COUNT(1)
+          FROM M_SUBJECT
+          LEFT JOIN M_COMPANY
+                 ON M_COMPANY.COMPANY_CD = M_SUBJECT.COMPANY_CD
+                AND M_COMPANY.TERM_FLG = '0'
+        <where>
+                (M_SUBJECT.COMPANY_CD = #{companyCd}
+             OR M_SUBJECT.COMPANY_CD = '${@fw.common.constant.ApplicationConstant@COMPANY_CD_ALL}')
+            AND M_SUBJECT.SUBJECT_CD = #{subjectCd}
+            AND M_SUBJECT.VALID_START_DATE &lt;= #{validStartDate}
+            AND M_SUBJECT.VALID_END_DATE &gt;= #{validEndDate}
+        </where>
+    </select>
+    <!-- 強化-00180-000 2013/03/12 MODIFY SBO_SOKOU END -->
+
+    <select id="searchSectionCount" resultType="int">
+        SELECT COUNT(1)
+          FROM M_SECTION
+          LEFT JOIN M_COMPANY 
+          ON M_COMPANY.COMPANY_CD = M_SECTION.COMPANY_CD
+          AND M_COMPANY.TERM_FLG = '0'
+         WHERE M_SECTION.COMPANY_CD = #{companyCd}
+           AND M_SECTION.SECTION_CD = #{sectionCd}
+           AND M_SECTION.VALID_START_DATE &lt;= #{validStartDate}
+           AND M_SECTION.VALID_END_DATE &gt;= #{validEndDate}
+    </select>
+    <select id="searchSectionTerm" resultType="String">
+        SELECT M_SECTION.TERM_FLG
+          FROM M_SECTION
+          LEFT JOIN M_COMPANY ON M_COMPANY.COMPANY_CD = M_SECTION.COMPANY_CD
+                             AND M_COMPANY.TERM_FLG = '0'
+         WHERE M_SECTION.COMPANY_CD = #{companyCd}
+           AND M_SECTION.SECTION_CD = #{sectionCd}
+           AND M_SECTION.VALID_START_DATE &lt;= #{validStartDate}
+           AND M_SECTION.VALID_END_DATE &gt;= #{validEndDate}
+    </select>
+
+    <select id="searchPurReqCount" resultType="Integer">
+        SELECT COUNT(1)
+        FROM T_PUR_REQUEST
+        <where>
+            T_PUR_REQUEST.PUR_APL_SEQ = #{purAplSeqNum}
+            AND
+            T_PUR_REQUEST.DELETE_FLG = '0'
+        </where>
+    </select>
+
+    <select id="searchPriceCount" resultType="Integer">
+        SELECT COUNT(1)
+        FROM M_PUR_PRICE
+        LEFT JOIN M_COMPANY
+        ON
+        M_COMPANY.COMPANY_CD = M_PUR_PRICE.BUYER_COMPANY_CD
+        AND
+        M_COMPANY.TERM_FLG = '0'
+        <where>
+            M_PUR_PRICE.BUYER_COMPANY_CD = #{buyerCompanyCd}
+            <!-- 強化-00958-000 2013/05/20 ADD SBO_pangzhen START -->
+            AND 
+            M_PUR_PRICE.BUYER_SECTION_CD = #{buyerSectionCd}
+            <!-- 強化-00958-000 2013/05/20 ADD SBO_pangzhen -END- -->
+            AND
+            M_PUR_PRICE.ITEM_CD = #{itemCd}
+            AND M_PUR_PRICE.SUP_CD = #{supCd}
+            AND
+            M_PUR_PRICE.VALID_START_DATE &lt;= #{validStartDate}
+            AND
+            M_PUR_PRICE.VALID_END_DATE >= #{validEndDate}
+            <!-- 強化-00278-000 2013/03/19 ADD SBO_pangzhen START -->
+            AND M_PUR_PRICE.TERM_FLG = '0'
+            <!-- 強化-00278-000 2013/03/19 ADD SBO_pangzhen -END- -->
+        </where>
+    </select>
+
+    <select id="searchManufactCount" resultType="Integer">
+        SELECT COUNT(1)
+        FROM M_MANUFACT
+        <where>
+            M_MANUFACT.MANUFACT_CD = #{manufactCd}
+        </where>
+    </select>
+
+    <select id="searchElementNameCount" resultType="Integer">
+        SELECT
+        COUNT(S_ELEMENT_NAME.ELEMENT_NAME_CD)
+        FROM S_ELEMENT_NAME
+        <where>
+        S_ELEMENT_NAME.ELEMENT_NAME_CD = #{elementNameCd}
+        </where>
+    </select>
+    
+    <select id="searchVchconCount" resultType="Integer">
+        SELECT
+        COUNT(S_VOUCHER_CONFIG.ELEMENT_SEQ)
+        FROM S_VOUCHER_CONFIG
+        <where>
+            S_VOUCHER_CONFIG.ELEMENT_SEQ = #{elementSeq}
+            AND S_VOUCHER_CONFIG.VOUCHER_TYPE = #{voucherType}
+        </where>
+    </select>
+
+    <!-- 強化-00180-000 2013/03/13 MODIFY SBO_SOKOU START -->
+    <select id="searchItemCdCount" resultType="Integer">
+        SELECT COUNT(M_ITEM.ITEM_CD)
+          FROM M_ITEM
+     LEFT JOIN M_COMPANY
+            ON M_COMPANY.COMPANY_CD = M_ITEM.COMPANY_CD
+           AND M_COMPANY.TERM_FLG = '0'
+        <where>
+                (M_ITEM.COMPANY_CD = #{companyCd}
+             OR M_ITEM.COMPANY_CD = '${@fw.common.constant.ApplicationConstant@COMPANY_CD_ALL}')
+            AND M_ITEM.ITEM_CD = #{itemCd}
+        </where>
+    </select>
+
+    <select id="searchItemCdTermFlgCount" resultType="Integer">
+        SELECT COUNT(M_ITEM.ITEM_CD)
+          FROM M_ITEM
+     LEFT JOIN M_COMPANY
+            ON M_COMPANY.COMPANY_CD = M_ITEM.COMPANY_CD
+           AND M_COMPANY.TERM_FLG = '0'
+        <where>
+                (M_ITEM.COMPANY_CD = #{companyCd}
+             OR M_ITEM.COMPANY_CD = '${@fw.common.constant.ApplicationConstant@COMPANY_CD_ALL}')
+            AND M_ITEM.ITEM_CD = #{itemCd}
+            AND M_ITEM.TERM_FLG = '0'
+        </where>
+    </select>
+    <!-- 強化-00180-000 2013/03/13 MODIFY SBO_SOKOU END -->
+
+    <!-- 強化-00180-000 2013/03/13 MODIFY SBO_SOKOU START -->
+    <select id="searchItemKindCount" resultType="int">
+        SELECT COUNT(1)
+          FROM M_ITEM_KIND
+     LEFT JOIN M_COMPANY
+            ON M_COMPANY.COMPANY_CD = M_ITEM_KIND.COMPANY_CD
+           AND M_COMPANY.TERM_FLG = '0'
+         WHERE (M_ITEM_KIND.COMPANY_CD = #{companyCd}
+            OR M_ITEM_KIND.COMPANY_CD = '${@fw.common.constant.ApplicationConstant@COMPANY_CD_ALL}')
+           AND M_ITEM_KIND.ITEM_CLASS_L = #{itemClassL}
+           AND M_ITEM_KIND.ITEM_CLASS_M = #{itemClassM}
+           AND M_ITEM_KIND.ITEM_CLASS_S = #{itemClassS}
+    </select>
+
+    <select id="searchItemKindTermFlgCount" resultType="int">
+        SELECT COUNT(1)
+          FROM M_ITEM_KIND
+     LEFT JOIN M_COMPANY
+            ON M_COMPANY.COMPANY_CD = M_ITEM_KIND.COMPANY_CD
+           AND M_COMPANY.TERM_FLG = '0'
+         WHERE (M_ITEM_KIND.COMPANY_CD = #{companyCd}
+            OR M_ITEM_KIND.COMPANY_CD = '${@fw.common.constant.ApplicationConstant@COMPANY_CD_ALL}')
+           AND M_ITEM_KIND.ITEM_CLASS_L = #{itemClassL}
+           AND M_ITEM_KIND.ITEM_CLASS_M = #{itemClassM}
+           AND M_ITEM_KIND.ITEM_CLASS_S = #{itemClassS}
+           AND M_ITEM_KIND.TERM_FLG='0'
+    </select>
+    <!-- 強化-00180-000 2013/03/13 MODIFY SBO_SOKOU END -->
+
+    <select id="searchDelivPlaceCount" resultType="int">
+        SELECT COUNT(1)
+        FROM M_DELIVERY_PLACE
+        LEFT JOIN M_COMPANY
+        ON M_COMPANY.COMPANY_CD = M_DELIVERY_PLACE.COMPANY_CD
+        AND M_COMPANY.TERM_FLG = '0'
+        <where>
+            M_DELIVERY_PLACE.COMPANY_CD = #{companyCd}
+            AND M_DELIVERY_PLACE.DELIV_PLACE_CD = #{delivPlaceCd}
+            AND M_DELIVERY_PLACE.VALID_START_DATE &lt;= #{validStartDate}
+            AND M_DELIVERY_PLACE.VALID_END_DATE >= #{validEndDate}
+        </where>
+    </select>
+    <select id="searchDelivPlaceTerm" resultType="String">
+        SELECT M_DELIVERY_PLACE.TERM_FLG
+        FROM M_DELIVERY_PLACE
+        LEFT JOIN M_COMPANY
+        ON M_COMPANY.COMPANY_CD = M_DELIVERY_PLACE.COMPANY_CD
+        AND M_COMPANY.TERM_FLG = '0'
+        <where>
+            M_DELIVERY_PLACE.COMPANY_CD = #{companyCd}
+            AND M_DELIVERY_PLACE.DELIV_PLACE_CD = #{delivPlaceCd}
+            AND M_DELIVERY_PLACE.VALID_START_DATE &lt;= #{validStartDate}
+            AND M_DELIVERY_PLACE.VALID_END_DATE >= #{validEndDate}
+        </where>
+    </select>
+    
+    <!-- 強化-01374-000 2013/05/10 ADD SBO_pangzhen START -->
+    <select id="searchDelivPlaceValid" resultType="int">
+        SELECT COUNT(1)
+        FROM M_DELIVERY_PLACE
+        LEFT JOIN M_COMPANY
+        ON M_COMPANY.COMPANY_CD = M_DELIVERY_PLACE.COMPANY_CD
+        AND M_COMPANY.TERM_FLG = '0'
+        <where>
+            M_DELIVERY_PLACE.COMPANY_CD = #{companyCd}
+            AND M_DELIVERY_PLACE.DELIV_PLACE_CD = #{delivPlaceCd}
+            AND M_DELIVERY_PLACE.VALID_START_DATE &lt;= #{validStartDate}
+            AND M_DELIVERY_PLACE.VALID_END_DATE >= #{validEndDate}
+        </where>
+    </select>
+    
+    <select id="searchAllDelivPlaceCount" resultType="int">
+        SELECT COUNT(1)
+        FROM M_DELIVERY_PLACE
+        LEFT JOIN M_COMPANY
+        ON M_COMPANY.COMPANY_CD = M_DELIVERY_PLACE.COMPANY_CD
+        <where>
+            M_DELIVERY_PLACE.COMPANY_CD = #{companyCd}
+            AND M_DELIVERY_PLACE.DELIV_PLACE_CD = #{delivPlaceCd}
+        </where>
+    </select>
+    <!-- 強化-01374-000 2013/05/10 ADD SBO_pangzhen -END- -->
+    
+    <select id="getNumberForUnacknowledged" resultType="int">
+        SELECT COUNT(1)
+          FROM M_PUR_PRICE
+          INNER JOIN M_PUR_PRICE_DSP_AUTH ON M_PUR_PRICE.BUYER_COMPANY_CD =
+                                            M_PUR_PRICE_DSP_AUTH.BUYER_COMPANY_CD
+                                        AND M_PUR_PRICE.BUYER_SECTION_CD =
+                                            M_PUR_PRICE_DSP_AUTH.BUYER_SECTION_CD
+                                        AND M_PUR_PRICE.ITEM_CD =
+                                            M_PUR_PRICE_DSP_AUTH.ITEM_CD
+                                        AND M_PUR_PRICE.SUP_CD =
+                                            M_PUR_PRICE_DSP_AUTH.SUP_CD
+                                        AND M_PUR_PRICE.VALID_START_DATE =
+                                            M_PUR_PRICE_DSP_AUTH.VALID_START_DATE
+                                        AND M_PUR_PRICE.VALID_END_DATE =
+                                            M_PUR_PRICE_DSP_AUTH.VALID_END_DATE
+                                        AND (M_PUR_PRICE_DSP_AUTH.REQ_COMPANY_CD = #{companyCd}
+                                            OR
+                                            M_PUR_PRICE_DSP_AUTH.REQ_COMPANY_CD = 'ALL')
+                                        AND (M_PUR_PRICE_DSP_AUTH.REQ_SECTION_PLACE_CD = #{sectionPlaceCd}
+                                            OR
+                                            M_PUR_PRICE_DSP_AUTH.REQ_SECTION_PLACE_CD = 'ALL')
+         WHERE M_PUR_PRICE.BUYER_COMPANY_CD = #{itemCompanyCd}
+           AND M_PUR_PRICE.BUYER_SECTION_CD = #{itemSectionCd}
+           AND M_PUR_PRICE.ITEM_CD = #{itemCd}
+           AND M_PUR_PRICE.SUP_CD = #{supCd}
+           AND M_PUR_PRICE.VALID_START_DATE &lt;= '${@fw.common.util.AppUtil@getSysDate()}'
+           AND M_PUR_PRICE.VALID_END_DATE &gt;= '${@fw.common.util.AppUtil@getSysDate()}'
+           AND M_PUR_PRICE.APP_STATUS_IND = '${@fw.common.constant.CodeNameConstant@APP_STATUS_IND_APPROVED}'
+           AND M_PUR_PRICE.TERM_FLG = '0'
+           AND (M_PUR_PRICE.PUR_STOP_FROM &gt; '${@fw.common.util.AppUtil@getSysDate()}'
+            OR M_PUR_PRICE.PUR_STOP_TO &lt; '${@fw.common.util.AppUtil@getSysDate()}'
+            OR (M_PUR_PRICE.PUR_STOP_FROM is null and M_PUR_PRICE.PUR_STOP_TO is null))
+    </select>
+
+    <select id="searchRecognitionUser" resultType="int">
+        SELECT COUNT(1)
+          FROM M_USER
+          LEFT JOIN M_APP_ROUTE_DTL ON M_USER.COMPANY_CD =
+                                       M_APP_ROUTE_DTL.COMPANY_CD
+                                   AND M_USER.SECTION_CD =
+                                       M_APP_ROUTE_DTL.SECTION_CD
+                                   AND M_APP_ROUTE_DTL.APP_VOUCHER_IND = #{appVoucherInd}
+                                   AND M_APP_ROUTE_DTL.APP_ROUTE_NO = #{appRouteNo}
+          LEFT JOIN M_COMPANY ON M_COMPANY.COMPANY_CD = M_APP_ROUTE_DTL.COMPANY_CD
+                             AND M_COMPANY.TERM_FLG = '0'
+         WHERE M_USER.COMPANY_CD = #{companyCd}
+           AND M_USER.SECTION_CD = #{sectionCd}
+           AND M_USER.TERM_FLG = '0' 
+    </select>
+    
+    <select id="searchAppUser" resultType="fw.domain.mst.userauthority.approute.ApprouterInfo">
+        SELECT APP_USER_ID AS "userId",
+               APP_SECTION_CD AS "sectionCd"
+        FROM M_APP_ROUTE_DTL
+        WHERE COMPANY_CD = #{companyCd}
+              AND SECTION_CD = #{sectionCd}
+              AND APP_VOUCHER_IND = #{appVoucherInd}
+              AND APP_ROUTE_NO = #{appRouteNo}
+    </select>
+    
+     <select id="searchRecognitionChannel" resultType="int">
+        SELECT COUNT(1)
+          FROM M_APP_ROUTE
+          LEFT JOIN M_COMPANY ON M_COMPANY.COMPANY_CD = M_APP_ROUTE.COMPANY_CD
+                             AND M_COMPANY.TERM_FLG = '0'
+         WHERE M_APP_ROUTE.COMPANY_CD = #{companyCd}
+           AND M_APP_ROUTE.SECTION_CD = #{sectionCd}
+           AND M_APP_ROUTE.APP_ROUTE_NO = #{appRouteNo}
+           AND M_APP_ROUTE.APP_VOUCHER_IND = #{appVoucherInd}
+    </select>
+    <select id="searchRecognitionTerm" resultType="String">
+        SELECT M_APP_ROUTE.TERM_FLG
+          FROM M_APP_ROUTE
+          LEFT JOIN M_COMPANY ON M_COMPANY.COMPANY_CD = M_APP_ROUTE.COMPANY_CD
+                             AND M_COMPANY.TERM_FLG = '0'
+         WHERE M_APP_ROUTE.COMPANY_CD = #{companyCd}
+           AND M_APP_ROUTE.SECTION_CD = #{sectionCd}
+           AND M_APP_ROUTE.APP_ROUTE_NO = #{appRouteNo}
+           AND M_APP_ROUTE.APP_VOUCHER_IND = #{appVoucherInd}
+    </select>
+    <select id="searchRecognitionValid" resultType="int">
+        SELECT COUNT(1)
+          FROM M_APP_ROUTE
+          LEFT JOIN M_COMPANY ON M_COMPANY.COMPANY_CD = M_APP_ROUTE.COMPANY_CD
+                             AND M_COMPANY.TERM_FLG = '0'
+         WHERE M_APP_ROUTE.COMPANY_CD = #{companyCd}
+           AND M_APP_ROUTE.SECTION_CD = #{sectionCd}
+           AND M_APP_ROUTE.APP_ROUTE_NO = #{appRouteNo}
+           AND M_APP_ROUTE.APP_VOUCHER_IND = #{appVoucherInd}
+           AND '${@fw.common.util.AppUtil@getSysDate(@fw.common.util.AppUtil@DATE_SHORT)}' BETWEEN M_APP_ROUTE.VALID_START_DATE AND M_APP_ROUTE.VALID_END_DATE
+    </select>
+
+    <!-- 強化-00180-000 2013/03/13 MODIFY SBO_SOKOU START -->
+    <select id="searchPayConditionCount" resultType="int">
+        SELECT COUNT(1)
+          FROM M_PAY_CONDITION
+          LEFT JOIN M_COMPANY
+                 ON M_COMPANY.COMPANY_CD = M_PAY_CONDITION.COMPANY_CD
+                AND M_COMPANY.TERM_FLG = '0'
+         WHERE (M_PAY_CONDITION.COMPANY_CD = #{companyCd}
+            OR M_PAY_CONDITION.COMPANY_CD = '${@fw.common.constant.ApplicationConstant@COMPANY_CD_ALL}')
+           AND M_PAY_CONDITION.PAY_CONDITION_CD = #{payConditionCd}
+    </select>
+
+     <select id="searchPayConditionTermFlgCount" resultType="int">
+        SELECT COUNT(1)
+          FROM M_PAY_CONDITION
+          LEFT JOIN M_COMPANY
+                 ON M_COMPANY.COMPANY_CD = M_PAY_CONDITION.COMPANY_CD
+                AND M_COMPANY.TERM_FLG = '0'
+         WHERE (M_PAY_CONDITION.COMPANY_CD = #{companyCd}
+            OR M_PAY_CONDITION.COMPANY_CD = '${@fw.common.constant.ApplicationConstant@COMPANY_CD_ALL}')
+           AND M_PAY_CONDITION.PAY_CONDITION_CD = #{payConditionCd}
+           AND M_PAY_CONDITION.TERM_FLG = '0'
+    </select>
+    <!-- 強化-00180-000 2013/03/13 MODIFY SBO_SOKOU END -->
+
+    <select id="searchCurrencyCount" resultType="int">
+        SELECT 
+          COUNT(1)
+        FROM 
+          M_CURRENCY
+        WHERE CURRENCY_CD = #{currencyCd}
+    </select>
+    <select id="searchCurrencyTermFlgCount" resultType="int">
+        SELECT 
+          COUNT(1)
+        FROM 
+          M_CURRENCY
+        WHERE CURRENCY_CD = #{currencyCd}
+          AND TERM_FLG = '0'
+    </select>
+    
+    <select id="searchUnitCount" resultType="int">
+        SELECT 
+          COUNT(1)
+        FROM 
+          M_UNIT_NAME
+        WHERE UNIT_CD = #{unitCd}
+    </select>
+    
+    <select id="searchUnitTermFlgCount" resultType="int">
+        SELECT 
+          COUNT(1)
+        FROM 
+          M_UNIT_NAME
+        WHERE UNIT_CD = #{unitCd}
+          AND TERM_FLG = '0'
+    </select>
+    
+    <select id="searchCodeNameCount" resultType="int">
+        SELECT 
+          COUNT(1)
+        FROM 
+          M_CODE_NAME
+        WHERE CODE_KEY = #{codeKey}
+          AND CODE_VALUE = #{codeValue}
+    </select>
+
+    <!-- 強化-00180-000 2013/03/13 MODIFY SBO_SOKOU START -->
+    <select id="searchSupplierExistCount" resultType="Integer">
+        SELECT COUNT(1)
+          FROM M_SUPPLIER
+          LEFT JOIN M_COMPANY
+                 ON M_COMPANY.COMPANY_CD = M_SUPPLIER.COMPANY_CD
+                AND M_COMPANY.TERM_FLG = '0'
+        <where>
+                (M_SUPPLIER.COMPANY_CD = #{companyCd}
+             OR M_SUPPLIER.COMPANY_CD = '${@fw.common.constant.ApplicationConstant@COMPANY_CD_ALL}')
+            AND M_SUPPLIER.SUP_CD = #{supCd}
+        </where>
+    </select>
+
+    <select id="searchSupplierValidDateCount" resultType="Integer">
+        SELECT COUNT(1)
+          FROM M_SUPPLIER
+          LEFT JOIN M_COMPANY
+                 ON M_COMPANY.COMPANY_CD = M_SUPPLIER.COMPANY_CD
+                AND M_COMPANY.TERM_FLG = '0'
+        <where>
+                (M_SUPPLIER.COMPANY_CD = #{companyCd}
+             OR M_SUPPLIER.COMPANY_CD = '${@fw.common.constant.ApplicationConstant@COMPANY_CD_ALL}')
+            AND M_SUPPLIER.SUP_CD = #{supCd}
+            AND '${@fw.common.util.AppUtil@getSysDate(@fw.common.util.AppUtil@DATE_SHORT)}' BETWEEN M_SUPPLIER.VALID_START_DATE AND M_SUPPLIER.VALID_END_DATE
+        </where>
+    </select>
+    <!-- 強化-00180-000 2013/03/13 MODIFY SBO_SOKOU END -->
+    
+    <select id="searchManufactTermFlgCount" resultType="Integer">
+        SELECT COUNT(1)
+        FROM M_MANUFACT
+        <where>
+            M_MANUFACT.MANUFACT_CD = #{manufactCd}
+            AND M_MANUFACT.TERM_FLG = '0'
+        </where>
+    </select>
+    
+    <select id="searchManufactValidDateCount" resultType="Integer">
+        SELECT COUNT(1)
+        FROM M_MANUFACT
+        <where>
+            M_MANUFACT.MANUFACT_CD = #{manufactCd}
+            AND '${@fw.common.util.AppUtil@getSysDate(@fw.common.util.AppUtil@DATE_SHORT)}' BETWEEN M_MANUFACT.VALID_START_DATE AND M_MANUFACT.VALID_END_DATE
+        </where>
+    </select>
+</mapper>

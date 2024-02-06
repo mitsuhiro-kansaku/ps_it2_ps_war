@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<flow xmlns="http://www.springframework.org/schema/webflow"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.springframework.org/schema/webflow
+        http://www.springframework.org/schema/webflow/spring-webflow-2.0.xsd"
+    parent="base">
+    
+    <var name="defaultSearchCondition" class="fw.domain.slip.price.revision.req.pricerevisionapp.PriceReqAppSearchCondition" />
+    
+    <!-- クイックリンクかどうか判定 -->
+    <decision-state id="isQuickLinkSearch">
+       <if test="requestParameters.isQuickLink" then="searchByQuickLink" else="searchByCondition"/>
+    </decision-state>
+    
+    <!-- クイックリンクを押下する場合 -->
+    <action-state id="searchByQuickLink">
+        <evaluate expression="PSAPR100Service.quickLinkSearch()" result="flowScope.searchCondition" />
+        <transition on="success" to="PSAPR100">
+            <set name="flowScope.isQuickLinkSearch" value="true"></set>
+        </transition>
+    </action-state>
+    
+    <!-- 検索ボタンを押下する場合 -->
+    <action-state id="searchByCondition">
+        <evaluate expression="PSAPR100Service.init()" result="flowScope.searchCondition" />
+        <transition on="success" to="PSAPR100" >
+            <set name="flowScope.isQuickLinkSearch" value="false"></set>
+        </transition>
+    </action-state>
+    
+    <view-state id="PSAPR100" model="searchCondition" view="apr/prcrev/PSAPR100">
+        <!-- チェック -->
+        <transition on="validate" validate="true">
+            <set name="flowScope.isCurrentPageSearch" value="false" />
+            <set name="flowScope.isShowList" value="true"></set>
+            <evaluate expression="PSAPR100Service.search(searchCondition)" />
+        </transition>
+        
+        <!-- 検索 -->
+        <transition on="search" to="PSAPR101" validate="false">
+            <set name="flowScope.isQuickLinkSearch" value="false"></set>
+        </transition>
+        
+        <!-- クイックリンク -->
+        <transition on="quickLinkSearch" to="PSAPR101" validate="false">
+            <set name="flowScope.isCurrentPageSearch" value="false" />
+            <set name="flowScope.isShowList" value="true"></set>
+            <set name="flowScope.isQuickLinkSearch" value="true"></set>
+        </transition>
+        <!-- 強化-00616-000 2013/03/25 ADD SBO_pangzhen START -->
+        <transition on="back" to="home" validate="false"/>
+        <!-- 強化-00616-000 2013/03/25 ADD SBO_pangzhen -END- -->
+    </view-state>
+    
+    <subflow-state id="PSAPR101" subflow="apr/prcrev/PSAPR101">
+        <input name="searchCondition" value="searchCondition" />
+        <input name="isCurrentPageSearch" value="isCurrentPageSearch" />
+        <input name="isQuickLinkSearch" value="isQuickLinkSearch" />
+        <transition on="back" to="PSAPR100">
+            <set name="flowScope.isCurrentPageSearch" value="true" />
+        </transition>
+    </subflow-state>
+</flow>

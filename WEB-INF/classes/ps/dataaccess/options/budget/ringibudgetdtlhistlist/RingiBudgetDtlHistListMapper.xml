@@ -1,0 +1,132 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="ps.dataaccess.options.budget.ringibudgetdtlhistlist.RingiBudgetDtlHistListMapper">
+
+    <sql id="listKeyIdentityWhereCondition">
+        T_RINGI_BUDGET_DTL_HIST.AUTO_DELETE_FLG = '0' 
+        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(ringiBudgetHistIdentify.company.companyCd)">
+            AND T_RINGI_BUDGET_DTL_HIST.COMPANY_CD = #{ringiBudgetHistIdentify.company.companyCd} 
+        </if>
+        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(ringiBudgetHistIdentify.sectionPlace.sectionPlaceCd)">
+            AND T_RINGI_BUDGET_DTL_HIST.SECTION_PLACE_CD = #{ringiBudgetHistIdentify.sectionPlace.sectionPlaceCd} 
+        </if>
+        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(ringiBudgetHistIdentify.budgetNo.budgetNo)">
+            AND T_RINGI_BUDGET_DTL_HIST.BUDGET_NO = #{ringiBudgetHistIdentify.budgetNo.budgetNo} 
+        </if>
+        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(ringiBudgetHistIdentify.budgetVersion.budgetVersion)">
+            AND T_RINGI_BUDGET_DTL_HIST.BUDGET_DTL_VERSION = #{ringiBudgetHistIdentify.budgetVersion.budgetVersion} 
+        </if>
+    </sql>
+
+    <resultMap type="fw.domain.options.budget.ringibudgethist.RingiBudgetDtlHistIdentify" 
+        id="RingiBudgetHistIdentify_Map">
+        <id column="COMPANY_CD" property="company.companyCd" />
+        <id column="SECTION_PLACE_CD" property="sectionPlace.sectionPlaceCd" />
+        <id column="BUDGET_NO" property="budgetNo.budgetNo" />
+        <id column="BUDGET_DTL_VERSION" property="budgetVersion.budgetVersion" />
+        <id column="BUDGET_DTL_NO" property="budgetDtlNo.budgetDtlNo" />
+        <id column="LAST_UPD_DATE" property="lastUpdDate.dateOfymd" />
+    </resultMap>
+
+    <resultMap type="fw.domain.options.budget.ringibudgetdtlhistlist.RingiBudgetDtlHistListItem" 
+        id="RingiBudgetHistListItem_Map">
+        <id column="COMPANY_CD" property="ringiBudgetDtlHistIdentify.company.companyCd" />
+        <id column="SECTION_PLACE_CD" property="ringiBudgetDtlHistIdentify.sectionPlace.sectionPlaceCd" />
+        <id column="BUDGET_NO" property="ringiBudgetDtlHistIdentify.budgetNo.budgetNo" />
+        <id column="BUDGET_DTL_VERSION" property="ringiBudgetDtlHistIdentify.budgetVersion.budgetVersion" />
+        <id column="BUDGET_DTL_NO" property="ringiBudgetDtlHistIdentify.budgetDtlNo.budgetDtlNo" />
+        <id column="LAST_UPD_DATE" property="ringiBudgetDtlHistIdentify.lastUpdDate.dateOfymd" />
+        <id column="BUDGET_NAME" property="budgetDtlTitleName" />
+        <id column="SUBJECT_CD" property="subjectCd" />
+        <id column="SUBJECT_NAME" property="subjectName" />
+        <id column="BUDGET_AMOUNT" property="budgetAmount.amount" />
+        <id column="BUDGET_NOTE" property="budgetNote" />
+        <id column="LAST_UPD_USER_ID" property="lastUpdUserID" />
+        <id column="USER_NAME" property="lastUpdUserName" />
+    </resultMap>
+
+    <select id="listKeyIdentity"
+        parameterType="fw.domain.options.budget.ringibudgetdtlhistlist.RingiBudgetDtlHistListSearchCondition"
+        resultMap="RingiBudgetHistIdentify_Map">
+        SELECT 
+            T_RINGI_BUDGET_DTL_HIST.COMPANY_CD
+            , T_RINGI_BUDGET_DTL_HIST.SECTION_PLACE_CD
+            , T_RINGI_BUDGET_DTL_HIST.BUDGET_NO
+            , T_RINGI_BUDGET_DTL_HIST.BUDGET_DTL_VERSION
+            , T_RINGI_BUDGET_DTL_HIST.BUDGET_DTL_NO
+        FROM 
+            T_RINGI_BUDGET_DTL_HIST 
+        LEFT JOIN M_B_USER bUser 
+            ON bUser.COMPANY_CD = T_RINGI_BUDGET_DTL_HIST.COMPANY_CD 
+            AND T_RINGI_BUDGET_DTL_HIST.LAST_UPD_USER_ID = bUser.USER_ID 
+            AND bUser.TERM_FLG = '0' 
+        LEFT JOIN M_B_USER_LANG bUserLang 
+            ON bUser.COMPANY_CD = bUserLang.COMPANY_CD 
+            AND bUser.USER_ID = bUserLang.USER_ID 
+            AND bUser.USE_LANGUAGE_IND = bUserLang.LANGUAGE_IND 
+        <where>
+            <include refid="listKeyIdentityWhereCondition"/>
+        </where>
+        ORDER BY ${searchCondition.columnOrder.columnOrder()} 
+    </select>
+
+    <select id="listPageItem" 
+        parameterType="fw.domain.options.budget.ringibudgetdtlhistlist.RingiBudgetDtlHistListSearchCondition"
+        resultMap="RingiBudgetHistListItem_Map">
+        SELECT 
+            T_RINGI_BUDGET_DTL_HIST.COMPANY_CD
+            , T_RINGI_BUDGET_DTL_HIST.SECTION_PLACE_CD
+            , T_RINGI_BUDGET_DTL_HIST.BUDGET_NO
+            , T_RINGI_BUDGET_DTL_HIST.BUDGET_DTL_VERSION
+            , T_RINGI_BUDGET_DTL_HIST.BUDGET_DTL_NO
+            , T_RINGI_BUDGET_DTL_HIST.BUDGET_NAME
+            , T_RINGI_BUDGET_DTL_HIST.SUBJECT_CD
+            , T_RINGI_BUDGET_DTL_HIST.SUBJECT_NAME
+            , T_RINGI_BUDGET_DTL_HIST.BUDGET_AMOUNT
+            , T_RINGI_BUDGET_DTL_HIST.BUDGET_NOTE
+            , T_RINGI_BUDGET_DTL_HIST.AUTO_DELETE_FLG
+            , T_RINGI_BUDGET_DTL_HIST.AUTO_DELETE_DATE
+            , T_RINGI_BUDGET_DTL_HIST.LAST_UPD_DATE
+            , T_RINGI_BUDGET_DTL_HIST.LAST_UPD_COMPANY_CD
+            , T_RINGI_BUDGET_DTL_HIST.LAST_UPD_SECTION_CD
+            , T_RINGI_BUDGET_DTL_HIST.LAST_UPD_USER_ID
+            , T_RINGI_BUDGET_DTL_HIST.REG_DATE
+            , T_RINGI_BUDGET_DTL_HIST.REG_COMPANY_CD
+            , T_RINGI_BUDGET_DTL_HIST.REG_SECTION_CD
+            , T_RINGI_BUDGET_DTL_HIST.REG_USER_ID 
+            , bUserLang.USER_NAME 
+        FROM 
+            T_RINGI_BUDGET_DTL_HIST 
+        LEFT JOIN M_B_USER bUser 
+            ON bUser.COMPANY_CD = T_RINGI_BUDGET_DTL_HIST.COMPANY_CD 
+            AND T_RINGI_BUDGET_DTL_HIST.LAST_UPD_USER_ID = bUser.USER_ID 
+            AND bUser.TERM_FLG = '0' 
+        LEFT JOIN M_B_USER_LANG bUserLang 
+            ON bUser.COMPANY_CD = bUserLang.COMPANY_CD 
+            AND bUser.USER_ID = bUserLang.USER_ID 
+            AND bUser.USE_LANGUAGE_IND = bUserLang.LANGUAGE_IND 
+        <where>
+            <include refid="listKeyIdentityWhereCondition"/>
+            AND ( 
+                T_RINGI_BUDGET_DTL_HIST.COMPANY_CD 
+                , T_RINGI_BUDGET_DTL_HIST.SECTION_PLACE_CD 
+                , T_RINGI_BUDGET_DTL_HIST.BUDGET_NO 
+                , T_RINGI_BUDGET_DTL_HIST.BUDGET_DTL_VERSION 
+                , T_RINGI_BUDGET_DTL_HIST.BUDGET_DTL_NO 
+            ) IN 
+            <foreach collection="searchCondition.page.keyDomainEntityList" item="keyList"  open="(" separator="," close=")">
+                ( 
+                    #{keyList.company.companyCd, jdbcType=VARCHAR} 
+                    , #{keyList.sectionPlace.sectionPlaceCd, jdbcType=VARCHAR} 
+                    , #{keyList.budgetNo.budgetNo, jdbcType=VARCHAR}
+                    , #{keyList.budgetVersion.budgetVersion, jdbcType=VARCHAR} 
+                    , #{keyList.budgetDtlNo.budgetDtlNo, jdbcType=VARCHAR} 
+                ) 
+            </foreach>
+        </where>
+        ORDER BY ${searchCondition.columnOrder.columnOrder()} 
+    </select>
+
+</mapper>

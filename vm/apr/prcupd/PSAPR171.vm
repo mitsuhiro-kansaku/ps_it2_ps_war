@@ -1,0 +1,317 @@
+<!doctype html>
+<html LANG="ja">
+<head>
+<title>#customSpringMessage('PRICE_PACKAGE_REG_APP_LIST')</title><!--価格マスタ一括登録承認一覧-->
+<meta http-equiv="Content-type" content="text/html; charset=UTF-8">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Content-script-type" content="text/javascript">
+<link id="CSS_FONT" rel="stylesheet" href="../../include/FontS.css" type="text/css">
+<link rel="stylesheet" href="../../include/Layout.css" type="text/css">
+<link rel="stylesheet" href="../../include/Color.css" type="text/css">
+<link rel="stylesheet" href="../../include/searchbox.css" type="text/css">
+<script language="javascript" TYPE="text/javascript" src="../../include/common.js"></script>
+<script language="javascript" TYPE="text/javascript" src="../../include/check.js"></script>
+<script language="javascript" TYPE="text/javascript" src="../../include/date.js"></script>
+<script language="javascript" TYPE="text/javascript" src="../../include/tablesort.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/searchbox.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/jquery-1.7.2.min.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/jquery.tablefix.js"></script>
+<script language="javascript" TYPE="text/javascript">
+<!--
+#set($searchCondition = $everyPurReqAppSearchCondition)
+#parse("./common/common_js.vm")
+function onLoad() {
+    parentButtonEnable();
+    var listSize = "#jsEscape($!itemList.priceMstPackageRegAppList.size())";
+    var size = 0;
+    if (listSize != "") {
+        size = listSize;
+    }
+    if(size > 0){
+        function  block(){
+            parent.document.getElementById('registArea').style.display = '';
+        }
+        block();
+    }
+    TableSort.init();
+    dataLoadHasPage();
+    var alertMessage = "$!alertMessage";
+    if (alertMessage != ""){
+        buttonUsableForList(alertMessage);
+        alert(alertMessage);
+    }
+    var hadSaved = '#jsEscape($!hadSaved)';
+    if(hadSaved == 'true'){
+        #set( $priceMPackageRegister = "#customSpringMessage('PRICE_M_PACKAGE_REGISTER')" )
+        alert('#customMessageArgs("I015", [$priceMPackageRegister])');
+    }
+}
+/* 一覧表ソート */
+function listOrder(obj) {
+    parent.iframeChange('${flowExecutionUrl}&_eventId=order','column',obj.id);
+}
+/* 承認チェックボックスの選択 */
+function selectRowApproval(rowNo) {
+    // 承認チェック
+    var approvalObj = document.getElementById("approvalStatus_" + rowNo);
+    // 差戻しチェック
+    var returnObj = document.getElementById("backAppStatus_" + rowNo);
+    var status = 0;
+    if(approvalObj.checked) {
+        returnObj.checked = false;
+        returnObj.disabled = true;
+        $("tr:[id=Row_"+rowNo+"]").css("background-color","#ff9");
+        status = 1;
+    } else {
+        returnObj.checked = false;
+        returnObj.disabled = false;
+        if (rowNo % 2 == 0) {
+            $("tr:[id=Row_"+rowNo+"]").css("background-color","#dce4ef");
+        } else {
+            $("tr:[id=Row_"+rowNo+"]").css("background-color","#fff");
+        }
+    }
+    document.getElementById("priceMstPackageRegAppList["+rowNo+"].approvalStatus").value = status;
+}
+/* 差戻しチェックボックスの選択 */
+function selectRowBackApp(rowNo) {
+    // 承認チェック
+    var approvalStatus = document.getElementById("approvalStatus_" + rowNo);
+    // 差戻しチェック
+    var backAppStatus = document.getElementById("backAppStatus_" + rowNo);
+    var status = 0;
+    if(backAppStatus.checked) {
+        approvalStatus.checked = false; //承認チェック外す
+        approvalStatus.disabled = true; //承認チェック使用不可
+        $("tr:[id=Row_"+rowNo+"]").css("background-color","#ff9");
+        // コメント編集
+        $("td:[id=Btn_" + rowNo+"]").show();
+        getObj("rowno").value = rowNo;
+        openRemand(rowNo);
+        status = 1;
+    } else {
+        approvalStatus.checked = false;
+        approvalStatus.disabled = false;
+        if (rowNo % 2 == 0) {
+            $("tr:[id=Row_"+rowNo+"]").css("background-color","#dce4ef");
+        } else {
+            $("tr:[id=Row_"+rowNo+"]").css("background-color","#fff");
+        }
+        $("td:[id=Btn_" + rowNo+"]").hide();
+    }
+    document.getElementById("priceMstPackageRegAppList["+rowNo+"].backAppStatus").value = status;
+}
+/* 「コメント編集」ボタンを押下 */
+function openRemand(rowNo) {
+    getObj("rowno").value = rowNo;
+    var id = "priceMstPackageRegAppList[" + rowNo + "].backAppComments";
+    var comment = document.getElementById(id).value;
+    var priceUplCompanyCd = getObj("priceUplCompanyCd_" + rowNo).value;
+    var priceUplSectionCd = getObj("priceUplSectionCd_" + rowNo).value;
+    var registerUserCd = getObj("registerUserCd_" + rowNo).value;
+    var backUserShowFlg=getObj("backUserShowFlg_" + rowNo).value;
+    receipt("1", comment, priceUplCompanyCd, priceUplSectionCd, registerUserCd, "370",backUserShowFlg);
+}
+/* ポップアップ値の設定 */
+function receipt(aprDisplayModel, aprRemandComment, companyCd, sectionCd, userId, authNo,backUserShowFlg) {
+    masterSearch('${flowExecutionUrl}&_eventId=receipt', 'appRouteDtl', '500', '300');
+    iframeChange("${flowExecutionUrl}&_eventId=receipt",
+        "aprDisplayModel", aprDisplayModel,
+        "aprRemandComment", aprRemandComment,
+        "companyCd", companyCd,
+        "sectionCd", sectionCd,
+        "userId", userId,
+        "authNo", authNo,
+         "backUserShowFlg",backUserShowFlg,
+        "appRouteDtl");
+}
+/* ポップアップ戻り値の設定 */
+function setApr(reason, userId, userName) {
+    var idComments = "priceMstPackageRegAppList[" + getObj("rowno").value + "].backAppComments";
+    document.getElementById(idComments).value = reason;
+    var idBackAppUserName = "priceMstPackageRegAppList[" + getObj("rowno").value + "].backAppUserName";
+    document.getElementById(idBackAppUserName).value = userName;
+    var idBackAppUserCd = "priceMstPackageRegAppList[" + getObj("rowno").value + "].backAppUserCd";
+    document.getElementById(idBackAppUserCd).value = userId;
+    document.getElementById("registerUserCd_"+ getObj("rowno").value).value = userId;
+}
+/* 登録ボタンを押下 */
+function exec() {
+    // 確認メッセージ
+    #set( $quotReqPriceAppMsg = "#customSpringMessage('PRICE_M_PACKAGE_REGISTER')" )
+    #set( $actionRegisterMsg = "#customSpringMessage('ACTION_REGISTER')" )
+    #set( $priceMPackageRegisterMsg = "#customSpringMessage('PRICE_M_PACKAGE_REGISTER')" )
+    var checkedCount = 0;
+    #foreach($item in $!itemList.priceMstPackageRegAppList)
+        // 承認チェックボックス
+        var approvalCheckName = "approvalStatus_$velocityCount";
+        if (getObj(approvalCheckName) != null && getObj(approvalCheckName).checked) {
+            checkedCount++;
+        }
+        // 差戻しチェックボックス
+        var backAppCheckName = "backAppStatus_$velocityCount";
+        if (getObj(backAppCheckName) != null && getObj(backAppCheckName).checked) {
+            checkedCount++;
+        }
+    #end
+    if (checkedCount == 0) {
+         alert("#nothingSelectedMessage()");
+    } else {
+        if( !confirm('#customMessageArgs("W010",[$priceMPackageRegisterMsg])') ) {
+            return;
+        }
+        buttonDisable();
+        parentButtonDisable();
+        getObj("BodyForm").action = "${flowExecutionUrl}&_eventId=save";
+        getObj("BodyForm").submit();
+    }
+}
+/* ファイルのダウンロード */
+function downloadFile(priceMstPackageRegSeqNo) {
+    if (priceMstPackageRegSeqNo != "") {
+        buttonDisable();
+        parentButtonDisable();
+        setTimeout(buttonUsable,1000);
+        setTimeout(parentButtonEnable,1000);
+        iframeChange("${flowExecutionUrl}&_eventId=download&priceMstPackageRegSeqNo=" + priceMstPackageRegSeqNo);
+    }
+}
+//-->
+</script>
+</head>
+<body id="BODY" topmargin="0" leftmargin="0" marginwidth="0" marginheight="0" align="left" onload="onLoad();setTablefix('#TABLE', 1, 4);" >
+#if($!errorMessage && $!errorMessage !="")
+<div class="error">
+    $!errorMessage
+</div>
+#end
+<form id="BodyForm" name="BodyForm" method="post">
+#foreach($!priceMstPackageRegAppItem in $!{itemList.priceMstPackageRegAppList})
+     #if("$!priceMstPackageRegAppItem.backAppUserCd" == "")
+        #customFormHiddenInput("registerUserCd_$velocityCount" "$!priceMstPackageRegAppItem.registerUserCd")
+        #customFormHiddenInput("priceMstPackageRegAppList[$velocityCount].backAppUserCd" "$!priceMstPackageRegAppItem.registerUserCd")
+     #else
+        #customFormHiddenInput("registerUserCd_$velocityCount" "$!priceMstPackageRegAppItem.backAppUserCd")
+        #customFormHiddenInput("priceMstPackageRegAppList[$velocityCount].backAppUserCd" "$!priceMstPackageRegAppItem.backAppUserCd")
+     #end
+     
+    #customFormHiddenInput("backUserShowFlg_$velocityCount" "$!priceMstPackageRegAppItem.registerUserCd")
+    #customFormHiddenInput("priceUplCompanyCd_$velocityCount" "$!priceMstPackageRegAppItem.priceUplCompanyCd")
+    #customFormHiddenInput("priceUplSectionCd_$velocityCount" "$!priceMstPackageRegAppItem.priceUplSectionCd")
+    #customFormHiddenInput("priceMstPackageRegAppList[$velocityCount].priceMstPackageRegIdentify.priceMstPackageRegSeqNo" "$!priceMstPackageRegAppItem.priceMstPackageRegIdentify.priceMstPackageRegSeqNo")
+    #customFormHiddenInput("priceMstPackageRegAppList[$velocityCount].priceMstPackageRegIdentify.lastUpdDate" "$!priceMstPackageRegAppItem.priceMstPackageRegIdentify.lastUpdDate")
+#end
+    #if($!itemList.priceMstPackageRegAppList.size() > 0)
+    <div id="show">
+    #set( $index = 0)
+    #foreach($!priceMstPackageRegAppItem in $!{itemList.priceMstPackageRegAppList})
+        #customFormHiddenInput("priceMstPackageRegAppList[$index].approvalStatus" "$!priceMstPackageRegAppItem.approvalStatus")
+        #customFormHiddenInput("priceMstPackageRegAppList[$index].backAppStatus" "$!priceMstPackageRegAppItem.backAppStatus")
+        #set( $index = $index + 1 )
+    #end
+    </div>
+    <table id="TABLE" class="ListArea" WIDTH="100%">
+        <thead>
+            <tr id="Header" style= "position:relative;overflow-y:auto; top:expression(this.offsetParent.scrollTop);">
+                <th class="BoxHeaderCenter FontSmall">No.</th>
+                <th class="BoxHeaderCenter FontSmall">#customSpringMessage('APPROVAL')</th><!--承認-->
+                <th class="BoxHeaderCenter FontSmall">#customSpringMessage('RETURN')</th><!--差戻し-->
+                <th class="BoxHeaderCenter FontSmall">#customSpringMessage('PACKAGE_CREATE_FILE')</th><!-- 一括登録ファイル -->
+                <th label="case" class="BoxHeaderCenter FontSmall" id="T_APPROVAL.NOW_APP_USER_NAME" onclick="listOrder(this);">#customSpringMessage('APP_USER_NAME')</th><!-- 承認者名 -->
+                <th label="case" class="BoxHeaderCenter FontSmall" id="T_APPROVAL.NEXT_APP_USER_NAME" onclick="listOrder(this);">#customSpringMessage('NEXT_APP_USER_NAME')</th><!-- 次の承認者名 -->
+                <th label="case" class="BoxHeaderCenter FontSmall" id="T_PRICE_UPLOAD.TITLE_NAME" onclick="listOrder(this);">#customSpringMessage('PRC_NEW_UPLOAD_TITLE_NAME')</th><!-- 新規価格表アップロード件名 -->
+                <th label="case" class="BoxHeaderCenter FontSmall" id="T_PRICE_UPLOAD.PRICE_UPL_ITME_VOL" onclick="listOrder(this);">#customSpringMessage('ITEM_NAME_POINT')</th><!-- 品目点数 -->
+                <th label="case" class="BoxHeaderCenter FontSmall" id="T_PRICE_UPLOAD.PRICE_UPL_DATE" onclick="listOrder(this);">#customSpringMessage('REGISTER_DATE')</th><!-- 登録日 -->
+                <th label="case" class="BoxHeaderCenter FontSmall" id="T_PRICE_UPLOAD.PRICE_UPL_USER_ID" onclick="listOrder(this);">#customSpringMessage('REG_USER_CD')</th><!-- 登録者コード -->
+                <th label="case" class="BoxHeaderCenter FontSmall" id="T_PRICE_UPLOAD.PRICE_UPL_USER_NAME" onclick="listOrder(this);">#customSpringMessage('REG_USER_NAME')</th><!-- 登録者名 -->
+            </tr>
+        </thead>
+        <tbody>
+        #foreach($!priceMstPackageRegAppItem in $!{itemList.priceMstPackageRegAppList})
+            #if($!priceMstPackageRegAppItem.approvalStatus == "1" || $!priceMstPackageRegAppItem.backAppStatus == "1")
+                <tr id="Row_$velocityCount" bgcolor="#ffff99">
+            #elseif($velocityCount % 2 == 0)
+                <tr id="Row_$velocityCount" bgcolor="#dce4ef">
+            #else
+                <tr id="Row_$velocityCount" bgcolor="#ffffff">
+            #end
+                    <td class="BoxDetailCenter FontList">#set( $no = $velocityCount + 1 )$no</td>
+
+                    <td class="BoxDetailCenter">
+                        <input type="checkbox" onclick="selectRowApproval($velocityCount)" class="Icon" name="approvalStatus_$velocityCount" id="approvalStatus_$velocityCount"
+                           #if($!priceMstPackageRegAppItem.approvalStatus == "1")
+                               checked
+                           #end
+                           #if($!priceMstPackageRegAppItem.backAppStatus == "1")
+                               disabled
+                           #end
+                        >
+                    </td>
+                    <td class="BoxDetailCenter">
+                         <input type="checkbox" onclick="selectRowBackApp($velocityCount);setTablefixByChange('#TABLE', 1, 4);" class="Icon" name="backAppStatus_$velocityCount" id="backAppStatus_$velocityCount"
+                            #if($!priceMstPackageRegAppItem.backAppStatus == "1")
+                                checked
+                            #end
+                            #if($!priceMstPackageRegAppItem.approvalStatus == "1")
+                                disabled
+                            #end
+                         >
+                    </td>
+                    <td class="BoxDetailCenter">
+                        <table width="100%">
+                            <tr>
+                                <td>
+                                    <input type="button" class="MiniButton" value="#customSpringMessage('ACTION_DOWNLOAD')" onclick="downloadFile('#jsEscapeInHTML($!priceMstPackageRegAppItem.priceMstPackageRegIdentify.priceMstPackageRegSeqNo)');"><!--ダウンロード-->
+                                </td>
+                                <td valign="top" class="FontSmall" style="display:none;">
+
+                                    <span id="RejectReasonT_$velocityCount" style="display:none;"><br>#customSpringMessage('BACK_APP_COMMENTS')</span><!--差戻しコメント-->
+                                    #springFormTextarea("itemList.priceMstPackageRegAppList[$velocityCount].backAppComments" "class='Small ListComment' rows='3' maxlength='200'")
+                                </td>
+                                <td valign="top" class="FontSmall" style="display:none;">
+                                    <span id="RejectPersonT_$velocityCount" #if($!priceMstPackageRegAppItem.backAppStatus != "1") style="display:none;" #end>#customSpringMessage('RETURN_DESTINATION')<br></span><!--差戻し先名-->
+                                    #if($!priceMstPackageRegAppItem.backAppStatus != "1")
+                                        #springFormInput("itemList.priceMstPackageRegAppList[$velocityCount].backAppUserName", "class='SmallDSP ListCommentUser' size='20' readonly")
+                                    #else
+                                        #springFormInput("itemList.priceMstPackageRegAppList[$velocityCount].backAppUserName", "class='SmallDSP' style='background-color:#EAEAEA;' size='20' readonly")
+                                    #end
+                                </td>
+                                #if($!priceMstPackageRegAppItem.backAppStatus == "1")
+                                    <td id="Btn_$velocityCount">
+                                #else
+                                    <td id="Btn_$velocityCount" style="display:none;">
+                                #end
+                                    <input id="RejectButton_$velocityCount" class="MiniButton" type="button" value="#customSpringMessage('COMMENT_EDIT')" onclick="openRemand($velocityCount);" #if($!priceMstPackageRegAppItem.backAppStatus != "1") #end><!--コメント編集-->
+                                </td>
+                            </tr>
+                        </table>
+                    </td>
+                    <td class="BoxDetailLeft FontList">#out($!{priceMstPackageRegAppItem.nowAppUserName})</td>
+                    <td class="BoxDetailLeft FontList">#out($!{priceMstPackageRegAppItem.nextAppUserName})</td>
+                    <td class="BoxDetailLeft FontList">#out($!{priceMstPackageRegAppItem.titleName})</td>
+                    <td class="BoxDetailRight">#out($!{priceMstPackageRegAppItem.itemNamePoint.volFormat})</td>
+                    <td class="BoxDetailCenter FontList">#out($!{priceMstPackageRegAppItem.registerDate.dateOfymdFormat})</td>
+                    <td class="BoxDetailCenter FontList">#out($!{priceMstPackageRegAppItem.registerUserCd})</td>
+                    <td class="BoxDetailLeft FontList">#out($!{priceMstPackageRegAppItem.registerUserName})</td>
+                </tr>
+            #end
+        </tbody>
+    </table>
+    #end
+    <br>
+    <table id="WAIT" class="NoBorder" style="display:none;width:100%;">
+        <tr>
+            <td style="text-align:center;">
+            <br><br>
+            <img src="../../image/wait.gif">
+            <br>
+            <span class="FontMini">
+                <br>#customSpringMessage('SEARCH_MESSAGE')<!--問い合わせ中...-->
+            </span>
+            <input type="hidden" name="rowno" id="rowno">
+            </td>
+        </tr>
+    </table>
+</form>
+</body>
+</html>

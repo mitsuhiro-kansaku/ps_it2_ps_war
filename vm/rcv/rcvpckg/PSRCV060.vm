@@ -1,0 +1,208 @@
+<!doctype html>
+<html LANG="ja">
+<head>
+<META http-equiv="Content-type" content="text/html; charset=UTF-8">
+<title>#customSpringMessage("RCV_PACKAGE_REG")</title><!--受入一括登録一覧-->
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Content-script-type" CONTENT="text/javascript">
+<link id="CSS_FONT" rel="stylesheet" href="../../include/FontS.css" type="text/css">
+<link rel="stylesheet" href="../../include/Layout.css" type="text/css">
+<link rel="stylesheet" href="../../include/Color.css" type="text/css">
+<link rel="stylesheet" href="../../include/searchbox.css" type="text/css">
+<link rel="stylesheet" href="../../include/ime.css" type="text/css">
+
+<script language="javascript" type="text/javascript" src="../../include/common.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/date.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/check.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/searchbox.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/jquery-1.7.2.min.js"></script>
+<script language="javascript" type="text/javascript">
+<!--
+#set($commonTitle = "#customSpringMessage('RCV_PACKAGE_REG')")
+#set($searchViewStateID='PSRCV060')
+#set($listViewStateID='PSRCV061')
+var pinName="PSRCV010_Pin";
+#parse("./common/common_js.vm")
+
+var maxSearchHeight = 160;
+var minSearchHeight = 30;
+
+function onLoad(){
+    bodyLoad();
+    var reqStatus = "#jsEscape($!purReqStatus)";
+    var statusFlag = true;
+    var linkFlag = false;
+    var types = "";
+    
+    if(reqStatus != ""){
+        linkFlag = true;
+        types="#jsEscape($!purReqStatus)";
+    }
+    var alertMessage = "$!alertMessage";    
+    if (alertMessage != ""){
+        alert(alertMessage);
+    }
+    var errorMsg = "$!errorMessage";
+    if (errorMsg != ""){
+        document.getElementById("TR_ERROR").style.display = "";
+        document.getElementById("DATAAREA").contentWindow.document.body.innerText = ""; 
+        return;
+    }
+    var isShowList = "#jsEscape($isShowList)";
+    if (isShowList == 'true'){
+        iframeChange("${flowExecutionUrl}&_eventId=search",'types',types);
+        statusFlag = false;
+    }
+
+    if(linkFlag && statusFlag){
+        iframeChange("${flowExecutionUrl}&_eventId=search",'types',types);
+    }
+    var type="#jsEscape($!type)";
+    if(type!=""){
+        iframeChange("${flowExecutionUrl}&_eventId=validate");
+    }
+}
+
+function execSearch() {
+    getObj("BodyForm").target="_self";
+    buttonDisable();
+    getObj('BodyForm').action = "${flowExecutionUrl}&_eventId=validate";
+    getObj('BodyForm').submit();
+}
+
+//-->
+
+</script>
+</head>
+<body topmargin="0" leftmargin="0" marginwidth="0" marginheight="0" align="center" width="100%" height="100%" onload="onLoad();" style="overflow-y:hidden;">
+<form id="BodyForm" name="Body" action="${flowExecutionUrl}&_eventId=validate" method="post" >
+    #customFormHiddenInput("userId" "")
+    #customFormHiddenInput("userName" "")
+    #customFormHiddenInput("reqTypeInd.hidden" "$!searchCondition.reqTypeInd")
+    #customFormHiddenInput("isClassify" "false")
+    #customFormHiddenInput("purReqStatus" "")
+    <!-- ＊＊＊＊＊　カレンダーボックス　＊＊＊＊＊ -->
+    <iframe id="CALENDARBOX" class="CALENDARBOX" framespacing="0"scrolling="no" frameborder="0" src="../../sbxCalendar/body.vm"></iframe>
+<!--検索部テーブル開始-->
+    <table class="NoBorder" width="100%" height="100%">
+        <tr>
+            <td id="SEARCH_AREA" class="SearchArea"><!-- onLoadで変更 -->
+                #parse("./common/common_title_tran_with_personal_setting.vm")
+                <table width="100%">
+                    <tr id="SEARCH_AREA2">
+                        <td id="Adjust" align="right" valign="top">
+                            <!-- 検索条件入力部 -->
+                            <table class="NoBorder"  width="100%">
+                                <tr><td align="left" colspan="4" nowrap>#customSpringMessage('PSRCV060_HEADER_COMMENT')</td></tr>
+                                $!PSRCV060PageCreaterForSearch.build('_td_style_left','class="FontSmallBold" align="right"', '_td_style_right', 'class="FontSmall" align="left"', '_item_style','Small')
+                                #set($isFirstItem = true)
+                                #foreach($!item in $!PSRCV060PageCreaterForSearch.getItemListForBody())
+                                    #set($currentOneRowFlag = $!PSRCV060PageCreaterForSearch.getOneRowFlag($!item))
+                                    
+                                    #if($isFirstItem)
+                                        $!PSRCV060PageCreaterForSearch.printTRtag()
+                                    #elseif($currentOneRowFlag)
+                                            $!PSRCV060PageCreaterForSearch.printTDtag()
+                                            $!PSRCV060PageCreaterForSearch.printTRtagClose()
+                                            #set($isFirstItem = true)
+                                            $!PSRCV060PageCreaterForSearch.printTRtag()
+                                    #end
+                                    
+                                    ##注文番号
+                                    #if($!item.getColumnName()=="T_ORDER.ORDER_NO")
+                                        $!PSRCV060PageCreaterForSearch.printDefault($!item)
+                                    ##件名
+                                    #elseif($!item.getColumnName()=="T_ORDER.TITLE_NAME")
+                                        $!PSRCV060PageCreaterForSearch.printDefault($!item)
+                                    ##納入先コード
+                                    #elseif($!item.getColumnName()=="T_ORDER.DELIV_PLACE_CD")
+                                        $!PSRCV060PageCreaterForSearch.printSpecial("m04_inputDelivery",$!item,'popupPageid','PSRCV060')
+                                    ##依頼部門コード
+                                    #elseif($!item.getColumnName()=="T_ORDER.REQ_SECTION_CD")
+                                        $!PSRCV060PageCreaterForSearch.printSpecial("m03_inputSection",$!item,'popupPageid','PSRCV060','projectId','reqSection')
+                                    ##依頼者コード
+                                    #elseif($!item.getColumnName()=="T_ORDER.REQ_USER_ID")
+                                        $!PSRCV060PageCreaterForSearch.printSpecial("m13_inputUserForSearch",$!item, 'popupPageid','PSRCV060')
+                                    ##注文日
+                                    #elseif($!item.getColumnName()=="T_ORDER.ORDER_FIRST_DATE")
+                                        $!PSRCV060PageCreaterForSearch.printDefault($!item)
+                                    ##注文納期
+                                    #elseif($!item.getColumnName()=="T_ORDER.ORDER_DELIV_DATE")
+                                        $!PSRCV060PageCreaterForSearch.printDefault($!item)
+                                    ##品名コード
+                                    #elseif($!item.getColumnName()=="T_ORDER.ITEM_CD")
+                                        $!PSRCV060PageCreaterForSearch.printSpecial("m11_inputItemCodeOnly",$!item,'popupPageid','PSRCV060')
+                                    ##取引先コード
+                                    #elseif($!item.getColumnName()=="T_ORDER.SUP_CD")
+                                        $!PSRCV060PageCreaterForSearch.printSpecial("m05_inputSupplier",$!item,"popupPageid","PSRCV060")
+                                    ##品名
+                                    #elseif($!item.getColumnName()=="T_ORDER.ITEM_NAME")
+                                        $!PSRCV060PageCreaterForSearch.printDefault($!item)
+                                    #else
+                                        $!PSRCV060PageCreaterForSearch.printDefault($!item)
+                                    #end
+                                    
+                                    #if($currentOneRowFlag)
+                                        $!PSRCV060PageCreaterForSearch.printTRtagClose()
+                                        #set($isFirstItem = true)
+                                    #else
+                                        #if($isFirstItem)
+                                            #set($isFirstItem = false)
+                                        #else
+                                            $!PSRCV060PageCreaterForSearch.printTRtagClose()
+                                            #set($isFirstItem = true)
+                                        #end
+                                    #end
+                                #end
+                                #if(!$isFirstItem)
+                                        $!PSRCV060PageCreaterForSearch.printTDtag()
+                                        $!PSRCV060PageCreaterForSearch.printTRtagClose()
+                                #end
+                                <tr>
+                                    <td nowrap class="FontSmallBold" align="right">#customSpringMessage("REQ_TYPE_IND")<!--依頼区分-->
+                                    </td>
+                                    <td nowrap class="FontSmall">
+                                        #customFormRadioButtons("searchCondition.reqTypeInd" $REQ_TYPE_IND "" "class='FontSmall'")
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td align="left" colspan="4" nowrap class="FontComment">
+                                        #customSpringMessage("PSRCV060_FOOTER_COMMENT")## ＊:前方一致 / ％:中間一致 / なし:完全一致
+                                    </td>
+                                </tr>
+                            </table>
+
+                        </td>
+                        <td nowrap class="FontSmallBold" align="right" valign="top">
+                            <br>
+                            <!-- ＊＊＊＊＊　検索実行　＊＊＊＊＊ -->
+                            <input type="button" onclick="javascript:execSearch();" class="LargeButton" value="#customSpringMessage('ACTION_SEARCH')"><!--検索-->
+                            <br>
+                            <br><a href="javascript:clear();searchConditionCheckBoxClearForExt();" id="clearSearch">#customSpringMessage("ACTION_CLEAR_SEARCH_CRITERIA")<!--検索条件をクリアする--></a>&nbsp;
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+        <tr id="registArea" style="display:none;">
+            <td style="background-color:#EAEAEA;height:22px;border-bottom:1px solid #999999;text-align:left;vertical-align:top;">
+                <!--登録-->
+                #parse("./common/common_regist.vm")
+            </td>
+        </tr>
+        <tr id ="TR_ERROR" style="display:none;">
+            <td class="error" style="height:0px;">
+                $!errorMessage
+            </td>
+        </tr>
+        <tr>
+            <td class="NoBorder" style="height:auto;">
+                <iframe id="DATAAREA" name="DATAAREA" framespacing="0" frameborder="0" src="../../layout/default.vm" scrolling="no" frameborder="no" style="position:static;width:100%;border:0px solid #999999;height:100%;z-index:0;"></iframe>
+            </td>
+        </tr>
+    </table>
+<iframe id="HIDDENAREA" name="HIDDENAREA" framespacing="0" frameborder="0" src="" scrolling="no" frameborder="no" style="display:none"></iframe>
+</FORM>
+
+</BODY>
+</html>

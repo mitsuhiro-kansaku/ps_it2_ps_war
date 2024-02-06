@@ -1,0 +1,345 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<title>#customSpringMessage('INVENTORY_RESULT_INPUT_LIST')</title><!--棚卸結果入力一覧-->
+<meta http-equiv="Content-type" content="text/html; charset=UTF-8">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Content-script-type" content="text/javascript">
+<link id="CSS_FONT" rel="stylesheet" href="../../include/FontS.css" type="text/css">
+<link rel="stylesheet" href="../../include/Layout.css" type="text/css">
+<link rel="stylesheet" href="../../include/Color.css" type="text/css">
+<link rel="stylesheet" href="../../include/ime.css" type="text/css">
+<script language="javascript" type="text/javascript" src="../../include/common.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/check.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/date.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/tablesort.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/jquery-1.7.2.min.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/jquery.tablefix.js"></script>
+<script language="javascript" type="text/javascript">
+<!--
+#set($updateGrant = $LoginUser.hasAuth(${AuthNoConstant.getValue("INVENTORY_UPDATE_GRANT")}))## 棚卸更新権限
+#parse("./common/common_js.vm")
+## ビューが初めて表示される直前に発生します。
+function onLoad(){
+    parentButtonEnable();
+    dataLoadHasPage();
+#if($!itemList.inventoryResultsItemList && $!itemList.inventoryResultsItemList.size() > 0)
+    setControlEnabled();
+#end
+    var alertMessage="$!alertMessage";
+    if(alertMessage!=""){
+        buttonUsableForList(alertMessage);
+        alert(alertMessage);
+    }
+    var isUpdateSuccess="#jsEscape($!isUpdateSuccess)";
+    if(isUpdateSuccess=="true"){
+        #set($params=["#customSpringMessage('INVENTORY_VOL')"])
+        alert("#customMessageArgs('I002',$params)");
+        return;
+    }
+}
+## 各コントロールの表示/非表示を設定します。
+function setControlEnabled(){
+    var body="#TABLE > tbody > ";
+    if($('#bodyTableDiv').length!=0){
+        body="#bodyTableDiv > table > tbody > ";
+    }
+    if($updateGrant&&("#jsEscape($!itemList.editable)"=="true")){ ## 編集可
+        $('#valueSetting',parent.document).css('display','');
+        $('#update',parent.document).css('display','');
+        $(body+'tr > td > div > input:[type=text][id^=inventoryResultsItemList][id$=inventoryVol\\.volFormat]').each(function(index){
+            $(this).addClass('SmallRight noIME');
+            $(this).removeAttr('tabIndex');
+            $(this).prop('readonly',false);
+            ## 開始時数と入力時数が異なる場合 又は、棚卸結果入力後に在庫が発生した場合は、背景色を変更する
+            var $startStockVol=$(body+'tr:eq('+index+') > td > div > input:[id^=inventoryResultsItemList][id$=startStockVol\\.volFormat]');
+            var $inputStockVol=$(body+'tr:eq('+index+') > td > div > input:[id^=inventoryResultsItemList][id$=inputStockVol\\.volFormat]');
+            var $genInvCountAfterInputted=$(body+'tr:eq('+index+') > td > div > input:[id^=inventoryResultsItemList][id$=generatedInventoryCountAfterInputted]');
+            if($startStockVol.val()!=$inputStockVol.val()||parseInt($genInvCountAfterInputted.val())>0){
+                $('tr:[id=Row_'+index+']').css('background-color','#ffb6c1');
+            }
+        });
+    }else{ ## 編集不可
+        $('#valueSetting',parent.document).css('display','none');
+        $('#update',parent.document).css('display','none');
+        $(body+'tr > td > div > input:[type=text][id^=inventoryResultsItemList][id$=inventoryVol\\.volFormat]').each(function(index){
+            $(this).addClass('SmallRightDsp');
+            $(this).attr('tabIndex',"-1");
+            $(this).prop('readonly',true);
+        });
+    }
+}
+## 「初期値設定」ボタンをクリックしたときに発生します。
+function doValueSetting(){
+    #set($params=["#customSpringMessage('INVENTORY_VOL')","#customSpringMessage('ACTION_SET_INITIAL_VALUE')"]);
+    if(!confirm("#customMessageArgs('W001',$params)")){
+        return;
+    }
+    var body="#TABLE > tbody > ";
+    if($('#bodyTableDiv').length!=0){
+        body="#bodyTableDiv > table > tbody > ";
+    }
+    $(body+'tr > td > div > input:[type=text][id^=inventoryResultsItemList][id$=inventoryVol\\.volFormat]').each(function(index){
+        var $inputInvDate = $(body+'tr:eq('+index+') > td > div > input:[id^=inventoryResultsItemList][id$=inputInvDate\\.dateOfymdDispYMDHMS]');
+        if($(this).prop('disabled')){ return true; }
+        if($(this).val()=='' || $inputInvDate.val() == ''){
+            $(this).val($(body+'tr:eq('+index+') > td > div > input:[id^=inventoryResultsItemList][id$=inputStockVol\\.volFormat]').val()).blur();
+        }
+    });
+}
+## 「更新」ボタンをクリックしたときに発生します。
+function doUpdate(){
+    #set($params=["#customSpringMessage('INVENTORY_VOL')","#customSpringMessage('UPDATE')"]);
+    if(!confirm("#customMessageArgs('W001',$params)")){
+        return;
+    }
+    parentButtonDisable();
+    buttonDisable();
+    getObj("BodyForm").action="${flowExecutionUrl}&_eventId=update";
+    getObj("BodyForm").submit();
+}
+//-->
+</script>
+</head>
+<body id="BODY" topmargin="0" leftmargin="0" marginwidth="0" marginheight="0" align="left" onload="onLoad();setTablefix('#TABLE',1,1+$!PSSTK081PageCreaterForList.printLockColumn());">
+#if($!errorMessage && $!errorMessage != "")
+<div id="error" class="error">
+    $!errorMessage
+</div>
+#end
+#if($!itemList.inventoryResultsItemList && $!itemList.inventoryResultsItemList.size() > 0)
+<form id="BodyForm" name="BodyForm" method="post">
+    <table id="TABLE" class="ListArea" width="100%">
+        <thead>
+            <tr id="Header">
+                <th class="BoxHeaderCenter FontSmall" width="5%">No.<!--No.--></th>
+                #foreach($!item in $!PSSTK081PageCreaterForList.getItemListForBody())
+                    #set($currentOneColumnFlag = $!PSSTK081PageCreaterForList.getOneColumnFlag($!item))
+                    #if($velocityCount == 0)
+                        $!PSSTK081PageCreaterForList.printTHtag($!item,'class="BoxHeaderCenter FontSmall"')
+                    #elseif($currentOneColumnFlag)
+                        $!PSSTK081PageCreaterForList.printBRtag($!item)
+                    #else
+                        $!PSSTK081PageCreaterForList.printTHtagClose()
+                        $!PSSTK081PageCreaterForList.printTHtag($!item,'class="BoxHeaderCenter FontSmall"')
+                    #end
+                    #if($!item.getColumnName() == "T_INVENTORY.INV_YEAR_MONTH")
+                        $!PSSTK081PageCreaterForList.printHead($!item)
+                    #elseif($!item.getColumnName() == "T_INVENTORY.COMPANY_CD")
+                        $!PSSTK081PageCreaterForList.printHead($!item)
+                    #elseif($!item.getColumnName() == "T_INVENTORY.COMPANY_NAME")
+                        $!PSSTK081PageCreaterForList.printHead($!item)
+                    #elseif($!item.getColumnName() == "T_INVENTORY.SECTION_PLACE_CD")
+                        $!PSSTK081PageCreaterForList.printHead($!item)
+                    #elseif($!item.getColumnName() == "T_INVENTORY.SECTION_PLACE_NAME")
+                        $!PSSTK081PageCreaterForList.printHead($!item)
+                    #elseif($!item.getColumnName() == "T_INVENTORY.STOCK_PLACE_CD")
+                        $!PSSTK081PageCreaterForList.printHead($!item)
+                    #elseif($!item.getColumnName() == "T_INVENTORY.STOCK_PLACE_NAME")
+                        $!PSSTK081PageCreaterForList.printHead($!item)
+                    #elseif($!item.getColumnName() == "T_INVENTORY.ITEM_CLASS_L")
+                        $!PSSTK081PageCreaterForList.printHead($!item)
+                    #elseif($!item.getColumnName() == "T_INVENTORY.ITEM_CLASS_L_NAME")
+                        $!PSSTK081PageCreaterForList.printHead($!item)
+                    #elseif($!item.getColumnName() == "T_INVENTORY.ITEM_CLASS_M")
+                        $!PSSTK081PageCreaterForList.printHead($!item)
+                    #elseif($!item.getColumnName() == "T_INVENTORY.ITEM_CLASS_M_NAME")
+                        $!PSSTK081PageCreaterForList.printHead($!item)
+                    #elseif($!item.getColumnName() == "T_INVENTORY.ITEM_CLASS_S")
+                        $!PSSTK081PageCreaterForList.printHead($!item)
+                    #elseif($!item.getColumnName() == "T_INVENTORY.ITEM_CLASS_S_NAME")
+                        $!PSSTK081PageCreaterForList.printHead($!item)
+                    #elseif($!item.getColumnName() == "T_INVENTORY.ITEM_COMPANY_CD")
+                        $!PSSTK081PageCreaterForList.printHead($!item)
+                    #elseif($!item.getColumnName() == "T_INVENTORY.ITEM_CD")
+                        $!PSSTK081PageCreaterForList.printHead($!item)
+                    #elseif($!item.getColumnName() == "T_INVENTORY.ITEM_NAME")
+                        $!PSSTK081PageCreaterForList.printHead($!item)
+                    #elseif($!item.getColumnName() == "T_INVENTORY.KATASHIKI")
+                        $!PSSTK081PageCreaterForList.printHead($!item)
+                    #elseif($!item.getColumnName() == "T_INVENTORY.MANUFACT_CD")
+                        $!PSSTK081PageCreaterForList.printHead($!item)
+                    #elseif($!item.getColumnName() == "T_INVENTORY.MANUFACT_NAME")
+                        $!PSSTK081PageCreaterForList.printHead($!item)
+                    #elseif($!item.getColumnName() == "T_INVENTORY.START_STOCK_VOL")
+                        $!PSSTK081PageCreaterForList.printHead($!item)
+                    #elseif($!item.getColumnName() == "T_INVENTORY.INPUT_STOCK_VOL")
+                        $!PSSTK081PageCreaterForList.printHead($!item)
+                    #elseif($!item.getColumnName() == "T_INVENTORY.NEXT_MONTH_STOCK_VOL")
+                        $!PSSTK081PageCreaterForList.printHead($!item)
+                    #elseif($!item.getColumnName() == "T_INVENTORY.INVENTORY_VOL")
+                        $!PSSTK081PageCreaterForList.printHead($!item)
+                        <span class="FontWarn">&nbsp;※</span>
+                    #elseif($!item.getColumnName() == "T_INVENTORY.UNIT_CD")
+                        $!PSSTK081PageCreaterForList.printHead($!item)
+                    #elseif($!item.getColumnName() == "T_INVENTORY.UNIT_NAME")
+                        $!PSSTK081PageCreaterForList.printHead($!item)
+                    #elseif($!item.getColumnName() == "T_INVENTORY.START_INV_DATE")
+                        $!PSSTK081PageCreaterForList.printHead($!item)
+                    #elseif($!item.getColumnName() == "T_INVENTORY.INPUT_INV_DATE")
+                        $!PSSTK081PageCreaterForList.printHead($!item)
+                    #elseif($!item.getColumnName() == "T_INVENTORY.SETTLE_INV_DATE")
+                        $!PSSTK081PageCreaterForList.printHead($!item)
+                    #else
+                        $!PSSTK081PageCreaterForList.printHead($!item)
+                    #end
+                #end
+                $!PSSTK081PageCreaterForList.printTHtagClose()
+            </tr>
+        </thead>
+        <tbody>
+        #foreach($!item in $!itemList.inventoryResultsItemList)
+            <tr id="Row_$foreach.index" name="Row_$foreach.index" #if($foreach.index % 2 == 0) bgcolor="#dce4ef" #else bgcolor="#ffffff" #end>
+                <td class="BoxDetailCenter FontList">$foreach.count</td>
+                #set($isStartStockVol = false)
+                #set($isInputStockVol = false)
+                #set($isInventoryVol = false)
+                #set($isInputInvDate = false)
+                #foreach($!item in $!PSSTK081PageCreaterForList.getItemListForBody($velocityCount))
+                    #set($currentOneColumnFlag = $!PSSTK081PageCreaterForList.getOneColumnFlag($!item))
+                    #if($velocityCount == 0)
+                        $!PSSTK081PageCreaterForList.printTDtag('class="BoxDetailLeft FontList"')
+                    #elseif(!$currentOneColumnFlag)
+                        $!PSSTK081PageCreaterForList.printTDtagClose()
+                        $!PSSTK081PageCreaterForList.printTDtag('class="BoxDetailLeft FontList"')
+                    #end
+                    #if($!item.getColumnName() == "T_INVENTORY.INV_YEAR_MONTH")
+                        $!PSSTK081PageCreaterForList.printDefault($!item
+                            , "_data_style", 'align="center"'
+                        )
+                    #elseif($!item.getColumnName() == "T_INVENTORY.COMPANY_CD")
+                        $!PSSTK081PageCreaterForList.printDefault($!item
+                            , "_data_style", 'align="center"'
+                        )
+                    #elseif($!item.getColumnName() == "T_INVENTORY.COMPANY_NAME")
+                        $!PSSTK081PageCreaterForList.printDefault($!item)
+                    #elseif($!item.getColumnName() == "T_INVENTORY.SECTION_PLACE_CD")
+                        $!PSSTK081PageCreaterForList.printDefault($!item
+                            , "_data_style", 'align="center"'
+                        )
+                    #elseif($!item.getColumnName() == "T_INVENTORY.SECTION_PLACE_NAME")
+                        $!PSSTK081PageCreaterForList.printDefault($!item)
+                    #elseif($!item.getColumnName() == "T_INVENTORY.STOCK_PLACE_CD")
+                        $!PSSTK081PageCreaterForList.printDefault($!item
+                            , "_data_style", 'align="center"'
+                        )
+                    #elseif($!item.getColumnName() == "T_INVENTORY.STOCK_PLACE_NAME")
+                        $!PSSTK081PageCreaterForList.printDefault($!item)
+                    #elseif($!item.getColumnName() == "T_INVENTORY.ITEM_CLASS_L")
+                        $!PSSTK081PageCreaterForList.printDefault($!item
+                            , "_data_style", 'align="center"'
+                        )
+                    #elseif($!item.getColumnName() == "T_INVENTORY.ITEM_CLASS_L_NAME")
+                        $!PSSTK081PageCreaterForList.printDefault($!item)
+                    #elseif($!item.getColumnName() == "T_INVENTORY.ITEM_CLASS_M")
+                        $!PSSTK081PageCreaterForList.printDefault($!item
+                            , "_data_style", 'align="center"'
+                        )
+                    #elseif($!item.getColumnName() == "T_INVENTORY.ITEM_CLASS_M_NAME")
+                        $!PSSTK081PageCreaterForList.printDefault($!item)
+                    #elseif($!item.getColumnName() == "T_INVENTORY.ITEM_CLASS_S")
+                        $!PSSTK081PageCreaterForList.printDefault($!item
+                            , "_data_style", 'align="center"'
+                        )
+                    #elseif($!item.getColumnName() == "T_INVENTORY.ITEM_CLASS_S_NAME")
+                        $!PSSTK081PageCreaterForList.printDefault($!item)
+                    #elseif($!item.getColumnName() == "T_INVENTORY.ITEM_COMPANY_CD")
+                        $!PSSTK081PageCreaterForList.printDefault($!item
+                            , "_data_style", 'align="center"'
+                        )
+                    #elseif($!item.getColumnName() == "T_INVENTORY.ITEM_CD")
+                        $!PSSTK081PageCreaterForList.printDefault($!item
+                            , "_data_style", 'align="center"'
+                        )
+                    #elseif($!item.getColumnName() == "T_INVENTORY.ITEM_NAME")
+                        $!PSSTK081PageCreaterForList.printDefault($!item)
+                    #elseif($!item.getColumnName() == "T_INVENTORY.KATASHIKI")
+                        $!PSSTK081PageCreaterForList.printDefault($!item)
+                    #elseif($!item.getColumnName() == "T_INVENTORY.MANUFACT_CD")
+                        $!PSSTK081PageCreaterForList.printDefault($!item
+                            , "_data_style", 'align="center"'
+                        )
+                    #elseif($!item.getColumnName() == "T_INVENTORY.MANUFACT_NAME")
+                        $!PSSTK081PageCreaterForList.printDefault($!item)
+                    #elseif($!item.getColumnName() == "T_INVENTORY.START_STOCK_VOL")
+                        $!PSSTK081PageCreaterForList.printSpecial("s47_list_data_textbox", $!item
+                            , "_data_style", 'align="right"'
+                            , "_displayOnly", 'true'
+                        )
+                    #elseif($!item.getColumnName() == "T_INVENTORY.INPUT_STOCK_VOL")
+                        $!PSSTK081PageCreaterForList.printSpecial("s47_list_data_textbox", $!item
+                            , "_data_style", 'align="right"'
+                            , "_displayOnly", 'true'
+                        )
+                        #set($isStartStockVol = true)
+                    #elseif($!item.getColumnName() == "T_INVENTORY.NEXT_MONTH_STOCK_VOL")
+                        $!PSSTK081PageCreaterForList.printSpecial("s47_list_data_textbox", $!item
+                            , "_data_style", 'align="right"'
+                            , "_displayOnly", 'true'
+                        )
+                        #set($isInputStockVol = true)
+                    #elseif($!item.getColumnName() == "T_INVENTORY.INVENTORY_VOL")
+                        $!PSSTK081PageCreaterForList.printSpecial("s47_list_data_textbox", $!item
+                            , "_data_style", 'align="right"'
+                            , "_item_style", 'SmallRight noIME'
+                            , "_event", 'onblur="editVal(this);" onfocus="deleteComma(this);"'
+                        )
+                        #set($isInventoryVol = true)
+                    #elseif($!item.getColumnName() == "T_INVENTORY.UNIT_CD")
+                        $!PSSTK081PageCreaterForList.printDefault($!item
+                            , "_data_style", 'align="center"'
+                        )
+                    #elseif($!item.getColumnName() == "T_INVENTORY.UNIT_NAME")
+                        $!PSSTK081PageCreaterForList.printDefault($!item)
+                    #elseif($!item.getColumnName() == "T_INVENTORY.START_INV_DATE")
+                        $!PSSTK081PageCreaterForList.printDefault($!item
+                            , "_data_style", 'align="center"'
+                        )
+                    #elseif($!item.getColumnName() == "T_INVENTORY.INPUT_INV_DATE")
+                        $!PSSTK081PageCreaterForList.printDefault($!item
+                            , "_data_style", 'align="center"'
+                        )
+                        #set($isInputInvDate = false)
+                    #elseif($!item.getColumnName() == "T_INVENTORY.SETTLE_INV_DATE")
+                        $!PSSTK081PageCreaterForList.printDefault($!item
+                            , "_data_style", 'align="center"'
+                        )
+                    #else
+                        $!PSSTK081PageCreaterForList.printDefault($!item)
+                    #end
+                #end
+                #if(!$isStartStockVol)
+                <div>
+                    #customFormHiddenInput("inventoryResultsItemList[$velocityCount].startStockVol.volFormat" "$!item.startStockVol.volFormat")
+                </div>
+                #end
+                #if(!$isInputStockVol)
+                <div>
+                    #customFormHiddenInput("inventoryResultsItemList[$velocityCount].inputStockVol.volFormat" "$!item.inputStockVol.volFormat")
+                </div>
+                #end
+                #if(!$isInventoryVol)
+                <div>
+                    #customFormHiddenInput("inventoryResultsItemList[$velocityCount].inventoryVol.volFormat" "$!item.inventoryVol.volFormat")
+                </div>
+                #end
+                #if(!$isInputInvDate)
+                <div>
+                    #customFormHiddenInput("inventoryResultsItemList[$velocityCount].inputInvDate.dateOfymdDispYMDHMS" "$!item.inputInvDate.dateOfymdDispYMDHMS")
+                </div>
+                #end
+                <div>
+                    #customFormHiddenInput("inventoryResultsItemList[$velocityCount].generatedInventoryCountAfterInputted" "$!item.generatedInventoryCountAfterInputted")
+                </div>
+                $!PSSTK081PageCreaterForList.printTDtagClose()
+            </tr>
+        #end
+        </tbody>
+    </table>
+</form>
+#end
+<br>
+<table id="WAIT" class="NoBorder" style="display:none;width:100%;"><tr><td style="text-align:center;"><br><br>
+<img src="../../image/wait.gif"><br><span class="FontMini"><br>#customSpringMessage('SEARCH_MESSAGE')<!--問い合わせ中...--></span></td></tr></table>
+</body>
+</html>

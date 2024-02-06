@@ -1,0 +1,720 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="ps.dataaccess.src.itempopup.ItemPopupMapper">
+
+    <sql id="listKeyIdentityWhereCondition">
+        AND (M_ITEM.COMPANY_CD = #{companyCd} OR M_ITEM.COMPANY_CD = '${@fw.common.constant.ApplicationConstant@COMPANY_CD_ALL}')
+        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(itemClassL)">
+            AND M_ITEM.ITEM_CLASS_L = #{itemClassL, jdbcType=VARCHAR}
+        </if>
+        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(itemClassM)">
+            AND M_ITEM.ITEM_CLASS_M = #{itemClassM, jdbcType=VARCHAR}
+        </if>
+        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(itemClassS)">
+            AND M_ITEM.ITEM_CLASS_S = #{itemClassS, jdbcType=VARCHAR}
+        </if>
+        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(itemCd)">
+            AND M_ITEM.ITEM_CD ${@fw.common.util.SearchModeUtil@getSearchSQL("fw.domain.mst.material.item.ItemPopupSearchCondition","itemCd")}
+        </if>
+        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(itemName)">
+            AND (M_ITEM_LANG_COMPANY.ITEM_NAME ${@fw.common.util.SearchModeUtil@getSearchSQL("fw.domain.mst.material.item.ItemPopupSearchCondition","itemName")}
+             OR M_ITEM_LANG_SYSTEM.ITEM_NAME ${@fw.common.util.SearchModeUtil@getSearchSQL("fw.domain.mst.material.item.ItemPopupSearchCondition","itemName")})
+        </if>
+        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(katashiki)">
+            AND M_ITEM.KATASHIKI ${@fw.common.util.SearchModeUtil@getSearchSQL("fw.domain.mst.material.item.ItemPopupSearchCondition","katashiki")}
+        </if>
+        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(manufactName)">
+            AND (M_MANUFACT_LANG_COMPANY.MANUFACT_NAME ${@fw.common.util.SearchModeUtil@getSearchSQL("fw.domain.mst.material.item.ItemPopupSearchCondition","manufactName")}
+             OR M_MANUFACT_LANG_SYSTEM.MANUFACT_NAME ${@fw.common.util.SearchModeUtil@getSearchSQL("fw.domain.mst.material.item.ItemPopupSearchCondition","manufactName")})
+        </if>
+        <if test="@fw.domain.mst.searchcondition.SearchCondition@termFlgIsNotEmpty(searchCondition.termFlg) and  searchCondition.termFlg==0">
+            AND M_ITEM.TERM_FLG = #{searchCondition.termFlg , jdbcType=VARCHAR}
+        </if>
+    </sql>
+
+    <select id="listKeyIdentityItem"
+            parameterType ="fw.domain.mst.material.item.ItemPopupSearchCondition"
+            resultType="fw.domain.mst.material.material.PriceArticleIdentify">
+        SELECT M_ITEM.COMPANY_CD as "companyCd",
+               M_ITEM.ITEM_CD as "itemCd",
+               CASE WHEN M_ITEM_LANG_COMPANY.ITEM_NAME IS NOT NULL
+                    THEN M_ITEM_LANG_COMPANY.ITEM_NAME
+                    ELSE M_ITEM_LANG_SYSTEM.ITEM_NAME
+                     END
+                      AS itemName,
+               CASE WHEN M_MANUFACT_LANG_COMPANY.MANUFACT_NAME IS NOT NULL
+                    THEN M_MANUFACT_LANG_COMPANY.MANUFACT_NAME
+                    ELSE M_MANUFACT_LANG_SYSTEM.MANUFACT_NAME
+                     END
+                      AS manufactName,
+               CASE WHEN M_UNIT_NAME_LANG_COMPANY.UNIT_NAME IS NOT NULL
+                    THEN M_UNIT_NAME_LANG_COMPANY.UNIT_NAME
+                    ELSE M_UNIT_NAME_LANG_SYSTEM.UNIT_NAME
+                     END
+                      AS unitName,
+               CASE WHEN M_ITEM_CLASS_LANG_L_COMPANY.ITEM_CLASS_NAME IS NOT NULL
+                    THEN M_ITEM_CLASS_LANG_L_COMPANY.ITEM_CLASS_NAME
+                    ELSE M_ITEM_CLASS_LANG_L_SYSTEM.ITEM_CLASS_NAME
+                     END
+                      AS itemClassNameL,
+               CASE WHEN M_ITEM_CLASS_LANG_M_COMPANY.ITEM_CLASS_NAME IS NOT NULL
+                    THEN M_ITEM_CLASS_LANG_M_COMPANY.ITEM_CLASS_NAME
+                    ELSE M_ITEM_CLASS_LANG_M_SYSTEM.ITEM_CLASS_NAME
+                     END
+                      AS itemClassNameM,
+               CASE WHEN M_ITEM_CLASS_LANG_S_COMPANY.ITEM_CLASS_NAME IS NOT NULL
+                    THEN M_ITEM_CLASS_LANG_S_COMPANY.ITEM_CLASS_NAME
+                    ELSE M_ITEM_CLASS_LANG_S_SYSTEM.ITEM_CLASS_NAME
+                     END
+                      AS itemClassNameS,
+               CASE WHEN M_SUBJECT_LANG_COMPANY.SUBJECT_NAME IS NOT NULL
+                    THEN M_SUBJECT_LANG_COMPANY.SUBJECT_NAME
+                    ELSE M_SUBJECT_LANG_SYSTEM.SUBJECT_NAME
+                     END
+                      AS subjectName
+          FROM M_ITEM
+          LEFT JOIN M_ITEM_LANG M_ITEM_LANG_COMPANY
+                 ON M_ITEM.COMPANY_CD = M_ITEM_LANG_COMPANY.COMPANY_CD
+                AND M_ITEM.ITEM_CD = M_ITEM_LANG_COMPANY.ITEM_CD
+                AND M_ITEM_LANG_COMPANY.LANGUAGE_IND = '${@fw.security.SecurityUtil@getCompanyUseLanguageIndByEscapeSql()}'
+          LEFT JOIN M_ITEM_LANG M_ITEM_LANG_SYSTEM
+                 ON M_ITEM.COMPANY_CD = M_ITEM_LANG_SYSTEM.COMPANY_CD
+                AND M_ITEM.ITEM_CD = M_ITEM_LANG_SYSTEM.ITEM_CD
+                AND M_ITEM_LANG_SYSTEM.LANGUAGE_IND = '${@fw.common.util.AppUtil@getSysLanguageByEscapeSql()}'
+          LEFT JOIN M_MANUFACT_LANG M_MANUFACT_LANG_COMPANY
+                 ON M_MANUFACT_LANG_COMPANY.MANUFACT_CD = M_ITEM.MANUFACT_CD
+                AND M_MANUFACT_LANG_COMPANY.LANGUAGE_IND = '${@fw.security.SecurityUtil@getCompanyUseLanguageIndByEscapeSql()}'
+          LEFT JOIN M_MANUFACT_LANG M_MANUFACT_LANG_SYSTEM
+                 ON M_MANUFACT_LANG_SYSTEM.MANUFACT_CD = M_ITEM.MANUFACT_CD
+                AND M_MANUFACT_LANG_SYSTEM.LANGUAGE_IND = '${@fw.common.util.AppUtil@getSysLanguageByEscapeSql()}'
+          LEFT JOIN M_UNIT_NAME_LANG M_UNIT_NAME_LANG_COMPANY
+                 ON M_UNIT_NAME_LANG_COMPANY.UNIT_CD = M_ITEM.UNIT_CD
+                AND M_UNIT_NAME_LANG_COMPANY.LANGUAGE_IND = '${@fw.security.SecurityUtil@getCompanyUseLanguageIndByEscapeSql()}'
+          LEFT JOIN M_UNIT_NAME_LANG M_UNIT_NAME_LANG_SYSTEM
+                 ON M_UNIT_NAME_LANG_SYSTEM.UNIT_CD = M_ITEM.UNIT_CD
+                AND M_UNIT_NAME_LANG_SYSTEM.LANGUAGE_IND = '${@fw.common.util.AppUtil@getSysLanguageByEscapeSql()}'
+          LEFT JOIN M_ITEM_CLASS M_ITEM_CLASS_L 
+                 ON M_ITEM_CLASS_L.ITEM_CLASS_L = M_ITEM.ITEM_CLASS_L
+                AND M_ITEM_CLASS_L.ITEM_CLASS_IND = '1'
+          LEFT JOIN M_ITEM_CLASS M_ITEM_CLASS_M 
+                 ON M_ITEM_CLASS_M.ITEM_CLASS_L = M_ITEM.ITEM_CLASS_L
+                AND M_ITEM_CLASS_M.ITEM_CLASS_M = M_ITEM.ITEM_CLASS_M
+                AND M_ITEM_CLASS_M.ITEM_CLASS_IND = '2'
+          LEFT JOIN M_ITEM_CLASS M_ITEM_CLASS_S 
+                 ON M_ITEM_CLASS_S.ITEM_CLASS_L = M_ITEM.ITEM_CLASS_L
+                AND M_ITEM_CLASS_S.ITEM_CLASS_M = M_ITEM.ITEM_CLASS_M
+                AND M_ITEM_CLASS_S.ITEM_CLASS_S = M_ITEM.ITEM_CLASS_S
+                AND M_ITEM_CLASS_S.ITEM_CLASS_IND = '3'
+          LEFT JOIN M_ITEM_CLASS_LANG M_ITEM_CLASS_LANG_L_COMPANY
+                 ON M_ITEM_CLASS_LANG_L_COMPANY.ITEM_CLASS_L = M_ITEM_CLASS_L.ITEM_CLASS_L
+                AND M_ITEM_CLASS_LANG_L_COMPANY.ITEM_CLASS_M = M_ITEM_CLASS_L.ITEM_CLASS_M
+                AND M_ITEM_CLASS_LANG_L_COMPANY.ITEM_CLASS_S = M_ITEM_CLASS_L.ITEM_CLASS_S
+                AND M_ITEM_CLASS_LANG_L_COMPANY.LANGUAGE_IND = '${@fw.security.SecurityUtil@getCompanyUseLanguageIndByEscapeSql()}'
+          LEFT JOIN M_ITEM_CLASS_LANG M_ITEM_CLASS_LANG_L_SYSTEM
+                 ON M_ITEM_CLASS_LANG_L_SYSTEM.ITEM_CLASS_L = M_ITEM_CLASS_L.ITEM_CLASS_L
+                AND M_ITEM_CLASS_LANG_L_SYSTEM.ITEM_CLASS_M = M_ITEM_CLASS_L.ITEM_CLASS_M
+                AND M_ITEM_CLASS_LANG_L_SYSTEM.ITEM_CLASS_S = M_ITEM_CLASS_L.ITEM_CLASS_S
+                AND M_ITEM_CLASS_LANG_L_SYSTEM.LANGUAGE_IND = '${@fw.common.util.AppUtil@getSysLanguageByEscapeSql()}'
+          LEFT JOIN M_ITEM_CLASS_LANG M_ITEM_CLASS_LANG_M_COMPANY
+                 ON M_ITEM_CLASS_LANG_M_COMPANY.ITEM_CLASS_L = M_ITEM_CLASS_M.ITEM_CLASS_L
+                AND M_ITEM_CLASS_LANG_M_COMPANY.ITEM_CLASS_M = M_ITEM_CLASS_M.ITEM_CLASS_M
+                AND M_ITEM_CLASS_LANG_M_COMPANY.ITEM_CLASS_S = M_ITEM_CLASS_M.ITEM_CLASS_S
+                AND M_ITEM_CLASS_LANG_M_COMPANY.LANGUAGE_IND = '${@fw.security.SecurityUtil@getCompanyUseLanguageIndByEscapeSql()}'
+          LEFT JOIN M_ITEM_CLASS_LANG M_ITEM_CLASS_LANG_M_SYSTEM
+                 ON M_ITEM_CLASS_LANG_M_SYSTEM.ITEM_CLASS_L = M_ITEM_CLASS_M.ITEM_CLASS_L
+                AND M_ITEM_CLASS_LANG_M_SYSTEM.ITEM_CLASS_M = M_ITEM_CLASS_M.ITEM_CLASS_M
+                AND M_ITEM_CLASS_LANG_M_SYSTEM.ITEM_CLASS_S = M_ITEM_CLASS_M.ITEM_CLASS_S
+                AND M_ITEM_CLASS_LANG_M_SYSTEM.LANGUAGE_IND = '${@fw.common.util.AppUtil@getSysLanguageByEscapeSql()}'
+          LEFT JOIN M_ITEM_CLASS_LANG M_ITEM_CLASS_LANG_S_COMPANY
+                 ON M_ITEM_CLASS_LANG_S_COMPANY.ITEM_CLASS_L = M_ITEM_CLASS_S.ITEM_CLASS_L
+                AND M_ITEM_CLASS_LANG_S_COMPANY.ITEM_CLASS_M = M_ITEM_CLASS_S.ITEM_CLASS_M
+                AND M_ITEM_CLASS_LANG_S_COMPANY.ITEM_CLASS_S = M_ITEM_CLASS_S.ITEM_CLASS_S
+                AND M_ITEM_CLASS_LANG_S_COMPANY.LANGUAGE_IND = '${@fw.security.SecurityUtil@getCompanyUseLanguageIndByEscapeSql()}'
+          LEFT JOIN M_ITEM_CLASS_LANG M_ITEM_CLASS_LANG_S_SYSTEM
+                 ON M_ITEM_CLASS_LANG_S_SYSTEM.ITEM_CLASS_L = M_ITEM_CLASS_S.ITEM_CLASS_L
+                AND M_ITEM_CLASS_LANG_S_SYSTEM.ITEM_CLASS_M = M_ITEM_CLASS_S.ITEM_CLASS_M
+                AND M_ITEM_CLASS_LANG_S_SYSTEM.ITEM_CLASS_S = M_ITEM_CLASS_S.ITEM_CLASS_S
+                AND M_ITEM_CLASS_LANG_S_SYSTEM.LANGUAGE_IND = '${@fw.common.util.AppUtil@getSysLanguageByEscapeSql()}'
+          LEFT JOIN M_SUBJECT_LANG M_SUBJECT_LANG_COMPANY
+                 ON M_SUBJECT_LANG_COMPANY.COMPANY_CD = M_ITEM.COMPANY_CD
+                AND M_SUBJECT_LANG_COMPANY.SUBJECT_CD = M_ITEM.SUBJECT_CD
+                AND M_SUBJECT_LANG_COMPANY.LANGUAGE_IND = '${@fw.security.SecurityUtil@getCompanyUseLanguageIndByEscapeSql()}'
+          LEFT JOIN M_SUBJECT_LANG M_SUBJECT_LANG_SYSTEM
+                 ON M_SUBJECT_LANG_SYSTEM.COMPANY_CD = M_ITEM.COMPANY_CD
+                AND M_SUBJECT_LANG_SYSTEM.SUBJECT_CD = M_ITEM.SUBJECT_CD
+                AND M_SUBJECT_LANG_SYSTEM.LANGUAGE_IND = '${@fw.common.util.AppUtil@getSysLanguageByEscapeSql()}'
+        <where>
+            <include refid="listKeyIdentityWhereCondition"/>
+        </where>
+         ORDER BY ${searchCondition.columnOrder.columnOrder()}
+    </select>
+
+     <resultMap type="fw.domain.mst.material.item.ItemPopupItem" id="ItemPopupItem_Map">
+           <result column="COMPANY_CD" property="priceArticleIdentify.companyCd"/>
+           <result column="ITEM_CD" property="priceArticleIdentify.itemCd"/>
+           <result column="UNIT_NAME" property="priceArticleIdentify.unitName"/>
+           <result column="LAST_UPD_DATE" property="priceArticleIdentify.lastUpdDate"/>
+           <result column="BUYER_SECTION_CD" property="priceArticleIdentify.buyerSectionCd"/>
+           <result column="VALID_START_DATE" property="priceArticleIdentify.validStartDate"/>
+           <result column="VALID_END_DATE" property="priceArticleIdentify.validEndDate"/>
+           <result column="LOWER_VOL" property="priceArticleIdentify.lowerVol"/>
+           <result column="UPPER_VOL" property="priceArticleIdentify.upperVol"/>
+    </resultMap>
+
+    <select id="listPageItemItem"
+            parameterType ="fw.domain.mst.material.item.ItemPopupSearchCondition" 
+            resultMap="ItemPopupItem_Map">
+        SELECT M_ITEM.COMPANY_CD,
+               M_ITEM.ITEM_CD,
+               M_ITEM.LAST_UPD_DATE,
+               CASE WHEN M_ITEM_LANG_COMPANY.ITEM_NAME IS NOT NULL
+                    THEN M_ITEM_LANG_COMPANY.ITEM_NAME
+                    ELSE M_ITEM_LANG_SYSTEM.ITEM_NAME
+                     END
+                      AS itemName,
+               CASE WHEN M_ITEM_CLASS_LANG_L_COMPANY.ITEM_CLASS_NAME IS NOT NULL
+                    THEN M_ITEM_CLASS_LANG_L_COMPANY.ITEM_CLASS_NAME
+                    ELSE M_ITEM_CLASS_LANG_L_SYSTEM.ITEM_CLASS_NAME
+                     END
+                      AS itemClassNameL,
+               CASE WHEN M_ITEM_CLASS_LANG_M_COMPANY.ITEM_CLASS_NAME IS NOT NULL
+                    THEN M_ITEM_CLASS_LANG_M_COMPANY.ITEM_CLASS_NAME
+                    ELSE M_ITEM_CLASS_LANG_M_SYSTEM.ITEM_CLASS_NAME
+                     END
+                      AS itemClassNameM,
+               CASE WHEN M_ITEM_CLASS_LANG_S_COMPANY.ITEM_CLASS_NAME IS NOT NULL
+                    THEN M_ITEM_CLASS_LANG_S_COMPANY.ITEM_CLASS_NAME
+                    ELSE M_ITEM_CLASS_LANG_S_SYSTEM.ITEM_CLASS_NAME
+                     END
+                      AS itemClassNameS,
+               M_ITEM.ITEM_CLASS_L as "itemClassL",
+               M_ITEM.ITEM_CLASS_M as "itemClassM",
+               M_ITEM.ITEM_CLASS_S as "itemClassS",
+               '0' as "priceFlg",
+               M_ITEM.MANUFACT_CD as "manufactCd",
+               CASE WHEN M_MANUFACT_LANG_COMPANY.MANUFACT_NAME IS NOT NULL
+                    THEN M_MANUFACT_LANG_COMPANY.MANUFACT_NAME
+                    ELSE M_MANUFACT_LANG_SYSTEM.MANUFACT_NAME
+                     END
+                      AS manufactName,
+               M_ITEM.KATASHIKI as "katashiki",
+               M_ITEM.UNIT_CD as "unitCd",
+               CASE WHEN M_UNIT_NAME_LANG_COMPANY.UNIT_NAME IS NOT NULL
+                    THEN M_UNIT_NAME_LANG_COMPANY.UNIT_NAME
+                    ELSE M_UNIT_NAME_LANG_SYSTEM.UNIT_NAME
+                     END
+                      AS unitName,
+               M_ITEM.SUBJECT_CD as "subjectCd",
+               CASE WHEN M_SUBJECT_LANG_COMPANY.SUBJECT_NAME IS NOT NULL
+                    THEN M_SUBJECT_LANG_COMPANY.SUBJECT_NAME
+                    ELSE M_SUBJECT_LANG_SYSTEM.SUBJECT_NAME
+                     END
+                      AS subjectName
+          FROM M_ITEM
+     LEFT JOIN M_ITEM_LANG M_ITEM_LANG_COMPANY
+            ON M_ITEM.COMPANY_CD = M_ITEM_LANG_COMPANY.COMPANY_CD
+           AND M_ITEM.ITEM_CD = M_ITEM_LANG_COMPANY.ITEM_CD
+           AND M_ITEM_LANG_COMPANY.LANGUAGE_IND = '${@fw.security.SecurityUtil@getCompanyUseLanguageIndByEscapeSql()}'
+     LEFT JOIN M_ITEM_LANG M_ITEM_LANG_SYSTEM
+            ON M_ITEM.COMPANY_CD = M_ITEM_LANG_SYSTEM.COMPANY_CD
+           AND M_ITEM.ITEM_CD = M_ITEM_LANG_SYSTEM.ITEM_CD
+           AND M_ITEM_LANG_SYSTEM.LANGUAGE_IND = '${@fw.common.util.AppUtil@getSysLanguageByEscapeSql()}'
+     LEFT JOIN M_MANUFACT_LANG M_MANUFACT_LANG_COMPANY
+            ON M_MANUFACT_LANG_COMPANY.MANUFACT_CD = M_ITEM.MANUFACT_CD
+           AND M_MANUFACT_LANG_COMPANY.LANGUAGE_IND = '${@fw.security.SecurityUtil@getCompanyUseLanguageIndByEscapeSql()}'
+     LEFT JOIN M_MANUFACT_LANG M_MANUFACT_LANG_SYSTEM
+            ON M_MANUFACT_LANG_SYSTEM.MANUFACT_CD = M_ITEM.MANUFACT_CD
+           AND M_MANUFACT_LANG_SYSTEM.LANGUAGE_IND = '${@fw.common.util.AppUtil@getSysLanguageByEscapeSql()}'
+     LEFT JOIN M_UNIT_NAME_LANG M_UNIT_NAME_LANG_COMPANY
+            ON M_UNIT_NAME_LANG_COMPANY.UNIT_CD = M_ITEM.UNIT_CD
+           AND M_UNIT_NAME_LANG_COMPANY.LANGUAGE_IND = '${@fw.security.SecurityUtil@getCompanyUseLanguageIndByEscapeSql()}'
+     LEFT JOIN M_UNIT_NAME_LANG M_UNIT_NAME_LANG_SYSTEM
+            ON M_UNIT_NAME_LANG_SYSTEM.UNIT_CD = M_ITEM.UNIT_CD
+           AND M_UNIT_NAME_LANG_SYSTEM.LANGUAGE_IND = '${@fw.common.util.AppUtil@getSysLanguageByEscapeSql()}'
+     LEFT JOIN M_ITEM_CLASS M_ITEM_CLASS_L 
+            ON M_ITEM_CLASS_L.ITEM_CLASS_L = M_ITEM.ITEM_CLASS_L
+           AND M_ITEM_CLASS_L.ITEM_CLASS_IND = '1'
+     LEFT JOIN M_ITEM_CLASS M_ITEM_CLASS_M 
+            ON M_ITEM_CLASS_M.ITEM_CLASS_L = M_ITEM.ITEM_CLASS_L
+           AND M_ITEM_CLASS_M.ITEM_CLASS_M = M_ITEM.ITEM_CLASS_M
+           AND M_ITEM_CLASS_M.ITEM_CLASS_IND = '2'
+     LEFT JOIN M_ITEM_CLASS M_ITEM_CLASS_S 
+            ON M_ITEM_CLASS_S.ITEM_CLASS_L = M_ITEM.ITEM_CLASS_L
+           AND M_ITEM_CLASS_S.ITEM_CLASS_M = M_ITEM.ITEM_CLASS_M
+           AND M_ITEM_CLASS_S.ITEM_CLASS_S = M_ITEM.ITEM_CLASS_S
+           AND M_ITEM_CLASS_S.ITEM_CLASS_IND = '3'
+     LEFT JOIN M_ITEM_CLASS_LANG M_ITEM_CLASS_LANG_L_COMPANY
+            ON M_ITEM_CLASS_LANG_L_COMPANY.ITEM_CLASS_L = M_ITEM_CLASS_L.ITEM_CLASS_L
+           AND M_ITEM_CLASS_LANG_L_COMPANY.ITEM_CLASS_M = M_ITEM_CLASS_L.ITEM_CLASS_M
+           AND M_ITEM_CLASS_LANG_L_COMPANY.ITEM_CLASS_S = M_ITEM_CLASS_L.ITEM_CLASS_S
+           AND M_ITEM_CLASS_LANG_L_COMPANY.LANGUAGE_IND = '${@fw.security.SecurityUtil@getCompanyUseLanguageIndByEscapeSql()}'
+     LEFT JOIN M_ITEM_CLASS_LANG M_ITEM_CLASS_LANG_L_SYSTEM
+            ON M_ITEM_CLASS_LANG_L_SYSTEM.ITEM_CLASS_L = M_ITEM_CLASS_L.ITEM_CLASS_L
+           AND M_ITEM_CLASS_LANG_L_SYSTEM.ITEM_CLASS_M = M_ITEM_CLASS_L.ITEM_CLASS_M
+           AND M_ITEM_CLASS_LANG_L_SYSTEM.ITEM_CLASS_S = M_ITEM_CLASS_L.ITEM_CLASS_S
+           AND M_ITEM_CLASS_LANG_L_SYSTEM.LANGUAGE_IND = '${@fw.common.util.AppUtil@getSysLanguageByEscapeSql()}'
+     LEFT JOIN M_ITEM_CLASS_LANG M_ITEM_CLASS_LANG_M_COMPANY
+            ON M_ITEM_CLASS_LANG_M_COMPANY.ITEM_CLASS_L = M_ITEM_CLASS_M.ITEM_CLASS_L
+           AND M_ITEM_CLASS_LANG_M_COMPANY.ITEM_CLASS_M = M_ITEM_CLASS_M.ITEM_CLASS_M
+           AND M_ITEM_CLASS_LANG_M_COMPANY.ITEM_CLASS_S = M_ITEM_CLASS_M.ITEM_CLASS_S
+           AND M_ITEM_CLASS_LANG_M_COMPANY.LANGUAGE_IND = '${@fw.security.SecurityUtil@getCompanyUseLanguageIndByEscapeSql()}'
+     LEFT JOIN M_ITEM_CLASS_LANG M_ITEM_CLASS_LANG_M_SYSTEM
+            ON M_ITEM_CLASS_LANG_M_SYSTEM.ITEM_CLASS_L = M_ITEM_CLASS_M.ITEM_CLASS_L
+           AND M_ITEM_CLASS_LANG_M_SYSTEM.ITEM_CLASS_M = M_ITEM_CLASS_M.ITEM_CLASS_M
+           AND M_ITEM_CLASS_LANG_M_SYSTEM.ITEM_CLASS_S = M_ITEM_CLASS_M.ITEM_CLASS_S
+           AND M_ITEM_CLASS_LANG_M_SYSTEM.LANGUAGE_IND = '${@fw.common.util.AppUtil@getSysLanguageByEscapeSql()}'
+     LEFT JOIN M_ITEM_CLASS_LANG M_ITEM_CLASS_LANG_S_COMPANY
+            ON M_ITEM_CLASS_LANG_S_COMPANY.ITEM_CLASS_L = M_ITEM_CLASS_S.ITEM_CLASS_L
+           AND M_ITEM_CLASS_LANG_S_COMPANY.ITEM_CLASS_M = M_ITEM_CLASS_S.ITEM_CLASS_M
+           AND M_ITEM_CLASS_LANG_S_COMPANY.ITEM_CLASS_S = M_ITEM_CLASS_S.ITEM_CLASS_S
+           AND M_ITEM_CLASS_LANG_S_COMPANY.LANGUAGE_IND = '${@fw.security.SecurityUtil@getCompanyUseLanguageIndByEscapeSql()}'
+     LEFT JOIN M_ITEM_CLASS_LANG M_ITEM_CLASS_LANG_S_SYSTEM
+            ON M_ITEM_CLASS_LANG_S_SYSTEM.ITEM_CLASS_L = M_ITEM_CLASS_S.ITEM_CLASS_L
+           AND M_ITEM_CLASS_LANG_S_SYSTEM.ITEM_CLASS_M = M_ITEM_CLASS_S.ITEM_CLASS_M
+           AND M_ITEM_CLASS_LANG_S_SYSTEM.ITEM_CLASS_S = M_ITEM_CLASS_S.ITEM_CLASS_S
+           AND M_ITEM_CLASS_LANG_S_SYSTEM.LANGUAGE_IND = '${@fw.common.util.AppUtil@getSysLanguageByEscapeSql()}'
+     LEFT JOIN M_SUBJECT_LANG M_SUBJECT_LANG_COMPANY
+            ON M_SUBJECT_LANG_COMPANY.COMPANY_CD = M_ITEM.COMPANY_CD
+           AND M_SUBJECT_LANG_COMPANY.SUBJECT_CD = M_ITEM.SUBJECT_CD
+           AND M_SUBJECT_LANG_COMPANY.LANGUAGE_IND = '${@fw.security.SecurityUtil@getCompanyUseLanguageIndByEscapeSql()}'
+     LEFT JOIN M_SUBJECT_LANG M_SUBJECT_LANG_SYSTEM
+            ON M_SUBJECT_LANG_SYSTEM.COMPANY_CD = M_ITEM.COMPANY_CD
+           AND M_SUBJECT_LANG_SYSTEM.SUBJECT_CD = M_ITEM.SUBJECT_CD
+           AND M_SUBJECT_LANG_SYSTEM.LANGUAGE_IND = '${@fw.common.util.AppUtil@getSysLanguageByEscapeSql()}'
+        <where>
+            (M_ITEM.COMPANY_CD ,M_ITEM.ITEM_CD) IN
+            <foreach collection="searchCondition.page.keyDomainEntityList" item="keyList"  open="(" separator="," close=")">  
+                (#{keyList.companyCd},#{keyList.itemCd})
+            </foreach>
+            <include refid="listKeyIdentityWhereCondition"/>
+        </where>
+        ORDER BY ${searchCondition.columnOrder.columnOrder()}
+    </select>
+
+    <select id="lostFocusSearch"
+            parameterType ="fw.domain.mst.material.item.ItemPopupSearchCondition" 
+            resultType="String">
+        SELECT M_ITEM_LANG.ITEM_NAME
+          FROM M_ITEM
+          LEFT JOIN M_ITEM_LANG
+                 ON M_ITEM.COMPANY_CD = M_ITEM_LANG.COMPANY_CD
+                AND M_ITEM.ITEM_CD = M_ITEM_LANG.ITEM_CD
+                AND M_ITEM_LANG.LANGUAGE_IND = '${@fw.security.SecurityUtil@getCompanyUseLanguageIndByEscapeSql()}'
+         WHERE (M_ITEM.COMPANY_CD = #{companyCd, jdbcType=VARCHAR}
+            OR M_ITEM.COMPANY_CD = '${@fw.common.constant.ApplicationConstant@COMPANY_CD_ALL}')
+           AND M_ITEM.ITEM_CD = #{itemCd, jdbcType=VARCHAR}
+    </select>
+
+    <sql id="listKeyIdentityPurPriceWhereCondition">
+        
+    </sql>
+
+    <select id="listKeyIdentityPurPrice"
+            parameterType ="fw.domain.mst.material.item.ItemPopupSearchCondition"
+            resultType="fw.domain.mst.material.material.PriceArticleIdentify">
+        SELECT M_PUR_PRICE_DTL.BUYER_COMPANY_CD as "buyerCompanyCd",
+               M_PUR_PRICE_DTL.BUYER_SECTION_CD as "buyerSectionCd",
+               M_PUR_PRICE_DTL.ITEM_CD as "itemCd",
+               CASE WHEN M_ITEM_LANG_COMPANY.ITEM_NAME IS NOT NULL
+                    THEN M_ITEM_LANG_COMPANY.ITEM_NAME
+                    ELSE M_ITEM_LANG_SYSTEM.ITEM_NAME
+                     END
+                      AS itemName,
+               CASE WHEN M_MANUFACT_LANG_COMPANY.MANUFACT_NAME IS NOT NULL
+                    THEN M_MANUFACT_LANG_COMPANY.MANUFACT_NAME
+                    ELSE M_MANUFACT_LANG_SYSTEM.MANUFACT_NAME
+                     END
+                      AS manufactName,
+               CASE WHEN M_UNIT_NAME_LANG_COMPANY.UNIT_NAME IS NOT NULL
+                    THEN M_UNIT_NAME_LANG_COMPANY.UNIT_NAME
+                    ELSE M_UNIT_NAME_LANG_SYSTEM.UNIT_NAME
+                     END
+                      AS unitName,
+               M_PUR_PRICE_DTL.SUP_CD as "supCd",
+               M_PUR_PRICE_DTL.VALID_START_DATE as "validStartDate",
+               M_PUR_PRICE_DTL.VALID_END_DATE as "validEndDate",
+               M_PUR_PRICE_DTL.LOWER_VOL as "lowerVol",
+               M_PUR_PRICE_DTL.UPPER_VOL as "upperVol",
+               CASE WHEN M_ITEM_CLASS_LANG_L_COMPANY.ITEM_CLASS_NAME IS NOT NULL
+                    THEN M_ITEM_CLASS_LANG_L_COMPANY.ITEM_CLASS_NAME
+                    ELSE M_ITEM_CLASS_LANG_L_SYSTEM.ITEM_CLASS_NAME
+                     END
+                      AS itemClassNameL,
+               CASE WHEN M_ITEM_CLASS_LANG_M_COMPANY.ITEM_CLASS_NAME IS NOT NULL
+                    THEN M_ITEM_CLASS_LANG_M_COMPANY.ITEM_CLASS_NAME
+                    ELSE M_ITEM_CLASS_LANG_M_SYSTEM.ITEM_CLASS_NAME
+                     END
+                      AS itemClassNameM,
+               CASE WHEN M_ITEM_CLASS_LANG_S_COMPANY.ITEM_CLASS_NAME IS NOT NULL
+                    THEN M_ITEM_CLASS_LANG_S_COMPANY.ITEM_CLASS_NAME
+                    ELSE M_ITEM_CLASS_LANG_S_SYSTEM.ITEM_CLASS_NAME
+                     END
+                      AS itemClassNameS,
+               CASE WHEN M_SUPPLIER_LANG_COMPANY.SUP_NAME IS NOT NULL
+                    THEN M_SUPPLIER_LANG_COMPANY.SUP_NAME
+                    ELSE M_SUPPLIER_LANG_SYSTEM.SUP_NAME
+                     END
+                      AS supName,
+               CASE WHEN M_SUPPLIER_LANG_COMPANY.SUP_ABBR_NAME IS NOT NULL
+                    THEN M_SUPPLIER_LANG_COMPANY.SUP_ABBR_NAME
+                    ELSE M_SUPPLIER_LANG_SYSTEM.SUP_ABBR_NAME
+                     END
+                      AS supAbbrName
+          FROM M_PUR_PRICE_DSP_AUTH
+         INNER JOIN M_PUR_PRICE
+                 ON M_PUR_PRICE_DSP_AUTH.BUYER_COMPANY_CD = M_PUR_PRICE.BUYER_COMPANY_CD
+                AND M_PUR_PRICE_DSP_AUTH.BUYER_SECTION_CD = M_PUR_PRICE.BUYER_SECTION_CD
+                AND M_PUR_PRICE_DSP_AUTH.ITEM_CD = M_PUR_PRICE.ITEM_CD
+                AND M_PUR_PRICE_DSP_AUTH.SUP_CD = M_PUR_PRICE.SUP_CD
+                AND M_PUR_PRICE_DSP_AUTH.VALID_START_DATE &lt;= ${@fw.common.util.AppUtil@getSysDate()}
+                AND M_PUR_PRICE_DSP_AUTH.VALID_END_DATE >= ${@fw.common.util.AppUtil@getSysDate()} 
+                AND M_PUR_PRICE_DSP_AUTH.REQ_COMPANY_CD = #{companyCd, jdbcType=VARCHAR}
+         INNER JOIN M_PUR_PRICE_DTL
+                 ON M_PUR_PRICE_DTL.BUYER_COMPANY_CD = M_PUR_PRICE.BUYER_COMPANY_CD
+                AND M_PUR_PRICE_DTL.BUYER_SECTION_CD = M_PUR_PRICE.BUYER_SECTION_CD
+                AND M_PUR_PRICE_DTL.ITEM_CD = M_PUR_PRICE.ITEM_CD
+                AND M_PUR_PRICE_DTL.SUP_CD = M_PUR_PRICE.SUP_CD
+                AND M_PUR_PRICE_DTL.VALID_START_DATE = M_PUR_PRICE.VALID_START_DATE
+                AND M_PUR_PRICE_DTL.VALID_END_DATE = M_PUR_PRICE.VALID_END_DATE
+                AND M_PUR_PRICE_DTL.UPPER_VOL > #{reqVol, jdbcType=VARCHAR}
+                AND M_PUR_PRICE_DTL.LOWER_VOL &lt;= #{reqVol, jdbcType=VARCHAR}
+         INNER JOIN M_ITEM
+                 ON (M_ITEM.COMPANY_CD = M_PUR_PRICE_DSP_AUTH.BUYER_COMPANY_CD
+                 OR M_ITEM.COMPANY_CD = '${@fw.common.constant.ApplicationConstant@COMPANY_CD_ALL}')
+                AND M_ITEM.ITEM_CD = M_PUR_PRICE_DSP_AUTH.ITEM_CD
+          LEFT JOIN M_ITEM_LANG M_ITEM_LANG_COMPANY
+                 ON M_ITEM.COMPANY_CD = M_ITEM_LANG_COMPANY.COMPANY_CD
+                AND M_ITEM.ITEM_CD = M_ITEM_LANG_COMPANY.ITEM_CD
+                AND M_ITEM_LANG_COMPANY.LANGUAGE_IND = '${@fw.security.SecurityUtil@getCompanyUseLanguageIndByEscapeSql()}'
+          LEFT JOIN M_ITEM_LANG M_ITEM_LANG_SYSTEM
+                 ON M_ITEM.COMPANY_CD = M_ITEM_LANG_SYSTEM.COMPANY_CD
+                AND M_ITEM.ITEM_CD = M_ITEM_LANG_SYSTEM.ITEM_CD
+                AND M_ITEM_LANG_SYSTEM.LANGUAGE_IND = '${@fw.common.util.AppUtil@getSysLanguageByEscapeSql()}'
+         INNER JOIN M_SUPPLIER
+                 ON M_SUPPLIER.COMPANY_CD = M_ITEM.COMPANY_CD
+                AND M_SUPPLIER.SUP_CD = M_PUR_PRICE_DSP_AUTH.SUP_CD
+	            AND M_SUPPLIER.VALID_START_DATE &lt;= ${@fw.common.util.AppUtil@getSysDate()}
+	            AND M_SUPPLIER.VALID_END_DATE >= ${@fw.common.util.AppUtil@getSysDate()}
+         INNER JOIN M_COMPANY
+                 ON M_PUR_PRICE_DSP_AUTH.BUYER_COMPANY_CD = M_COMPANY.COMPANY_CD
+                AND M_COMPANY.COMPANY_USE_LANGUAGE_IND='${@fw.security.SecurityUtil@getCompanyUseLanguageIndByEscapeSql()}'
+          LEFT JOIN M_UNIT_NAME_LANG M_UNIT_NAME_LANG_COMPANY
+                 ON M_UNIT_NAME_LANG_COMPANY.UNIT_CD = M_ITEM.UNIT_CD
+                AND M_UNIT_NAME_LANG_COMPANY.LANGUAGE_IND = '${@fw.security.SecurityUtil@getCompanyUseLanguageIndByEscapeSql()}'
+          LEFT JOIN M_UNIT_NAME_LANG M_UNIT_NAME_LANG_SYSTEM
+                 ON M_UNIT_NAME_LANG_SYSTEM.UNIT_CD = M_ITEM.UNIT_CD
+                AND M_UNIT_NAME_LANG_SYSTEM.LANGUAGE_IND = '${@fw.common.util.AppUtil@getSysLanguageByEscapeSql()}'
+          LEFT JOIN M_SUPPLIER_LANG M_SUPPLIER_LANG_COMPANY
+                 ON M_SUPPLIER_LANG_COMPANY.SUP_CD = M_SUPPLIER.SUP_CD
+                AND M_SUPPLIER_LANG_COMPANY.COMPANY_CD = M_SUPPLIER.COMPANY_CD
+                AND M_SUPPLIER_LANG_COMPANY.LANGUAGE_IND = '${@fw.security.SecurityUtil@getCompanyUseLanguageIndByEscapeSql()}'
+          LEFT JOIN M_SUPPLIER_LANG M_SUPPLIER_LANG_SYSTEM
+                 ON M_SUPPLIER_LANG_SYSTEM.SUP_CD = M_SUPPLIER.SUP_CD
+                AND M_SUPPLIER_LANG_SYSTEM.COMPANY_CD = M_SUPPLIER.COMPANY_CD
+                AND M_SUPPLIER_LANG_SYSTEM.LANGUAGE_IND = '${@fw.common.util.AppUtil@getSysLanguageByEscapeSql()}'
+          LEFT JOIN M_MANUFACT_LANG M_MANUFACT_LANG_COMPANY
+                 ON M_MANUFACT_LANG_COMPANY.MANUFACT_CD = M_ITEM.MANUFACT_CD
+                AND M_MANUFACT_LANG_COMPANY.LANGUAGE_IND = '${@fw.security.SecurityUtil@getCompanyUseLanguageIndByEscapeSql()}'
+          LEFT JOIN M_MANUFACT_LANG M_MANUFACT_LANG_SYSTEM
+                 ON M_MANUFACT_LANG_SYSTEM.MANUFACT_CD = M_ITEM.MANUFACT_CD
+                AND M_MANUFACT_LANG_SYSTEM.LANGUAGE_IND = '${@fw.common.util.AppUtil@getSysLanguageByEscapeSql()}'
+          LEFT JOIN M_ITEM_CLASS M_ITEM_CLASS_L 
+                 ON M_ITEM_CLASS_L.ITEM_CLASS_L = M_ITEM.ITEM_CLASS_L
+                AND M_ITEM_CLASS_L.ITEM_CLASS_IND = '1'
+          LEFT JOIN M_ITEM_CLASS M_ITEM_CLASS_M 
+                 ON M_ITEM_CLASS_M.ITEM_CLASS_L = M_ITEM.ITEM_CLASS_L
+                AND M_ITEM_CLASS_M.ITEM_CLASS_M = M_ITEM.ITEM_CLASS_M
+                AND M_ITEM_CLASS_M.ITEM_CLASS_IND = '2'
+          LEFT JOIN M_ITEM_CLASS M_ITEM_CLASS_S 
+                 ON M_ITEM_CLASS_S.ITEM_CLASS_L = M_ITEM.ITEM_CLASS_L
+                AND M_ITEM_CLASS_S.ITEM_CLASS_M = M_ITEM.ITEM_CLASS_M
+                AND M_ITEM_CLASS_S.ITEM_CLASS_S = M_ITEM.ITEM_CLASS_S
+                AND M_ITEM_CLASS_S.ITEM_CLASS_IND = '3'
+          LEFT JOIN M_ITEM_CLASS_LANG M_ITEM_CLASS_LANG_L_COMPANY
+                 ON M_ITEM_CLASS_LANG_L_COMPANY.ITEM_CLASS_L = M_ITEM_CLASS_L.ITEM_CLASS_L
+                AND M_ITEM_CLASS_LANG_L_COMPANY.ITEM_CLASS_M = M_ITEM_CLASS_L.ITEM_CLASS_M
+                AND M_ITEM_CLASS_LANG_L_COMPANY.ITEM_CLASS_S = M_ITEM_CLASS_L.ITEM_CLASS_S
+                AND M_ITEM_CLASS_LANG_L_COMPANY.LANGUAGE_IND = '${@fw.security.SecurityUtil@getCompanyUseLanguageIndByEscapeSql()}'
+          LEFT JOIN M_ITEM_CLASS_LANG M_ITEM_CLASS_LANG_L_SYSTEM
+                 ON M_ITEM_CLASS_LANG_L_SYSTEM.ITEM_CLASS_L = M_ITEM_CLASS_L.ITEM_CLASS_L
+                AND M_ITEM_CLASS_LANG_L_SYSTEM.ITEM_CLASS_M = M_ITEM_CLASS_L.ITEM_CLASS_M
+                AND M_ITEM_CLASS_LANG_L_SYSTEM.ITEM_CLASS_S = M_ITEM_CLASS_L.ITEM_CLASS_S
+                AND M_ITEM_CLASS_LANG_L_SYSTEM.LANGUAGE_IND = '${@fw.common.util.AppUtil@getSysLanguageByEscapeSql()}'
+          LEFT JOIN M_ITEM_CLASS_LANG M_ITEM_CLASS_LANG_M_COMPANY
+                 ON M_ITEM_CLASS_LANG_M_COMPANY.ITEM_CLASS_L = M_ITEM_CLASS_M.ITEM_CLASS_L
+                AND M_ITEM_CLASS_LANG_M_COMPANY.ITEM_CLASS_M = M_ITEM_CLASS_M.ITEM_CLASS_M
+                AND M_ITEM_CLASS_LANG_M_COMPANY.ITEM_CLASS_S = M_ITEM_CLASS_M.ITEM_CLASS_S
+                AND M_ITEM_CLASS_LANG_M_COMPANY.LANGUAGE_IND = '${@fw.security.SecurityUtil@getCompanyUseLanguageIndByEscapeSql()}'
+          LEFT JOIN M_ITEM_CLASS_LANG M_ITEM_CLASS_LANG_M_SYSTEM
+                 ON M_ITEM_CLASS_LANG_M_SYSTEM.ITEM_CLASS_L = M_ITEM_CLASS_M.ITEM_CLASS_L
+                AND M_ITEM_CLASS_LANG_M_SYSTEM.ITEM_CLASS_M = M_ITEM_CLASS_M.ITEM_CLASS_M
+                AND M_ITEM_CLASS_LANG_M_SYSTEM.ITEM_CLASS_S = M_ITEM_CLASS_M.ITEM_CLASS_S
+                AND M_ITEM_CLASS_LANG_M_SYSTEM.LANGUAGE_IND = '${@fw.common.util.AppUtil@getSysLanguageByEscapeSql()}'
+          LEFT JOIN M_ITEM_CLASS_LANG M_ITEM_CLASS_LANG_S_COMPANY
+                 ON M_ITEM_CLASS_LANG_S_COMPANY.ITEM_CLASS_L = M_ITEM_CLASS_S.ITEM_CLASS_L
+                AND M_ITEM_CLASS_LANG_S_COMPANY.ITEM_CLASS_M = M_ITEM_CLASS_S.ITEM_CLASS_M
+                AND M_ITEM_CLASS_LANG_S_COMPANY.ITEM_CLASS_S = M_ITEM_CLASS_S.ITEM_CLASS_S
+                AND M_ITEM_CLASS_LANG_S_COMPANY.LANGUAGE_IND = '${@fw.security.SecurityUtil@getCompanyUseLanguageIndByEscapeSql()}'
+          LEFT JOIN M_ITEM_CLASS_LANG M_ITEM_CLASS_LANG_S_SYSTEM
+                 ON M_ITEM_CLASS_LANG_S_SYSTEM.ITEM_CLASS_L = M_ITEM_CLASS_S.ITEM_CLASS_L
+                AND M_ITEM_CLASS_LANG_S_SYSTEM.ITEM_CLASS_M = M_ITEM_CLASS_S.ITEM_CLASS_M
+                AND M_ITEM_CLASS_LANG_S_SYSTEM.ITEM_CLASS_S = M_ITEM_CLASS_S.ITEM_CLASS_S
+                AND M_ITEM_CLASS_LANG_S_SYSTEM.LANGUAGE_IND = '${@fw.common.util.AppUtil@getSysLanguageByEscapeSql()}'
+        <where>
+        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(itemClassL)">
+              AND M_ITEM.ITEM_CLASS_L = #{itemClassL, jdbcType=VARCHAR}
+        </if>
+        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(itemClassM)">
+              AND M_ITEM.ITEM_CLASS_M = #{itemClassM, jdbcType=VARCHAR}
+        </if>
+        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(itemClassS)">
+              AND M_ITEM.ITEM_CLASS_S = #{itemClassS, jdbcType=VARCHAR}
+        </if>
+        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(itemCd)">
+              AND M_ITEM.ITEM_CD ${@fw.common.util.SearchModeUtil@getSearchSQL("fw.domain.mst.material.item.ItemPopupSearchCondition","itemCd")}
+        </if>
+        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(itemName)">
+              AND (M_ITEM_LANG_COMPANY.ITEM_NAME ${@fw.common.util.SearchModeUtil@getSearchSQL("fw.domain.mst.material.item.ItemPopupSearchCondition","itemName")}
+               OR M_ITEM_LANG_SYSTEM.ITEM_NAME ${@fw.common.util.SearchModeUtil@getSearchSQL("fw.domain.mst.material.item.ItemPopupSearchCondition","itemName")})
+        </if>
+        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(katashiki)">
+              AND M_ITEM.KATASHIKI ${@fw.common.util.SearchModeUtil@getSearchSQL("fw.domain.mst.material.item.ItemPopupSearchCondition","katashiki")}
+        </if>
+        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(manufactName)">
+              AND (M_MANUFACT_LANG_COMPANY.MANUFACT_NAME ${@fw.common.util.SearchModeUtil@getSearchSQL("fw.domain.mst.material.item.ItemPopupSearchCondition","manufactName")}
+               OR M_MANUFACT_LANG_SYSTEM.MANUFACT_NAME ${@fw.common.util.SearchModeUtil@getSearchSQL("fw.domain.mst.material.item.ItemPopupSearchCondition","manufactName")})
+        </if>
+        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(supCd)">
+              AND M_SUPPLIER.SUP_CD ${@fw.common.util.SearchModeUtil@getSearchSQL("fw.domain.mst.material.item.ItemPopupSearchCondition","supCd")}
+        </if>
+        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(supName)">
+              AND (M_SUPPLIER_LANG_COMPANY.SUP_NAME ${@fw.common.util.SearchModeUtil@getSearchSQL("fw.domain.mst.material.item.ItemPopupSearchCondition","supName")}
+               OR M_SUPPLIER_LANG_SYSTEM.SUP_NAME ${@fw.common.util.SearchModeUtil@getSearchSQL("fw.domain.mst.material.item.ItemPopupSearchCondition","supName")})
+        </if>
+        AND M_PUR_PRICE.VALID_START_DATE &lt;= ${@fw.common.util.AppUtil@getSysDate()}
+        AND M_PUR_PRICE.VALID_END_DATE >= ${@fw.common.util.AppUtil@getSysDate()}   
+        AND M_PUR_PRICE.APP_STATUS_IND = '2'  
+        AND (M_PUR_PRICE.PUR_STOP_FROM > ${@fw.common.util.AppUtil@getSysDate()} 
+        OR M_PUR_PRICE.PUR_STOP_TO &lt; ${@fw.common.util.AppUtil@getSysDate()}
+        OR (M_PUR_PRICE.PUR_STOP_FROM is null and M_PUR_PRICE.PUR_STOP_TO is null)) 
+        AND M_ITEM.TERM_FLG = '0'
+        AND M_PUR_PRICE.TERM_FLG = '0'
+        AND M_SUPPLIER.TERM_FLG = '0'
+        </where>
+         ORDER BY ${searchCondition.columnOrder.columnOrder()}
+    </select>
+
+    <select id="listPageItemPurPrice"
+            parameterType ="fw.domain.mst.material.item.ItemPopupSearchCondition" 
+            resultMap="ItemPopupItem_Map">
+        SELECT M_ITEM.COMPANY_CD,
+               M_ITEM.ITEM_CD,
+               CASE WHEN M_ITEM_LANG_COMPANY.ITEM_NAME IS NOT NULL
+                    THEN M_ITEM_LANG_COMPANY.ITEM_NAME
+                    ELSE M_ITEM_LANG_SYSTEM.ITEM_NAME
+                     END
+                      AS itemName,
+               M_ITEM.LAST_UPD_DATE,
+               M_PUR_PRICE.BUYER_SECTION_CD,
+               CASE WHEN M_ITEM_CLASS_LANG_L_COMPANY.ITEM_CLASS_NAME IS NOT NULL
+                    THEN M_ITEM_CLASS_LANG_L_COMPANY.ITEM_CLASS_NAME
+                    ELSE M_ITEM_CLASS_LANG_L_SYSTEM.ITEM_CLASS_NAME
+                     END
+                      AS itemClassNameL,
+               CASE WHEN M_ITEM_CLASS_LANG_M_COMPANY.ITEM_CLASS_NAME IS NOT NULL
+                    THEN M_ITEM_CLASS_LANG_M_COMPANY.ITEM_CLASS_NAME
+                    ELSE M_ITEM_CLASS_LANG_M_SYSTEM.ITEM_CLASS_NAME
+                     END
+                      AS itemClassNameM,
+               CASE WHEN M_ITEM_CLASS_LANG_S_COMPANY.ITEM_CLASS_NAME IS NOT NULL
+                    THEN M_ITEM_CLASS_LANG_S_COMPANY.ITEM_CLASS_NAME
+                    ELSE M_ITEM_CLASS_LANG_S_SYSTEM.ITEM_CLASS_NAME
+                     END
+                      AS itemClassNameS,
+               M_ITEM.ITEM_CLASS_L as "itemClassL",
+               M_ITEM.ITEM_CLASS_M as "itemClassM",
+               M_ITEM.ITEM_CLASS_S as "itemClassS",
+               CASE WHEN M_MANUFACT_LANG_COMPANY.MANUFACT_NAME IS NOT NULL
+                    THEN M_MANUFACT_LANG_COMPANY.MANUFACT_NAME
+                    ELSE M_MANUFACT_LANG_SYSTEM.MANUFACT_NAME
+                     END
+                      AS manufactName,
+               M_ITEM.MANUFACT_CD as "manufactCd",
+               M_ITEM.KATASHIKI as "katashiki",
+               CASE WHEN M_UNIT_NAME_LANG_COMPANY.UNIT_NAME IS NOT NULL
+                    THEN M_UNIT_NAME_LANG_COMPANY.UNIT_NAME
+                    ELSE M_UNIT_NAME_LANG_SYSTEM.UNIT_NAME
+                     END
+                      AS unitName,
+               M_ITEM.UNIT_CD as "unitCd",
+               M_SUPPLIER.SUP_CD as "supCd",
+               M_SUPPLIER.SUP_CD as "priceArticleIdentify.supCd",
+               CASE WHEN M_SUPPLIER_LANG_COMPANY.SUP_NAME IS NOT NULL
+                    THEN M_SUPPLIER_LANG_COMPANY.SUP_NAME
+                    ELSE M_SUPPLIER_LANG_SYSTEM.SUP_NAME
+                     END
+                      AS supName,
+               CASE WHEN M_SUPPLIER_LANG_COMPANY.SUP_ABBR_NAME IS NOT NULL
+                    THEN M_SUPPLIER_LANG_COMPANY.SUP_ABBR_NAME
+                    ELSE M_SUPPLIER_LANG_SYSTEM.SUP_ABBR_NAME
+                     END
+                      AS supAbbrName,
+               M_PUR_PRICE.CURRENCY_CD as "currencyCd",
+               M_PUR_PRICE_DTL.BUY_PRICE "unitPrice.amount.amount",
+               M_PUR_PRICE.INSPECT_IND as "inspectInd",
+               M_PUR_PRICE.AUTO_ORDER_FLG as "autoOrderFlg.autoOrderFlg",
+               M_PUR_PRICE.BUYER_COMPANY_CD as "buyerCompanyCd",
+               M_PUR_PRICE.BUYER_SECTION_CD as "buyerSectionCd",
+               M_PUR_PRICE.TAX_IND as "taxInd.taxInd",
+               M_PUR_PRICE.VALID_START_DATE as "validStartDate",
+               M_PUR_PRICE.VALID_START_DATE as "VALID_START_DATE",
+               M_PUR_PRICE.VALID_END_DATE as "validEndDate",
+               M_PUR_PRICE.VALID_END_DATE as "VALID_END_DATE",
+               M_PUR_PRICE_DTL.LOWER_VOL as "LOWER_VOL",
+               M_PUR_PRICE_DTL.UPPER_VOL as "UPPER_VOL",
+               M_CURRENCY.CURRENCY_MARK as "currencyMark",
+               M_PUR_PRICE.PRICE_TYPE as "priceFlg"
+          FROM M_PUR_PRICE_DSP_AUTH
+    INNER JOIN M_PUR_PRICE
+            ON M_PUR_PRICE_DSP_AUTH.BUYER_COMPANY_CD = M_PUR_PRICE.BUYER_COMPANY_CD
+           AND M_PUR_PRICE_DSP_AUTH.BUYER_SECTION_CD = M_PUR_PRICE.BUYER_SECTION_CD
+           AND M_PUR_PRICE_DSP_AUTH.ITEM_CD = M_PUR_PRICE.ITEM_CD
+           AND M_PUR_PRICE_DSP_AUTH.SUP_CD = M_PUR_PRICE.SUP_CD
+           AND M_PUR_PRICE_DSP_AUTH.VALID_START_DATE &lt;= ${@fw.common.util.AppUtil@getSysDate()}
+           AND M_PUR_PRICE_DSP_AUTH.VALID_END_DATE >= ${@fw.common.util.AppUtil@getSysDate()} 
+           AND M_PUR_PRICE_DSP_AUTH.REQ_COMPANY_CD = #{companyCd, jdbcType=VARCHAR}
+    INNER JOIN M_PUR_PRICE_DTL
+            ON M_PUR_PRICE_DTL.BUYER_COMPANY_CD = M_PUR_PRICE.BUYER_COMPANY_CD
+           AND M_PUR_PRICE_DTL.BUYER_SECTION_CD = M_PUR_PRICE.BUYER_SECTION_CD
+           AND M_PUR_PRICE_DTL.ITEM_CD = M_PUR_PRICE.ITEM_CD
+           AND M_PUR_PRICE_DTL.SUP_CD = M_PUR_PRICE.SUP_CD
+           AND M_PUR_PRICE_DTL.VALID_START_DATE = M_PUR_PRICE.VALID_START_DATE
+           AND M_PUR_PRICE_DTL.VALID_END_DATE = M_PUR_PRICE.VALID_END_DATE
+    INNER JOIN M_ITEM
+            ON (M_ITEM.COMPANY_CD = M_PUR_PRICE_DTL.BUYER_COMPANY_CD
+            OR M_ITEM.COMPANY_CD = '${@fw.common.constant.ApplicationConstant@COMPANY_CD_ALL}')
+           AND M_ITEM.ITEM_CD = M_PUR_PRICE_DTL.ITEM_CD
+    INNER JOIN M_SUPPLIER
+            ON M_SUPPLIER.COMPANY_CD = M_ITEM.COMPANY_CD
+           AND M_SUPPLIER.SUP_CD = M_PUR_PRICE_DTL.SUP_CD
+           AND M_SUPPLIER.VALID_START_DATE &lt;= ${@fw.common.util.AppUtil@getSysDate()}
+           AND M_SUPPLIER.VALID_END_DATE >= ${@fw.common.util.AppUtil@getSysDate()}
+     LEFT JOIN M_SUPPLIER_LANG M_SUPPLIER_LANG_COMPANY
+            ON M_SUPPLIER_LANG_COMPANY.SUP_CD = M_SUPPLIER.SUP_CD
+           AND M_SUPPLIER_LANG_COMPANY.COMPANY_CD = M_SUPPLIER.COMPANY_CD
+           AND M_SUPPLIER_LANG_COMPANY.LANGUAGE_IND = '${@fw.security.SecurityUtil@getCompanyUseLanguageIndByEscapeSql()}'
+     LEFT JOIN M_SUPPLIER_LANG M_SUPPLIER_LANG_SYSTEM
+            ON M_SUPPLIER_LANG_SYSTEM.SUP_CD = M_SUPPLIER.SUP_CD
+           AND M_SUPPLIER_LANG_SYSTEM.COMPANY_CD = M_SUPPLIER.COMPANY_CD
+           AND M_SUPPLIER_LANG_SYSTEM.LANGUAGE_IND = '${@fw.common.util.AppUtil@getSysLanguageByEscapeSql()}'
+     LEFT JOIN M_ITEM_LANG M_ITEM_LANG_COMPANY
+            ON M_ITEM.COMPANY_CD = M_ITEM_LANG_COMPANY.COMPANY_CD
+           AND M_ITEM.ITEM_CD = M_ITEM_LANG_COMPANY.ITEM_CD
+           AND M_ITEM_LANG_COMPANY.LANGUAGE_IND = '${@fw.security.SecurityUtil@getCompanyUseLanguageIndByEscapeSql()}'
+     LEFT JOIN M_ITEM_LANG M_ITEM_LANG_SYSTEM
+            ON M_ITEM.COMPANY_CD = M_ITEM_LANG_SYSTEM.COMPANY_CD
+           AND M_ITEM.ITEM_CD = M_ITEM_LANG_SYSTEM.ITEM_CD
+           AND M_ITEM_LANG_SYSTEM.LANGUAGE_IND = '${@fw.common.util.AppUtil@getSysLanguageByEscapeSql()}'
+     LEFT JOIN M_MANUFACT_LANG M_MANUFACT_LANG_COMPANY
+            ON M_MANUFACT_LANG_COMPANY.MANUFACT_CD = M_ITEM.MANUFACT_CD
+           AND M_MANUFACT_LANG_COMPANY.LANGUAGE_IND = '${@fw.security.SecurityUtil@getCompanyUseLanguageIndByEscapeSql()}'
+     LEFT JOIN M_MANUFACT_LANG M_MANUFACT_LANG_SYSTEM
+            ON M_MANUFACT_LANG_SYSTEM.MANUFACT_CD = M_ITEM.MANUFACT_CD
+           AND M_MANUFACT_LANG_SYSTEM.LANGUAGE_IND = '${@fw.common.util.AppUtil@getSysLanguageByEscapeSql()}'
+     LEFT JOIN M_UNIT_NAME_LANG M_UNIT_NAME_LANG_COMPANY
+            ON M_UNIT_NAME_LANG_COMPANY.UNIT_CD = M_ITEM.UNIT_CD
+           AND M_UNIT_NAME_LANG_COMPANY.LANGUAGE_IND = '${@fw.security.SecurityUtil@getCompanyUseLanguageIndByEscapeSql()}'
+     LEFT JOIN M_UNIT_NAME_LANG M_UNIT_NAME_LANG_SYSTEM
+            ON M_UNIT_NAME_LANG_SYSTEM.UNIT_CD = M_ITEM.UNIT_CD
+           AND M_UNIT_NAME_LANG_SYSTEM.LANGUAGE_IND = '${@fw.common.util.AppUtil@getSysLanguageByEscapeSql()}'
+     LEFT JOIN M_CURRENCY
+            ON M_PUR_PRICE.CURRENCY_CD = M_CURRENCY.CURRENCY_CD
+           AND M_CURRENCY.TERM_FLG = '0'
+     LEFT JOIN M_ITEM_CLASS_LANG M_ITEM_CLASS_LANG_L_COMPANY
+            ON M_ITEM_CLASS_LANG_L_COMPANY.ITEM_CLASS_L = M_ITEM.ITEM_CLASS_L
+           AND M_ITEM_CLASS_LANG_L_COMPANY.ITEM_CLASS_M = ' '
+           AND M_ITEM_CLASS_LANG_L_COMPANY.ITEM_CLASS_S = ' '
+           AND M_ITEM_CLASS_LANG_L_COMPANY.LANGUAGE_IND = '${@fw.security.SecurityUtil@getCompanyUseLanguageIndByEscapeSql()}'
+     LEFT JOIN M_ITEM_CLASS_LANG M_ITEM_CLASS_LANG_L_SYSTEM
+            ON M_ITEM_CLASS_LANG_L_SYSTEM.ITEM_CLASS_L = M_ITEM.ITEM_CLASS_L
+           AND M_ITEM_CLASS_LANG_L_SYSTEM.ITEM_CLASS_M = ' '
+           AND M_ITEM_CLASS_LANG_L_SYSTEM.ITEM_CLASS_S = ' '
+           AND M_ITEM_CLASS_LANG_L_SYSTEM.LANGUAGE_IND = '${@fw.common.util.AppUtil@getSysLanguageByEscapeSql()}'
+     LEFT JOIN M_ITEM_CLASS_LANG M_ITEM_CLASS_LANG_M_COMPANY
+            ON M_ITEM_CLASS_LANG_M_COMPANY.ITEM_CLASS_L = M_ITEM.ITEM_CLASS_L
+           AND M_ITEM_CLASS_LANG_M_COMPANY.ITEM_CLASS_M = M_ITEM.ITEM_CLASS_M
+           AND M_ITEM_CLASS_LANG_M_COMPANY.ITEM_CLASS_S = ' '
+           AND M_ITEM_CLASS_LANG_M_COMPANY.LANGUAGE_IND = '${@fw.security.SecurityUtil@getCompanyUseLanguageIndByEscapeSql()}'
+     LEFT JOIN M_ITEM_CLASS_LANG M_ITEM_CLASS_LANG_M_SYSTEM
+            ON M_ITEM_CLASS_LANG_M_SYSTEM.ITEM_CLASS_L = M_ITEM.ITEM_CLASS_L
+           AND M_ITEM_CLASS_LANG_M_SYSTEM.ITEM_CLASS_M = M_ITEM.ITEM_CLASS_M
+           AND M_ITEM_CLASS_LANG_M_SYSTEM.ITEM_CLASS_S = ' '
+           AND M_ITEM_CLASS_LANG_M_SYSTEM.LANGUAGE_IND = '${@fw.common.util.AppUtil@getSysLanguageByEscapeSql()}'
+     LEFT JOIN M_ITEM_CLASS_LANG M_ITEM_CLASS_LANG_S_COMPANY
+            ON M_ITEM_CLASS_LANG_S_COMPANY.ITEM_CLASS_L = M_ITEM.ITEM_CLASS_L
+           AND M_ITEM_CLASS_LANG_S_COMPANY.ITEM_CLASS_M = M_ITEM.ITEM_CLASS_M
+           AND M_ITEM_CLASS_LANG_S_COMPANY.ITEM_CLASS_S = M_ITEM.ITEM_CLASS_S
+           AND M_ITEM_CLASS_LANG_S_COMPANY.LANGUAGE_IND = '${@fw.security.SecurityUtil@getCompanyUseLanguageIndByEscapeSql()}'
+     LEFT JOIN M_ITEM_CLASS_LANG M_ITEM_CLASS_LANG_S_SYSTEM
+            ON M_ITEM_CLASS_LANG_S_SYSTEM.ITEM_CLASS_L = M_ITEM.ITEM_CLASS_L
+           AND M_ITEM_CLASS_LANG_S_SYSTEM.ITEM_CLASS_M = M_ITEM.ITEM_CLASS_M
+           AND M_ITEM_CLASS_LANG_S_SYSTEM.ITEM_CLASS_S = M_ITEM.ITEM_CLASS_S
+           AND M_ITEM_CLASS_LANG_S_SYSTEM.LANGUAGE_IND = '${@fw.common.util.AppUtil@getSysLanguageByEscapeSql()}'
+         WHERE
+             (M_PUR_PRICE_DTL.BUYER_COMPANY_CD ,M_PUR_PRICE_DTL.BUYER_SECTION_CD ,M_PUR_PRICE_DTL.ITEM_CD ,M_PUR_PRICE_DTL.SUP_CD ,M_PUR_PRICE_DTL.VALID_START_DATE ,M_PUR_PRICE_DTL.VALID_END_DATE ,M_PUR_PRICE_DTL.LOWER_VOL ,M_PUR_PRICE_DTL.UPPER_VOL) IN
+             <foreach collection="searchCondition.page.keyDomainEntityList" item="keyList"  open="(" separator="," close=")">  
+                 (#{keyList.buyerCompanyCd},#{keyList.buyerSectionCd},#{keyList.itemCd},#{keyList.supCd},#{keyList.validStartDate},#{keyList.validEndDate},#{keyList.lowerVol},#{keyList.upperVol})
+            </foreach>
+        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(itemClassL)">
+              AND M_ITEM.ITEM_CLASS_L = #{itemClassL, jdbcType=VARCHAR}
+        </if>
+        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(itemClassM)">
+              AND M_ITEM.ITEM_CLASS_M = #{itemClassM, jdbcType=VARCHAR}
+        </if>
+        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(itemClassS)">
+              AND M_ITEM.ITEM_CLASS_S = #{itemClassS, jdbcType=VARCHAR}
+        </if>
+        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(itemCd)">
+              AND M_ITEM.ITEM_CD ${@fw.common.util.SearchModeUtil@getSearchSQL("fw.domain.mst.material.item.ItemPopupSearchCondition","itemCd")}
+        </if>
+        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(itemName)">
+              AND (M_ITEM_LANG_COMPANY.ITEM_NAME ${@fw.common.util.SearchModeUtil@getSearchSQL("fw.domain.mst.material.item.ItemPopupSearchCondition","itemName")}
+               OR M_ITEM_LANG_SYSTEM.ITEM_NAME ${@fw.common.util.SearchModeUtil@getSearchSQL("fw.domain.mst.material.item.ItemPopupSearchCondition","itemName")})
+        </if>
+        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(katashiki)">
+              AND M_ITEM.KATASHIKI ${@fw.common.util.SearchModeUtil@getSearchSQL("fw.domain.mst.material.item.ItemPopupSearchCondition","katashiki")}
+        </if>
+        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(manufactName)">
+              AND (M_MANUFACT_LANG_COMPANY.MANUFACT_NAME ${@fw.common.util.SearchModeUtil@getSearchSQL("fw.domain.mst.material.item.ItemPopupSearchCondition","manufactName")}
+               OR M_MANUFACT_LANG_SYSTEM.MANUFACT_NAME ${@fw.common.util.SearchModeUtil@getSearchSQL("fw.domain.mst.material.item.ItemPopupSearchCondition","manufactName")})
+        </if>
+        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(supCd)">
+              AND M_SUPPLIER.SUP_CD ${@fw.common.util.SearchModeUtil@getSearchSQL("fw.domain.mst.material.item.ItemPopupSearchCondition","supCd")}
+        </if>
+        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(supName)">
+              AND (M_SUPPLIER_LANG_COMPANY.SUP_NAME ${@fw.common.util.SearchModeUtil@getSearchSQL("fw.domain.mst.material.item.ItemPopupSearchCondition","supName")}
+               OR M_SUPPLIER_LANG_SYSTEM.SUP_NAME ${@fw.common.util.SearchModeUtil@getSearchSQL("fw.domain.mst.material.item.ItemPopupSearchCondition","supName")})
+        </if>
+        AND M_PUR_PRICE.VALID_START_DATE &lt;= ${@fw.common.util.AppUtil@getSysDate()}
+        AND M_PUR_PRICE.VALID_END_DATE >= ${@fw.common.util.AppUtil@getSysDate()}
+        
+        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(reqVol)">
+              AND M_PUR_PRICE_DTL.UPPER_VOL >= #{reqVol, jdbcType=VARCHAR}
+              AND M_PUR_PRICE_DTL.LOWER_VOL &lt;= #{reqVol, jdbcType=VARCHAR}
+        </if>
+        <if test="@org.apache.commons.lang.StringUtils@isBlank(reqVol)">
+              AND M_PUR_PRICE_DTL.UPPER_VOL >= 0
+              AND M_PUR_PRICE_DTL.LOWER_VOL &lt;= 0
+        </if>
+        AND M_PUR_PRICE.APP_STATUS_IND = '2'  
+        AND (M_PUR_PRICE.PUR_STOP_FROM > ${@fw.common.util.AppUtil@getSysDate()} 
+        OR M_PUR_PRICE.PUR_STOP_TO &lt; ${@fw.common.util.AppUtil@getSysDate()}
+        OR (M_PUR_PRICE.PUR_STOP_FROM is null and M_PUR_PRICE.PUR_STOP_TO is null)) 
+        AND M_ITEM.TERM_FLG = '0'
+        AND M_PUR_PRICE.TERM_FLG = '0'
+        AND M_SUPPLIER.TERM_FLG = '0'
+        ORDER BY ${searchCondition.columnOrder.columnOrder()}
+    </select>
+</mapper>

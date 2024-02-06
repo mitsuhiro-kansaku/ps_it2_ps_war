@@ -1,0 +1,830 @@
+<!doctype html>
+<HTML LANG="ja">
+
+<head>
+<title>#customSpringMessage('PRICE_M_REGISTER_APP')</title>
+<meta http-equiv="Content-type" content="text/html; charset=UTF-8">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Content-script-type" content="text/javascript">
+<link id="CSS_FONT" rel="stylesheet" href="../../include/FontS.css" type="text/css">
+<link rel="stylesheet" href="../../include/Layout.css" type="text/css">
+<link rel="stylesheet" href="../../include/Color.css" type="text/css">
+<link rel="stylesheet" href="../../include/searchbox.css" type="text/css">
+
+<script LANGUAGE="javascript" type="text/javascript" src="../../include/common.js"></script>
+<script LANGUAGE="javascript" type="text/javascript" src="../../include/check.js"></script>
+<script LANGUAGE="javascript" type="text/javascript" src="../../include/date.js"></script>
+<script LANGUAGE="javascript" type="text/javascript" src="../../include/searchbox.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/jquery-1.7.2.min.js"></script>
+<script LANGUAGE="javascript" type="text/javascript">
+<!--
+
+#parse("./common/common_js.vm")
+var isClickable = false;
+
+function onLoad() {
+    #set($commonTitle = "#customSpringMessage('PRICE_M_REGISTER_APP')")
+
+    var alertMessage = "$!alertMessage";
+    if (alertMessage != "") {
+        alert(alertMessage);
+        if(alertMessage.indexOf("#customSpringMessage('E035')") != -1){
+            buttonDisable();
+            parent.iframeChange("${flowExecutionUrl}&_eventId=next");
+            return;
+        }
+    }
+
+    approvalPaging();
+
+    var errorMsg = "$!errorMessage";
+    if (errorMsg != "") {
+        document.getElementById("TR_ERROR").style.display = "";
+        isClickable = true;
+        return;
+    }
+
+    var isReturnSuccess = '#jsEscape($!isReturnSuccess)';
+    if(isReturnSuccess == 'true') {
+        alert('#customMessageArgs("I029", ["#customSpringMessage('PRICE_M_REGISTER')"])');
+        buttonDisable();
+        parent.iframeChange("${flowExecutionUrl}&_eventId=next");
+        return;
+    }
+
+    var isApprovalSuccess = '#jsEscape($!isApprovalSuccess)';
+    if(isApprovalSuccess == 'true') {
+        alert('#customMessageArgs("I028", ["#customSpringMessage('PRICE_M_REGISTER')"])');
+        buttonDisable();
+        parent.iframeChange("${flowExecutionUrl}&_eventId=next");
+        return;
+    }
+
+    //approvalPaging();
+    isClickable = true;
+}
+
+//差戻し
+function sendBack() {
+    if(!isClickable) {
+        return;
+    }
+    #set( $priceMRegisterAppMsg = "#customSpringMessage('PRICE_M_REGISTER')" )
+    #set( $actionRegisterMsg = "#customSpringMessage('RETURN')" )
+    if( !confirm('#customMessageArgs("W001", [$priceMRegisterAppMsg, $actionRegisterMsg])') ) {
+        return;
+    }
+    ## +++++ 強化-00041-000 2013/03/25 ADD SBO_KANGJW START +++++
+    buttonDisable();
+    ## +++++ 強化-00041-000 2013/03/25 ADD SBO_KANGJW -END- +++++
+    ## +++++ IT2-01209-000 2013/03/18 ADD SBO_KANGJW START +++++
+    getObj("Body").action = "${flowExecutionUrl}&_eventId=sendBack";
+    ## +++++ IT2-01209-000 2013/03/18 ADD SBO_KANGJW END +++++
+    getObj("Body").submit();
+}
+
+//承認
+function onApproval() {
+    if(!isClickable) {
+        return;
+    }
+    #set( $priceMRegisterAppMsg = "#customSpringMessage('PRICE_M_REGISTER')" )
+    #set( $actionRegisterMsg = "#customSpringMessage('APPROVAL')" )
+    if( !confirm('#customMessageArgs("W001", [$priceMRegisterAppMsg, $actionRegisterMsg])') ) {
+        return;
+    }
+    ## +++++ 強化-00041-000 2013/03/25 ADD SBO_KANGJW START +++++
+    buttonDisable();
+    ## +++++ 強化-00041-000 2013/03/25 ADD SBO_KANGJW -END- +++++
+    ## +++++ IT2-01209-000 2013/03/18 ADD SBO_KANGJW START +++++
+    getObj("Body").action = "${flowExecutionUrl}&_eventId=approval";
+    ## +++++ IT2-01209-000 2013/03/18 ADD SBO_KANGJW END +++++
+    getObj("Body").submit();
+}
+
+//承認者の削除
+function removeAuthorizer(obj) {
+    if(!isClickable) {
+        return;
+    }
+
+    var appSeq = obj.parentNode.parentNode.children[0].children[0].innerHTML;
+    ## +++++ IT2-01209-000 2013/03/18 ADD SBO_KANGJW START +++++
+    getObj("Body").action="${flowExecutionUrl}&_eventId=removeAuthorizer&&appSeq="+appSeq;
+    ## +++++ IT2-01209-000 2013/03/18 ADD SBO_KANGJW END +++++
+    getObj("Body").submit();
+}
+
+//承認者の追加
+function addAuthorizer() {
+    if(!isClickable) {
+        return;
+    }
+
+    ## +++++ IT2-01209-000 2013/03/18 ADD SBO_KANGJW START +++++
+    getObj("Body").action="${flowExecutionUrl}&_eventId=addAuthorizer";
+    ## +++++ IT2-01209-000 2013/03/18 ADD SBO_KANGJW END +++++
+    getObj("Body").submit();
+}
+
+// 承認者検索
+function searchAuthorizer() {
+    var userId = getObj('buyerPrice.appManagement.appList.appUserName.userID');
+    var userName = getObj('buyerPrice.appManagement.appList.appUserName.userName');
+    var sectionCd = getObj('buyerPrice.appManagement.appList.appUserName.section.sectionCd');
+    var sectionName = getObj('buyerPrice.appManagement.appList.appUserName.section.sectionName');
+    var officialName = getObj('buyerPrice.appManagement.appList.appUserName.official.officialName');
+    var sectionPlaceCd = getObj('buyerPrice.appManagement.appList.appUserName.section.sectionPlace.sectionPlaceCd');
+    var sectionPlaceName = getObj('buyerPrice.appManagement.appList.appUserName.section.sectionPlace.sectionPlaceName');
+    var mail = getObj('buyerPrice.appManagement.appList.appUserName.mailAddr.mail');
+    var extensionNo = getObj('buyerPrice.appManagement.appList.appUserName.extNo.extensionNo');
+    var externalNo = getObj('buyerPrice.appManagement.appList.appUserName.externalNo.externalNo');
+
+    userPopup.setObject(userId, userName, sectionCd, sectionName, officialName, sectionPlaceCd, sectionPlaceName, mail, extensionNo, externalNo);
+    masterSearch('../../src/userPopup/search?pageid=userPopupSearch&popupPageid=PSAPR122', 'UserSearch', '750', '500');
+}
+
+// ダウンロード
+function downloadFile(downFlag) {
+    if (downFlag != "") {
+        ## +++++ IT2-01209-000 2013/03/18 ADD SBO_KANGJW START +++++
+        iframeChange('${flowExecutionUrl}&_eventId=download&&downFlag=' + downFlag);
+        ## +++++ IT2-01209-000 2013/03/18 ADD SBO_KANGJW END +++++
+    }
+}
+
+function openDetail() {
+    poppage("${flowExecutionUrl}&_eventId=detail",'DETAIL','900','850');
+}
+//-->
+</script>
+</head>
+<body topmargin="0" leftmargin="0" marginwidth="0" marginheight="0" align="center" onload="onLoad();" style="overflow:hidden">
+<form id="Body" name="Body" method="post">
+    <table class="SearchBody">
+        <tr>
+            <td id="SEARCH_AREA" class="SearchArea"><!-- onLoadで変更 -->
+                #parse("./common/common_title_tran_with_individual_approval.vm")
+            </td>
+        </tr>
+        <tr>
+            <td class="NoBorder" style="background-color:#CCC;">
+                <div id="Area" style="position:relative;WIDTH: 100%;HEIGHT: 100%;OVERFLOW-X: auto;OVERFLOW-Y: scroll;display:none;">
+
+    <table class="HomeBox" align="center">
+        <tr>
+            <td style="padding:60px,5px,10px,15px">
+                <table class="NoBorder">
+                    <tr>
+                        <td align="left">
+                            <table class="NoBorder" width="100%">
+                                <tr>
+                                    <td>
+                                        <u><img src="../../image/mrkCircle.gif"><span id="StepTitle" class="FontStepTitle">#customSpringMessage('PRICE_M_REGISTER_APP')<!--価格マスタ登録承認--></span></u>
+                                        <br><br>
+                                        <span id="ReqNo" class="FontSmallBold DarkBlue">
+                                            #customSpringMessage('PSAPR122_HEADER_COMMENT')
+                                        </span>
+                                    </td>
+                                    <td align="right" valign="middle">
+                                        <input type="button" class="LargeButton Red" value="#customSpringMessage('RETURN')" onclick="sendBack();">&nbsp;&nbsp;<!--差戻し-->
+                                        <input id="button" type="button" class="LargeButton" value="#customSpringMessage('APPROVAL')" onclick="javascript:onApproval();"><!--承　認-->
+                                        #if($!domain.isShowDetail())
+                                            <br/>
+                                            <input id="detailButton" type="button" class="LargeButton" value="#customSpringMessage('LAST_PRICE_DETAIL')" onclick="openDetail()">
+                                        #end
+                                    </td>
+                                </tr>
+                                 <tr id ="TR_ERROR" style="display:none;"><td class="error" style="height:0px;">
+                                    $!errorMessage
+                                </td></tr>
+                            </table>
+                            <br>
+                            <table class="Box1G" width="98%">
+                                <tbody class="Box1G">
+                                    <tr>
+                                        ## +++++ 強化-01554-000 2013/05/20 ADD SBO_KANGJW START +++++
+                                        <td nowrap class="Box1H FontBoxHeader">
+                                        ## +++++ 強化-01554-000 2013/05/20 ADD SBO_KANGJW END +++++
+                                        ## ----- 強化-01554-000 2013/05/20 DEL SBO_KANGJW START -----
+                                        ##<td nowrap class="Box1H FontBoxHeader" style="width:100px">
+                                        ## ----- 強化-01554-000 2013/05/20 DEL SBO_KANGJW END -----
+                                            #customSpringMessage('REGISTER_DATE')<!--登録日-->
+                                        </td>
+                                        <td nowrap class="Box1D FontSmall" colspan="3">
+                                            #out($!{domain.buyerPrice.managementInfo.registerDate.reqDate.dateOfymdDispYMD})
+                                        </td>
+                                    </tr>
+                                    <tr id ="TermFlg">
+                                        <td nowrap class="Box1H FontBoxHeader">
+                                            #customSpringMessage('TERM_IND')<!--廃止区分-->
+                                        </td>
+                                        <td nowrap class="Box1D FontSmall" colspan="3">
+                                            #out($!{domain.buyerPrice.termFlg_PageValue})
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td class="Box1H FontBoxHeader" width="20%">
+                                            #customSpringMessage('ITEM_CD')<!--品名コード-->
+                                        </td>
+                                        <td class="Box1D FontSmall" colspan="3">
+                                            #out($!{domain.buyerPrice.identify.item.itemCd})
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td class="Box1H FontBoxHeader">
+                                            #customSpringMessage('ITEM_NAME')<!-- 品名 -->
+                                        </td>
+                                        <td class="Box1D FontSmall"  colspan="3">
+                                            #out($!{domain.buyerPrice.identify.item.itemName})
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td class="Box1H FontBoxHeader">
+                                            #customSpringMessage('PRODUCT_CLASS')<!-- 品名分類 -->
+                                        </td>
+                                        <td nowrap class="Box1D"  colspan="3">
+                                            <table class="FontSmall">
+                                                <tr>
+                                                    <td>
+                                                        <div class="ItemKind">#customSpringMessage('ITEM_CLASS_L_ABBR')</div><!-- 大 -->
+                                                    </td>
+                                                    <td>#out($!{domain.buyerPrice.identify.item.itemClass.itemClassNameL})</td>
+                                                    <td>
+                                                        <div class="ItemKind">#customSpringMessage('ITEM_CLASS_M_ABBR')</div><!-- 中 -->
+                                                    </td>
+                                                    <td>#out($!{domain.buyerPrice.identify.item.itemClass.itemClassNameM})</td>
+                                                    <td>
+                                                        <div class="ItemKind">#customSpringMessage('ITEM_CLASS_S_ABBR')</div><!-- 小 -->
+                                                    </td>
+                                                    <td>#out($!{domain.buyerPrice.identify.item.itemClass.itemClassNameS})</td>
+                                                </tr>
+                                            </table>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td nowrap class="Box1H FontBoxHeader">
+                                            #customSpringMessage('CATALOG_IND')<!-- カタログ区分 -->
+                                        </td>
+                                        <td nowrap class="Box1D FontSmall"  colspan="3">
+                                            #out($!{domain.buyerPrice.managementInfo.catalogInd_PageValue})
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td nowrap class="Box1H FontBoxHeader">
+                                            #customSpringMessage('SUPPLIER')<!-- 取引先 -->
+                                        </td>
+                                        <td nowrap class="Box1D FontSmall"  colspan="3">
+                                            #out($!{domain.buyerPrice.identify.supplierFrom.supCd})&nbsp;#out($!{domain.buyerPrice.identify.supplierFrom.supplierName.supplierAbbrName})
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td nowrap class="Box1H FontBoxHeader" >
+                                            #customSpringMessage('VALID_PERIOD')<!-- 有効期間 -->
+                                        </td>
+                                        <td nowrap class="Box1D FontSmall"  colspan="3">
+                                            #if($!domain.buyerPrice.identify.validityPeriod.period.endDate !="99999999")
+                                                ## +++++ 強化-01573-000 2013/05/22 ADD SBO_KANGJW START +++++
+                                                #out($!{domain.buyerPrice.identify.validityPeriod.period.startDate.dateOfymdFormat})～#out($!{domain.buyerPrice.identify.validityPeriod.period.endDate.dateOfymdFormat})
+                                                ## +++++ 強化-01573-000 2013/05/22 ADD SBO_KANGJW END +++++
+                                                ## ----- 強化-01573-000 2013/05/22 DEL SBO_KANGJW START -----
+                                                ###out($!{domain.buyerPrice.identify.validityPeriod.period.startDate.dateOfymdFormat})&nbsp;～&nbsp;#out($!{domain.buyerPrice.identify.validityPeriod.period.endDate.dateOfymdFormat})
+                                                ## ----- 強化-01573-000 2013/05/22 DEL SBO_KANGJW END -----
+                                            #else
+                                                ## +++++ 強化-01573-000 2013/05/22 ADD SBO_KANGJW START +++++
+                                                #out($!{domain.buyerPrice.identify.validityPeriod.period.startDate.dateOfymdFormat})～&nbsp;
+                                                ## +++++ 強化-01573-000 2013/05/22 ADD SBO_KANGJW END +++++
+                                                ## ----- 強化-01573-000 2013/05/22 DEL SBO_KANGJW START -----
+                                                ###out($!{domain.buyerPrice.identify.validityPeriod.period.startDate.dateOfymdFormat})&nbsp;～&nbsp;
+                                                ## ----- 強化-01573-000 2013/05/22 DEL SBO_KANGJW END -----
+                                            #end
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td nowrap class="Box1H FontBoxHeader">
+                                            #customSpringMessage('REVISION_NUMBER')<!-- 履歴番号 -->
+                                        </td>
+                                        <td nowrap class="Box1D FontSmall"  colspan="3">
+                                            #out($!{domain.buyerPrice.revision.updateNo})
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td nowrap class="Box1H FontBoxHeader">
+                                            #customSpringMessage('MNG_IND')<!-- 価格管理区分 -->
+                                        </td>
+                                        <td nowrap class="Box1D FontSmall"  colspan="3">
+                                            #out($!{domain.buyerPrice.managementInfo.priceManagementInd.priceManagementInd_PageValue})
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td nowrap class="Box1H FontBoxHeader">
+                                            #customSpringMessage('AUTO_ORDER_FLG')<!-- 自動発注フラグ -->
+                                        </td>
+                                        <td nowrap class="Box1D FontSmall"  colspan="3">
+                                            #out($!{domain.buyerPrice.orderDeliv.autoOrderFlg.autoOrderFlg_PageValue})
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td nowrap class="Box1H FontBoxHeader">
+                                            #customSpringMessage('BUYER_USER_SECTION')<!-- 購買担当部門 -->
+                                        </td>
+                                        <td nowrap class="Box1D FontSmall" colspan="3">
+                                            #out($!{domain.buyerPrice.managementInfo.buyerUserSectionCd})&nbsp;#out($!{domain.buyerPrice.managementInfo.buyerUserSectionName})
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td nowrap class="Box1H FontBoxHeader">
+                                            #customSpringMessage('BUYER_USER')<!-- 購買担当者 -->
+                                        </td>
+                                        <td nowrap class="Box1D FontSmall" colspan="3">
+                                            #out($!{domain.buyerPrice.managementInfo.buyerUser.buyerUserId})&nbsp;#out($!{domain.buyerPrice.managementInfo.buyerUser.buyerUserName})
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td nowrap class="Box1H FontBoxHeader">
+                                            #customSpringMessage('AUTO_STOP_FLG')<!-- 自動打切フラグ -->
+                                        </td>
+                                        <td nowrap class="Box1D FontSmall"  colspan="3">
+                                            #out($!{domain.buyerPrice.orderDeliv.autoTerminateFlg.autoTerminateFlg_PageValue})
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td  nowrap class="Box1H FontBoxHeader">
+                                            #customSpringMessage('STD_ORDER_LT')<!-- 標準納入日数 -->
+                                        </td>
+                                        <td class="Box1D FontSmall"  colspan="3">
+                                            ## +++++  ＩＴ３-00196-000 2013/07/11 DEL SBO_Chen START +++++
+                                            ###out($!{domain.buyerPrice.orderDeliv.standardDelivDayCount.standardDelivDayCount.dayCount})&nbsp;#customSpringMessage('SUNDAY')<!-- 日 -->
+                                            ## +++++  ＩＴ３-00196-000 2013/07/11 DEL SBO_Chen END +++++
+                                            ## +++++  ＩＴ３-00196-000 2013/07/11 ADD SBO_Chen START +++++
+                                            #out($!{domain.buyerPrice.orderDeliv.standardDelivDayCount.standardDelivDayCount.dayCount})&nbsp;#customSpringMessage('STD_DELIVE_DAY')<!-- 日 -->
+                                            ## +++++  ＩＴ３-00196-000 2013/07/11 ADD SBO_Chen END +++++
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td class="Box1H FontBoxHeader">
+                                            #customSpringMessage('KATASHIKI')<!-- 型式 -->
+                                        </td>
+                                        <td class="Box1D FontSmall"  colspan="3">
+                                            #out($!{domain.buyerPrice.identify.item.katashiki})
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td class="Box1H FontBoxHeader">
+                                            #customSpringMessage('MANUFACT')<!-- メーカー -->
+                                        </td>
+                                        <td class="Box1D FontSmall"  colspan="3">
+                                            #out($!{domain.buyerPrice.identify.item.manufact.manufactCd})&nbsp;#out($!{domain.buyerPrice.identify.item.manufact.manufactName})
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td nowrap class="Box1H FontBoxHeader">
+                                            #customSpringMessage('ORDER_UNIT')<!-- 発注単位数量 -->
+                                        </td>
+                                        <td nowrap class="Box1D FontSmall" colspan="3">
+                                            #out($!{domain.buyerPrice.orderDeliv.custUnitVol.custUnitVol.volFormat})
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td nowrap class="Box1H FontBoxHeader">
+                                            #customSpringMessage('MIN_ORDER_VOL')<!-- 最小発注数量 -->
+                                        </td>
+                                            <td nowrap class="Box1D FontSmall" colspan="3">
+                                                #out($!{domain.buyerPrice.orderDeliv.minCustVol.minCustVol.volFormat})
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td nowrap class="Box1H FontBoxHeader">
+                                            #customSpringMessage('PRICE_LIST_NO')<!-- 価格表No. -->
+                                        </td>
+                                        <td nowrap class="Box1D FontSmall" colspan="3">
+                                            #out($!{domain.buyerPrice.supple.priceNo})
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td nowrap class="Box1H FontBoxHeader">
+                                            #customSpringMessage('NEXT_UPD_YM')<!-- 次回見直時期 -->
+                                        </td>
+                                        <td nowrap class="Box1D FontSmall" colspan="3">
+                                            #out($!{domain.buyerPrice.revision.lastUpdYm.lastUpdYm.dateOfymFormat})
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td nowrap class="Box1H FontBoxHeader">
+                                        #customSpringMessage('UPDATE_CYCLE')<!-- 価格改定サイクル -->
+                                        </td>
+                                        <td nowrap class="Box1D FontSmall"  colspan="3">
+                                            #out($!{domain.buyerPrice.revision.updateCycle.updateCycle_PageValue})
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td nowrap class="Box1H FontBoxHeader">
+                                            #customSpringMessage('QUOT_REQ_NO')<!-- 見積依頼番号 -->
+                                        </td>
+                                        <td nowrap class="Box1D FontSmallAnk" colspan="3">
+                                            <span nowrap class="FontSlipNo">
+                                                #out($!{domain.buyerPrice.managementInfo.quotReqNo.quotReqNo})
+                                            </span>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td nowrap class="Box1H FontBoxHeader">
+                                            #customSpringMessage('INSPECT_IND')<!-- 検査区分 -->
+                                        </td>
+                                        <td nowrap class="Box1D FontSmall" colspan="3">
+                                            #out($!{domain.buyerPrice.orderDeliv.inspectInd.inspectInd_PageValue})
+                                        </td>
+                                    </tr>
+
+                                    <tr>
+                                        <td nowrap class="Box1H FontBoxHeader">
+                                            #customSpringMessage('TAX_IND')<!-- 課税区分 -->
+                                        </td>
+                                        <td nowrap class="Box1D FontSmall" colspan="3">
+                                            #out($!{domain.buyerPrice.supItem.amountTypePrice.taxCalculationInd.taxInd.taxInd_PageValue})
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td nowrap class="Box1H FontBoxHeader">
+                                            #customSpringMessage('CONSUMPT_IND')<!-- 消費税区分 -->
+                                        </td>
+                                        <td nowrap class="Box1D FontSmall" colspan="3">
+                                            #out($!{domain.buyerPrice.supItem.amountTypePrice.taxCalculationInd.consumptInd.consumptInd_PageValue})
+                                        </td>
+                                    </tr>
+
+                                    <tr>
+                                        <td nowrap class="Box1H FontBoxHeader">
+                                            #customSpringMessage('GREEN_ITEM_PUR')<!-- グリーン品購入 -->
+                                        </td>
+                                        <td nowrap class="Box1D FontSmall" colspan="3">
+                                            #out($!{domain.buyerPrice.supple.green.greenPur_PageValue})
+                                        </td>
+                                    </tr>
+
+                                    <tr>
+                                        <td nowrap class="Box1H FontBoxHeader">
+                                            #customSpringMessage('PRICE_LABEL')<!-- 環境ラベル -->
+                                        </td>
+                                        <td nowrap class="Box1D FontSmall"  colspan="3">
+                                            #out($!{domain.buyerPrice.supple.green.priceLabel_PageValue})
+                                        </td>
+                                    </tr>
+
+                                    <tr>
+                                        <td class="Box1H FontBoxHeader">
+                                            #customSpringMessage('GREEN_ITEM_ATTACH')<!-- グリーン品添付 -->
+                                        </td>
+                                        <td class="Box1D FontSmall"  colspan="3">
+                                         ## +++++  強化-00580-000 2013/04/08 ADD SBO_wangzf START +++++
+                                          #if($!domain.buyerPrice.supple.green.greenItemAttach.fileName!="")
+                                            <A href="#" onclick="downloadFile('1');">#out($!{domain.buyerPrice.supple.green.greenItemAttach.fileName})</A>
+                                          #end
+                                         ## +++++  強化-00580-000 2013/04/08 ADD SBO_wangzf START +++++
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td nowrap class="Box1H FontBoxHeader">
+                                            #customSpringMessage('CATALOG_FLG')<!-- カタログ種別 -->
+                                        </td>
+                                        <td nowrap class="Box1D FontSmall"  colspan="3">
+                                            #out($!{domain.buyerPrice.supItem.Kind.materialType.materialType_PageValue})
+                                        </td>
+                                    </tr>
+
+                                    <tr>
+                                        <td nowrap class="Box1H FontBoxHeader">
+                                            #customSpringMessage('CONNECT_TYPE')<!-- 接続種別 -->
+                                        </td>
+                                        <td nowrap class="Box1D FontSmall" colspan="3">
+                                            #out($!{domain.buyerPrice.orderDeliv.connectType.connectTypeInd_PageValue})
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td nowrap class="Box1H FontBoxHeader" >
+                                            #customSpringMessage('PUR_STOP_PERIOD')<!-- 購入停止期間 -->
+                                        </td>
+                                        <td nowrap class="Box1D FontSmall" colspan="3">
+                                            #out($!{domain.buyerPrice.managementInfo.purStopFlag.purStopPeriod.purStopPeriodStart.dateOfymdFormat})
+                                            #if($!{domain.buyerPrice.managementInfo.purStopFlag.purStopPeriod.purStopPeriodStart.dateOfymd} != "" || $!{domain.buyerPrice.managementInfo.purStopFlag.purStopPeriod.purStopPeriodEnd.dateOfymd} != "")
+                                            ## ----- 強化-01778-000 20130618 DEL SBO_SOKOU START -----
+                                                ## +++++ 強化-00586-000 2013/03/26 ADD SBO_wangzf START +++++
+                                              ## ---- &nbsp;#customSpringMessage('KARA')&nbsp; -----
+                                                ## +++++ 強化-00586-000 2013/03/26 ADD SBO_wangzf END +++++
+                                                ## ---- 強化-00586-000 2013/03/26 DEL SBO_wangzf START -----
+                                                ## &nbsp;～&nbsp;
+                                                ## ---- 強化-00586-000 2013/03/26 DEL SBO_wangzf END -----
+                                            ## ----- 強化-01778-000 20130618 DEL SBO_SOKOU END -----
+                                            ## +++++ 強化-01778-000 20130618 ADD SBO_SOKOU START +++++
+                                              &nbsp;～&nbsp;
+                                            ## +++++ 強化-01778-000 20130618 ADD SBO_SOKOU END +++++
+                                            #end
+                                            #out($!{domain.buyerPrice.managementInfo.purStopFlag.purStopPeriod.purStopPeriodEnd.dateOfymdFormat})
+                                        </td>
+                                    </tr>
+
+                                    <tr>
+                                        <td nowrap class="Box1H FontBoxHeader">
+                                            #customSpringMessage('PRICE_REMARKS')<!-- 購買価格説明 -->
+                                        </td>
+                                        <td class="Box1D FontSmall" colspan="3">
+                                            #out($!{domain.buyerPrice.supple.buyerPriceRemarks})
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td class="Box1H FontBoxHeader">
+                                            #customSpringMessage('REF_URL')<!-- 参照先URL -->
+                                        </td>
+                                        <td class="Box1D FontSmall" colspan="3">
+                                           ## +++++  強化-00580-000 2013/04/08 ADD SBO_wangzf START +++++
+                                           #if($!domain.buyerPrice.supple.refUrl!="")
+                                            <A href="#out($!{domain.buyerPrice.supple.refUrl})" target="_blank">#out($!{domain.buyerPrice.supple.refUrl})</A>
+                                           #end
+                                           ## +++++  強化-00580-000 2013/04/08 ADD SBO_wangzf END +++++
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td class="Box1H FontBoxHeader">
+                                            #customSpringMessage('IMG_FILE_NAME')<!-- 画像ファイル名 -->
+                                        </td>
+                                        <td class="Box1D FontSmall" colspan="3">
+                                         ## +++++  強化-00580-000 2013/04/08 ADD SBO_wangzf START +++++
+                                           #if($!domain.buyerPrice.supple.imgFile.fileName !="")
+                                            <A href="#" onclick="downloadFile('2');">#out($!{domain.buyerPrice.supple.imgFile.fileName})</A>
+                                           #end
+                                         ## +++++  強化-00580-000 2013/04/08 ADD SBO_wangzf START +++++
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td class="Box1H FontBoxHeader">
+                                            #customSpringMessage('UNIT')<!-- 単位 -->
+                                        </td>
+                                        <td nowrap class="Box1D FontSmall">#out($!{domain.buyerPrice.identify.item.unit.unitName})</td>
+                                        <td nowrap class="Box1H FontBoxHeader">
+                                            #customSpringMessage('CURRENCY_CD')<!-- 通貨コード -->
+                                        </td>
+                                        <td nowrap class="Box1D FontSmall">#out($!{domain.buyerPrice.identify.supplierFrom.currency.currencyCd})</td>
+                                    </tr>
+                                    <tr>
+                                        <td nowrap class="Box1Hdb FontBoxHeader" rowspan="6" width="10%">
+                                            #customSpringMessage('PRESENT_PRICE_LIST')<!-- 価格表 -->
+                                        </td>
+                                        <td class="Box1H FontSmall">
+                                            #customSpringMessage('MIN_AMOUNT')<!-- 下限数量 -->
+                                        </td>
+                                        <td class="Box1H FontSmall" colspan="2">
+                                            ## +++++ 強化-00586-000 2013/06/19 DEL SBO_SOKOU START +++++
+                                            ## #customSpringMessage('UNIT_PRICE')<!-- 単価 -->
+                                            ## +++++ 強化-00586-000 2013/06/19 DEL SBO_SOKOU -END- +++++
+                                            ## +++++ 強化-00586-000 2013/06/19 ADD SBO_SOKOU START +++++
+                                            #customSpringMessage('STD_PRICE')<!-- 購買単価 -->
+                                            ## +++++ 強化-00586-000 2013/06/19 ADD SBO_SOKOU -END- +++++
+                                        </td>
+                                    </tr>
+                                    #foreach($!amountPriceItem in $!{domain.buyerPrice.supItem.amountPriceList})
+                                        <tr>
+                                            <td nowrap  class="Box1Dd FontSmallAnk">
+                                                #out($!{amountPriceItem.minAmount.volFormat})
+                                            </td>
+                                            <td nowrap class="Box1Dd FontCurrSmall" colspan="2">
+                                                #if($!{amountPriceItem.price.amountFormat} != "")
+                                                    #out($!{domain.buyerPrice.identify.supplierFrom.currency.currencyMark})
+                                                #end
+                                                &nbsp;#out($!{amountPriceItem.price.amountFormat})
+                                            </td>
+                                        </tr>
+                                    #end
+                                    <tr>
+                                        <td nowrap class="Box1H FontBoxHeader">
+                                            #customSpringMessage('VIEW_PRICE_RANGE')<!-- 価格公開範囲 -->
+                                        </td>
+                                        <td class="Box1D FontSmall" colspan="3">
+                                            #if($!{domain.buyerPrice.managementInfo.requesterList[0].reqSectionPlaceCd} == "ALL")
+                                                #customSpringMessage('ALL_VIEW')<!--全て表示-->
+                                            #else
+                                                 #foreach($!requester in $!domain.buyerPrice.managementInfo.requesterList)
+                                                    #out($!domain.buyerPrice.managementInfo.requesterList[$velocityCount].reqCompanyCd) &nbsp; #out($!domain.buyerPrice.managementInfo.requesterList[$velocityCount].reqSectionPlaceCd)  <br>
+                                                 #end
+                                            #end
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+
+                                <!--<tr><td class="NoBorder" colspan="4">&nbsp;</td></tr>-->
+                                <br />
+
+                            <table class="Box1G" width="98%">
+                                <tbody class="Box1H FontBoxHeader ListBorderWidth">
+                                    <tr>
+                                        <td nowrap class="Box1H FontBoxHeader">
+                                            #customSpringMessage('APP_ROUTE')<!-- 承認ルート -->
+                                        </td>
+                                        <td nowrap class="Box1D FontSmall"  colspan="3">
+                                            #out($!{domain.buyerPrice.managementInfo.approute.appRouteName})
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td class="Box1H FontBoxHeader">
+                                            #customSpringMessage('APP_USER')<!-- 承認者 -->
+                                        </td>
+                                        <td class="Box1D FontSmallAnk" colspan="3">
+                                            <table class="AppSheet" width="98%" style="-webkit-box-shadow:2px 2px 0px #000000">
+
+                                                #if($!domain.buyerPrice.appManagement.appList.appItemList.size() > 0)
+                                                    #foreach($!appItem in $!{domain.buyerPrice.appManagement.appList.appItemList})
+                                                        <tr id="row_$velocityCount" name="row_$velocityCount">
+                                                            <td class="AppNoArea">
+                                                                <span class="FontNumber">#out($!{appItem.appSeq})</span>
+                                                            </td>
+                                                            #if($!{appItem.subAppFlg} == "1")
+                                                                <td class="AppPersonArea FontSmall" nowrap>
+                                                                    #out($!{appItem.subAppUserName.section.sectionCd})&nbsp;#out($!{appItem.subAppUserName.section.sectionName})
+                                                                    <br>
+                                                                    #out($!{appItem.subAppUserName.userID})&nbsp;
+                                                                    <span class="FontUserName">#out($!{appItem.subAppUserName.userName})</span>
+                                                                    ## +++++強化-00568-000 2013/03/26 ADD SBO_KANGJW START +++++
+                                                                    <span class="FontMini">#out($!{appItem.subAppUserName.official.officialName})</span>
+                                                                    ## +++++強化-00568-000 2013/03/26 ADD SBO_KANGJW -END- +++++
+                                                                </td>
+                                                                <td class="AppPersonArea">
+                                                                    <table class="NoBorder">
+                                                                        <tr>
+                                                                            <td><img src="../../image/mrkTel.gif"></td>
+                                                                            <td class="FontMini" nowrap>
+                                                                                #customSpringMessage('EXTENSION_NO')<!-- 内線番号 -->:<span class="FontSmallAnk">#out($!{appItem.subAppUserName.extNo.extensionNo})</span>&nbsp;&nbsp;
+                                                                                #customSpringMessage('EXTERNAL_NO')<!-- 外線番号 -->:<span class="FontSmallAnk">#out($!{appItem.subAppUserName.externalNo.externalNo})</span>
+                                                                            </td>
+                                                                        </tr>
+                                                                        <tr>
+                                                                            <td><img src="../../image/mrkMail.gif"></td>
+                                                                            <td class="FontMiniAnkBold" nowrap>
+                                                                                <span class="FontMiniAnk">
+                                                                                #if("$!{appItem.subAppUserName.mailAddr.mail}" != "")
+                                                                                <A HREF="mailto: #out($!{appItem.subAppUserName.userName})<#out($!{appItem.subAppUserName.mailAddr.mail})>">#out($!{appItem.subAppUserName.mailAddr.mail})</A>
+                                                                                #end
+                                                                                </span>
+                                                                            </td>
+                                                                            <td align="right" valign="bottom"></td>
+                                                                        </tr>
+                                                                    </table>
+                                                                </td>
+                                                            #else
+                                                                <td class="AppPersonArea FontSmall" nowrap>
+                                                                    #out($!{appItem.appUserName.section.sectionCd})&nbsp;#out($!{appItem.appUserName.section.sectionName})
+                                                                    <br>
+                                                                    #out($!{appItem.appUserName.userID})&nbsp;
+                                                                    <span class="FontUserName">#out($!{appItem.appUserName.userName})</span>
+                                                                    ## +++++強化-00568-000 2013/03/26 ADD SBO_KANGJW START +++++
+                                                                    <span class="FontMini">#out($!{appItem.appUserName.official.officialName})</span>
+                                                                    ## +++++強化-00568-000 2013/03/26 ADD SBO_KANGJW -END- +++++
+                                                                </td>
+                                                                <td class="AppPersonArea">
+                                                                    <table class="NoBorder">
+                                                                        <tr>
+                                                                            <td><img src="../../image/mrkTel.gif"></td>
+                                                                            <td class="FontMini" nowrap>
+                                                                                #customSpringMessage('EXTENSION_NO')<!-- 内線番号 -->:<span class="FontSmallAnk">#out($!{appItem.appUserName.extNo.extensionNo})</span>&nbsp;&nbsp;
+                                                                                #customSpringMessage('EXTERNAL_NO')<!-- 外線番号 -->:<span class="FontSmallAnk">#out($!{appItem.appUserName.externalNo.externalNo})</span>
+                                                                            </td>
+                                                                        </tr>
+                                                                        <tr>
+                                                                            <td><img src="../../image/mrkMail.gif"></td>
+                                                                            <td class="FontMiniAnkBold" nowrap>
+                                                                                <span class="FontMiniAnk">
+                                                                                #if("$!{appItem.appUserName.mailAddr.mail}" != "")
+                                                                                <A HREF="mailto:#out($!{appItem.appUserName.userName})<#out($!{appItem.appUserName.mailAddr.mail})>">#out($!{appItem.appUserName.mailAddr.mail})</A>
+                                                                                #end
+                                                                                </span>
+                                                                            </td>
+                                                                            <td align="right" valign="bottom"></td>
+                                                                        </tr>
+                                                                    </table>
+                                                                </td>
+                                                            #end
+                                                            <td nowrap class="AppStampArea">
+                                                                #if("$!{appItem.appItemStatus.appItemStatus}" == "3" || "$!{appItem.appItemStatus.appItemStatus}" == "2")
+                                                                    <span class="FontBigBold DarkBlue">$!appItem.appItemStatus.appItemStatus_PageValue</span><!--承認-->
+                                                                    <span class="FontMiniAnkBold"><br>#out($!{appItem.appDate.appDate.dateOfymdDispYMD})</span>
+                                                                #elseif("$!{appItem.appItemStatus.appItemStatus}" == "4")
+                                                                    <span class="FontBigBold Red">$!appItem.appItemStatus.appItemStatus_PageValue</span><!--差戻し-->
+                                                                    <span class="FontMiniAnkBold"><br>#out($!{appItem.appDate.appDate.dateOfymdDispYMD})</span>
+                                                                #elseif($!appItem.appSeq!=$!domain.buyerPrice.appManagement.appList.appSeq&&$!appItem.canDelete())
+                                                                  ## +++++ 強化-00586-000 2013/03/26 ADD SBO_wangzf START +++++
+                                                                  <input type='button' class='MiniButton' onclick='removeAuthorizer(this);' value='#customSpringMessage("ACTION_DELETE")'><!-- 削除 -->
+                                                                  ## +++++ 強化-00586-000 2013/03/26 ADD SBO_wangzf END +++++
+                                                                  ## ---- 強化-00586-000 2013/03/26 DEL SBO_wangzf START -----
+                                                                  ##<input type='button' class='MiniButton' onclick='removeAuthorizer(this);' value='削除'><!-- 削除 -->
+                                                                  ## ---- 強化-00586-000 2013/03/26 DEL SBO_wangzf END -----
+                                                                #else
+                                                                    <span>&nbsp;</span>
+                                                                #end
+                                                            </td>
+                                                        </tr>
+                                                ##edit start ＩＴ２-00509-000
+                                                #if($velocityCount+1 <$!domain.buyerPrice.appManagement.appList.appItemList.size())
+                                                <tr id = "row_$velocityCount" name = "row_$velocityCount"><td colspan="4" class="AppBorder">&nbsp;</td></tr>
+                                                #end
+                                                ##edit end ＩＴ２-00509-000
+                                                    #end
+                                                #end
+                                            </table>
+
+                                            <br>
+
+                                            <table>
+                                                <tr>
+                                                    <td valign="top"><img src="../../image/mrkGuide.gif">&nbsp;</td>
+                                                    <td class="FontMini">
+                                                        #customSpringMessage('APP_ADD_BUTTON_COMMENT')<!-- コメントCOMMENT_APP_ADD -->
+                                                        <!--承認者を追加したい場合は、追加したい承認者とその順序を指定して、「承認者の追加」ボタンをクリックしてください。<br>自分の承認した後の順序に追加できます。-->
+                                                        <br>
+                                                    <td>
+                                                </tr>
+                                                <tr>
+                                                    <td nowrap colspan="2" align="center">
+                                                        <table>
+                                                            <tr>
+                                                                <td class="FontMini" align="left" valign="middle" nowrap>
+                                                                    #customSpringMessage('ADD_APP_USER')<!-- 追加する承認者 -->:
+                                                                </td>
+                                                                <td>
+                                                                 ## +++++ 強化-00580-000 2013/03/25 ADD SBO_wangzf START +++++
+                                                                    #springFormInput("domain.buyerPrice.appManagement.appList.appUserName.userID" "class='SmallDsp' maxlength='12' type='text' size='14' readonly tabindex = '-1' ondblclick='searchAuthorizer();'")
+                                                                    #springFormInput("domain.buyerPrice.appManagement.appList.appUserName.userName" "class='SmallDsp' type='text' size='20' readonly tabindex = '-1' ondblclick='searchAuthorizer();'")
+                                                                 ## +++++ 強化-00580-000 2013/03/25 ADD SBO_wangzf END +++++
+                                                                 ## ---- 強化-00580-000 2013/03/25 DEL SBO_wangzf START -----
+                                                                  ## #springFormInput("domain.buyerPrice.appManagement.appList.appUserName.userID" "class='SmallDsp' maxlength='12' type='text' size='14' readonly ondblclick='searchAuthorizer();'")
+                                                                  ## #springFormInput("domain.buyerPrice.appManagement.appList.appUserName.userName" "class='SmallDsp' type='text' size='20' readonly ondblclick='searchAuthorizer();'")
+                                                                 ## ---- 強化-00580-000 2013/03/25 DEL SBO_wangzf END -----
+                                                                    <img class="Icon" name="UserSearch" src="../../image/btnLupe.gif" onclick="searchAuthorizer();"><!--ユーザー検索-->
+                                                                    #springFormHiddenInput("domain.buyerPrice.appManagement.appList.appUserName.section.sectionCd" "")
+                                                                    #springFormHiddenInput("domain.buyerPrice.appManagement.appList.appUserName.section.sectionName" "")
+                                                                    #springFormHiddenInput("domain.buyerPrice.appManagement.appList.appUserName.official.officialName" "")
+                                                                    #springFormHiddenInput("domain.buyerPrice.appManagement.appList.appUserName.section.sectionPlace.sectionPlaceCd" "")
+                                                                    #springFormHiddenInput("domain.buyerPrice.appManagement.appList.appUserName.section.sectionPlace.sectionPlaceName" "")
+                                                                    #springFormHiddenInput("domain.buyerPrice.appManagement.appList.appUserName.mailAddr.mail" "")
+                                                                    #springFormHiddenInput("domain.buyerPrice.appManagement.appList.appUserName.extNo.extensionNo" "")
+                                                                    #springFormHiddenInput("domain.buyerPrice.appManagement.appList.appUserName.externalNo.externalNo" "")
+                                                                </td>
+                                                                <td class="FontMini" align="left" valign="middle" nowrap>
+                                                                    #customSpringMessage('ORDER'):<!-- 順序 -->
+                                                                </td>
+                                                                <td class="FontMini" align="left" valign="middle" nowrap>
+                                                                    #customFormSingleSelect("domain.buyerPrice.appManagement.appList.appSeqByAdd" $appOrderList "class='Small'")
+                                                                </td>
+                                                                <td>
+                                                                    <input type="button" class="MiniButton" value="#customSpringMessage('ACTION_ADD_APP_USER')" onclick="addAuthorizer();" /><!--承認者の追加PAY_REQ_LIST-->
+                                                                </td>
+                                                            </tr>
+                                                        </table>
+                                                    </td>
+                                                </tr>
+                                            </table>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+
+                                <!--<tr><td class="NoBorder">&nbsp;</td></tr>-->
+                                <br />
+
+                            <table class="Box1G" width="98%">
+                                #set($backUserName = $!domain.buyerPrice.appManagement.backApp.backAppFirstUser.userName)
+                                #set($domainPath = "domain.buyerPrice.appManagement")
+                                #set($delComment = "BUYER_NOT_ENTRY_COMMENT")
+                                #parse("./common/common_back.vm")
+
+                            ## +++++ 強化-01835-000 20130629 SBO_SOKOU ADD START +++++
+                            </table>
+                            ## +++++ 強化-01835-000 20130629 SBO_SOKOU ADD -END- +++++
+                                <table class="NoBorder" width="98%">
+                                    <br>
+                                    <tr>
+                                        <td>#customSpringMessage('PSAPR122_FOOTER_COMMENT')</td>
+                                        <td align="right" valign="middle">
+                                            <input type="button" class="LargeButton Red" value="#customSpringMessage('RETURN')" onclick="sendBack();">&nbsp;&nbsp;<!--差戻し-->
+                                            <input id="Submit" type="button" class="LargeButton" value="#customSpringMessage('APPROVAL')" onclick="onApproval();"><!--承　認-->
+                                        </td>
+                                    </tr>
+                                </table>
+                            ## ----- 強化-01835-000 20130629 SBO_SOKOU DEL START -----
+                            ## </table>
+                            ## ----- 強化-01835-000 20130629 SBO_SOKOU DEL -END- -----
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+                </div>
+            </td>
+        </tr>
+    </table>
+</form>
+</body>
+</html>
+
+<script>
+    getObj("Area").style.display = "block";
+</script>

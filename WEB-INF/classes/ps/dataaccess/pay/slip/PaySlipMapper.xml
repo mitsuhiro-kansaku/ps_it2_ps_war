@@ -1,0 +1,370 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="ps.dataaccess.pay.slip.PaySlipMapper">
+
+    <sql id="listKeyIdentitySearchWhereCondition">
+        ${@ps.common.util.ItemSettingUtil@getItemSettingWhereSQL('19')}
+        AND T_P_PAY.ACC_COMPANY_CD = '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}'
+        AND T_P_PAY.ACC_SECTION_CD = '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}'
+        AND T_P_PAY.PAY_STATUS = '11'
+        <if test="@org.apache.commons.lang.StringUtils@isBlank(status)" >
+            AND T_P_PAY.ACC_STATUS IN ('01', '02', '03')
+        </if>
+        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(status)">
+            AND T_P_PAY.ACC_STATUS = #{status, jdbcType=VARCHAR}
+        </if>
+        AND T_P_PAY.DELETE_FLG = '0'
+        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(subjectCd)">
+            AND EXISTS (
+                SELECT
+                    T_P_PAY_DTL.PAY_SEQ
+                FROM
+                    T_P_PAY_DTL
+                WHERE
+                    T_P_PAY_DTL.PAY_SEQ = T_P_PAY.PAY_SEQ
+                AND T_P_PAY_DTL.DELETE_FLG = '0'
+                AND T_P_PAY_DTL.SUBJECT_CD =  #{subjectCd,jdbcType=VARCHAR}
+            )
+        </if>
+        AND T_P_PAY.NEW_FLG = '1'
+        AND T_P_PAY.DELETE_FLG = '0'
+    </sql>
+
+    <!--検索条件で全てキリストを取得する-->
+    <select id="listKeyIdentitySearch" 
+        parameterType="fw.domain.slip.payreq.payslip.paysliplist.PaySlipListSearchCondition" 
+        resultType="fw.domain.slip.payreq.payreq.payreqinput.PayReqIdentify">
+         SELECT
+                T_P_PAY.PAY_SEQ as "payReqSeq"
+         FROM   T_P_PAY       
+         <where>
+            <include refid="listKeyIdentitySearchWhereCondition"/>
+         </where> 
+         ORDER BY ${searchCondition.columnOrder.columnOrder()}
+    </select>   
+
+    <!-- 検索条件で件数を取得(クイックリンク件数取得用) -->
+    <select id="countOfPaySlipList" parameterType="fw.domain.slip.payreq.payslip.paysliplist.PaySlipListSearchCondition" resultType="Integer" >
+        SELECT
+            COUNT(1)
+        FROM
+            T_P_PAY
+        <where>
+            <include refid="listKeyIdentitySearchWhereCondition"/>
+        </where>
+        AND T_P_PAY.ACC_USER_ID = '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}'
+    </select>
+
+    <!--支払請求一覧明細を取得する-->
+    <resultMap id="PaySlipItem_Map" type="fw.domain.slip.payreq.payslip.paysliplist.PaySlipItem" >
+    </resultMap>
+    <select id="listPageItem" parameterType="fw.domain.slip.payreq.payslip.paysliplist.PaySlipListSearchCondition"
+                                            resultMap="PaySlipItem_Map">
+         SELECT
+                 T_P_PAY.PAY_SEQ as "payReqIdentify.payReqSeq",
+                 T_P_PAY.PAY_NO as "payNo",
+                 T_P_PAY.INPUT_USER_NAME as "inputUserName",
+                 T_P_PAY.ACC_USER_NAME as "accUserName",
+                 T_P_PAY.ACC_STATUS as "status",
+                 T_P_PAY.REQ_DATE as "reqDate.dateOfymd",
+                 T_P_PAY.TITLE_NAME as "titleName",
+                 T_P_PAY.SUP_CD as "supCd",
+                 T_P_PAY.SUP_ABBR_NAME as "supName",
+                 T_P_PAY.CURRENCY_CD as "currencyCd",
+                 T_P_PAY.TOTAL_AMOUNT_IN_TAX as "totalAmountOutTax.amount",
+                 T_P_PAY.PAY_CONDITION_NAME as "payConditionName",
+                 T_P_PAY.REQ_SECTION_CD as "reqSectionCd",
+                 T_P_PAY.REQ_SECTION_NAME as "reqSectionName",
+                 T_P_PAY.REQ_USER_ID as "reqUserId",
+                 T_P_PAY.REQ_USER_NAME as "reqUserName",
+                 T_P_PAY.ACC_SECTION_CD as "accSectionCd",
+                 T_P_PAY.ACC_SECTION_NAME as "accSectionName",
+                 T_P_PAY.LAST_UPD_DATE as "payReqIdentify.lastUpdDate",
+                 ${@ps.common.util.ItemSettingUtil@getItemSettingSelectSQLDomainAliasNonBinary("T_P_PAY", "paySeqExtItem")}
+          FROM   T_P_PAY
+          <where>  
+            <include refid="listKeyIdentitySearchWhereCondition"/>
+            AND T_P_PAY.PAY_SEQ IN
+          <foreach collection="searchCondition.page.keyDomainEntityList" item="keyList"  open="(" separator="," close=")">  
+                 #{keyList.payReqSeq, jdbcType=VARCHAR}
+          </foreach>
+         </where>
+          ORDER BY ${searchCondition.columnOrder.columnOrder()}
+    </select>
+    
+    <!-- 申請中止を更新 -->
+    <update id="updateForReqStop" parameterType="string">
+        UPDATE
+            T_P_PAY
+        SET            
+              T_P_PAY.ACC_STATUS = '12'         
+            , T_P_PAY.ACC_APP_ROUTE_NO = ''
+            , T_P_PAY.ACC_APP_ROUTE_NAME = ''
+            , T_P_PAY.LAST_UPD_DATE = '${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}'
+            , T_P_PAY.LAST_UPD_COMPANY_CD = '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}'
+            , T_P_PAY.LAST_UPD_SECTION_CD = '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}'
+            , T_P_PAY.LAST_UPD_USER_ID = '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}'
+        WHERE
+            T_P_PAY.PAY_SEQ = #{paySeq}
+    </update>
+          
+    <sql id="listKeyIdentityWhereCondition">
+           ${@ps.common.util.ItemSettingUtil@getItemSettingWhereSQL('19')}
+                 <if test="@org.apache.commons.lang.StringUtils@isNotBlank(@ps.common.util.ItemSettingUtil@getItemSettingWhereSQL('19'))">
+                 AND T_P_PAY.PAY_STATUS = '11'    
+                 </if>
+                 <if test="@org.apache.commons.lang.StringUtils@isBlank(@ps.common.util.ItemSettingUtil@getItemSettingWhereSQL('19'))">
+                 T_P_PAY.PAY_STATUS = '11'
+                 </if>
+                 AND T_P_PAY.ACC_STATUS = '12'
+                 AND T_P_PAY.ACC_COMPANY_CD ='${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}'
+                 AND T_P_PAY.ACC_SECTION_CD = '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}'
+                 AND T_P_PAY.ACC_USER_ID = '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}'
+                 AND T_P_PAY.NEW_FLG = '1'
+                 AND T_P_PAY.DELETE_FLG = '0'
+                 AND EXISTS(
+                               SELECT T_P_PAY_DTL.PAY_SEQ
+                               FROM T_P_PAY_DTL
+                               WHERE T_P_PAY_DTL.PAY_SEQ = T_P_PAY.PAY_SEQ
+                                        AND T_P_PAY_DTL.DELETE_FLG = '0'
+                                        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(subjectCd)">
+                                            AND T_P_PAY_DTL.SUBJECT_CD = #{subjectCd}
+                                        </if>
+                                      
+                              )
+    </sql>
+    <select id="listKeyIdentity" 
+      parameterType="fw.domain.slip.payreq.payslip.screennotactionpaylist.ScreenNotActionPayListSearchCondition"
+      resultType="fw.domain.slip.payreq.payreq.payreqinput.PayReqIdentify">
+      SELECT  T_P_PAY.PAY_SEQ AS "payReqSeq"
+      FROM   T_P_PAY
+      <where>
+         <include refid="listKeyIdentityWhereCondition"/>
+       </where>
+       ORDER BY ${searchCondition.columnOrder.columnOrder()}
+    </select>
+   
+   <!-- 未処理支払伝票キーリストで、一ページ目の未処理支払伝票一覧を取得 -->
+   <resultMap type="fw.domain.slip.payreq.payslip.screennotactionpaylist.ScreenNotActionPayItem"
+        id="ScreenNotActionPayItem_Map">
+     </resultMap>
+   <select id="listPage" parameterType="fw.domain.mst.searchcondition.SearchCondition" resultMap="ScreenNotActionPayItem_Map">
+       SELECT T_P_PAY.PAY_SEQ AS "payReqIdentify.payReqSeq"
+              ,T_P_PAY.PAY_NO AS "payReqIdentify.payNo"
+              ,T_P_PAY.PAY_NO AS "payNo"
+              ,T_P_PAY.REQ_DATE AS "reqDate.dateOfymd"
+              ,T_P_PAY.TITLE_NAME AS "titleName"
+              ,T_P_PAY.SUP_CD AS "supCd"
+              ,T_P_PAY.SUP_ABBR_NAME AS "supName"
+              ,T_P_PAY.CURRENCY_CD AS "currencyCd"
+              ,M_CURRENCY.CURRENCY_MARK AS "currencyMark"
+              ,T_P_PAY.TOTAL_AMOUNT_IN_TAX AS "totalAmountOutTax.amount"
+              ,T_P_PAY.PAY_CONDITION_NAME AS "payConditionName"
+              ,T_P_PAY.REQ_SECTION_CD AS "reqSectionCd"
+              ,T_P_PAY.REQ_SECTION_NAME AS "reqSectionName"
+              ,T_P_PAY.REQ_USER_ID AS "reqUserCd"
+              ,T_P_PAY.REQ_USER_NAME AS "reqUserName"
+              ,T_P_PAY.LAST_UPD_DATE AS "payReqIdentify.lastUpdDate"
+              ,T_P_PAY.PS_BILL_DATE AS "psBillDate.dateOfymd"
+              ,T_P_PAY.REQ_COMPANY_CD AS "inputCompanyCd"
+              ,T_P_PAY.REQ_SECTION_CD AS "inputSectionCd"
+              ,T_P_PAY.REQ_USER_ID AS "inputUserId"
+              ,${@ps.common.util.ItemSettingUtil@getItemSettingSelectSQLDomainAliasNonBinary("T_P_PAY", "paySeqExtItem")}
+       FROM   T_P_PAY
+       LEFT JOIN M_CURRENCY
+       ON     M_CURRENCY.CURRENCY_CD = T_P_PAY.CURRENCY_CD
+              AND M_CURRENCY.TERM_FLG = '0'
+       <where>   
+            <include refid="listKeyIdentityWhereCondition"/>
+                AND T_P_PAY.PAY_SEQ IN
+                <foreach collection="searchCondition.page.keyDomainEntityList" item="keyList"  open="(" separator="," close=")">
+               (#{keyList.payReqSeq})
+                </foreach>
+        </where>
+       ORDER BY ${searchCondition.columnOrder.columnOrder()}
+   </select>
+   
+   <!-- 申請の場合、支払請求依頼を更新 -->
+   <update id="updateForApp" parameterType="fw.domain.slip.payreq.payslip.screennotactionpaylist.ScreenNotActionPayItem">
+       UPDATE T_P_PAY
+       SET       
+                    T_P_PAY.ACC_STATUS = '01'
+                 ,T_P_PAY.ACC_COMPANY_CD = '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}'
+                 ,T_P_PAY.ACC_COMPANY_NAME = '${@fw.security.SecurityUtil@getCompanyNameByEscapeSql()}'
+                 ,T_P_PAY.ACC_SECTION_PLACE_CD = '${@fw.security.SecurityUtil@getSectionPlaceCdByEscapeSql()}'
+                 ,T_P_PAY.ACC_SECTION_PLACE_NAME = '${@fw.security.SecurityUtil@getSectionPlaceNameByEscapeSql()}'
+                 ,T_P_PAY.ACC_SECTION_CD = '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}'
+                 ,T_P_PAY.ACC_SECTION_NAME = '${@fw.security.SecurityUtil@getDefaultSectionNameByEscapeSql()}'
+                 ,T_P_PAY.ACC_USER_ID = '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}'
+                 ,T_P_PAY.ACC_USER_NAME = '${@fw.security.SecurityUtil@getUserNameByEscapeSql()}'
+                 ,T_P_PAY.ACC_USER_EXTENSION_NO = '${@fw.security.SecurityUtil@getLoginUserExtNoByEscapeSql()}'
+                 ,T_P_PAY.ACC_USER_TEL_NO = '${@fw.security.SecurityUtil@getLoginUserExternalNoByEscapeSql()}'
+                 ,T_P_PAY.ACC_APP_ROUTE_NO=#{approute.appRouteNo}
+                 ,T_P_PAY.ACC_APP_ROUTE_NAME=#{approute.appRouteName}
+                 ,T_P_PAY.ACC_SEND_IND = '2'
+                 ,T_P_PAY.LAST_UPD_DATE = '${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}'
+                 ,T_P_PAY.LAST_UPD_COMPANY_CD = '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}'
+                 ,T_P_PAY.LAST_UPD_SECTION_CD = '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}'
+                 ,T_P_PAY.LAST_UPD_USER_ID = '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}'
+       WHERE  T_P_PAY.PAY_SEQ = #{payReqIdentify.payReqSeq}
+   </update>
+   
+   <!-- 依頼者差戻しの場合、支払請求依頼を更新 -->
+   <update id="updateForUserBack" parameterType="fw.domain.slip.payreq.payslip.screennotactionpaylist.ScreenNotActionPayItem">
+       UPDATE T_P_PAY
+       SET      T_P_PAY.PAY_STATUS = '06'
+                 ,T_P_PAY.ACC_BACK_COMPANY_CD = '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}'
+                 ,T_P_PAY.ACC_BACK_COMPANY_NAME = '${@fw.security.SecurityUtil@getCompanyNameByEscapeSql()}'
+                 ,T_P_PAY.ACC_BACK_SECTION_CD = '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}'
+                 ,T_P_PAY.ACC_BACK_SECTION_NAME = '${@fw.security.SecurityUtil@getDefaultSectionNameByEscapeSql()}'
+                 ,T_P_PAY.ACC_BACK_USER_ID = '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}'
+                 ,T_P_PAY.ACC_BACK_USER_NAME = '${@fw.security.SecurityUtil@getUserNameByEscapeSql()}'
+                 ,T_P_PAY.ACC_BACK_USER_COMMENTS = #{receipt.remand.backReason.backReason.comment}
+                 ,T_P_PAY.LAST_UPD_DATE = '${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}'
+                 ,T_P_PAY.LAST_UPD_COMPANY_CD = '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}'
+                 ,T_P_PAY.LAST_UPD_SECTION_CD = '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}'
+                 ,T_P_PAY.LAST_UPD_USER_ID = '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}'
+       WHERE  T_P_PAY.PAY_SEQ = #{payReqIdentify.payReqSeq}
+   </update>
+   
+      <!-- 受付差戻しの場合、支払請求依頼を更新 -->
+   <update id="updateForPayBack" parameterType="fw.domain.slip.payreq.payslip.screennotactionpaylist.ScreenNotActionPayItem">
+       UPDATE T_P_PAY
+       SET      T_P_PAY.ACC_STATUS = '13'
+                 ,T_P_PAY.LAST_UPD_DATE = '${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}'
+                 ,T_P_PAY.LAST_UPD_COMPANY_CD = '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}'
+                 ,T_P_PAY.LAST_UPD_SECTION_CD = '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}'
+                 ,T_P_PAY.LAST_UPD_USER_ID = '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}'
+       WHERE  T_P_PAY.PAY_SEQ = #{payReqIdentify.payReqSeq}
+   </update>
+
+    <sql id="listKeyIdentityAccUserChangeWhereCondition">
+          ${@ps.common.util.ItemSettingUtil@getItemSettingWhereSQL()}
+        AND T_P_PAY.PAY_STATUS = '11'
+        AND T_P_PAY.ACC_STATUS = '12'
+        AND T_P_PAY.ACC_COMPANY_CD = '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}'
+        AND T_P_PAY.ACC_SECTION_CD = '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}'
+        AND T_P_PAY.NEW_FLG = '1'
+        AND T_P_PAY.DELETE_FLG = '0'
+        AND EXISTS (
+           SELECT T_P_PAY.PAY_SEQ
+             FROM T_P_PAY_DTL
+            WHERE T_P_PAY_DTL.PAY_SEQ = T_P_PAY.PAY_SEQ
+              AND T_P_PAY_DTL.DELETE_FLG = '0'
+           <if test="!@org.apache.commons.lang.StringUtils@isBlank(subjectCd)">
+              AND T_P_PAY_DTL.SUBJECT_CD = #{subjectCd}
+           </if>
+        )
+    </sql>
+    
+   <select id="listKeyIdentityAccUserChange"
+      parameterType="fw.domain.slip.payreq.payslip.screenaccuserchange.ScreenAccUserChangeSearchCondition"
+      resultType="fw.domain.slip.payreq.payslip.screenaccuserchange.Identify">
+      SELECT T_P_PAY.PAY_SEQ as paySeq
+        FROM T_P_PAY
+      <where>
+         <include refid="listKeyIdentityAccUserChangeWhereCondition"/>
+     </where>
+     ORDER BY ${searchCondition.columnOrder.columnOrder()}
+  </select>
+  
+  <resultMap type="fw.domain.slip.payreq.payslip.screenaccuserchange.ScreenAccUserChangeItem" id="ScreenAccUserChangeItem_Map">
+      <id column="PAY_SEQ" property="identify.paySeq"/>
+      <id column="LAST_UPD_DATE" property="identify.lastUpdDate"/>
+      <id column="COMMENT" property="receipt.remand.backReason.backReason.comment"/>
+  </resultMap>
+  
+  <select id="listPageItemAccUserChange"
+    parameterType="fw.domain.slip.payreq.payslip.screenaccuserchange.ScreenAccUserChangeSearchCondition"
+    resultMap="ScreenAccUserChangeItem_Map">
+        SELECT T_P_PAY.PAY_SEQ as "PAY_SEQ",
+               T_P_PAY.PAY_NO as "payNo",
+               T_P_PAY.REQ_DATE as "reqDate.dateOfymd",
+               T_P_PAY.TITLE_NAME as "titleName",
+               T_P_PAY.SUP_CD as "supCd",
+               T_P_PAY.SUP_ABBR_NAME as "supName",
+               T_P_PAY.CURRENCY_CD as "currencyCd",
+               (CASE WHEN T_P_PAY.TOTAL_AMOUNT_IN_TAX IS NULL 
+                THEN 0 
+                ELSE T_P_PAY.TOTAL_AMOUNT_IN_TAX END) as "totalAmountOutTax.amount",
+               T_P_PAY.PAY_CONDITION_NAME as "payConditionName",
+               T_P_PAY.REQ_SECTION_CD as "reqSectionCd",
+               T_P_PAY.REQ_SECTION_NAME as "reqSectionName",
+               T_P_PAY.REQ_USER_ID as "reqCd",
+               T_P_PAY.REQ_USER_NAME as "reqName",
+               T_P_PAY.LAST_UPD_DATE as "LAST_UPD_DATE",
+               T_P_PAY.REQ_COMPANY_CD as "user.section.company.companyCd",
+               T_P_PAY.REQ_SECTION_CD as "user.section.sectionCd",
+               T_P_PAY.REQ_USER_ID as "user.userID", 
+               T_P_PAY.ACC_BACK_USER_COMMENTS as "COMMENT",
+               ${@ps.common.util.ItemSettingUtil@getItemSettingSelectSQLDomainAliasNonBinary("T_P_PAY", "searchResExtItem")}
+        FROM T_P_PAY
+        <where>
+         <include refid="listKeyIdentityAccUserChangeWhereCondition"/>
+            AND T_P_PAY.PAY_SEQ IN
+             <foreach collection="searchCondition.page.keyDomainEntityList" item="keyList" open="(" separator="," close=")">
+                #{keyList.paySeq}
+             </foreach>
+        </where>
+        ORDER BY ${searchCondition.columnOrder.columnOrder()}
+  </select>
+  
+  <update id="updatePayUserChange" parameterType="fw.domain.slip.payreq.payslip.screenaccuserchange.ScreenAccUserChangeItem">
+      UPDATE T_P_PAY
+         SET ACC_STATUS = '12',
+             ACC_COMPANY_CD = '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}',
+             ACC_COMPANY_NAME = '${@fw.security.SecurityUtil@getCompanyNameByEscapeSql()}',
+             ACC_SECTION_PLACE_CD = '${@fw.security.SecurityUtil@getSectionPlaceCdByEscapeSql()}',
+             ACC_SECTION_PLACE_NAME = '${@fw.security.SecurityUtil@getSectionPlaceNameByEscapeSql()}',
+             ACC_SECTION_CD = '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}',
+             ACC_SECTION_NAME = '${@fw.security.SecurityUtil@getDefaultSectionNameByEscapeSql()}',
+             ACC_USER_ID = #{screenAccUserChangeItem.user.userID},
+             ACC_USER_NAME = #{screenAccUserChangeItem.user.userName},
+             ACC_USER_EXTENSION_NO = #{extNo},
+             ACC_USER_TEL_NO = #{externalNo},
+             LAST_UPD_DATE = '${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}',
+             LAST_UPD_COMPANY_CD = '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}',
+             LAST_UPD_SECTION_CD = '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}',
+             LAST_UPD_USER_ID = '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}'
+       WHERE PAY_SEQ = #{screenAccUserChangeItem.identify.paySeq}
+  </update>
+  
+  <update id="updatePayUserRemand" parameterType="fw.domain.slip.payreq.payslip.screenaccuserchange.ScreenAccUserChangeItem">
+      UPDATE T_P_PAY
+         SET PAY_STATUS = '06',
+             ACC_BACK_COMPANY_CD = '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}',
+             ACC_BACK_COMPANY_NAME = '${@fw.security.SecurityUtil@getCompanyNameByEscapeSql()}',
+             ACC_BACK_SECTION_CD = '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}',
+             ACC_BACK_SECTION_NAME = '${@fw.security.SecurityUtil@getDefaultSectionNameByEscapeSql()}',
+             ACC_BACK_USER_ID = '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}',
+             ACC_BACK_USER_NAME = '${@fw.security.SecurityUtil@getUserNameByEscapeSql()}',
+             ACC_BACK_USER_COMMENTS = #{receipt.remand.backReason.backReason.comment},
+             LAST_UPD_DATE = '${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}',
+             LAST_UPD_COMPANY_CD = '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}',
+             LAST_UPD_SECTION_CD = '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}',
+             LAST_UPD_USER_ID = '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}'
+       WHERE PAY_SEQ = #{identify.paySeq}
+  </update>
+  
+  <update id="updatePayRecieveRemand" parameterType="fw.domain.slip.payreq.payslip.screenaccuserchange.ScreenAccUserChangeItem">
+      UPDATE T_P_PAY
+         SET ACC_STATUS = '13',
+             ACC_USER_ID = '',
+             ACC_USER_NAME = '',
+             ACC_BACK_COMPANY_CD = '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}',
+             ACC_BACK_COMPANY_NAME = '${@fw.security.SecurityUtil@getCompanyNameByEscapeSql()}',
+             ACC_BACK_SECTION_CD = '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}',
+             ACC_BACK_SECTION_NAME = '${@fw.security.SecurityUtil@getDefaultSectionNameByEscapeSql()}',
+             ACC_BACK_USER_ID = '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}',
+             ACC_BACK_USER_NAME = '${@fw.security.SecurityUtil@getUserNameByEscapeSql()}',
+             ACC_BACK_USER_COMMENTS = '',
+             LAST_UPD_DATE = '${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}',
+             LAST_UPD_COMPANY_CD = '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}',
+             LAST_UPD_SECTION_CD = '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}',
+             LAST_UPD_USER_ID = '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}'
+       WHERE PAY_SEQ = #{identify.paySeq}
+  </update>
+
+</mapper>

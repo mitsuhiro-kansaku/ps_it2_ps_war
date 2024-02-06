@@ -1,0 +1,461 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="ps.dataaccess.pay.ref.PayRefMapper">
+
+    <sql id="extItem">
+                    ${@ps.common.util.ItemSettingUtil@getItemSettingSelectSQLDomainAliasNonBinary("T_P_PAY", "payResExtItem")},
+                    ${@ps.common.util.ItemSettingUtil@getItemSettingSelectSQLDomainAliasNonBinary("T_P_PAY_DTL", "payResExtItemDtl")}
+    </sql>
+
+    <sql id="listKeyIdentityPayWhereCondition">
+      ${@ps.common.util.ItemSettingUtil@getItemSettingWhereSQL('19')}
+      AND T_P_PAY.INPUT_COMPANY_CD = '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}'
+      <if test = "@org.apache.commons.lang.StringUtils@isNotBlank(
+        @fw.common.util.AppUtil@getSectionViewRegion())">
+         AND T_P_PAY.INPUT_SECTION_CD IN (${@fw.common.util.AppUtil@getSectionViewRegion()})
+      </if>
+      <if test="@org.apache.commons.collections.CollectionUtils@isNotEmpty(payAdoStatusList) or @org.apache.commons.collections.CollectionUtils@isNotEmpty(accStatusList)">
+      AND (
+      </if>
+      <if test="@org.apache.commons.collections.CollectionUtils@isNotEmpty(payAdoStatusList)">
+          T_P_PAY.PAY_STATUS IN
+          <foreach collection="payAdoStatusList" item="payStatus" open="(" separator="," close=")">
+              #{payStatus, jdbcType=VARCHAR}
+          </foreach>
+      </if>
+      <if test="@org.apache.commons.collections.CollectionUtils@isNotEmpty(payAdoStatusList) and @org.apache.commons.collections.CollectionUtils@isNotEmpty(accStatusList)">
+          OR
+      </if>
+      <if test="@org.apache.commons.collections.CollectionUtils@isNotEmpty(accStatusList)">
+          T_P_PAY.ACC_STATUS IN
+          <foreach collection="accStatusList" item="accStatus" open="(" separator="," close=")">
+              #{accStatus, jdbcType=VARCHAR}
+          </foreach>
+      </if>
+      <if test="@org.apache.commons.collections.CollectionUtils@isNotEmpty(payAdoStatusList) or @org.apache.commons.collections.CollectionUtils@isNotEmpty(accStatusList)">
+          )
+      </if>
+      AND T_P_PAY.NEW_FLG = '1'
+      AND T_P_PAY.DELETE_FLG = '0'
+      AND EXISTS (
+          SELECT T_P_PAY.PAY_SEQ 
+          FROM T_P_PAY_DTL
+          WHERE T_P_PAY_DTL.PAY_SEQ = T_P_PAY.PAY_SEQ 
+              AND T_P_PAY_DTL.DELETE_FLG = '0'
+              <if test="@org.apache.commons.lang.StringUtils@isNotBlank(subjectCd)">
+              AND T_P_PAY_DTL.SUBJECT_CD = #{subjectCd}
+              </if>
+      )
+    </sql>
+    
+    <select id="listKeyIdentityPay"
+        parameterType="fw.domain.slip.payreq.payreq.payvoucherpeference.PayVoucherPeferenceSearchCondition"
+        resultType="fw.domain.slip.payreq.payreq.payvoucherpeference.Identify">
+        SELECT 
+            T_P_PAY.PAY_SEQ AS "paySeq"
+        FROM T_P_PAY 
+        <where>
+             <include refid="listKeyIdentityPayWhereCondition"/>
+      </where>
+          ORDER BY ${searchCondition.columnOrder.columnOrder()}
+    </select>
+    
+        <sql id="listKeyIdentityAccWhereCondition">
+        ${@ps.common.util.ItemSettingUtil@getItemSettingWhereSQL('19')}
+       AND T_P_PAY.ACC_COMPANY_CD = '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}'
+       AND T_P_PAY.ACC_SECTION_CD = '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}'
+       AND T_P_PAY.PAY_STATUS = '11'
+       <if test="@org.apache.commons.collections.CollectionUtils@isNotEmpty(accStatusList)">
+           AND T_P_PAY.ACC_STATUS IN
+           <foreach collection="accStatusList" item="accStatus" open="(" separator="," close=")">
+               #{accStatus, jdbcType=VARCHAR}
+           </foreach>
+       </if>
+       AND T_P_PAY.NEW_FLG = '1'
+       AND T_P_PAY.DELETE_FLG = '0'
+       AND EXISTS (
+           SELECT T_P_PAY.PAY_SEQ 
+           FROM T_P_PAY_DTL
+           WHERE T_P_PAY_DTL.PAY_SEQ = T_P_PAY.PAY_SEQ 
+               AND T_P_PAY_DTL.DELETE_FLG = '0'
+               <if test="@org.apache.commons.lang.StringUtils@isNotBlank(subjectCd)">
+               AND T_P_PAY_DTL.SUBJECT_CD = #{subjectCd}
+               </if>
+       )
+    </sql>
+    
+    <select id="listKeyIdentityAcc"
+        parameterType="fw.domain.slip.payreq.payreq.payvoucherpeference.PayVoucherPeferenceAccSearchCondition"
+        resultType="fw.domain.slip.payreq.payreq.payvoucherpeference.Identify">
+        SELECT 
+            T_P_PAY.PAY_SEQ AS "paySeq"
+        FROM T_P_PAY 
+        <where>
+             <include refid="listKeyIdentityAccWhereCondition"/>
+        </where>
+          ORDER BY ${searchCondition.columnOrder.columnOrder()}
+    </select>
+    <resultMap type="fw.domain.slip.payreq.payreq.payvoucherpeference.PayVoucherPeferenceItem" id="PayItem_Map">
+    </resultMap>
+    <select id="listPageItemPay"
+    parameterType="fw.domain.mst.searchcondition.SearchCondition"
+    resultMap="PayItem_Map">
+        SELECT 
+            T_P_PAY.PAY_SEQ AS "identify.paySeq",
+            T_P_PAY.PAY_NO AS "payNo",
+            T_P_PAY.PAY_STATUS AS "payStatus" ,
+            T_P_PAY.ACC_STATUS AS "accStatus" ,
+            T_P_PAY.REQ_DATE AS "reqDate.dateOfymd",
+            T_P_PAY.TITLE_NAME AS "titleName",
+            T_P_PAY.SUP_CD AS "supCd",
+            T_P_PAY.SUP_ABBR_NAME AS "supName",
+            T_P_PAY.CURRENCY_CD AS "currencyCd",
+            T_P_PAY.TOTAL_AMOUNT_IN_TAX AS "totalAmountOutTax.amount",
+            T_P_PAY.PAY_CONDITION_NAME AS "payConditionName",
+            T_P_PAY.REQ_SECTION_CD AS "reqSectionCd",
+            T_P_PAY.REQ_SECTION_NAME AS "reqSectionName",
+            T_P_PAY.REQ_USER_ID AS "reqCd",
+            T_P_PAY.REQ_USER_NAME AS "reqName",
+            T_P_PAY.INPUT_SECTION_CD AS "inputSectionCd",
+            T_P_PAY.INPUT_SECTION_NAME AS "inputSectionName",
+            T_P_PAY.INPUT_USER_ID AS "inputUserId",
+            T_P_PAY.INPUT_USER_NAME AS "issueVousherName",
+            T_P_PAY.ACC_SECTION_CD AS "accSectionCd",
+            T_P_PAY.ACC_SECTION_NAME AS "accSectionName",
+            T_P_PAY.ACC_USER_ID AS "accUserCd",
+            T_P_PAY.ACC_USER_NAME AS "accUserName",
+            T_P_PAY.LAST_UPD_DATE AS "identify.lastUpdDate",
+            ${@ps.common.util.ItemSettingUtil@getItemSettingSelectSQLDomainAliasNonBinary("T_P_PAY", "payResExtItem")}
+        FROM T_P_PAY 
+        <where>
+             <include refid="listKeyIdentityPayWhereCondition"/>
+             AND (T_P_PAY.PAY_SEQ) IN
+            <foreach collection="searchCondition.page.keyDomainEntityList" item="keyList"  open="(" separator="," close=")">  
+                (#{keyList.paySeq})
+            </foreach>
+        </where>
+         ORDER BY ${searchCondition.columnOrder.columnOrder()}
+    </select>
+    <select id="listPageItemAcc"
+    parameterType="fw.domain.mst.searchcondition.SearchCondition"
+    resultMap="PayItem_Map">
+        SELECT 
+            T_P_PAY.PAY_SEQ AS "identify.paySeq",
+            T_P_PAY.PAY_NO AS "payNo",
+            T_P_PAY.PAY_STATUS AS "payStatus",
+            T_P_PAY.ACC_STATUS AS "accStatus",
+            T_P_PAY.REQ_DATE AS "reqDate.dateOfymd",
+            T_P_PAY.TITLE_NAME AS "titleName",
+            T_P_PAY.SUP_CD AS "supCd",
+            T_P_PAY.SUP_ABBR_NAME AS "supName",
+            T_P_PAY.CURRENCY_CD AS "currencyCd",
+            T_P_PAY.TOTAL_AMOUNT_IN_TAX AS "totalAmountOutTax.amount",
+            T_P_PAY.PAY_CONDITION_NAME AS "payConditionName",
+            T_P_PAY.REQ_SECTION_CD AS "reqSectionCd",
+            T_P_PAY.REQ_SECTION_NAME AS "reqSectionName",
+            T_P_PAY.REQ_USER_ID AS "reqCd",
+            T_P_PAY.REQ_USER_NAME AS "reqName",
+            T_P_PAY.INPUT_SECTION_CD AS "inputSectionCd",
+            T_P_PAY.INPUT_SECTION_NAME AS "inputSectionName",
+            T_P_PAY.INPUT_USER_ID AS "inputUserId",
+            T_P_PAY.INPUT_USER_NAME AS "issueVousherName",
+            T_P_PAY.ACC_SECTION_CD AS "accSectionCd",
+            T_P_PAY.ACC_SECTION_NAME AS "accSectionName",
+            T_P_PAY.ACC_USER_ID AS "accUserCd",
+            T_P_PAY.ACC_USER_NAME AS "accUserName",
+            T_P_PAY.LAST_UPD_DATE AS "identify.lastUpdDate",
+            ${@ps.common.util.ItemSettingUtil@getItemSettingSelectSQLDomainAliasNonBinary("T_P_PAY", "payResExtItem")}
+        FROM T_P_PAY 
+        <where>
+             <include refid="listKeyIdentityAccWhereCondition"/>
+             AND (T_P_PAY.PAY_SEQ) IN
+            <foreach collection="searchCondition.page.keyDomainEntityList" item="keyList"  open="(" separator="," close=")">  
+                (#{keyList.paySeq})
+            </foreach>
+        </where>
+         ORDER BY ${searchCondition.columnOrder.columnOrder()}
+    </select>
+   
+    <resultMap type="fw.domain.slip.payreq.payreq.payvoucherpeference.PayVoucherPeferenceItemDownLoadItem" id="PayVoucherPeferenceItemDownloadItem_Map">
+        <id column="FISCAL_MONTH" property="fiscalMonth.dateOfym" />
+        <id column="SUP_CD" property="supCd" />
+        <id column="SUP_NAME" property="supName" />
+        <id column="SUP_ABBR_NAME" property="supAbbrName" />
+        <id column="SUP_COMPANY_CD" property="supCompanyCd" />
+        <id column="DELIV_KEY_NO" property="delivKeyNo" />
+        <id column="PAY_VERSION_NO" property="acceptVersion" />
+        <id column="CORRECT_CD" property="divisionCd" />
+        <id column="PAY_NO" property="orderNo" />
+        <id column="RB_IND" property="rbInd" />
+        <id column="REQ_COMPANY_CD" property="reqCompanyCd" />
+        <id column="REQ_COMPANY_NAME" property="reqCompanyName" />
+        <id column="REQ_SECTION_PLACE_CD" property="reqSectionPlaceCd" />
+        <id column="REQ_SECTION_PLACE_NAME" property="reqSectionPlaceName" />
+        <id column="REQ_SECTION_CD" property="reqSectionCd" />
+        <id column="REQ_SECTION_NAME" property="reqSectionName" />
+        <id column="REQ_USER_ID" property="reqUserId" />
+        <id column="REQ_USER_NAME" property="reqUserName" />
+        <id column="LOAD_COMPANY_CD" property="loadCompanyCd" />
+        <id column="LOAD_COMPANY_NAME" property="loadCompanyName" />
+        <id column="LOAD_SECTION_PLACE_CD" property="loadSectionPlaceCd" />
+        <id column="LOAD_SECTION_PLACE_NAME" property="loadSectionPlaceName" />
+        <id column="LOAD_SECTION_CD" property="loadSectionCd" />
+        <id column="LOAD_SECTION_NAME" property="loadSectionName" />
+        <id column="ACC_COMPANY_CD" property="buyerCompanyCd" />
+        <id column="ACC_COMPANY_NAME" property="buyerCompanyName" />
+        <id column="ACC_SECTION_PLACE_CD" property="buyerSectionPlaceCd" />
+        <id column="ACC_SECTION_PLACE_NAME" property="buyerSectionPlaceName" />
+        <id column="ACC_SECTION_CD" property="buyerSectionCd" />
+        <id column="ACC_SECTION_NAME" property="buyerSectionName" />
+        <id column="ACC_USER_ID" property="buyerUserId" />
+        <id column="ACC_USER_NAME" property="buyerUserName" />
+        <id column="ACC_COMPANY_CD" property="acceptCompanyCd" />
+        <id column="ACC_COMPANY_NAME" property="acceptCompanyName" />
+        <id column="ACC_SECTION_PLACE_CD" property="acceptSectionPlaceCd" />
+        <id column="ACC_SECTION_PLACE_NAME" property="acceptSectionPlaceName" />
+        <id column="ACC_SECTION_CD" property="acceptSectionCd" />
+        <id column="ACC_SECTION_NAME" property="acceptSectionName" />
+        <id column="ACC_USER_ID" property="acceptUserId" />
+        <id column="ACC_USER_NAME" property="acceptUserName" />
+        <id column="PS_BILL_DATE" property="acceptDate.dateOfymd" />
+        <id column="DETAIL_SUBJECT" property="itemName" />
+        <id column="SUBJECT_COMPANY_CD" property="subjectCompanyCd" />
+        <id column="SUBJECT_CD" property="subjectCd" />
+        <id column="SUBJECT_NAME" property="subjectName" />
+        <id column="BUDGET_NO" property="budgetNo" />
+        <id column="CURRENCY_CD" property="currencyCd" />
+        <id column="UNIT_CD" property="unitCd" />
+        <id column="UNIT_NAME" property="unitName" />
+        <id column="CONSUMPT_IND" property="acceptConsumptInd" />
+        <id column="TAX_IND" property="acceptTaxInd" />
+        <id column="TAX_RATE" property="taxRate.rate.amount" />
+        <id column="PAY_VOL" property="acceptVol.vol" />
+        <id column="UNIT_PRICE" property="acceptUnitPrice.amount" />
+        <id column="CLAIM_PRICE" property="acceptAmount.amount" />
+        <id column="CONSUMPT_AMOUNT" property="consumptAmount.amount" />
+        <id column="CLAIM_TOTAL_AMOUNT" property="totalAmount.amount" />
+        <id column="TITLE_NAME" property="titleName" />
+        <id column="PAY_CONDITION_CD" property="payConditionCd" />
+        <id column="PAY_CONDITION_NAME" property="payConditionName" />
+        <id column="PAY_SEQ" property="AcceptSeq" />
+        <id column="ELIGIBLE_INVOICE_ISSUE_IND" property="eligibleInvoiceIssueInd" />
+        <id column="BUSINESS_REGIST_NO" property="businessRegistNo" />
+    </resultMap>
+
+    <sql id="viewDownloadSql">
+      SELECT T_P_PAY.FISCAL_MONTH
+           , T_P_PAY.SUP_CD
+           , T_P_PAY.SUP_NAME
+           , T_P_PAY.SUP_ABBR_NAME
+           , T_P_PAY.SUP_COMPANY_CD
+           , T_P_PAY.PAY_NO || 
+             CASE WHEN LENGTH(T_P_PAY_DTL.DETAIL_NO) = 1
+                  THEN LPAD(TO_CHAR(T_P_PAY_DTL.DETAIL_NO), 2, '0')
+                  ELSE SUBSTR(TO_CHAR(T_P_PAY_DTL.DETAIL_NO), -2)
+             END AS "DELIV_KEY_NO"
+           , T_P_PAY.PAY_VERSION_NO
+           , T_P_PAY.CORRECT_CD
+           , T_P_PAY.PAY_NO
+           , '0' AS RB_IND
+           , T_P_PAY.REQ_COMPANY_CD
+           , T_P_PAY.REQ_COMPANY_NAME
+           , T_P_PAY.REQ_SECTION_PLACE_CD
+           , T_P_PAY.REQ_SECTION_PLACE_NAME
+           , T_P_PAY.REQ_SECTION_CD
+           , T_P_PAY.REQ_SECTION_NAME
+           , T_P_PAY.REQ_USER_ID
+           , T_P_PAY.REQ_USER_NAME
+           , T_P_PAY_DTL.LOAD_COMPANY_CD
+           , T_P_PAY_DTL.LOAD_COMPANY_NAME
+           , T_P_PAY_DTL.LOAD_SECTION_PLACE_CD
+           , T_P_PAY_DTL.LOAD_SECTION_PLACE_NAME
+           , T_P_PAY_DTL.LOAD_SECTION_CD
+           , T_P_PAY_DTL.LOAD_SECTION_NAME
+           , T_P_PAY.ACC_COMPANY_CD
+           , T_P_PAY.ACC_COMPANY_NAME
+           , T_P_PAY.ACC_SECTION_PLACE_CD
+           , T_P_PAY.ACC_SECTION_PLACE_NAME
+           , T_P_PAY.ACC_SECTION_CD
+           , T_P_PAY.ACC_SECTION_NAME
+           , T_P_PAY.ACC_USER_ID
+           , T_P_PAY.ACC_USER_NAME
+           , T_P_PAY.PS_BILL_DATE
+           , T_P_PAY_DTL.DETAIL_SUBJECT
+           , T_P_PAY_DTL.SUBJECT_COMPANY_CD
+           , T_P_PAY_DTL.SUBJECT_CD
+           , T_P_PAY_DTL.SUBJECT_NAME
+           , T_P_PAY_DTL.BUDGET_NO
+           , T_P_PAY.CURRENCY_CD
+           , T_P_PAY_DTL.UNIT_CD
+           , T_P_PAY_DTL.UNIT_NAME
+           , T_P_PAY_DTL.CONSUMPT_IND
+           , T_P_PAY_DTL.TAX_IND
+           , T_P_PAY_DTL.TAX_RATE
+           , T_P_PAY_DTL.PAY_VOL
+           , T_P_PAY_DTL.UNIT_PRICE
+           , T_P_PAY_DTL.CLAIM_PRICE
+           , T_P_PAY_DTL.CONSUMPT_AMOUNT
+           , T_P_PAY_DTL.CLAIM_TOTAL_AMOUNT
+           , T_P_PAY.TITLE_NAME
+           , T_P_PAY.PAY_CONDITION_CD
+           , T_P_PAY.PAY_CONDITION_NAME
+           , T_P_PAY.PAY_SEQ
+           , M_SUPPLIER.ELIGIBLE_INVOICE_ISSUE_IND
+           , M_SUPPLIER.BUSINESS_REGIST_NO
+           , <include refid="extItem"/>
+        FROM T_P_PAY
+       INNER JOIN T_P_PAY_DTL
+          ON T_P_PAY.PAY_SEQ = T_P_PAY_DTL.PAY_SEQ
+       LEFT JOIN M_SUPPLIER
+         ON  (M_SUPPLIER.COMPANY_CD = T_P_PAY.REQ_COMPANY_CD
+         OR  M_SUPPLIER.COMPANY_CD = '${@fw.common.constant.ApplicationConstant@COMPANY_CD_ALL}')
+        AND  M_SUPPLIER.SUP_CD = T_P_PAY.SUP_CD
+    </sql>
+
+    <select id="payDownload" parameterType="fw.domain.slip.payreq.payreq.payvoucherpeference.PayVoucherPeferenceSearchCondition" resultMap="PayVoucherPeferenceItemDownloadItem_Map">
+        <include refid="pageHeader"/>
+        <include refid="viewDownloadSql"/>
+        <where>
+            ${@ps.common.util.ItemSettingUtil@getItemSettingWhereSQL('19')}
+            AND T_P_PAY.REQ_COMPANY_CD = '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}'
+            <if test = "@org.apache.commons.lang.StringUtils@isNotBlank(
+              @fw.common.util.AppUtil@getSectionViewRegion())">
+               AND T_P_PAY.REQ_SECTION_CD IN (${@fw.common.util.AppUtil@getSectionViewRegion()})
+            </if>
+            <if test="@org.apache.commons.collections.CollectionUtils@isNotEmpty(payAdoStatusList)">
+                AND T_P_PAY.PAY_STATUS IN
+                <foreach collection="payAdoStatusList" item="payStatus" open="(" separator="," close=")">
+                    #{payStatus, jdbcType=VARCHAR}
+                </foreach>
+            </if>
+            <if test="@org.apache.commons.collections.CollectionUtils@isNotEmpty(accStatusList)">
+                AND T_P_PAY.ACC_STATUS IN
+                <foreach collection="accStatusList" item="accStatus" open="(" separator="," close=")">
+                    #{accStatus, jdbcType=VARCHAR}
+                </foreach>
+            </if>
+            AND T_P_PAY.NEW_FLG = '1'
+            AND T_P_PAY.DELETE_FLG = '0'
+            AND EXISTS (
+                SELECT T_P_PAY.PAY_SEQ 
+                FROM T_P_PAY_DTL
+                WHERE T_P_PAY_DTL.PAY_SEQ = T_P_PAY.PAY_SEQ 
+                    AND T_P_PAY_DTL.DELETE_FLG = '0'
+                    <if test="@org.apache.commons.lang.StringUtils@isNotBlank(subjectCd)">
+                    AND T_P_PAY_DTL.SUBJECT_CD = #{subjectCd}
+                    </if>
+            )
+        </where>
+        ORDER BY T_P_PAY.FISCAL_MONTH DESC, T_P_PAY.SUP_CD, T_P_PAY.PAY_NO, T_P_PAY_DTL.DETAIL_NO, T_P_PAY.PAY_VERSION_NO, T_P_PAY.CORRECT_CD
+      <include refid="pageRoot"/>
+    </select>
+    <select id="payDownloadCount" parameterType="fw.domain.slip.payreq.payreq.payvoucherpeference.PayVoucherPeferenceSearchCondition"
+         resultType="java.lang.Long">
+        SELECT 
+            COUNT(*)
+        FROM T_P_PAY 
+        <where>
+            ${@ps.common.util.ItemSettingUtil@getItemSettingWhereSQL('19')}
+            AND T_P_PAY.REQ_COMPANY_CD = '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}'
+            <if test = "@org.apache.commons.lang.StringUtils@isNotBlank(
+              @fw.common.util.AppUtil@getSectionViewRegion())">
+               AND T_P_PAY.REQ_SECTION_CD IN (${@fw.common.util.AppUtil@getSectionViewRegion()})
+            </if>
+            <if test="@org.apache.commons.collections.CollectionUtils@isNotEmpty(payAdoStatusList)">
+                AND T_P_PAY.PAY_STATUS IN
+                <foreach collection="payAdoStatusList" item="payStatus" open="(" separator="," close=")">
+                    #{payStatus, jdbcType=VARCHAR}
+                </foreach>
+            </if>
+            <if test="@org.apache.commons.collections.CollectionUtils@isNotEmpty(accStatusList)">
+                AND T_P_PAY.ACC_STATUS IN
+                <foreach collection="accStatusList" item="accStatus" open="(" separator="," close=")">
+                    #{accStatus, jdbcType=VARCHAR}
+                </foreach>
+            </if>
+            AND T_P_PAY.NEW_FLG = '1'
+            AND T_P_PAY.DELETE_FLG = '0'
+            AND EXISTS (
+                SELECT T_P_PAY.PAY_SEQ 
+                FROM T_P_PAY_DTL
+                WHERE T_P_PAY_DTL.PAY_SEQ = T_P_PAY.PAY_SEQ 
+                    AND T_P_PAY_DTL.DELETE_FLG = '0'
+                    <if test="@org.apache.commons.lang.StringUtils@isNotBlank(subjectCd)">
+                    AND T_P_PAY_DTL.SUBJECT_CD = #{subjectCd}
+                    </if>
+            )
+        </where>
+    </select>
+    <select id="accDownload" parameterType="fw.domain.slip.payreq.payreq.payvoucherpeference.PayVoucherPeferenceAccSearchCondition" resultMap="PayVoucherPeferenceItemDownloadItem_Map">
+        <include refid="pageHeader"/>
+        <include refid="viewDownloadSql"/>
+        <where>
+            ${@ps.common.util.ItemSettingUtil@getItemSettingWhereSQL('19')}
+            AND T_P_PAY.ACC_COMPANY_CD = '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}'
+            <if test = "@org.apache.commons.lang.StringUtils@isNotBlank(
+              @fw.common.util.AppUtil@getSectionViewRegion())">
+               AND T_P_PAY.ACC_SECTION_CD IN (${@fw.common.util.AppUtil@getSectionViewRegion()})
+            </if>
+            AND T_P_PAY.PAY_STATUS = '11'
+            <if test="@org.apache.commons.collections.CollectionUtils@isNotEmpty(accStatusList)">
+                AND T_P_PAY.ACC_STATUS IN
+                <foreach collection="accStatusList" item="accStatus" open="(" separator="," close=")">
+                    #{accStatus, jdbcType=VARCHAR}
+                </foreach>
+            </if>
+            AND T_P_PAY.NEW_FLG = '1'
+            AND T_P_PAY.DELETE_FLG = '0'
+            AND EXISTS (
+                SELECT T_P_PAY.PAY_SEQ 
+                FROM T_P_PAY_DTL
+                WHERE T_P_PAY_DTL.PAY_SEQ = T_P_PAY.PAY_SEQ 
+                    AND T_P_PAY_DTL.DELETE_FLG = '0'
+                    <if test="@org.apache.commons.lang.StringUtils@isNotBlank(subjectCd)">
+                    AND T_P_PAY_DTL.SUBJECT_CD = #{subjectCd}
+                    </if>
+            )
+        </where>
+        ORDER BY T_P_PAY.FISCAL_MONTH DESC, T_P_PAY.SUP_CD, T_P_PAY.PAY_NO, T_P_PAY_DTL.DETAIL_NO, T_P_PAY.PAY_VERSION_NO, T_P_PAY.CORRECT_CD
+        <include refid="pageRoot"/>
+    </select>
+    <select id="accDownloadCount" parameterType="fw.domain.slip.payreq.payreq.payvoucherpeference.PayVoucherPeferenceAccSearchCondition"
+         resultType="java.lang.Long">
+        SELECT 
+            COUNT(*)
+        FROM T_P_PAY 
+       <where>
+            ${@ps.common.util.ItemSettingUtil@getItemSettingWhereSQL('19')}
+            AND T_P_PAY.ACC_COMPANY_CD = '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}'
+            <if test = "@org.apache.commons.lang.StringUtils@isNotBlank(
+              @fw.common.util.AppUtil@getSectionViewRegion())">
+               AND T_P_PAY.ACC_SECTION_CD IN (${@fw.common.util.AppUtil@getSectionViewRegion()})
+            </if>
+            AND T_P_PAY.PAY_STATUS = '11'
+            <if test="@org.apache.commons.collections.CollectionUtils@isNotEmpty(accStatusList)">
+                AND T_P_PAY.ACC_STATUS IN
+                <foreach collection="accStatusList" item="accStatus" open="(" separator="," close=")">
+                    #{accStatus, jdbcType=VARCHAR}
+                </foreach>
+            </if>
+            AND T_P_PAY.NEW_FLG = '1'
+            AND T_P_PAY.DELETE_FLG = '0'
+            AND EXISTS (
+                SELECT T_P_PAY.PAY_SEQ 
+                FROM T_P_PAY_DTL
+                WHERE T_P_PAY_DTL.PAY_SEQ = T_P_PAY.PAY_SEQ 
+                    AND T_P_PAY_DTL.DELETE_FLG = '0'
+                    <if test="@org.apache.commons.lang.StringUtils@isNotBlank(subjectCd)">
+                    AND T_P_PAY_DTL.SUBJECT_CD = #{subjectCd}
+                    </if>
+            )
+        </where>
+    </select>
+    <sql id="pageHeader">
+       SELECT * FROM (
+    </sql>
+    <sql id="pageRoot">
+        ) WHERE  ROWNUM &lt;=${@fw.common.util.PropertiesUtil@getLong("DOWNLOAD_MAXCNT")}
+    </sql>
+</mapper>

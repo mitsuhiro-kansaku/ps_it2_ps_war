@@ -1,0 +1,174 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="ps.dataaccess.acp.print.AcpPrintMapper">
+    <!-- ====================== PSACP091 検収通知書発行  Start =================== -->
+    <!-- SRC-00115-00 include化共通-->
+	<sql id="listKeyIdentityWhereCondition">
+        ${@ps.common.util.ItemSettingUtil@getItemSettingWhereSQL()}
+        AND T_ACCEPTANCE.DELETE_FLG = '0'
+        AND T_ACCEPTANCE.ACCEPT_COMPANY_CD = '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}'
+        <!-- 強化-01676-000 2013/05/29 DEL SBO_jujt -START- -->
+        <!-- AND T_ACCEPTANCE.ACCEPT_SECTION_CD = '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}'-->
+        <!-- 強化-01676-000 2013/05/29 DEL SBO_jujt END -->
+        <!-- 強化-01676-000 2013/05/29 ADD SBO_jujt START -->
+        AND T_ACCEPTANCE.ACCEPT_SECTION_CD = '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}'
+        <!-- 強化-01676-000 2013/05/29 ADD SBO_jujt -END- -->
+        AND T_ACCEPTANCE.ACCEPT_STATUS = '04'
+        AND T_ORDER.DELETE_FLG = '0'
+        AND T_ORDER.NEW_APP_FLG = '1'
+        <if test="@org.apache.commons.lang.StringUtils@isBlank(quickLinkFlag)">
+            <choose>
+                <when test="@org.apache.commons.lang.StringUtils@isBlank(reqTypeInd)">
+                    AND T_ORDER.REQ_TYPE_IND IN ('2','3','9')
+                </when>
+                <otherwise>
+                    AND T_ORDER.REQ_TYPE_IND = #{reqTypeInd}
+                </otherwise>
+            </choose>
+            <choose>
+                <when test="@org.apache.commons.lang.StringUtils@isBlank(faxSendInd)">
+                    AND T_ACCEPTANCE.FAX_SEND_IND IN ('0','1','9')
+                </when>
+                <otherwise>
+                    AND T_ACCEPTANCE.FAX_SEND_IND = #{faxSendInd}
+                </otherwise>
+            </choose>
+        </if>
+        <choose>
+            <when test="printInd == 3">
+                AND T_ACCEPTANCE.PRINT_IND IN ('0','1')
+            </when>
+            <otherwise>
+                AND T_ACCEPTANCE.PRINT_IND = #{printInd}
+            </otherwise>
+        </choose>
+        <choose>
+            <when test="@org.apache.commons.lang.StringUtils@isBlank(ediInd)">
+                AND T_ORDER.EDI_IND IN ('0','1')
+            </when>
+            <otherwise>
+                AND T_ORDER.EDI_IND = #{ediInd}
+            </otherwise>
+        </choose>
+	</sql>
+    
+     <select id="listKeyIdentity" 
+        parameterType="fw.domain.slip.receive.acceptance.acceptancenotice.ScreenAcceptancePrintSearchCondition"
+        resultType="fw.domain.slip.receive.acceptance.Identify">
+        SELECT T_ACCEPTANCE.ACCEPT_SEQ as "acceptSeqNo.sequenceNo"
+		FROM T_ACCEPTANCE
+		INNER JOIN T_ORDER
+		     ON T_ORDER.ORDER_NO = T_ACCEPTANCE.ORDER_NO
+		<where> 
+            <include refid="listKeyIdentityWhereCondition"/>
+        </where>
+        ORDER BY ${searchCondition.columnOrder.columnOrder()}
+    </select>
+    
+     <select id="listKeyIdentityCount" 
+        parameterType="fw.domain.slip.receive.acceptance.acceptancenotice.ScreenAcceptancePrintSearchCondition"
+        resultType="java.lang.Integer">
+        SELECT COUNT(*)
+        FROM T_ACCEPTANCE
+        INNER JOIN T_ORDER
+             ON T_ORDER.ORDER_NO = T_ACCEPTANCE.ORDER_NO
+        <where> 
+            <include refid="listKeyIdentityWhereCondition"/>
+        </where>
+    </select>
+    
+    <resultMap type="fw.domain.slip.receive.acceptance.acceptancenotice.ScreenAcceptancePrintItem" 
+        id="Print_Map">
+        <id column="ACCEPT_SEQ" property="identify.acceptSeqNo.sequenceNo" />
+        <id column="ediInd" property="identify.ediInd" />
+        <id column="EXCLUSIVE_SLIP_NO" property="identify.exclusiveSlipId.slipNo"/>
+        <id column="EXCLUSIVE_LAST_UPD_DATE" property="identify.exclusiveSlipId.lastUpdDate"/>
+    </resultMap>
+    <select id="listPageItem" parameterType="fw.domain.slip.receive.acceptance.acceptancenotice.ScreenAcceptancePrintSearchCondition" 
+        resultMap="Print_Map">
+        SELECT 
+            T_ACCEPTANCE.DELIV_KEY_NO as "identify.delivKeyNo",
+            T_ACCEPTANCE.LAST_UPD_DATE as "identify.lastUpdDate",
+            T_ACCEPTANCE.ACCEPT_SEQ ,
+            T_ACCEPTANCE.CORRECT_CD as "identify.correctCd",
+            T_ACCEPTANCE.ACCEPT_VERSION as "acceptVersion" ,
+            T_ACCEPTANCE.PRINT_IND as "printInd" ,
+            T_ACCEPTANCE.FAX_SEND_IND as "faxInd" ,
+            T_ACCEPTANCE.ACCEPT_DATE as "acceptDate.dateOfymd",
+            T_ACCEPTANCE.CURRENCY_CD as "currencyCd" ,
+            T_ACCEPTANCE.DELIV_VOL as "delivVol.vol" ,
+            T_ACCEPTANCE.ACCEPT_VOL as "acceptVol.vol" ,
+            T_ACCEPTANCE.UNIT_PRICE as "unitPrice.amount" ,
+            T_ACCEPTANCE.ACCEPT_AMOUNT as "acceptAmount.amount" ,
+            T_ACCEPTANCE.ACCEPT_SECTION_CD as "acceptSectionCd" ,
+            T_ACCEPTANCE.ACCEPT_SECTION_NAME as "acceptSectionName" ,
+            T_ACCEPTANCE.ACCEPT_USER_ID as "acceptUserId" ,
+            T_ACCEPTANCE.ACCEPT_USER_NAME as "acceptUserName" ,
+            T_ORDER.ORDER_NO as "identify.orderNo" ,
+            T_ORDER.ORDER_SEQ as "identify.orderSeq",
+            T_ORDER.REQ_TYPE_IND as "reqTypeInd",
+            T_ORDER.SUP_CD as "supCd", 
+            T_ORDER.SUP_ABBR_NAME as "supName" ,
+            T_ORDER.SUP_COMPANY_CD as "supCompanyCd",
+            T_ORDER.SUBCON_IND as "subconInd" ,
+            T_ORDER.EDI_IND as "ediInd",
+            T_ORDER.ITEM_CD as "itemCd",
+            T_ORDER.ITEM_NAME as "itemName",
+            T_ORDER.UNIT_NAME as "unitName",
+            T_ORDER.BUYER_SECTION_CD as "buyerSectionCd",
+            T_ORDER.BUYER_SECTION_NAME as "buyerSectionName",
+            T_ORDER.BUYER_USER_ID as "buyerUserId" ,
+            T_ORDER.BUYER_USER_NAME as "buyerUserName" ,
+            T_ORDER.ORDER_FIRST_DATE as "orderDate.dateOfymd",
+            T_ORDER.REQ_SECTION_CD as "reqSectionCd",
+            T_ORDER.REQ_SECTION_NAME as "reqSectionName" ,
+            T_ORDER.REQ_USER_Id as "reqUserId",
+            T_ORDER.REQ_USER_NAME as "reqUserName",
+            T_SLIP_MNG.SLIP_NO AS EXCLUSIVE_SLIP_NO,
+            T_SLIP_MNG.LAST_UPD_DATE AS EXCLUSIVE_LAST_UPD_DATE,
+            ${@ps.common.util.ItemSettingUtil@getItemSettingSelectSQLDomainAliasNonBinary("T_ORDER", "orderExtItem")},
+            ${@ps.common.util.ItemSettingUtil@getItemSettingSelectSQLDomainAliasNonBinary("T_ACCEPTANCE", "acceptExtItem")}
+        FROM  T_ACCEPTANCE
+        INNER JOIN T_ORDER
+             ON T_ORDER.ORDER_NO = T_ACCEPTANCE.ORDER_NO
+        LEFT JOIN T_SLIP_MNG
+            ON T_ORDER.ORDER_NO = T_SLIP_MNG.SLIP_NO
+            AND T_SLIP_MNG.DELETE_FLG = '0'
+        <where>
+            T_ACCEPTANCE.ACCEPT_SEQ IN 
+            <foreach collection="searchCondition.page.keyDomainEntityList" item="keyList"  open="(" separator="," close=")">  
+                #{keyList.acceptSeqNo.sequenceNo}
+            </foreach>
+            <include refid="listKeyIdentityWhereCondition"/>
+        </where> 
+        ORDER BY ${searchCondition.columnOrder.columnOrder()}
+    </select>
+    
+    <update id="update" parameterType="fw.domain.slip.receive.acceptance.Identify">
+        UPDATE T_ACCEPTANCE
+        SET DELETE_FLG = '2' ,
+            LAST_UPD_DATE = '${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}',
+            LAST_UPD_COMPANY_CD = '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}',
+            LAST_UPD_SECTION_CD = '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}',
+            LAST_UPD_USER_ID = '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}'
+        WHERE ACCEPT_SEQ = #{acceptSeqNo.sequenceNo}
+    </update>
+    
+    <update id="print" parameterType="fw.domain.slip.receive.acceptance.acceptancenotice.ScreenAcceptancePrint">
+      UPDATE T_ACCEPTANCE 
+         SET
+             PRINT_IND='1',
+             LAST_UPD_DATE='${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}',
+             LAST_UPD_COMPANY_CD = '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}',
+             LAST_UPD_SECTION_CD = '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}',
+             LAST_UPD_USER_ID='${@fw.security.SecurityUtil@getUserIdByEscapeSql()}'
+        WHERE (ACCEPT_SEQ) IN 
+        <foreach item="seq" collection="seqList"
+          open="(" separator="," close=")">
+            #{seq}
+        </foreach>
+    </update>
+    <!-- ====================== PSACP091 検収通知書発行  End =================== -->
+</mapper>

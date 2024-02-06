@@ -1,0 +1,283 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<title>#customSpringMessage("M_SUBJECT")</title><!--科目マスタ-->
+<meta http-equiv="Content-type" content="text/html; charset=UTF-8">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Content-script-type" content="text/javascript">
+<link rel="stylesheet" href="../../include/searchbox.css" type="text/css">
+<link rel="stylesheet" href="../../include/Color.css" type="text/css">
+<link rel="stylesheet" href="../../include/Layout.css" type="text/css">
+<link id="CSS_FONT" rel="stylesheet" href="../../include/FontS.css" type="text/css">
+<link rel="stylesheet" href="../../include/ime.css" type="text/css">
+<script language="javascript" type="text/javascript" src="../../include/common.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/check.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/date.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/searchbox.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/jquery-1.7.2.min.js"></script>
+<script language="javascript" type="text/javascript">
+<!--
+#parse("./common/common_js.vm")
+
+function onLoad() {
+    setFocus();
+    var alertMessage = "$!alertMessage";
+    if (alertMessage != ""){
+        alert(alertMessage);
+    }
+    var errorMsg = "$!errorMessage";
+    if (errorMsg != ""){
+        document.getElementById("TR_ERROR").style.display = "";
+        return;
+    }
+        var isSuccess = '#jsEscape($!isSuccess)';
+        if(isSuccess == 'true'){
+            #set( $mSubject = "#customSpringMessage('M_SUBJECT')" )
+            #if($!type == "Update")
+                alert('#customMessageArgs("I002",[$mSubject])');
+            #else
+                alert('#customMessageArgs("I005",[$mSubject])');
+            #end
+            buttonDisable();
+            top.iframeChange("${flowExecutionUrl}&_eventId=back");
+        }
+}
+
+function exec() {
+    #set( $mmSubject = "#customSpringMessage('M_SUBJECT')" )   
+    #if($!type == "Update")
+        #set( $register = "#customSpringMessage('UPDATE')" )
+        if( !confirm('#customMessageArgs("W001",[$mmSubject,$register])')) {
+            return;
+        }
+    #else
+        #set( $register = "#customSpringMessage('ACTION_REGISTER')" )
+        if( !confirm('#customMessageArgs("W001",[$mmSubject,$register])')) {
+            return;
+        }
+    #end
+    
+    buttonDisable();
+    getObj("Body").submit();
+}
+function getCalendar(num,objName){
+	var obj = document.getElementsByName(objName)[0];
+	initSearchBox(num,obj);
+}
+//-->
+</script>
+</head>
+<body class="Body" topmargin="10" leftmargin="10" marginwidth="10" marginheight="10" align="left" onload="onLoad();">
+<iframe id="CALENDARBOX" class="CALENDARBOX" framespacing="0"scrolling="no" frameborder="0" src="../../sbxCalendar/body.vm"></iframe>
+<form id="Body" name="Body" action="${flowExecutionUrl}&_eventId=submit" method="post">
+    #customFormHiddenInput("pageid" "subject$!type")
+<table width="70%" style="height:20px; margin-right:auto; margin-left:auto;"><tr id ="TR_ERROR" style="display:none;"><td class="error">
+	$!errorMessage
+</td></tr>
+       <tr>
+            <td class="FontSmallBold DarkBlue">
+                #if($!{type} == "Insert")
+                    #customSpringMessage("PSMST202_ADD_HEADER_COMMENT") 
+                #else 
+                    #customSpringMessage("PSMST202_EDIT_HEADER_COMMENT") 
+                #end
+            </td>
+       </tr>    
+</table>
+    <table class="DTL_BOX" width="70%">
+        <tr>
+            <td class="DTL_TITLE_BOX" >
+                <table class="NoBorder" width="100%">
+                    <tr>
+                        #if("Update" == "$!type")
+                        <td class="ScreenName" style="text-align:left;">#customSpringMessage('SCREEN_M_SUBJECT_EDIT')</td><!-科目マスタ編集-->
+                        #else
+                        <td class="ScreenName" style="text-align:left;">#customSpringMessage('SCREEN_M_SUBJECT_CREATE')</td><!--科目マスタ登録-->
+                        #end
+                        <td class="FontSmall" align="right">
+                            <input type="button" class="MiddleButton" value="#customSpringMessage('ACTION_REGISTER')" onclick="javascript:exec();">
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+        <tr>
+            <td class="DTL_INTER_BOX">
+                <table class="NoBorder" width="100%">
+                    #if("$!isUseAll"=="false")
+                    <tr>
+                        <td class="DTL_OUTHEAD" width="30%">
+                            <div class="DTL_INHEAD">
+                                <span class="FontDetailHeader">#customSpringMessage('COMPANY_CD')</span>
+                               <!--会社コード-->
+                            </div>
+                        </td>
+                        <td class="DTL_OUTHEAD">
+                            <div class="DTL_INBODY">
+                                <table class="NoBorder" width="98%">
+                                    <tr>
+                                        <td class="FontDetailData">
+                                            #out($!domain.subjectIdentify.companyCd)
+                                        </td>
+                                        <td align="right">
+                                            #customFormSingCheckboxByType("TERMINATION" "domain.validity.term.termFlg" "" $termFlagList "class='FontSmall'")<!--廃止-->
+                                        </td>
+                                    </tr>
+                                </table>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="DTL_OUTHEAD" width="30%">
+                            <div class="DTL_INHEAD">
+                                <span class="FontDetailHeader">#customSpringMessage('COMPANY_NAME')</span><!--会社名-->
+                                
+                            </div>
+                        </td>
+                        <td class="DTL_OUTHEAD">
+                            <div class="DTL_INBODY">
+                                <span class="FontDetailData">#out($!domain.companySummary.companyName)</span>            
+                            </div>
+                        </td>
+                    </tr>
+                    #end
+                    <tr>
+                        <td class="DTL_OUTHEAD" width="30%">
+                            <div class="DTL_INHEAD">
+                                <span class="FontDetailHeader">#customSpringMessage('COMPANY_USE_LANGUAGE')</span><!--会社使用言語-->
+                            </div>
+                        </td>
+                        <td class="DTL_OUTHEAD">
+							<div class="DTL_INBODY">
+                                 <table class="NoBorder" width="98%">
+                                    <tr>
+                                        <td class="FontDetailData">
+                                            $!domain.companySummary.languageInd_PageValue
+                                        </td>
+                                        #if("$!isUseAll"=="true")
+                                            <td align="right">
+                                                #customFormSingCheckboxByType("TERMINATION" "domain.validity.term.termFlg" "" $termFlagList "class='FontSmall'")<!--廃止-->
+                                            </td>
+                                        #end   
+                                    </tr>
+                                </table>
+                            </div>
+                        </td> 
+                    </tr>
+					<tr>
+                        <td class="DTL_OUTHEAD" width="30%">
+                            <div class="DTL_INHEAD">
+                                <span class="FontDetailHeader">#customSpringMessage('SUBJECT_CD')</span>
+                                #customFormRedMessageByType("class='FontWarn'" "false" "※")<!--科目コード-->
+                            </div>
+                        </td>
+                        <td class="DTL_OUTHEAD">
+                            <div class="DTL_INBODY">
+                                  #customFormInputByType("domain.subjectIdentify.subjectCd" "class='Middle noIME' maxLength='12' size='20'" "false" "class='FontMiniAnkBold'" "class='Brown'")
+                            </div>
+                        </td>
+                    </tr>
+					<tr>
+                        <td class="DTL_OUTHEAD" width="30%">
+                            <div class="DTL_INHEAD">
+                                <span class="FontDetailHeader">#customSpringMessage('SUBJECT_NAME')</span>#customFormRedMessageByType("class='FontWarn'" "true" "※")<!--科目名-->
+                                <img src="../../image/mrkBook.gif" align="center">
+                            </div>
+                        </td>
+                        <td class="DTL_OUTHEAD">
+                            <div class="DTL_INBODY">
+                               #customFormInputByType("domain.subjectName" "class='Middle onIME' maxLength='30' size='70'" "true"  "class='FontMiniAnkBold'" "class='Brown'")
+                            </div>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="DTL_OUTHEAD" width="30%">
+                            <div class="DTL_INHEAD">
+                                <span class="FontDetailHeader">#customSpringMessage('VALID_PERIOD')</span><!--有効期間-->
+                            </div>
+                        </td>
+                        <td class="DTL_OUTHEAD">
+                            <div class="DTL_INBODY">
+								#springFormInput("domain.validity.validityPeriod.period.startDate.dateOfymdFormat" "maxLength=8 size=12 class='MiddleAnk noIME' onblur='dateOnBlur(this);' onfocus='dateOnFocus(this);'  ")<!--ここをダブルクリックすると、カレンダーを開きます。-->
+								<img class="Icon" src="../../image/btnCalendar.gif" onclick="getCalendar(1,'validity.validityPeriod.period.startDate.dateOfymdFormat');">
+								 ～
+								#springFormInput("domain.validity.validityPeriod.period.endDate.dateOfymdFormat" "maxLength=8 size=12 class='MiddleAnk noIME' onblur='dateOnBlur(this);' onfocus='dateOnFocus(this);'  ")<!--ここをダブルクリックすると、カレンダーを開きます。-->
+								<img class="Icon" src="../../image/btnCalendar.gif" onclick="getCalendar(1,'validity.validityPeriod.period.endDate.dateOfymdFormat');">
+                            </div>
+                        </td>
+                    </tr>
+                </table>
+                <hr>
+
+                <table width="100%">
+                    <tr>
+                        <td class="DTL_OUTHEAD">
+                            <div class="DTL_INHEAD">
+                                <input class="SmallButton" type="button" value="#customSpringMessage('ACTION_LANGUAGE_ADD')" onclick="addLanguage();">
+                            </div>
+                        </td>
+                    </tr>
+                </table>
+
+                <div id="languageArea">
+                    #foreach($!subjectLanguage in $!domain.subjectLanguageList.subjectLanguageList)
+                    <div id="LAUNGAGE_FIELD_$velocityCount">
+                    <table id="lang_1" class="NoBorder" width="100%">
+                        <tr>
+                            <td class="DTL_OUTHEAD" width="10%">
+                                <div class="DTL_INHEAD">
+                                    <span class="FontBoxHeader">#customSpringMessage('LANGUAGE')</span>#customFormRedMessageByType("class='FontWarn'" "true" "※")<!--言語-->
+                                </div>
+                            </td>
+                            <td class="DTL_OUTHEAD">
+                                <div class="DTL_INBODY">
+                                #customFormSingSelectByType("domain.subjectLanguageList.subjectLanguageList[$velocityCount].languageInd.languageInd" $languageList "class='Small'" "true" "class='FontMiniAnkBold'" "class='Brown'")
+                                </div>
+                            </td>
+                            <td class="DTL_OUTBODY">
+                                <div class="DTL_INBODY" align="right" rightmargin="10">
+                                    <input class="SmallButton" type="button" value="#customSpringMessage('ACTION_LANGUAGE_DELETE')" onclick="removeLanguage($velocityCount);">
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td class="DTL_OUTHEAD" width="10%">
+                                <div class="DTL_INHEAD">
+                                    <span class="FontBoxHeader">#customSpringMessage('SUBJECT_NAME')</span>#customFormRedMessageByType("class='FontWarn'" "true" "※")<!--科目名-->
+                                </div>
+                            </td>
+                            <td class="DTL_OUTHEAD" colspan="2">
+                                <div class="DTL_INBODY">
+                                    #customFormInputByType("domain.subjectLanguageList.subjectLanguageList[$velocityCount].subjectName" "class='Middle onIME' maxLength='30' size='77'" "true" "class='FontMiniAnkBold'" "class='Brown'")
+                                </div>
+                            </td>
+                        </tr>
+                    </table>
+                    </div>
+                    #end
+                </div>
+                <hr>
+
+                <table class="NoBorder" style="width:100%;">
+                    <tr>
+                        <td class="DTL_MSGBOX" nowrap>
+                            #if($!{type} == "Insert")
+                                #customSpringMessage("PSMST202_ADD_FOOTER_COMMENT") 
+                            #else 
+                                #customSpringMessage("PSMST202_EDIT_FOOTER_COMMENT") ## の項目は、使用する言語により表示が切り替わります。※印の項目は、必須入力です。廃止された情報は今後利用できなくなります。
+                            #end
+                        </td>
+                        <td class="DTL_MSGBOX" style="text-align:right;">
+                            <br/>
+                            <input type="button" class="MiddleButton" value="#customSpringMessage('ACTION_REGISTER')" onclick="javascript:exec();">
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+</form>
+
+</body>
+
+</html>

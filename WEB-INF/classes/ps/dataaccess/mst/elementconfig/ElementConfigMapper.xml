@@ -1,0 +1,665 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="ps.dataaccess.mst.elementconfig.ElementConfigMapper">
+
+    <!-- ＩＴ２-01494-000 20130801 DEL SBO_SOKOU START -->
+    <!--
+   <select id="listKeyIdentity" parameterType="fw.domain.mst.resource.customize.elementconfig.mstmanagement.ItemDefinitionSearchCondition"
+        resultType="fw.domain.mst.resource.customize.elementconfig.mstmanagement.ItemDefinitionIdentify">
+        SELECT 
+            S_ELEMENT_CONFIG.ELEMENT_SEQ as "elementSeq"
+        FROM S_ELEMENT_CONFIG
+    --> 
+         <!-- 強化-01774-000 2013/06/10 DEL SBO_SOKOU START -->
+            <!-- 強化-01611-000 2013/05/23 DEL SBO_CHENCHENG START -->
+            <!--LEFT JOIN S_ELEMENT_NAME-->
+            <!-- 強化-01611-000 2013/05/23 DEL SBO_CHENCHENG -END- -->
+            <!-- 強化-01611-000 2013/05/23 ADD SBO_CHENCHENG START -->
+            <!-- INNER JOIN S_ELEMENT_NAME-->
+            <!-- 強化-01611-000 2013/05/23 ADD SBO_CHENCHENG -END- -->
+            <!-- ON -->
+                <!-- S_ELEMENT_CONFIG.ELEMENT_NAME_CD = S_ELEMENT_NAME.ELEMENT_NAME_CD-->
+                <!-- 強化-01740-000 2013/06/07 ADD SBO_wangzf -START- -->
+                <!-- AND S_ELEMENT_NAME.LANGUAGE_IND = '${@fw.security.SecurityUtil@getCompanyUseLanguageIndByEscapeSql()}'-->
+                <!-- 強化-01740-000 2013/06/07 ADD SBO_wangzf -END- -->
+                <!-- 強化-01740-000 2013/06/07 DEL SBO_wangzf -START- -->
+                <!--AND S_ELEMENT_NAME.LANGUAGE_IND = '${@fw.security.SecurityUtil@getUseLanguageIndByEscapeSql()}'-->
+                <!-- 強化-01740-000 2013/06/07 DEL SBO_wangzf -START- -->
+         <!-- 強化-01774-000 2013/06/10 DEL SBO_SOKOU -END- -->
+         <!-- 強化-01774-000 2013/06/10 ADD SBO_SOKOU START -->
+         <!--
+             INNER JOIN S_ELEMENT_NAME
+                     ON S_ELEMENT_CONFIG.ELEMENT_NAME_CD = S_ELEMENT_NAME.ELEMENT_NAME_CD
+                    AND S_ELEMENT_NAME.LANGUAGE_IND = '${@fw.security.SecurityUtil@getUseLanguageIndByEscapeSql()}'
+         -->
+         <!-- 強化-01774-000 2013/06/10 ADD SBO_SOKOU -END- -->
+    <!--
+         <where>
+              <if test="@org.apache.commons.lang.StringUtils@isNotBlank(elementNameCd)">
+                  AND S_ELEMENT_NAME.ELEMENT_NAME_CD ${@fw.common.util.SearchModeUtil@getSearchSQL("fw.domain.mst.resource.customize.elementconfig.mstmanagement.ItemDefinitionSearchCondition","elementNameCd")}
+              </if>
+              <if test="@org.apache.commons.lang.StringUtils@isNotBlank(elementName)">
+                  AND S_ELEMENT_NAME.ELEMENT_NAME ${@fw.common.util.SearchModeUtil@getSearchSQL("fw.domain.mst.resource.customize.elementconfig.mstmanagement.ItemDefinitionSearchCondition","elementName")}
+              </if>
+              <if test="@org.apache.commons.lang.StringUtils@isNotBlank(itemType)">
+                  AND S_ELEMENT_CONFIG.ITEM_TYPE = #{itemType, jdbcType=VARCHAR}
+              </if>
+        </where> 
+        ORDER BY ${searchCondition.columnOrder.columnOrder()}
+    </select>
+    -->
+    <!-- ＩＴ２-01494-000 20130801 DEL SBO_SOKOU END -->
+    <!-- ＩＴ２-01494-000 20130801 ADD SBO_SOKOU START -->
+    <select id="listKeyIdentity"
+            parameterType="fw.domain.mst.resource.customize.elementconfig.mstmanagement.ItemDefinitionSearchCondition"
+            resultType="fw.domain.mst.resource.customize.elementconfig.mstmanagement.ItemDefinitionIdentify">
+        SELECT S_ELEMENT_CONFIG.ELEMENT_SEQ as "elementSeq",
+               CASE WHEN company_lang.ELEMENT_NAME IS NOT NULL
+                    THEN company_lang.ELEMENT_NAME
+                    ELSE system_lang.ELEMENT_NAME
+                     END
+                      AS elementName
+          FROM S_ELEMENT_CONFIG
+     LEFT JOIN S_ELEMENT_NAME company_lang
+            ON S_ELEMENT_CONFIG.ELEMENT_NAME_CD = company_lang.ELEMENT_NAME_CD
+           AND company_lang.LANGUAGE_IND = '${@fw.security.SecurityUtil@getCompanyUseLanguageIndByEscapeSql()}'
+     LEFT JOIN S_ELEMENT_NAME system_lang
+            ON S_ELEMENT_CONFIG.ELEMENT_NAME_CD = system_lang.ELEMENT_NAME_CD
+           AND system_lang.LANGUAGE_IND = '${@fw.common.util.AppUtil@getSysLanguageByEscapeSql()}'
+        <where>
+            <if test="@org.apache.commons.lang.StringUtils@isNotBlank(elementNameCd)">
+               AND S_ELEMENT_CONFIG.ELEMENT_NAME_CD ${@fw.common.util.SearchModeUtil@getSearchSQL("fw.domain.mst.resource.customize.elementconfig.mstmanagement.ItemDefinitionSearchCondition","elementNameCd")}
+            </if>
+            <if test="@org.apache.commons.lang.StringUtils@isNotBlank(elementName)">
+               AND (company_lang.ELEMENT_NAME ${@fw.common.util.SearchModeUtil@getSearchSQL("fw.domain.mst.resource.customize.elementconfig.mstmanagement.ItemDefinitionSearchCondition","elementName")}
+                OR system_lang.ELEMENT_NAME ${@fw.common.util.SearchModeUtil@getSearchSQL("fw.domain.mst.resource.customize.elementconfig.mstmanagement.ItemDefinitionSearchCondition","elementName")})
+            </if>
+            <if test="@org.apache.commons.lang.StringUtils@isNotBlank(itemType)">
+               AND S_ELEMENT_CONFIG.ITEM_TYPE = #{itemType, jdbcType=VARCHAR}
+            </if>
+        </where>
+        ORDER BY ${searchCondition.columnOrder.columnOrder()}
+    </select>
+    <!-- ＩＴ２-01494-000 20130801 ADD SBO_SOKOU END -->
+
+    <!-- ＩＴ２-01494-000 20130801 DEL SBO_SOKOU START -->
+    <!--
+    <select id="listSortKeyIdentity"
+        resultType="fw.domain.mst.resource.customize.elementconfig.mstmanagement.ItemDefinitionIdentify">
+        SELECT 
+            S_ELEMENT_CONFIG.ELEMENT_SEQ as "elementSeq"
+        FROM S_ELEMENT_CONFIG
+    --> 
+    <!-- 強化-01774-000 2013/06/10 DEL SBO_SOKOU START -->
+        <!-- 強化-01611-000 2013/05/23 DEL SBO_CHENCHENG START -->
+        <!--LEFT JOIN S_ELEMENT_NAME-->
+        <!-- 強化-01611-000 2013/05/23 DEL SBO_CHENCHENG -END- -->
+        <!-- 強化-01611-000 2013/05/23 ADD SBO_CHENCHENG START -->
+        <!-- INNER JOIN S_ELEMENT_NAME-->
+        <!-- 強化-01611-000 2013/05/23 ADD SBO_CHENCHENG -END- -->
+            <!-- ON -->
+                <!-- S_ELEMENT_CONFIG.ELEMENT_NAME_CD = S_ELEMENT_NAME.ELEMENT_NAME_CD-->
+                <!-- 強化-01740-000 2013/06/07 ADD SBO_wangzf -START- -->
+                <!-- AND S_ELEMENT_NAME.LANGUAGE_IND = '${@fw.security.SecurityUtil@getCompanyUseLanguageIndByEscapeSql()}'-->
+                <!-- 強化-01740-000 2013/06/07 ADD SBO_wangzf -END- -->
+                <!-- 強化-01740-000 2013/06/07 DEL SBO_wangzf -START- -->
+                <!--AND S_ELEMENT_NAME.LANGUAGE_IND = '${@fw.security.SecurityUtil@getUseLanguageIndByEscapeSql()}'-->
+                <!-- 強化-01740-000 2013/06/07 DEL SBO_wangzf -START- -->
+    <!-- 強化-01774-000 2013/06/10 DEL SBO_SOKOU -END- -->
+    <!-- 強化-01774-000 2013/06/10 ADD SBO_SOKOU START -->
+    <!--
+        INNER JOIN S_ELEMENT_NAME
+                ON S_ELEMENT_CONFIG.ELEMENT_NAME_CD = S_ELEMENT_NAME.ELEMENT_NAME_CD
+               AND S_ELEMENT_NAME.LANGUAGE_IND = '${@fw.security.SecurityUtil@getUseLanguageIndByEscapeSql()}'
+    -->
+    <!-- 強化-01774-000 2013/06/10 ADD SBO_SOKOU -END- -->
+    <!--
+        <where>
+              <if test="@org.apache.commons.lang.StringUtils@isNotBlank(elementNameCd)">
+                  AND S_ELEMENT_NAME.ELEMENT_NAME_CD ${@fw.common.util.SearchModeUtil@getSearchSQL("fw.domain.mst.resource.customize.elementconfig.mstmanagement.ItemDefinitionSearchCondition","elementNameCd")}
+              </if>
+              <if test="@org.apache.commons.lang.StringUtils@isNotBlank(elementName)">
+                  AND S_ELEMENT_NAME.ELEMENT_NAME ${@fw.common.util.SearchModeUtil@getSearchSQL("fw.domain.mst.resource.customize.elementconfig.mstmanagement.ItemDefinitionSearchCondition","elementName")}
+              </if>
+              <if test="@org.apache.commons.lang.StringUtils@isNotBlank(itemType)">
+                  AND S_ELEMENT_CONFIG.ITEM_TYPE = #{itemType, jdbcType=VARCHAR}
+              </if>
+        </where> 
+        ORDER BY ${searchCondition.columnOrder.columnOrder()}
+    </select>
+    -->
+    <!-- ＩＴ２-01494-000 20130801 DEL SBO_SOKOU END -->
+    <!-- ＩＴ２-01494-000 20130801 ADD SBO_SOKOU START -->
+    <select id="listSortKeyIdentity"
+            resultType="fw.domain.mst.resource.customize.elementconfig.mstmanagement.ItemDefinitionIdentify">
+        SELECT S_ELEMENT_CONFIG.ELEMENT_SEQ as "elementSeq",
+               CASE WHEN company_lang.ELEMENT_NAME IS NOT NULL
+                    THEN company_lang.ELEMENT_NAME
+                    ELSE system_lang.ELEMENT_NAME
+                     END
+                      AS elementName
+          FROM S_ELEMENT_CONFIG
+     LEFT JOIN S_ELEMENT_NAME company_lang
+            ON S_ELEMENT_CONFIG.ELEMENT_NAME_CD = company_lang.ELEMENT_NAME_CD
+           AND company_lang.LANGUAGE_IND = '${@fw.security.SecurityUtil@getCompanyUseLanguageIndByEscapeSql()}'
+     LEFT JOIN S_ELEMENT_NAME system_lang
+            ON S_ELEMENT_CONFIG.ELEMENT_NAME_CD = system_lang.ELEMENT_NAME_CD
+           AND system_lang.LANGUAGE_IND = '${@fw.common.util.AppUtil@getSysLanguageByEscapeSql()}'
+        <where>
+            <if test="@org.apache.commons.lang.StringUtils@isNotBlank(elementNameCd)">
+                AND S_ELEMENT_CONFIG.ELEMENT_NAME_CD ${@fw.common.util.SearchModeUtil@getSearchSQL("fw.domain.mst.resource.customize.elementconfig.mstmanagement.ItemDefinitionSearchCondition","elementNameCd")}
+            </if>
+            <if test="@org.apache.commons.lang.StringUtils@isNotBlank(elementName)">
+                AND (company_lang.ELEMENT_NAME ${@fw.common.util.SearchModeUtil@getSearchSQL("fw.domain.mst.resource.customize.elementconfig.mstmanagement.ItemDefinitionSearchCondition","elementName")}
+                 OR system_lang.ELEMENT_NAME ${@fw.common.util.SearchModeUtil@getSearchSQL("fw.domain.mst.resource.customize.elementconfig.mstmanagement.ItemDefinitionSearchCondition","elementName")})
+            </if>
+            <if test="@org.apache.commons.lang.StringUtils@isNotBlank(itemType)">
+                AND S_ELEMENT_CONFIG.ITEM_TYPE = #{itemType, jdbcType=VARCHAR}
+            </if>
+        </where>
+        ORDER BY ${searchCondition.columnOrder.columnOrder()}
+    </select>
+    <!-- ＩＴ２-01494-000 20130801 ADD SBO_SOKOU END -->
+    
+    <resultMap type="fw.domain.mst.resource.customize.elementconfig.mstmanagement.ItemDefinitionItem" id="ItemDefinitionItem_Map">
+        <id column="ELEMENT_SEQ" property="itemDefinitionIdentify.elementSeq"/>
+        <id column="LAST_UPD_DATE" property="itemDefinitionIdentify.lastUpdDate"/>
+    </resultMap>    
+    
+    <!-- ＩＴ２-01494-000 20130801 DEL SBO_SOKOU START -->
+    <!--
+    <select id="listPageItem" parameterType="fw.domain.mst.resource.customize.elementconfig.mstmanagement.ItemDefinitionSearchCondition"
+        resultMap="ItemDefinitionItem_Map">
+            SELECT
+                S_ELEMENT_CONFIG.ELEMENT_SEQ ,
+                S_ELEMENT_NAME.ELEMENT_NAME_CD as "elementNameCd",
+                S_ELEMENT_NAME.ELEMENT_NAME as "elementName",
+                S_ELEMENT_CONFIG.ITEM_TYPE as "itemType",
+                S_ELEMENT_CONFIG.INPUT_TYPE as "textType",
+                S_ELEMENT_CONFIG.IME_TYPE as "ime",
+                S_ELEMENT_CONFIG.MAX_LENGTH as "maxLength",
+                S_ELEMENT_CONFIG.DECIMAL_PLACE as "decimalPlace",
+                S_ELEMENT_CONFIG.MASTER_TYPE as "masterType",
+                S_ELEMENT_CONFIG.LAST_UPD_DATE,
+                S_ELEMENT_CONFIG.EXTEND_FLG as "extendItem"
+            FROM S_ELEMENT_CONFIG 
+            INNER JOIN S_ELEMENT_NAME
+            ON
+     --> 
+          <!-- 強化-01774-000 2013/06/10 DEL SBO_SOKOU START -->
+               <!-- S_ELEMENT_CONFIG.ELEMENT_NAME_CD = S_ELEMENT_NAME.ELEMENT_NAME_CD-->
+               <!-- 強化-01740-000 2013/06/07 ADD SBO_wangzf -START- -->
+               <!-- AND S_ELEMENT_NAME.LANGUAGE_IND = '${@fw.security.SecurityUtil@getCompanyUseLanguageIndByEscapeSql()}'-->
+               <!-- 強化-01740-000 2013/06/07 ADD SBO_wangzf -END- -->
+               <!-- 強化-01740-000 2013/06/07 DEL SBO_wangzf -START- -->
+               <!-- AND S_ELEMENT_NAME.LANGUAGE_IND = '${@fw.security.SecurityUtil@getUseLanguageIndByEscapeSql()}'-->
+               <!-- 強化-01740-000 2013/06/07 DEL SBO_wangzf -START- -->
+          <!-- 強化-01774-000 2013/06/10 DEL SBO_SOKOU -END- -->
+          <!-- 強化-01774-000 2013/06/10 ADD SBO_SOKOU START -->
+          <!--
+              S_ELEMENT_CONFIG.ELEMENT_NAME_CD = S_ELEMENT_NAME.ELEMENT_NAME_CD
+          AND S_ELEMENT_NAME.LANGUAGE_IND = '${@fw.security.SecurityUtil@getUseLanguageIndByEscapeSql()}'
+          -->
+          <!-- 強化-01774-000 2013/06/10 ADD SBO_SOKOU -END- -->
+    <!--
+            WHERE 
+                S_ELEMENT_CONFIG.ELEMENT_SEQ in 
+              <foreach collection="searchCondition.page.keyDomainEntityList" item="keyList"  open="(" separator="," close=")">  
+                #{keyList.elementSeq}  
+              </foreach>  
+              <if test="@org.apache.commons.lang.StringUtils@isNotBlank(elementNameCd)">
+                  AND S_ELEMENT_NAME.ELEMENT_NAME_CD ${@fw.common.util.SearchModeUtil@getSearchSQL("fw.domain.mst.resource.customize.elementconfig.mstmanagement.ItemDefinitionSearchCondition","elementNameCd")}
+              </if> 
+              <if test="@org.apache.commons.lang.StringUtils@isNotBlank(elementName)">
+                  AND S_ELEMENT_NAME.ELEMENT_NAME ${@fw.common.util.SearchModeUtil@getSearchSQL("fw.domain.mst.resource.customize.elementconfig.mstmanagement.ItemDefinitionSearchCondition","elementName")}
+              </if>
+              <if test="@org.apache.commons.lang.StringUtils@isNotBlank(itemType)">
+                  AND S_ELEMENT_CONFIG.ITEM_TYPE = #{itemType, jdbcType=VARCHAR}
+              </if>
+            ORDER BY ${searchCondition.columnOrder.columnOrder()}
+    </select>
+    -->
+    <!-- ＩＴ２-01494-000 20130801 DEL SBO_SOKOU END -->
+    <!-- ＩＴ２-01494-000 20130801 ADD SBO_SOKOU START -->
+    <select id="listPageItem"
+            parameterType="fw.domain.mst.resource.customize.elementconfig.mstmanagement.ItemDefinitionSearchCondition"
+            resultMap="ItemDefinitionItem_Map">
+        SELECT S_ELEMENT_CONFIG.ELEMENT_SEQ,
+               S_ELEMENT_CONFIG.ELEMENT_NAME_CD as "elementNameCd",
+               CASE WHEN company_lang.ELEMENT_NAME IS NOT NULL
+                    THEN company_lang.ELEMENT_NAME
+                    ELSE system_lang.ELEMENT_NAME
+                     END
+                      AS elementName,
+               S_ELEMENT_CONFIG.ITEM_TYPE as "itemType",
+               S_ELEMENT_CONFIG.INPUT_TYPE as "textType",
+               S_ELEMENT_CONFIG.IME_TYPE as "ime",
+               S_ELEMENT_CONFIG.MAX_LENGTH as "maxLength",
+               S_ELEMENT_CONFIG.DECIMAL_PLACE as "decimalPlace",
+               S_ELEMENT_CONFIG.MASTER_TYPE as "masterType",
+               S_ELEMENT_CONFIG.LAST_UPD_DATE,
+               S_ELEMENT_CONFIG.EXTEND_FLG as "extendItem"
+          FROM S_ELEMENT_CONFIG
+     LEFT JOIN S_ELEMENT_NAME company_lang
+            ON S_ELEMENT_CONFIG.ELEMENT_NAME_CD = company_lang.ELEMENT_NAME_CD
+           AND company_lang.LANGUAGE_IND = '${@fw.security.SecurityUtil@getCompanyUseLanguageIndByEscapeSql()}'
+     LEFT JOIN S_ELEMENT_NAME system_lang
+            ON S_ELEMENT_CONFIG.ELEMENT_NAME_CD = system_lang.ELEMENT_NAME_CD
+           AND system_lang.LANGUAGE_IND = '${@fw.common.util.AppUtil@getSysLanguageByEscapeSql()}'
+        <where>
+               S_ELEMENT_CONFIG.ELEMENT_SEQ IN
+            <foreach collection="searchCondition.page.keyDomainEntityList" item="keyList"  open="(" separator="," close=")">  
+                #{keyList.elementSeq}  
+            </foreach>  
+            <if test="@org.apache.commons.lang.StringUtils@isNotBlank(elementNameCd)">
+                AND (company_lang.ELEMENT_NAME_CD ${@fw.common.util.SearchModeUtil@getSearchSQL("fw.domain.mst.resource.customize.elementconfig.mstmanagement.ItemDefinitionSearchCondition","elementNameCd")}
+                 OR system_lang.ELEMENT_NAME_CD ${@fw.common.util.SearchModeUtil@getSearchSQL("fw.domain.mst.resource.customize.elementconfig.mstmanagement.ItemDefinitionSearchCondition","elementNameCd")})
+            </if> 
+            <if test="@org.apache.commons.lang.StringUtils@isNotBlank(elementName)">
+                AND (company_lang.ELEMENT_NAME ${@fw.common.util.SearchModeUtil@getSearchSQL("fw.domain.mst.resource.customize.elementconfig.mstmanagement.ItemDefinitionSearchCondition","elementName")}
+                 OR system_lang.ELEMENT_NAME ${@fw.common.util.SearchModeUtil@getSearchSQL("fw.domain.mst.resource.customize.elementconfig.mstmanagement.ItemDefinitionSearchCondition","elementName")})
+            </if>
+            <if test="@org.apache.commons.lang.StringUtils@isNotBlank(itemType)">
+                AND S_ELEMENT_CONFIG.ITEM_TYPE = #{itemType, jdbcType=VARCHAR}
+            </if>
+        </where>
+            ORDER BY ${searchCondition.columnOrder.columnOrder()}
+    </select>
+    <!-- ＩＴ２-01494-000 20130801 ADD SBO_SOKOU END -->
+    
+    <resultMap type="fw.domain.mst.resource.customize.elementconfig.mstmanagement.ItemDefinitionManagement" id="ItemDefinitionManagement_Map">
+        <id column="ELEMENT_SEQ" property="itemDefinitionIdentify.elementSeq"/>
+        <id column="ITEM_TYPE" property="itemClass.itemType.itemType"/>
+        <id column="INPUT_TYPE" property="inputMethod.inputType.inputType"/>
+        <id column="MAX_LENGTH" property="inputMethod.maxLength.maxLength"/>
+        <id column="DECIMAL_PLACE" property="inputMethod.maxLength.decimalPlace.decimalPlace"/>
+        <id column="MASTER_TYPE" property="itemClass.masterType.masterType"/>
+        <id column="LAST_UPD_DATE" property="itemDefinitionIdentify.lastUpdDate"/>
+    </resultMap> 
+
+    <select id="search" parameterType="fw.domain.mst.resource.customize.elementconfig.mstmanagement.ItemDefinitionIdentify" resultMap="ItemDefinitionManagement_Map">
+        SELECT
+            S_ELEMENT_CONFIG.ELEMENT_SEQ,
+            S_ELEMENT_CONFIG.ELEMENT_NAME_CD as "elementNameCd.elementNameCd",
+            S_ELEMENT_CONFIG.ITEM_TYPE,
+            S_ELEMENT_CONFIG.INPUT_TYPE,
+            S_ELEMENT_CONFIG.IME_TYPE as "inputMethod.imeType.imeType",
+            S_ELEMENT_CONFIG.MAX_LENGTH,
+            S_ELEMENT_CONFIG.DECIMAL_PLACE,
+            S_ELEMENT_CONFIG.MASTER_TYPE,
+            S_ELEMENT_CONFIG.EXTEND_FLG as "extendItem.extendItem",
+            S_ELEMENT_CONFIG.LAST_UPD_DATE
+        FROM 
+            S_ELEMENT_CONFIG
+        WHERE
+            S_ELEMENT_CONFIG.ELEMENT_SEQ = #{elementSeq}
+    </select> 
+
+    <select id="searchElementName"
+            parameterType="String"
+            resultType="String">
+        SELECT CASE WHEN user_lang.ELEMENT_NAME IS NOT NULL
+                    THEN user_lang.ELEMENT_NAME
+                    WHEN company_lang.ELEMENT_NAME IS NOT NULL
+                    THEN company_lang.ELEMENT_NAME
+                    ELSE system_lang.ELEMENT_NAME
+               END
+               AS ELEMENT_NAME
+          FROM (SELECT S_ELEMENT_NAME.ELEMENT_NAME_CD
+                  FROM S_ELEMENT_NAME
+              GROUP BY S_ELEMENT_NAME.ELEMENT_NAME_CD) S_ELEMENT_NAME
+     LEFT JOIN S_ELEMENT_NAME user_lang
+            ON user_lang.ELEMENT_NAME_CD = S_ELEMENT_NAME.ELEMENT_NAME_CD
+           AND user_lang.LANGUAGE_IND = '${@fw.security.SecurityUtil@getUseLanguageIndByEscapeSql()}'
+     LEFT JOIN S_ELEMENT_NAME company_lang
+            ON company_lang.ELEMENT_NAME_CD = S_ELEMENT_NAME.ELEMENT_NAME_CD
+           AND company_lang.LANGUAGE_IND = '${@fw.security.SecurityUtil@getCompanyUseLanguageIndByEscapeSql()}'
+     LEFT JOIN S_ELEMENT_NAME system_lang
+            ON system_lang.ELEMENT_NAME_CD = S_ELEMENT_NAME.ELEMENT_NAME_CD
+           AND system_lang.LANGUAGE_IND = '${@fw.common.util.AppUtil@getSysLanguageByEscapeSql()}'
+         WHERE S_ELEMENT_NAME.ELEMENT_NAME_CD = #{elementCd}
+    </select> 
+
+    <insert id="insert" parameterType="fw.domain.mst.resource.customize.elementconfig.mstmanagement.ItemDefinitionManagement">
+        INSERT INTO S_ELEMENT_CONFIG
+        (
+            ELEMENT_SEQ,
+            ELEMENT_NAME_CD,
+            ITEM_TYPE,
+            INPUT_TYPE,
+            IME_TYPE,
+            MAX_LENGTH,
+            DECIMAL_PLACE,
+            MASTER_TYPE,
+            EXTEND_FLG,
+            LAST_UPD_DATE,
+            LAST_UPD_COMPANY_CD,
+            LAST_UPD_SECTION_CD,
+            LAST_UPD_USER_ID,
+            REG_DATE,
+            REG_COMPANY_CD,
+            REG_SECTION_CD,
+            REG_USER_ID
+        ) VALUES (
+            #{itemDefinitionIdentify.elementSeq, jdbcType=VARCHAR},
+            #{elementNameCd.elementNameCd, jdbcType=VARCHAR},
+            #{itemClass.itemType.itemType, jdbcType=VARCHAR},
+            #{inputMethod.inputType.inputType, jdbcType=VARCHAR},
+            #{inputMethod.imeType.imeType, jdbcType=VARCHAR},
+            #{inputMethod.maxLength.maxLength, jdbcType=VARCHAR},
+            #{inputMethod.maxLength.decimalPlace.decimalPlace, jdbcType=VARCHAR},
+            #{itemClass.masterType.masterType, jdbcType=VARCHAR},
+            '1',<!-- #{extendItem.extendItem, jdbcType=VARCHAR}, -->
+            '${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}',
+            '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}',
+            '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}',
+            '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}',
+            '${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}',
+            '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}',
+            '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}',
+            '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}'
+        )
+    </insert>
+
+    <update id="update" parameterType="fw.domain.mst.resource.customize.elementconfig.mstmanagement.ItemDefinitionManagement">
+        UPDATE S_ELEMENT_CONFIG
+        SET
+            ELEMENT_NAME_CD = #{elementNameCd.elementNameCd},
+            ITEM_TYPE = #{itemClass.itemType.itemType},
+            INPUT_TYPE = #{inputMethod.inputType.inputType},
+            IME_TYPE = #{inputMethod.imeType.imeType},
+            MAX_LENGTH = #{inputMethod.maxLength.maxLength},
+            DECIMAL_PLACE = #{inputMethod.maxLength.decimalPlace.decimalPlace},
+            MASTER_TYPE = #{itemClass.masterType.masterType},
+            EXTEND_FLG = '1',<!-- EXTEND_FLG = #{extendItem.extendItem}, -->
+            LAST_UPD_DATE = '${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}',
+            LAST_UPD_COMPANY_CD = '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}',
+            LAST_UPD_SECTION_CD = '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}',
+            LAST_UPD_USER_ID = '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}'
+        WHERE 
+            ELEMENT_SEQ = #{itemDefinitionIdentify.elementSeq}
+    </update>
+
+    <delete id="delete" parameterType="fw.domain.mst.resource.customize.elementconfig.mstmanagement.ItemDefinitionIdentify">
+        DELETE FROM S_ELEMENT_CONFIG
+        WHERE 
+            ELEMENT_SEQ = #{elementSeq}
+    </delete>
+
+    <insert id="addOptionMng" parameterType="fw.domain.mst.resource.customize.elementconfig.mstmanagement.UserCondSelectItemDefinitionManagement">
+        INSERT INTO S_OPTION_MNG
+        (
+            OPTION_MNG_SEQ,
+            ELEMENT_SEQ,
+            OPTION_TYPE,
+            CODE_KEY,
+            LAST_UPD_DATE,
+            LAST_UPD_COMPANY_CD,
+            LAST_UPD_SECTION_CD,
+            LAST_UPD_USER_ID,
+            REG_DATE,
+            REG_COMPANY_CD,
+            REG_SECTION_CD,
+            REG_USER_ID
+        ) VALUES (
+            #{optionMngSeq, jdbcType=VARCHAR},
+            #{itemDefinitionIdentify.elementSeq, jdbcType=VARCHAR},
+            '1',
+            null,
+            '${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}',
+            '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}',
+            '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}',
+            '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}',
+            '${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}',
+            '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}',
+            '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}',
+            '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}'
+        )
+    </insert>
+    
+    <insert id="addOptionName" parameterType="fw.domain.mst.resource.customize.elementconfig.mstmanagement.OptionLangKanaName">
+        INSERT INTO S_OPTION_NAME
+        (
+            OPTION_NAME_CD,
+            LANGUAGE_IND,
+            OPTION_NAME,
+            LAST_UPD_DATE,
+            LAST_UPD_COMPANY_CD,
+            LAST_UPD_SECTION_CD,
+            LAST_UPD_USER_ID,
+            REG_DATE,
+            REG_COMPANY_CD,
+            REG_SECTION_CD,
+            REG_USER_ID
+        ) VALUES (
+            #{optionNameCd, jdbcType=VARCHAR},
+            #{languageInd.languageInd, jdbcType=VARCHAR},
+            #{optionLangKanaName, jdbcType=VARCHAR},
+            '${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}',
+            '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}',
+            '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}',
+            '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}',
+            '${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}',
+            '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}',
+            '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}',
+            '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}'
+        )
+    </insert>
+
+    <insert id="addSelectOption" parameterType="fw.domain.mst.resource.customize.elementconfig.mstmanagement.OptionItem">
+        INSERT INTO S_SELECT_OPTION
+        (
+            SELECT_CD,
+            OPTION_MNG_SEQ,
+            SELECT_OPTION_SEQ,
+            OPTION_NAME_CD,
+            USE_FLG,
+            DSP_ORDER,
+            LAST_UPD_DATE,
+            LAST_UPD_COMPANY_CD,
+            LAST_UPD_SECTION_CD,
+            LAST_UPD_USER_ID,
+            REG_DATE,
+            REG_COMPANY_CD,
+            REG_SECTION_CD,
+            REG_USER_ID
+        ) VALUES (
+            #{selectCd, jdbcType=VARCHAR},
+            #{optionMngSeq, jdbcType=VARCHAR},
+            #{selectOptionSeq, jdbcType=VARCHAR},
+            #{optionNameCd, jdbcType=VARCHAR},
+            #{useFlg.useFlg, jdbcType=VARCHAR},
+            #{dspOrder.dspOrder, jdbcType=VARCHAR},
+            '${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}',
+            '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}',
+            '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}',
+            '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}',
+            '${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}',
+            '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}',
+            '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}',
+            '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}'
+        )
+    </insert>
+
+    <!-- ＩＴ３-00282-000 20130712 ADD SOKOU START -->
+    <update id="updateSelectOption"
+            parameterType="fw.domain.mst.resource.customize.elementconfig.mstmanagement.OptionItem">
+            UPDATE S_SELECT_OPTION
+               SET USE_FLG             = #{useFlg.useFlg, jdbcType=VARCHAR},
+                   DSP_ORDER           = #{dspOrder.dspOrder, jdbcType=VARCHAR},
+                   LAST_UPD_DATE       = '${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}',
+                   LAST_UPD_COMPANY_CD = '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}',
+                   LAST_UPD_SECTION_CD = '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}',
+                   LAST_UPD_USER_ID    = '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}'
+             WHERE SELECT_CD      = #{selectCd, jdbcType=VARCHAR}
+               AND OPTION_MNG_SEQ = #{optionMngSeq, jdbcType=VARCHAR}
+    </update>
+    <!-- ＩＴ３-00282-000 20130712 ADD SOKOU -END- -->
+
+    <insert id="addCheckOption" parameterType="fw.domain.mst.resource.customize.elementconfig.mstmanagement.OptionItem">
+        INSERT INTO S_CHECK_OPTION
+        (
+            CHECK_CD,
+            OPTION_MNG_SEQ,
+            CHECK_OPTION_SEQ,
+            OPTION_NAME_CD,
+            USE_FLG,
+            DSP_ORDER,
+            LAST_UPD_DATE,
+            LAST_UPD_COMPANY_CD,
+            LAST_UPD_SECTION_CD,
+            LAST_UPD_USER,
+            REG_DATE,
+            REG_COMPANY_CD,
+            REG_SECTION_CD,
+            REG_USER_ID
+        ) VALUES (
+            #{checkCd, jdbcType=VARCHAR},
+            #{optionMngSeq, jdbcType=VARCHAR},
+            #{checkOptionSeq, jdbcType=VARCHAR},
+            #{optionNameCd, jdbcType=VARCHAR},
+            #{useFlg.useFlg, jdbcType=VARCHAR},
+            #{dspOrder.dspOrder, jdbcType=VARCHAR},
+            '${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}',
+            '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}',
+            '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}',
+            '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}',
+            '${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}',
+            '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}',
+            '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}',
+            '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}'
+        )
+    </insert>
+
+    <!-- ＩＴ３-00282-000 20130712 ADD SOKOU START -->
+    <update id="updateCheckOption"
+            parameterType="fw.domain.mst.resource.customize.elementconfig.mstmanagement.OptionItem">
+            UPDATE S_CHECK_OPTION
+               SET USE_FLG             = #{useFlg.useFlg, jdbcType=VARCHAR},
+                   DSP_ORDER           = #{dspOrder.dspOrder, jdbcType=VARCHAR},
+                   LAST_UPD_DATE       = '${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}',
+                   LAST_UPD_COMPANY_CD = '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}',
+                   LAST_UPD_SECTION_CD = '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}',
+                   LAST_UPD_USER       = '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}'
+             WHERE CHECK_CD       = #{checkCd, jdbcType=VARCHAR}
+               AND OPTION_MNG_SEQ = #{optionMngSeq, jdbcType=VARCHAR}
+    </update>
+    <!-- ＩＴ３-00282-000 20130712 ADD SOKOU -END- -->
+
+    <delete id="deleteOptionNameSelect" parameterType="String">
+        DELETE FROM S_OPTION_NAME
+        WHERE 
+            OPTION_NAME_CD in
+            (
+                SELECT
+                    OPTION_NAME_CD
+                FROM S_SELECT_OPTION 
+                WHERE
+                    OPTION_MNG_SEQ = #{optionMngSeq}
+            )
+    </delete>
+    
+    <delete id="deleteOptionNameCheck" parameterType="String">
+        DELETE FROM S_OPTION_NAME
+        WHERE 
+            OPTION_NAME_CD in
+            (
+                SELECT
+                    OPTION_NAME_CD
+                FROM S_CHECK_OPTION 
+                WHERE
+                    OPTION_MNG_SEQ = #{optionMngSeq}
+            )
+    </delete>
+    
+    <delete id="deleteOptionMng" parameterType="String">
+        DELETE FROM S_OPTION_MNG
+        WHERE 
+            ELEMENT_SEQ = #{elementSeq}
+    </delete>
+    
+    <delete id="deleteSelectOption" parameterType="String">
+        DELETE FROM S_SELECT_OPTION
+        WHERE 
+            OPTION_MNG_SEQ = #{optionMngSeq}
+    </delete>
+    
+    <delete id="deleteCheckOption" parameterType="String">
+        DELETE FROM S_CHECK_OPTION
+        WHERE 
+            OPTION_MNG_SEQ = #{optionMngSeq}
+    </delete>
+    
+    <select id="searchOptionMngSeq" parameterType="String" resultType="String">
+        SELECT
+            OPTION_MNG_SEQ
+        FROM S_OPTION_MNG 
+        WHERE
+            ELEMENT_SEQ = #{elementSeq}
+    </select> 
+   
+    <select id="searchOptionItem" parameterType="String"
+        resultType="fw.domain.mst.resource.customize.elementconfig.mstmanagement.OptionItem">
+        SELECT 
+            USE_FLG as "useFlg.useFlg",
+            OPTION_NAME_CD as "optionNameCd",
+            SELECT_OPTION_SEQ as "selectOptionSeq",
+            SELECT_CD as "selectCd"
+        FROM S_SELECT_OPTION 
+            INNER JOIN S_OPTION_MNG
+            ON 
+                S_SELECT_OPTION.OPTION_MNG_SEQ = S_OPTION_MNG.OPTION_MNG_SEQ
+        WHERE
+            ELEMENT_SEQ = #{elementSeq}
+        ORDER BY DSP_ORDER
+    </select>
+    
+    <select id="searchCheckOptionItem" parameterType="String"
+        resultType="fw.domain.mst.resource.customize.elementconfig.mstmanagement.OptionItem">
+        SELECT 
+            USE_FLG as "useFlg.useFlg",
+            OPTION_NAME_CD as "optionNameCd",
+            CHECK_OPTION_SEQ as "checkOptionSeq",
+            CHECK_CD as "checkCd"
+        FROM S_CHECK_OPTION 
+            INNER JOIN S_OPTION_MNG
+            ON 
+                S_CHECK_OPTION.OPTION_MNG_SEQ = S_OPTION_MNG.OPTION_MNG_SEQ
+        WHERE
+            ELEMENT_SEQ = #{elementSeq}
+        ORDER BY DSP_ORDER
+    </select>
+    
+    <select id="searchLanguage" parameterType="String"
+        resultType="fw.domain.mst.resource.customize.elementconfig.mstmanagement.OptionLangKanaName">
+        SELECT 
+            LANGUAGE_IND as "languageInd.languageInd",
+            OPTION_NAME as "optionLangKanaName"
+        FROM S_OPTION_NAME 
+        WHERE
+            OPTION_NAME_CD = #{optionNameCd}
+    </select>
+    
+    <select id="searchItemType" parameterType="String"
+        resultType="String">
+        SELECT 
+            ITEM_TYPE 
+        FROM S_ELEMENT_CONFIG 
+        WHERE
+            ELEMENT_SEQ = #{elementSeq}
+    </select>
+    
+    <!-- 伝票定義マスタ存在チェック -->
+    <select id="countVoucherConfig" parameterType="fw.domain.mst.resource.customize.elementconfig.mstmanagement.ItemDefinitionIdentify"
+        resultType="int">
+        SELECT
+            COUNT(1)
+        FROM
+            S_VOUCHER_CONFIG
+        WHERE
+            S_VOUCHER_CONFIG.ELEMENT_SEQ = #{elementSeq}
+    </select>
+    
+</mapper>

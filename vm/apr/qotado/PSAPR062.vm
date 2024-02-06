@@ -1,0 +1,194 @@
+<!doctype html>
+<html LANG="ja">
+<head>
+<title>#set($commonTitle = "#customSpringMessage('QUOT_ADO_APP')")</title><!-- 見積採否承認 -->
+<meta http-equiv="Content-type" content="text/html; charset=UTF-8">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Content-script-type" content="text/javascript">
+
+<link id="CSS_FONT" rel="stylesheet" href="../../include/FontS.css" type="text/css">
+<link rel="stylesheet" href="../../include/ime.css" type="text/css">
+<link rel="stylesheet" href="../../include/searchbox.css" type="text/css">
+<link rel="stylesheet" href="../../include/Layout.css" type="text/css">
+<link rel="stylesheet" href="../../include/Color.css" type="text/css">
+<script language="javascript" type="text/javascript" src="../../include/common.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/check.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/date.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/searchbox.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/jquery-1.7.2.min.js"></script>
+<script language="javascript" type="text/javascript">
+<!--
+#parse("./common/common_js.vm")
+var messageInfo;
+
+var isClickable = false;
+
+//画面ロード
+function onLoad() {
+    var alertMessage = "$!alertMessage";
+    if (alertMessage != ""){
+        messageInfo = alertMessage;
+        iframeLoaded(getObj('DATAAREA2'),showMessage);
+        return;
+    }
+    var errorMsg = "$!errorMessage";
+    getObj("errorMsg").value = errorMsg;
+    top.document.title = document.title;
+
+    if (errorMsg == "") {
+        var hasApprovaled = '#jsEscape($!hasApprovaled)';
+
+        if (hasApprovaled == 'true') {
+            #set( $quotAdoApp = ["#customSpringMessage('QUOT_ADOPTION')"])
+            messageInfo = '#customMessageArgs("I028", $quotAdoApp)';
+            iframeLoaded(getObj('DATAAREA2'),showMessage);
+            return;
+        }
+
+        var hasSendBacked = '#jsEscape($!hasSendBacked)';
+        if (hasSendBacked == 'true') {
+            #set( $quotAdoApp = ["#customSpringMessage('QUOT_ADOPTION')"])
+            messageInfo = '#customMessageArgs("I029", $quotAdoApp)';
+            iframeLoaded(getObj('DATAAREA2'),showMessage);
+            return;
+        }
+    }
+    approvalPaging();
+}
+
+// 承認ボタンを押下
+function approval() {
+    if(!isClickable) {
+        return;
+    }
+
+    #set( $approvalParam = ["#customSpringMessage('QUOT_ADOPTION')", "#customSpringMessage('APPROVAL')"])
+    if(!confirm('#customMessageArgs("W001", $approvalParam)')) {
+        return;
+    }
+        var form = document.getElementById("Body");
+    buttonDisable();
+    form.action = "${flowExecutionUrl}&_eventId=approval";
+    form.submit();
+}
+
+//差戻しボタンを押下
+function sendBack() {
+    if(!isClickable) {
+        return;
+    }
+
+    #set( $approvalParam = ["#customSpringMessage('QUOT_ADOPTION')", "#customSpringMessage('RETURN')"])
+    if(!confirm("#customMessageArgs("W001", $approvalParam)")) {
+        return;
+    }
+    var userObj = window.frames["DATAAREA3"].document.getElementById("quotAdo.appManagement.backApp.backAppFirstUser.userID");
+    getObj("quotAdo.appManagement.backApp.backAppReason.backReason.comment").value = window.frames["DATAAREA3"].document.getElementById("quotAdo.appManagement.backApp.backAppReason.backReason.comment").value;
+    var existsFlg = "#jsEscape($!existsBackAppUser)";
+    if (existsFlg == "true") {
+        getObj("quotAdo.appManagement.backApp.backAppFirstUser.userID").value = "#jsEscape($!domain.quotAdo.appManagement.backApp.backAppFirstUser.userID)";
+    } else {
+        var index = userObj.selectedIndex;
+        getObj("quotAdo.appManagement.backApp.backAppFirstUser.userID").value = userObj.options[index].value;
+    }
+
+    var form = document.getElementById("Body");
+    buttonDisable();
+    form.action = "${flowExecutionUrl}&_eventId=sendBack";
+    form.submit();
+
+}
+
+function toggleHeaderArea() {
+    var img = document.getElementById("toggleHeaderImage");
+
+    if( img.src.indexOf("btnUp2.gif") >= 0 ) {
+        setDisplay("ADJUSTDATAAREA3", false);
+        document.getElementById("ADJUSTDATAAREA1").style.height = "100%";
+        document.getElementById("ADJUSTDATAAREA2").style.height = "100%";
+        img.src='../../image/btnDown2.gif';
+    } else {
+        setDisplay("ADJUSTDATAAREA3",true);
+        document.getElementById("ADJUSTDATAAREA1").style.height = "50%";
+        document.getElementById("ADJUSTDATAAREA2").style.height = "50%";
+        document.getElementById("ADJUSTDATAAREA3").style.height = "50%";
+        img.src='../../image/btnUp2.gif';
+    }
+}
+
+function openQotArea() {
+    setDisplay("ADJUSTDATAAREA1",true);
+    setDisplay("ADJUSTDATAAREA2",true);
+    document.getElementById("ADJUSTDATAAREA1").style.width = "40%";
+    document.getElementById("ADJUSTDATAAREA2").style.width = "60%";
+}
+
+function closeQotArea() {
+    setDisplay("ADJUSTDATAAREA1",false);
+    setDisplay("ADJUSTDATAAREA2",true);
+    document.getElementById("ADJUSTDATAAREA2").style.width = "100%";
+}
+
+function showMessage(){
+    alert(messageInfo);
+    if(messageInfo.indexOf("E035")!=-1 || messageInfo.indexOf("I028")!=-1 || messageInfo.indexOf("I029")!=-1){
+        buttonDisable();
+        parent.iframeChange("${flowExecutionUrl}&_eventId=next");
+    }
+}
+
+//-->
+</script>
+</head>
+<body topmargin="0" leftmargin="0" marginwidth="0" marginheight="0" align="center" width="100%" height="100%" onload="onLoad();" style="overflow-x:auto;overflow-y:auto;">
+<form id="Body" name="Body" method="post" enctype="multipart/form-data">
+    #customFormHiddenInput("errorMsg", "")
+
+    #customFormHiddenInput("quotAdo.appManagement.backApp.backAppFirstUser.userID", "#jsEscape($!domain.quotAdo.appManagement.backApp.backAppFirstUser.userID)")
+    #customFormHiddenInput("quotAdo.appManagement.backApp.backAppReason.backReason.comment", "")
+    <table class="SearchBody" width="100%" height="100%">
+        <tr>
+            <td id="SEARCH_AREA" class="SearchArea"  colspan="2"><!-- onLoadで変更 -->
+                #parse("./common/common_title_tran_with_individual_approval.vm")
+            </td>
+        </tr>
+        <tr>
+            <td colspan="2" valign="top">
+                <table class="Box3H" width="100%" align="center">
+                    <tr>
+                        <td style="width:16px;">
+                            <button type="button" class="Button" onclick="toggleHeaderArea();">
+                                <img id="toggleHeaderImage" src="../../image/btnUp2.gif">
+                            </button>
+                        </td>
+                        <td width="30%" align="left" class="PaddingM ScreenName">#customSpringMessage('QUOT_ADO_APP')</td><!-- 見積採否承認 -->
+                        <td width="70%" class="FontSmall" align="right">
+                            <input type="button" class="LargeButton Red" value="#customSpringMessage('RETURN')" onclick="sendBack();"><!-- 差戻し -->
+                            &nbsp;&nbsp;
+                            <input id="button" type="button" class="LargeButton" value="#customSpringMessage('APPROVAL')" onclick="javascript:approval();"><!-- 承　認 -->
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+        <tr >
+            <td  class="NoBorder" colspan="2" id ="ADJUSTDATAAREA3" height="50%" width="100%">
+                <iframe id="DATAAREA3" name="DATAAREA3" framespacing="0" src="../../layout/wait.vm" scrolling="auto" frameborder="no"  class= "DataArea"></iframe>
+            </td>
+        </tr>
+        <tr>
+            <td id ="ADJUSTDATAAREA1" class="NoBorder"  height="50%" width="40%">
+                <iframe id="DATAAREA1" name="DATAAREA1" framespacing="0" src="../../layout/wait.vm" scrolling="auto" frameborder="no"  class= "DataArea"></iframe>
+            </td>
+            <td id ="ADJUSTDATAAREA2" class="NoBorder"  height="50%" width="60%">
+                <iframe id="DATAAREA2" name="DATAAREA2" framespacing="0" src="../../layout/wait.vm" scrolling="auto" frameborder="no"  class= "DataArea"></iframe>
+            </td>
+        </tr>
+    </table>
+</form>
+</body>
+</html>
+<script language="javascript" type="text/javascript">
+getObj("errorMsg").value = "$!errorMessage";
+iframeChange("${flowExecutionUrl}&_eventId=PSAPR062_3", "DATAAREA3");
+</script>

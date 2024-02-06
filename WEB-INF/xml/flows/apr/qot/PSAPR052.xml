@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<flow xmlns="http://www.springframework.org/schema/webflow"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.springframework.org/schema/webflow
+        http://www.springframework.org/schema/webflow/spring-webflow-2.0.xsd"
+    parent="base">
+    
+   
+   <input name="quotReqIdentify" />
+   <input name="isInitIndividualApr" />
+   <input name="SessionKey"/>
+   <input name="searchCondition" />
+    
+    <decision-state id="isInitIndividualApr">
+        <if test="flowScope.isExclusiveCheck != null and flowScope.isExclusiveCheck" then="PSAPR052" />
+        <if test="flowScope.isInitIndividualApr == null or flowScope.isInitIndividualApr" then="initDetail" else="back" />
+    </decision-state>
+    
+    <action-state id="initDetail">
+        <evaluate expression="PSAPR052Service.init(quotReqIdentify)"
+            result="flowScope.domain" />
+        <transition to="PSAPR052"/> 
+    </action-state>
+    
+    <view-state id="PSAPR052" view="apr/qot/PSAPR052" model="domain">
+        <transition on="approval" validate="true">
+             <evaluate expression="PSAPR052Service.approval(domain)"/>
+             <set name="flashScope.isSuccessForApproval" value="true"></set> 
+        </transition>
+        <transition on="sendBack" validate="true">
+             <evaluate expression="PSAPR052Service.sendBack(domain)"/> 
+             <set name="flashScope.isSuccessForSendBack" value="true"></set> 
+        </transition>
+        <transition on="next" validate="false" to="isInitIndividualApr">
+             <evaluate expression="PSAPR052Service.next()" result="flowScope.quotReqIdentify"/> 
+             <set name="flashScope.isSuccessForApproval" value="false"></set> 
+             <set name="flashScope.isSuccessForSendBack" value="false"></set> 
+        </transition>
+        <transition on="page" validate="false" to="isInitIndividualApr">
+             <evaluate expression="PSAPR052Service.page()" result="flowScope.quotReqIdentify"/> 
+        </transition>
+        <transition on="download" validate="false">
+            <evaluate expression="PSAPR052Service.downloadByteFile()"/>
+        </transition>
+        <transition on="downloadext" validate="false">
+            <evaluate expression="PSAPR022Service.downloadFileExt(domain)"/>
+        </transition>
+        <transition on="appback" to="back" validate="false"/>
+        <transition on="sendback" to="back" validate="false"/>
+        
+        
+        <!-- 承認者の追加  -->
+        <transition on="addAuthorizer" validate="false">
+             <evaluate expression="PSAPR052Service.addAuthorizer(domain)" result="flowScope.domain"/> 
+        </transition>
+        <!-- 承認者の削除  -->
+        <transition on="removeAuthorizer" validate="false">
+             <evaluate expression="PSAPR052Service.removeAuthorizer(domain,requestParameters.appSeq)" result="flowScope.domain"/> 
+        </transition>
+    </view-state> 
+
+</flow> 

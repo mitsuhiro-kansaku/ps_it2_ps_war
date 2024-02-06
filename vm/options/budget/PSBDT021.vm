@@ -1,0 +1,252 @@
+<!doctype html>
+<html LANG="ja">
+<head>
+#set($commonTitle = "#customSpringMessage('SECTION_BUDGET_LIST')")
+<title>$commonTitle</title><!--部門予算一覧-->
+<meta http-equiv="Content-type" content="text/html; charset=UTF-8">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Content-script-type" content="text/javascript">
+<link id="CSS_FONT" rel="stylesheet" href="../../include/FontS.css" type="text/css">
+<link rel="stylesheet" href="../../include/Layout.css" type="text/css">
+<link rel="stylesheet" href="../../include/Color.css" type="text/css">
+<link id="CSS_FONT" rel="stylesheet" href="../../include/FontS.css" type="text/css">
+<script language="javascript" TYPE="text/javascript" src="../../include/common.js"></script>
+<script language="javascript" TYPE="text/javascript" src="../../include/check.js"></script>
+<script language="javascript" TYPE="text/javascript" src="../../include/date.js"></script>
+<script language="javascript" TYPE="text/javascript" src="../../include/tablesort.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/searchbox.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/jquery-1.7.2.min.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/jquery.tablefix.js"></script>
+<script language="javascript" TYPE="text/javascript">
+<!--
+#set($searchCondition=$sectionBudgetListSearchCondition)
+#parse("./common/common_js.vm")
+function onLoad() {
+    parentButtonEnable();
+    TableSort.init();
+    dataLoadHasPage();
+    var alertMessage = "$!alertMessage";
+    var isSuccess = '#jsEscape($!isSuccess)';
+    if(isSuccess == 'true'){
+        #set( $ship = "#customSpringMessage('SHIP')" );
+        alert('#customMessageArgs("I028",[$ship])');
+    }
+    if (alertMessage != ""){
+        buttonUsableForList(alertMessage);
+        alert(alertMessage);
+    }
+    var errorMsg = "$!errorMessage";
+    if (errorMsg != ""){
+        return;
+    }
+    var isShowSelect = "#jsEscape($isShowSelect)";
+    if (isShowSelect == 'true'){
+           top.iframeChange("${flowExecutionUrl}&_eventId=select");
+    }
+    var isShowEdit = "#jsEscape($isShowEdit)";
+    if (isShowEdit == 'true'){
+           top.iframeChange("${flowExecutionUrl}&_eventId=edit");
+    }
+
+}
+
+function exec(){
+}
+
+//選択
+function openSelect(sectionCd,subjectCd,
+                    #foreach($!index in [1..12])
+                        acceptSumAmount$!index,
+                    #end
+                    budgetYear) {
+    buttonDisable();
+    parent.iframeChange('${flowExecutionUrl}&_eventId=selectValidate&&sectionBudget.sectionBudgetIdentify.section.sectionCd=' + sectionCd +
+                                                                    '&&sectionBudget.sectionBudgetIdentify.subject.subjectCd=' + subjectCd +
+                                                                    #foreach($!index in [1..12])
+                                                                        '&&acceptSumAmount$!index=' + acceptSumAmount$!index +
+                                                                    #end
+                                                                    '&&sectionBudget.sectionBudgetIdentify.budgetYear=' + budgetYear,
+                                                                    "HIDDENAREA");
+}
+
+//編集
+function openEdit(sectionCd,subjectCd,budgetYear,lastUpdDate) {
+    buttonDisable();
+    parent.iframeChange('${flowExecutionUrl}&_eventId=editValidate&&sectionBudget.sectionBudgetIdentify.section.sectionCd=' + sectionCd +
+                                                                    '&&sectionBudget.sectionBudgetIdentify.subject.subjectCd=' + subjectCd +
+                                                                    '&&sectionBudget.sectionBudgetIdentify.budgetYear=' + budgetYear +
+                                                                    '&&sectionBudget.sectionBudgetIdentify.lastUpdDate=' + lastUpdDate, "HIDDENAREA");
+
+}
+
+//実績月選択
+function openSelectMonth(sectionCd,subjectCd,targetMonth,budgetYear) {
+    buttonDisable();
+    parent.iframeChange('${flowExecutionUrl}&_eventId=selectValidate&&sectionBudget.sectionBudgetIdentify.section.sectionCd=' + sectionCd +
+                                                                    '&&sectionBudget.sectionBudgetIdentify.subject.subjectCd=' + subjectCd +
+                                                                    '&&targetMonth=' + targetMonth +
+                                                                    '&&sectionBudget.sectionBudgetIdentify.budgetYear=' + budgetYear, "HIDDENAREA");
+}
+
+//-->
+</script>
+</head>
+<body id="BODY" topmargin="0" leftmargin="0" marginwidth="0" marginheight="0" align="left" onload="onLoad();setTablefix('#TABLE',1,3);">
+#if($!errorMessage && $!errorMessage!="")
+<div id="error" name="error" class="error">
+    $!errorMessage
+</div>
+#end
+#if($!itemList.sectionBudgetListItemList && $!itemList.sectionBudgetListItemList.size()>0)
+<form id="BodyForm" name="BodyForm"  method="post">
+<table id="TABLE" class="ListArea" width="100%">
+    <thead>
+        <tr id="Header" style= "position:relative;overflow-y:auto;">
+            <th class="BoxHeaderCenter FontSmall">No.<!--No.--></th>
+            <th class="BoxHeaderCenter FontSmall">#customSpringMessage('SELECTION')<!--選択--></th>
+            <th class="BoxHeaderCenter FontSmall">#customSpringMessage('ACTION')<!--処理--></th>
+            <th label="case" class="BoxHeaderCenter FontSmall" id="SECTION_CD" onclick="parent.iframeChange('${flowExecutionUrl}&_eventId=order','column','SECTION_CD')">
+                #customSpringMessage('SECTION_CD')<!--部門コード-->
+            </th>
+            <th label="case" class="BoxHeaderCenter FontSmall" id="SECTION_NAME" onclick="parent.iframeChange('${flowExecutionUrl}&_eventId=order','column','SECTION_NAME')">
+                #customSpringMessage('SECTION_NAME')<!--部門名-->
+            </th>
+            <th label="case" class="BoxHeaderCenter FontSmall" id="SUBJECT_CD" onclick="parent.iframeChange('${flowExecutionUrl}&_eventId=order','column','SUBJECT_CD')">
+                #customSpringMessage('SUBJECT_CD')<!--科目コード-->
+            </th>
+            <th label="case" class="BoxHeaderCenter FontSmall" id="SUBJECT_NAME" onclick="parent.iframeChange('${flowExecutionUrl}&_eventId=order','column','SUBJECT_NAME')">
+                #customSpringMessage('SUBJECT_NAME')<!--科目名-->
+            </th>
+            <th label="case" class="BoxHeaderCenter FontSmall" id="BUDGET_YEAR" onclick="parent.iframeChange('${flowExecutionUrl}&_eventId=order','column','BUDGET_YEAR')">
+                #customSpringMessage('FISCAL_YEAR')<!--年度-->
+            </th>
+            <th label="case" class="BoxHeaderCenter FontSmall" id="BUDGET_NAME" onclick="parent.iframeChange('${flowExecutionUrl}&_eventId=order','column','BUDGET_NAME')">
+                #customSpringMessage('BUDGET_NAME')<!--予算名-->
+            </th>
+            <th label="case" class="BoxHeaderCenter FontSmall" id="CURRENCY_CD" onclick="parent.iframeChange('${flowExecutionUrl}&_eventId=order','column','CURRENCY_CD')">
+                #customSpringMessage('CURRENCY_CD')<!--通貨コード-->
+            </th>
+            <th label="case" class="BoxHeaderCenter FontSmall" id="BUDGET_AMOUNT_F_T" onclick="parent.iframeChange('${flowExecutionUrl}&_eventId=order','column','BUDGET_AMOUNT_F_T')">
+                #customSpringMessage('FIRST_BUDGET_AMOUNT')<!--期初予算合計額-->
+            </th>
+            <th label="case" class="BoxHeaderCenter FontSmall" id="BUDGET_AMOUNT_T" onclick="parent.iframeChange('${flowExecutionUrl}&_eventId=order','column','BUDGET_AMOUNT_T')">
+                #customSpringMessage('BUDGET_TOTAL_SUM')<!--予算合計額-->
+            </th>
+            <th label="case" class="BoxHeaderCenter FontSmall" id="ACCEPT_SUM_AMOUNT_T" onclick="parent.iframeChange('${flowExecutionUrl}&_eventId=order','column','ACCEPT_SUM_AMOUNT_T')">
+                #customSpringMessage('ACCEPT_SUM')<!--検収累計額-->
+            </th>
+            <th label="case" class="BoxHeaderCenter FontSmall" id="BUDGET_BAL_RES" onclick="parent.iframeChange('${flowExecutionUrl}&_eventId=order','column','BUDGET_BAL_RES')">
+                #customSpringMessage('BUDGET_BAL_RES')<!--予算残(実績)-->
+            </th>
+            <th label="case" class="BoxHeaderCenter FontSmall" id="PROGRESS_RATE_RES" onclick="parent.iframeChange('${flowExecutionUrl}&_eventId=order','column','PROGRESS_RATE_RES')">
+                #customSpringMessage('PROGRESS_RATE_RES')<!--進捗率(実績)-->
+            </th>
+            <th label="case" class="BoxHeaderCenter FontSmall" id="PUR_REQ_SUM_AMOUNT_T" onclick="parent.iframeChange('${flowExecutionUrl}&_eventId=order','column','PUR_REQ_SUM_AMOUNT_T')">
+                #customSpringMessage('PUR_REQ_SUM')<!--購入依頼累計額-->
+            </th>
+            <th label="case" class="BoxHeaderCenter FontSmall" id="BUDGET_BAL_EST" onclick="parent.iframeChange('${flowExecutionUrl}&_eventId=order','column','BUDGET_BAL_EST')">
+                #customSpringMessage('BUDGET_BAL_EST')<!--予算残(見込)-->
+            </th>
+            <th label="case" class="BoxHeaderCenter FontSmall" id="PROGRESS_RATE_EST" onclick="parent.iframeChange('${flowExecutionUrl}&_eventId=order','column','PROGRESS_RATE_EST')">
+                #customSpringMessage('PROGRESS_RATE_EST')<!--進捗率(見込)-->
+            </th>
+            <th label="case" class="BoxHeaderCenter FontSmall" id="ORDER_SUM_AMOUNT_T" onclick="parent.iframeChange('${flowExecutionUrl}&_eventId=order','column','ORDER_SUM_AMOUNT_T')">
+                #customSpringMessage('ORDER_SUM')<!--発注累計額-->
+            </th>
+            <th label="case" class="BoxHeaderCenter FontSmall" id="ORDER_DIFF_SUM_AMOUNT_T" onclick="parent.iframeChange('${flowExecutionUrl}&_eventId=order','column','ORDER_DIFF_SUM_AMOUNT_T')">
+                #customSpringMessage('ORDER_DIFF_SUM')<!--発注差分累計額-->
+            </th>
+            #foreach($!headerNameMonth in $!headerNameMonths)
+                <th class="BoxHeaderCenter FontSmall">
+                    #customSpringMessage($!headerNameMonth)
+                </th>
+            #end
+            <th label="case" class="BoxHeaderCenter FontSmall" id="SEC_TOTAL_CHK_IND" onclick="parent.iframeChange('${flowExecutionUrl}&_eventId=order','column','SEC_TOTAL_CHK_IND')">
+                #customSpringMessage('TOTAL_CHK')<!--総額チェック-->
+            </th>
+            <th label="case" class="BoxHeaderCenter FontSmall" id="DIFF_MAX_AMOUNT" onclick="parent.iframeChange('${flowExecutionUrl}&_eventId=order','column','DIFF_MAX_AMOUNT')">
+                #customSpringMessage('TOTAL_DIFF_MAX_AMOUNT')<!--総額差額上限金額-->
+            </th>
+        </tr>
+    </thead>
+    #set($No=0)
+    <tbody>
+    #foreach($!item in $!itemList.sectionBudgetListItemList)
+        #set( $No = $No + 1 )
+        <tr id="Row_$velocityCount" name="Row_$velocityCount" #if($!item.budgetOverFlg == '1') bgcolor="#ffb6c1" #elseif($velocityCount % 2 == 0) bgcolor="#dce4ef" #else bgcolor="#ffffff" #end>
+            <td class="BoxDetailCenter FontList">$No</td>
+            <td class="BoxDetailCenter">
+            #if($LoginUser.hasAuth(${AuthNoConstant.getValue("SECTION_BUDGET_DTL_READ_GRANT")}))
+                #if($!item.selectAbleFlg == "1")
+                    <input type="button" class="SmallButton" value="#customSpringMessage('SELECTION')"
+                        onclick="openSelect('#jsEscapeInHTML($!item.sectionBudget.sectionBudgetIdentify.section.sectionCd)',
+                            '#jsEscapeInHTML($!item.sectionBudget.sectionBudgetIdentify.subject.subjectCd)',
+                            #foreach($!acceptSumAmount in $!item.acceptSumAmounts)
+                                '#jsEscapeInHTML($!acceptSumAmount.amount)',
+                            #end
+                            '#jsEscapeInHTML($!item.sectionBudget.sectionBudgetIdentify.budgetYear)'
+                            )">
+                #end
+            #end
+            </td>
+            <td class="BoxDetailCenter">
+                #if($!item.sectionBudget.sectionBudgetIdentify.lastUpdDate != "")
+                    #if($LoginUser.hasAuth(${AuthNoConstant.getValue("SECTION_BUDGET_UPDATE_GRANT")}))
+                        <input type="button" class="SmallButton" value="#customSpringMessage('ACTION_EDIT')"
+                            onclick="openEdit('#jsEscapeInHTML($!item.sectionBudget.sectionBudgetIdentify.section.sectionCd)',
+                            '#jsEscapeInHTML($!item.sectionBudget.sectionBudgetIdentify.subject.subjectCd)',
+                            '#jsEscapeInHTML($!item.sectionBudget.sectionBudgetIdentify.budgetYear)',
+                            '#jsEscapeInHTML($!item.sectionBudget.sectionBudgetIdentify.lastUpdDate)'
+                            )">
+                    #end
+                #end
+            </td>
+            <td class="BoxDetailCenter FontList">$!item.sectionBudget.sectionBudgetIdentify.section.sectionCd</td>
+            <td class="BoxDetailLeft FontList">$!item.sectionBudget.sectionBudgetIdentify.section.sectionName</td>
+            <td class="BoxDetailCenter FontList">$!item.sectionBudget.sectionBudgetIdentify.subject.subjectCd</td>
+            <td class="BoxDetailLeft FontList">$!item.sectionBudget.sectionBudgetIdentify.subject.subjectName</td>
+            <td class="BoxDetailCenter FontList">$!item.sectionBudget.sectionBudgetIdentify.budgetYear</td>
+            <td class="BoxDetailLeft FontList">$!item.sectionBudget.budgetName</td>
+            <td class="BoxDetailCenter FontList">$!item.sectionResults.currency.currencyCd</td>
+            <td class="BoxDetailRight FontCurrSmall">$!item.sectionResults.currency.currencyMark$!item.sectionBudget.budgetAmountFT.amountFormat</td>
+            <td class="BoxDetailRight FontCurrSmall">$!item.sectionResults.currency.currencyMark$!item.sectionBudget.budgetAmountT.amountFormat</td>
+            <td class="BoxDetailRight FontCurrSmall">$!item.sectionResults.currency.currencyMark$!item.sectionResults.acceptSumAmountT.amountFormat</td>
+            <td class="BoxDetailRight FontCurrSmall">$!item.sectionResults.currency.currencyMark$!item.budgetBalRes.amountFormat</td>
+            <td class="BoxDetailRight FontList">$!item.progressRateRes.volFormat%</td>
+            <td class="BoxDetailRight FontCurrSmall">$!item.sectionResults.currency.currencyMark$!item.sectionResults.purReqSumAmountT.amountFormat</td>
+            <td class="BoxDetailRight FontCurrSmall">$!item.sectionResults.currency.currencyMark$!item.budgetBalEst.amountFormat</td>
+            <td class="BoxDetailRight FontList">$!item.progressRateEst.volFormat%</td>
+            <td class="BoxDetailRight FontCurrSmall">$!item.sectionResults.currency.currencyMark$!item.sectionResults.orderSumAmountT.amountFormat</td>
+            <td class="BoxDetailRight FontCurrSmall">$!item.sectionResults.currency.currencyMark$!item.sectionResults.orderDiffSumAmountT.amountFormat</td>
+            #foreach($!budgetAcceptSumAmount in $!item.budgetAcceptSumAmounts)
+                <td class="BoxDetailRight FontCurrSmall">
+                    $!item.sectionResults.currency.currencyMark$!budgetAcceptSumAmount[0]
+                    <br>
+                    #if('0' != $!budgetAcceptSumAmount[2] && $LoginUser.hasAuth(${AuthNoConstant.getValue("SECTION_BUDGET_DTL_READ_GRANT")}))
+                        <span label="case"  class="column SortColumn FontCurrSmall" style="color: #0000ff; border-bottom-color: #0000ff; border-bottom-width: 1px; border-bottom-style: dashed; cursor: pointer;"
+                            onclick="openSelectMonth('#jsEscapeInHTML($!item.sectionBudget.sectionBudgetIdentify.section.sectionCd)',
+                            '#jsEscapeInHTML($!item.sectionBudget.sectionBudgetIdentify.subject.subjectCd)',
+                            $velocityCount,
+                            '#jsEscapeInHTML($!item.sectionBudget.sectionBudgetIdentify.budgetYear)'
+                            )">
+                            $!item.sectionResults.currency.currencyMark$!budgetAcceptSumAmount[1]
+                        </span>
+                    #else
+                            $!item.sectionResults.currency.currencyMark$!budgetAcceptSumAmount[1]
+                    #end
+                </td>
+            #end
+            <td class="BoxDetailCenter FontList">$!item.sectionBudget.secTotalChk</td>
+            <td class="BoxDetailRight FontCurrSmall">$!item.sectionResults.currency.currencyMark$!item.sectionBudget.diffMaxAmount.amountFormat</td>
+        </tr>
+    #end
+    </tbody>
+</table>
+</form>
+#end
+
+<br>
+<table id="WAIT" class="NoBorder" style="display:none;width:100%;"><tr><td style="text-align:center;"><br><br>
+<img src="../../image/wait.gif"><br><span class="Font8"><br>#customSpringMessage('SEARCH_MESSAGE')</span></td></tr></table><!--問い合わせ中...-->
+</body>
+</html>

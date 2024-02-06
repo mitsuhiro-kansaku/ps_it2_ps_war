@@ -1,0 +1,710 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="ps.dataaccess.apr.qot.QotMapper">
+
+    <sql id="listKeyIdentitySearchWhereCondition">
+           ${@ps.common.util.ItemSettingUtil@getItemSettingWhereSQL('3')}
+           AND T_QUOT_REQUEST.QUOT_TYPE_IND IN ('1', '4')
+           AND T_QUOT_REQUEST.DELETE_FLG = '0'
+           AND T_QUOT_REQUEST.NEW_FLG = '1'
+           AND EXISTS( SELECT T_QUOT_REQ_DTL.QUOT_REQ_SEQ
+                     FROM T_QUOT_REQ_DTL
+                    WHERE T_QUOT_REQUEST.QUOT_REQ_SEQ = T_QUOT_REQ_DTL.QUOT_REQ_SEQ
+                      AND T_QUOT_REQUEST.QUOT_REQ_VERSION = T_QUOT_REQ_DTL.QUOT_REQ_VERSION
+                      AND T_QUOT_REQ_DTL.DELETE_FLG = '0'
+                      <if test="@org.apache.commons.lang.StringUtils@isNotBlank(itemCd)">
+                            AND T_QUOT_REQ_DTL.ITEM_CD ${@fw.common.util.SearchModeUtil@getSearchSQL("fw.domain.slip.quot.quotreq.QuotReqAppSearchCondition","itemCd")}
+                      </if>
+                      <if test="@org.apache.commons.lang.StringUtils@isNotBlank(itemName)">
+                            AND T_QUOT_REQ_DTL.ITEM_NAME ${@fw.common.util.SearchModeUtil@getSearchSQL("fw.domain.slip.quot.quotreq.QuotReqAppSearchCondition","itemName")}
+                      </if>
+            )
+           AND EXISTS( SELECT T_QUOT_REQ_SUP.QUOT_REQ_SEQ
+                     FROM T_QUOT_REQ_SUP
+                    WHERE T_QUOT_REQUEST.QUOT_REQ_SEQ = T_QUOT_REQ_SUP.QUOT_REQ_SEQ
+                      AND T_QUOT_REQUEST.QUOT_REQ_VERSION = T_QUOT_REQ_SUP.QUOT_REQ_VERSION
+                      AND T_QUOT_REQ_SUP.DELETE_FLG = '0'
+                      <if test="@org.apache.commons.lang.StringUtils@isNotBlank(supCd)">
+                        AND T_QUOT_REQ_SUP.SUP_CD ${@fw.common.util.SearchModeUtil@getSearchSQL("fw.domain.slip.quot.quotreq.QuotReqAppSearchCondition","supCd")}
+                      </if>
+                      <if test="@org.apache.commons.lang.StringUtils@isNotBlank(supName)">
+                        AND T_QUOT_REQ_SUP.SUP_ABBR_NAME ${@fw.common.util.SearchModeUtil@getSearchSQL("fw.domain.slip.quot.quotreq.QuotReqAppSearchCondition","supName")}
+                      </if>
+           )
+           AND QUOT_REQ_STATUS IN ('01', '02')
+    </sql>
+    <!--検索条件で全てキリストを取得する-->
+    <select id="listKeyIdentitySearch" parameterType="fw.domain.slip.quot.quotreq.QuotReqAppSearchCondition"
+                                                resultType="fw.domain.slip.quot.quotreq.QuotReqIdentify">
+        SELECT T_QUOT_REQUEST.QUOT_REQ_SEQ AS "quotReqSeqNo.seqNumber",
+               T_QUOT_REQUEST.LAST_UPD_DATE as "lastUpdDate"
+          FROM T_QUOT_REQUEST
+         INNER JOIN T_APPROVAL ON T_QUOT_REQUEST.QUOT_REQ_SEQ =
+                                  T_APPROVAL.APP_VOUCHER_KEY
+                              AND T_APPROVAL.APP_VOUCHER_IND = 'B'
+                              AND T_APPROVAL.APP_STATUS_IND IN ('0', '1')
+                              AND T_APPROVAL.DELETE_FLG = '0'
+                              <if test="@org.apache.commons.lang.StringUtils@isEmpty(appUserId)">
+                                AND T_APPROVAL.NOW_APP_USER_ID = '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}'
+                              </if>
+                              <if test="@org.apache.commons.lang.StringUtils@isNotEmpty(appUserId)">
+                                AND T_APPROVAL.NOW_APP_USER_ID = #{appUserId}
+                              </if>
+                              AND T_APPROVAL.NOW_APP_COMPANY_CD = '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}'
+         <where>
+            <include refid="listKeyIdentitySearchWhereCondition"/>
+        </where>
+        ORDER BY ${searchCondition.columnOrder.columnOrder()}
+    </select>
+
+    <resultMap id="QuotReqestInfoItem_Map"
+        type="fw.domain.slip.quot.quotreq.QuotReqAppItem">
+        <id column="QUOT_REQ_NO" property="quotReqNo" />
+        <id column="QUOT_REQ_SEQ" property="quotReqIdentify.quotReqSeqNo.seqNumber" />
+        <id column="NOW_APP_USER_NAME" property="appUserName" />
+        <id column="NEXT_APP_USER_NAME" property="nextAppUserName" />
+        <id column="FOR_SUPPRIER_COMMENT" property="comment" />
+        <id column="TITLE_NAME" property="titleName" />
+        <id column="QUOT_RESP_LIMIT_DATE" property="respLimitDate.dateOfymd" />
+        <id column="REQ_USER_ID" property="reqUserId" />
+        <id column="REQ_SECTION_NAME" property="reqSection" />
+        <id column="REQ_USER_NAME" property="reqUserName" />
+        <id column="DELIV_PLACE_NAME" property="deliveryPlaceName" />
+        <id column="BUYER_SECTION_NAME" property="buyerSection" />
+        <id column="BUYER_USER_ID" property="buyerUserId" />
+        <id column="BUYER_USER_NAME" property="buyerUserName" />
+        <id column="DELIV_PLACE_CD" property="deliveryPlaceCd" />
+        <id column="LAST_UPD_DATE" property="quotReqIdentify.lastUpdDate" />
+        <id column="ATTACH_FILE_SEQ1" property="rangeByAttachFile1.attachFile.seqNo" />
+        <id column="ATTACH_FILE_SEQ2" property="rangeByAttachFile2.attachFile.seqNo" />
+        <id column="REQ_SECTION_CD" property="reqSectionCd" />
+        <id column="BUYER_SECTION_CD" property="buyerSectionCd" />
+        <id column="PRE_SEQ" property="preSeq" />
+        <id column="EXCLUSIVE_SLIP_NO" property="quotReqIdentify.exclusiveSlipId.slipNo"/>
+        <id column="EXCLUSIVE_LAST_UPD_DATE" property="quotReqIdentify.exclusiveSlipId.lastUpdDate"/>
+    </resultMap>
+
+    <select id="listPageItem" parameterType="fw.domain.slip.quot.quotado.QuotAdoAppSearchCondition"
+                                            resultMap="QuotReqestInfoItem_Map">
+        SELECT  T_QUOT_REQUEST.QUOT_REQ_NO ,
+                T_QUOT_REQUEST.QUOT_REQ_SEQ ,
+                T_QUOT_REQUEST.LAST_UPD_DATE,
+                T_QUOT_REQUEST.BUYER_SECTION_CD,
+                T_QUOT_REQUEST.REQ_SECTION_CD,
+                T_APPROVAL.NOW_APP_USER_NAME ,
+                T_APPROVAL.NEXT_APP_USER_NAME ,
+                T_QUOT_REQUEST.FOR_SUPPRIER_COMMENT ,
+                T_QUOT_REQUEST.TITLE_NAME ,
+                T_QUOT_REQUEST.QUOT_RESP_LIMIT_DATE ,
+                T_QUOT_REQUEST.REQ_USER_ID ,
+                T_QUOT_REQUEST.REQ_SECTION_NAME ,
+                T_QUOT_REQUEST.REQ_USER_NAME ,
+                T_QUOT_REQUEST.DELIV_PLACE_NAME ,
+                T_QUOT_REQUEST.BUYER_SECTION_NAME ,
+                T_QUOT_REQUEST.BUYER_USER_ID ,
+                T_QUOT_REQUEST.BUYER_USER_NAME ,
+                T_QUOT_REQUEST.DELIV_PLACE_CD ,
+                T_QUOT_REQUEST.LAST_UPD_DATE,
+                T_QUOT_REQUEST.ATTACH_FILE_SEQ1,
+                T_QUOT_REQUEST.ATTACH_FILE_SEQ2,
+                T_QUOT_REQUEST.QUOT_TYPE_IND,
+                T_QUOT_REQUEST.PRE_SEQ,
+                T_SLIP_MNG.SLIP_NO AS EXCLUSIVE_SLIP_NO,
+                T_SLIP_MNG.LAST_UPD_DATE AS EXCLUSIVE_LAST_UPD_DATE,
+                ${@ps.common.util.ItemSettingUtil@getItemSettingSelectSQLDomainAliasNonBinary("T_QUOT_REQUEST","searchResExtItem")}
+        FROM    T_QUOT_REQUEST
+        INNER JOIN (SELECT
+                        T_QUOT_REQ_DTL.QUOT_REQ_SEQ,
+                        MIN(T_QUOT_REQ_DTL.QUOT_REQ_DTL_NO) as QUOT_REQ_DTL_NO
+                    FROM T_QUOT_REQ_DTL, T_QUOT_REQUEST
+                        WHERE T_QUOT_REQ_DTL.QUOT_REQ_SEQ = T_QUOT_REQUEST.QUOT_REQ_SEQ
+                        AND T_QUOT_REQ_DTL.DELETE_FLG = '0'
+                        GROUP BY T_QUOT_REQ_DTL.QUOT_REQ_SEQ
+                    )T_QUOT_REQ_DTL
+            ON T_QUOT_REQ_DTL.QUOT_REQ_SEQ = T_QUOT_REQUEST.QUOT_REQ_SEQ
+        INNER JOIN T_SLIP_MNG
+            ON T_QUOT_REQ_DTL.QUOT_REQ_DTL_NO = T_SLIP_MNG.SLIP_NO
+        INNER JOIN
+                T_APPROVAL
+        ON      T_QUOT_REQUEST.QUOT_REQ_SEQ = T_APPROVAL.APP_VOUCHER_KEY
+        AND     T_APPROVAL.APP_VOUCHER_IND = 'B'
+        AND     T_APPROVAL.APP_STATUS_IND IN ('0','1')
+        AND     T_APPROVAL.DELETE_FLG = '0'
+        <if test="@org.apache.commons.lang.StringUtils@isEmpty(appUserId)">
+        AND     T_APPROVAL.NOW_APP_USER_ID = '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}'
+        </if>
+        <if test="@org.apache.commons.lang.StringUtils@isNotEmpty(appUserId)">
+        AND     T_APPROVAL.NOW_APP_USER_ID = #{appUserId}
+        </if>
+        AND     T_APPROVAL.NOW_APP_COMPANY_CD = '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}'
+        <where>
+            <include refid="listKeyIdentitySearchWhereCondition"/>
+            AND T_QUOT_REQUEST.QUOT_REQ_SEQ IN
+           <foreach collection="searchCondition.page.keyDomainEntityList" item="keyList"  open="(" separator="," close=")">
+                 #{keyList.quotReqSeqNo.seqNumber}
+           </foreach>
+        </where>
+        ORDER BY ${searchCondition.columnOrder.columnOrder()}
+    </select>
+
+    <select id="listSupplierInfo" parameterType="string" resultType="fw.domain.slip.quot.quotreq.QuotReqAppItem">
+       SELECT T_QUOT_REQ_SUP.SUP_CD        as "supCd",
+              T_QUOT_REQ_SUP.SUP_ABBR_NAME as "supName"
+         FROM T_QUOT_REQ_SUP
+        WHERE T_QUOT_REQ_SUP.QUOT_REQ_SEQ = #{quotReqSeq}
+        ORDER BY QUOT_REQ_SEQ ASC, QUOT_SUP_LINE_NO ASC
+
+    </select>
+
+   <resultMap id="listQutoDetailInfo_MAP"
+        type="fw.domain.slip.quot.quotreq.QuotReqAppItem">
+        <id column="UNIT_NAME" property="productInfo.unitPrice.amount" />
+        <id column="UNIT_PRICE" property="productInfo.unitPrice.amount" />
+        <id column="QUOT_REQ_AMOUNT" property="productInfo.reqHopeAmount.amount" />
+        <id column="REQ_DELIV_DATE" property="productInfo.reqHopeDelivDate.dateOfymd" />
+     </resultMap>
+    <select id="listQutoDetailInfo" parameterType="string" resultMap="listQutoDetailInfo_MAP">
+         SELECT T_QUOT_REQ_DTL.ITEM_CD as "productInfo.itemCd",
+               T_QUOT_REQ_DTL.CURRENCY_CD as "productInfo.currency",
+               T_QUOT_REQ_DTL.ITEM_NAME as "productInfo.itemName",
+               T_QUOT_REQ_DTL.QUOT_REQ_VOL as "productInfo.vol.vol",
+               T_QUOT_REQ_DTL.UNIT_NAME as "productInfo.unit",
+               T_QUOT_REQ_DTL.UNIT_PRICE,
+               T_QUOT_REQ_DTL.QUOT_REQ_AMOUNT as "QUOT_REQ_AMOUNT",
+               T_QUOT_REQ_DTL.REQ_DELIV_DATE,
+               T_QUOT_REQ_DTL.ATTACH_FILE_SEQ as "productInfo.attachFileSeq"
+          FROM T_QUOT_REQ_DTL
+         WHERE T_QUOT_REQ_DTL.QUOT_REQ_SEQ = #{quotReqSeq}
+         ORDER BY T_QUOT_REQ_DTL.QUOT_REQ_DTL_NO
+    </select>
+
+    <!--個別承認初期-->
+    <resultMap id="listLongInit_MAP"
+        type="fw.domain.slip.quot.quotreq.QuotReq">
+        <id column="QUOT_REQ_NO" property="quotReqIdentify.quotReqNo.quotReqNo" />
+        <id column="QUOT_REQ_SEQ" property="quotReqIdentify.quotReqSeqNo.seqNumber" />
+        <id column="QUOT_REQ_VERSION" property="quotReqIdentify.historyNo.historyNo" />
+        <id column="CORRECT_CD" property="correctInd.correctInd" />
+        <id column="ITEM_CLASS_L_NAME" property="itemKind.itemClassLName" />
+        <id column="ITEM_CLASS_M_NAME" property="itemKind.itemClassMName" />
+        <id column="ITEM_CLASS_S_NAME" property="itemKind.itemClassSName" />
+        <id column="TITLE_NAME" property="titleName.titleName" />
+        <id column="QUOT_RESP_LIMIT_DATE" property="respLimitDate.respLimitDate.dateOfymd" />
+        <id column="DELIV_PLACE_CD" property="delivPlace.delivPlaceCd" />
+        <id column="DELIV_PLACE_NAME" property="delivPlace.delivPlaceName" />
+        <id column="FOR_SUPPRIER_COMMENT" property="forSupplierComment.forSupplierComment.comment" />
+        <id column="ATTACH_FILE_SEQ1" property="rangeByAttachFile1.attachFile.seqNo" />
+        <id column="ATTACH_FILE_NAME1" property="rangeByAttachFile1.attachFile.fileName" />
+        <id column="ATTACH_SCOPE1" property="rangeByAttachFile1.attachRange.attachRange" />
+        <id column="ATTACH_FILE_SEQ2" property="rangeByAttachFile2.attachFile.seqNo" />
+        <id column="ATTACH_FILE_NAME2" property="rangeByAttachFile2.attachFile.fileName" />
+        <id column="ATTACH_SCOPE2" property="rangeByAttachFile2.attachRange.attachRange" />
+        <id column="BUYER_COMPANY_CD" property="buyUser.buyUser.section.company.companyCd" />
+        <id column="BUYER_SECTION_CD" property="buyUser.buyUser.section.sectionCd" />
+        <id column="BUYER_SECTION_NAME" property="buyUser.buyUser.section.sectionName" />
+        <id column="BUYER_USER_EXTENSION_NO" property="buyUser.buyUser.externalNo.externalNo" />
+        <id column="BUYER_USER_TEL_NO" property="buyUser.buyUser.extNo.extensionNo" />
+        <id column="BUYER_USER_ID" property="buyUser.buyUser.userID" />
+        <id column="BUYER_USER_NAME" property="buyUser.buyUser.userName" />
+        <id column="REQ_COMPANY_CD" property="reqUser.reqUser.section.company.companyCd" />
+        <id column="REQ_SECTION_CD" property="reqUser.reqUser.section.sectionCd" />
+        <id column="REQ_SECTION_NAME" property="reqUser.reqUser.section.sectionName" />
+        <id column="REQ_USER_EXTENSION_NO" property="reqUser.reqUser.externalNo.externalNo" />
+        <id column="REQ_USER_TEL_NO" property="reqUser.reqUser.extNo.extensionNo" />
+        <id column="REQ_USER_ID" property="reqUser.reqUser.userID" />
+        <id column="REQ_USER_NAME" property="reqUser.reqUser.userName" />
+        <id column="APP_ROUTE_NO" property="approute.appRouteNo" />
+        <id column="APP_ROUTE_NAME" property="approute.appRouteName" />
+        <id column="LAST_UPD_DATE" property="quotReqIdentify.lastUpdDate" />
+        <id column="QUOT_TYPE_IND" property="quotInd.quotInd" />
+        <id column="APP_ROUTE_NO" property="appManagement.routeNo" />
+        <id column="PRE_SEQ" property="preSeq" />
+        <id column="SLIP_NO" property="exclusiveSlipId.slipNo" />
+        <id column="SLIP_LAST_UPD_DATE" property="exclusiveSlipId.lastUpdDate" />
+        <id column="EXT_TXT_1" property="detailExtItem.extendTxt.extendTxt1" />
+        <id column="EXT_TXT_2" property="detailExtItem.extendTxt.extendTxt2" />
+        <id column="EXT_TXT_3" property="detailExtItem.extendTxt.extendTxt3" />
+        <id column="EXT_TXT_4" property="detailExtItem.extendTxt.extendTxt4" />
+        <id column="EXT_TXT_5" property="detailExtItem.extendTxt.extendTxt5" />
+        <id column="EXT_TXT_6" property="detailExtItem.extendTxt.extendTxt6" />
+        <id column="EXT_TXT_7" property="detailExtItem.extendTxt.extendTxt7" />
+        <id column="EXT_TXT_8" property="detailExtItem.extendTxt.extendTxt8" />
+        <id column="EXT_TXT_9" property="detailExtItem.extendTxt.extendTxt9" />
+        <id column="EXT_TXT_10" property="detailExtItem.extendTxt.extendTxt10" />
+        <id column="EXT_AREA_1" property="detailExtItem.extendArea.extendArea1" />
+        <id column="EXT_AREA_2" property="detailExtItem.extendArea.extendArea2" />
+        <id column="EXT_AREA_3" property="detailExtItem.extendArea.extendArea3" />
+        <id column="EXT_AREA_4" property="detailExtItem.extendArea.extendArea4" />
+        <id column="EXT_AREA_5" property="detailExtItem.extendArea.extendArea5" />
+        <id column="EXT_DATE_1" property="detailExtItem.extendDate.extendDate1.dateOfymd" />
+        <id column="EXT_DATE_2" property="detailExtItem.extendDate.extendDate2.dateOfymd" />
+        <id column="EXT_DATE_3" property="detailExtItem.extendDate.extendDate3.dateOfymd" />
+        <id column="EXT_DATE_4" property="detailExtItem.extendDate.extendDate4.dateOfymd" />
+        <id column="EXT_DATE_5" property="detailExtItem.extendDate.extendDate5.dateOfymd" />
+        <id column="EXT_INT_1" property="detailExtItem.extendInt.extendInt1.value" />
+        <id column="EXT_INT_2" property="detailExtItem.extendInt.extendInt2.value" />
+        <id column="EXT_INT_3" property="detailExtItem.extendInt.extendInt3.value" />
+        <id column="EXT_INT_4" property="detailExtItem.extendInt.extendInt4.value" />
+        <id column="EXT_INT_5" property="detailExtItem.extendInt.extendInt5.value" />
+        <id column="EXT_INT_6" property="detailExtItem.extendInt.extendInt6.value" />
+        <id column="EXT_INT_7" property="detailExtItem.extendInt.extendInt7.value" />
+        <id column="EXT_INT_8" property="detailExtItem.extendInt.extendInt8.value" />
+        <id column="EXT_INT_9" property="detailExtItem.extendInt.extendInt9.value" />
+        <id column="EXT_INT_10" property="detailExtItem.extendInt.extendInt10.value" />
+        <id column="EXT_DEC_1" property="detailExtItem.extendDec.extendDec1.value" />
+        <id column="EXT_DEC_2" property="detailExtItem.extendDec.extendDec2.value" />
+        <id column="EXT_DEC_3" property="detailExtItem.extendDec.extendDec3.value" />
+        <id column="EXT_DEC_4" property="detailExtItem.extendDec.extendDec4.value" />
+        <id column="EXT_DEC_5" property="detailExtItem.extendDec.extendDec5.value" />
+        <id column="EXT_SEL_1" property="detailExtItem.extendSel.extendSel1" />
+        <id column="EXT_SEL_2" property="detailExtItem.extendSel.extendSel2" />
+        <id column="EXT_SEL_3" property="detailExtItem.extendSel.extendSel3" />
+        <id column="EXT_SEL_4" property="detailExtItem.extendSel.extendSel4" />
+        <id column="EXT_SEL_5" property="detailExtItem.extendSel.extendSel5" />
+        <id column="EXT_SEL_6" property="detailExtItem.extendSel.extendSel6" />
+        <id column="EXT_SEL_7" property="detailExtItem.extendSel.extendSel7" />
+        <id column="EXT_SEL_8" property="detailExtItem.extendSel.extendSel8" />
+        <id column="EXT_SEL_9" property="detailExtItem.extendSel.extendSel9" />
+        <id column="EXT_SEL_10" property="detailExtItem.extendSel.extendSel10" />
+        <id column="EXT_CHK_1" property="detailExtItem.extendChk.extendChk1" />
+        <id column="EXT_CHK_2" property="detailExtItem.extendChk.extendChk2" />
+        <id column="EXT_CHK_3" property="detailExtItem.extendChk.extendChk3" />
+        <id column="EXT_CHK_4" property="detailExtItem.extendChk.extendChk4" />
+        <id column="EXT_CHK_5" property="detailExtItem.extendChk.extendChk5" />
+        <id column="EXT_FILE_1" property="detailExtItem.extendFile.extendFile1.fileName" />
+        <id column="EXT_FILE_2" property="detailExtItem.extendFile.extendFile2.fileName" />
+        <id column="EXT_FILE_3" property="detailExtItem.extendFile.extendFile3.fileName" />
+        <id column="EXT_FILE_BINARY_1" property="detailExtItem.extendFile.extendFile1.binary" />
+        <id column="EXT_FILE_BINARY_2" property="detailExtItem.extendFile.extendFile2.binary" />
+        <id column="EXT_FILE_BINARY_3" property="detailExtItem.extendFile.extendFile3.binary" />
+        <id column="EXT_MST_1" property="detailExtItem.extendMst.extendMst1.mstKey" />
+        <id column="EXT_MST_2" property="detailExtItem.extendMst.extendMst2.mstKey" />
+        <id column="EXT_MST_3" property="detailExtItem.extendMst.extendMst3.mstKey" />
+        <id column="EXT_MST_4" property="detailExtItem.extendMst.extendMst4.mstKey" />
+        <id column="EXT_MST_5" property="detailExtItem.extendMst.extendMst5.mstKey" />
+        <id column="EXT_MST_6" property="detailExtItem.extendMst.extendMst6.mstKey" />
+        <id column="EXT_MST_7" property="detailExtItem.extendMst.extendMst7.mstKey" />
+        <id column="EXT_MST_8" property="detailExtItem.extendMst.extendMst8.mstKey" />
+        <id column="EXT_MST_NAME_1" property="detailExtItem.extendMst.extendMst1.mstName" />
+        <id column="EXT_MST_NAME_2" property="detailExtItem.extendMst.extendMst2.mstName" />
+        <id column="EXT_MST_NAME_3" property="detailExtItem.extendMst.extendMst3.mstName" />
+        <id column="EXT_MST_NAME_4" property="detailExtItem.extendMst.extendMst4.mstName" />
+        <id column="EXT_MST_NAME_5" property="detailExtItem.extendMst.extendMst5.mstName" />
+        <id column="EXT_MST_NAME_6" property="detailExtItem.extendMst.extendMst6.mstName" />
+        <id column="EXT_MST_NAME_7" property="detailExtItem.extendMst.extendMst7.mstName" />
+        <id column="EXT_MST_NAME_8" property="detailExtItem.extendMst.extendMst8.mstName" />
+    </resultMap>
+    <select id="listLongInit"  resultMap="listLongInit_MAP">
+        SELECT T_QUOT_REQUEST.QUOT_REQ_NO,
+               T_QUOT_REQUEST.QUOT_REQ_SEQ,
+               T_QUOT_REQUEST.QUOT_REQ_VERSION,
+               T_QUOT_REQUEST.CORRECT_CD,
+               T_QUOT_REQUEST.ITEM_CLASS_L_NAME,
+               T_QUOT_REQUEST.ITEM_CLASS_M_NAME,
+               T_QUOT_REQUEST.ITEM_CLASS_S_NAME,
+               T_QUOT_REQUEST.TITLE_NAME,
+               T_QUOT_REQUEST.QUOT_RESP_LIMIT_DATE,
+               T_QUOT_REQUEST.DELIV_PLACE_CD,
+               T_QUOT_REQUEST.DELIV_PLACE_NAME,
+               T_QUOT_REQUEST.FOR_SUPPRIER_COMMENT,
+               T_QUOT_REQUEST.ATTACH_FILE_SEQ1,
+               T_ATTACH_MNG_A.ATTACH_FILE_NAME AS "ATTACH_FILE_NAME1",
+               T_ATTACH_MNG_A.ATTACH_SCOPE AS "ATTACH_SCOPE1",
+               T_QUOT_REQUEST.ATTACH_FILE_SEQ2,
+               T_ATTACH_MNG_B.ATTACH_FILE_NAME AS "ATTACH_FILE_NAME2",
+               T_ATTACH_MNG_B.ATTACH_SCOPE AS "ATTACH_SCOPE2",
+               T_QUOT_REQUEST.BUYER_COMPANY_CD,
+               T_QUOT_REQUEST.BUYER_SECTION_CD,
+               T_QUOT_REQUEST.BUYER_SECTION_NAME,
+               T_QUOT_REQUEST.BUYER_USER_EXTENSION_NO,
+               T_QUOT_REQUEST.BUYER_USER_TEL_NO,
+               T_QUOT_REQUEST.BUYER_USER_ID,
+               T_QUOT_REQUEST.BUYER_USER_NAME,
+               T_QUOT_REQUEST.REQ_COMPANY_CD,
+               T_QUOT_REQUEST.REQ_SECTION_CD,
+               T_QUOT_REQUEST.REQ_SECTION_NAME,
+               T_QUOT_REQUEST.REQ_USER_EXTENSION_NO,
+               T_QUOT_REQUEST.REQ_USER_TEL_NO,
+               T_QUOT_REQUEST.REQ_USER_ID,
+               T_QUOT_REQUEST.REQ_USER_NAME,
+               T_QUOT_REQUEST.APP_ROUTE_NO,
+               T_QUOT_REQUEST.APP_ROUTE_NAME,
+               T_QUOT_REQUEST.LAST_UPD_DATE,
+               T_QUOT_REQUEST.QUOT_TYPE_IND,
+               T_QUOT_REQUEST.APP_ROUTE_NO,
+               T_QUOT_REQUEST.PRE_SEQ,
+               T_SLIP_MNG.SLIP_NO,
+               T_SLIP_MNG.LAST_UPD_DATE as SLIP_LAST_UPD_DATE,
+               ${@ps.common.util.ItemSettingUtil@getItemSettingSelectSQL("T_QUOT_REQUEST")}
+          FROM T_QUOT_REQUEST
+          INNER JOIN (
+             SELECT
+                QUOT_REQ_SEQ,
+                MIN(QUOT_REQ_DTL_NO) as QUOT_REQ_DTL_NO
+             FROM
+                T_QUOT_REQ_DTL
+             GROUP BY QUOT_REQ_SEQ
+           ) T_QUOT_REQ_DTL ON
+                T_QUOT_REQUEST.QUOT_REQ_SEQ = T_QUOT_REQ_DTL.QUOT_REQ_SEQ
+          LEFT JOIN T_SLIP_MNG ON
+                T_QUOT_REQ_DTL.QUOT_REQ_DTL_NO = T_SLIP_MNG.SLIP_NO
+          LEFT JOIN T_ATTACH_MNG T_ATTACH_MNG_A ON T_QUOT_REQUEST.ATTACH_FILE_SEQ1 =
+                                                   T_ATTACH_MNG_A.ATTACH_FILE_SEQ
+                                               AND T_ATTACH_MNG_A.DELETE_FLG = '0'
+          LEFT JOIN T_ATTACH_MNG T_ATTACH_MNG_B ON T_QUOT_REQUEST.ATTACH_FILE_SEQ2 =
+                                                   T_ATTACH_MNG_B.ATTACH_FILE_SEQ
+                                               AND T_ATTACH_MNG_B.DELETE_FLG = '0'
+         WHERE T_QUOT_REQUEST.QUOT_REQ_SEQ = #{quotReqSeq}
+     </select>
+
+    <resultMap id="listLongSupInit_MAP"  type="fw.domain.slip.quot.quotreq.QuotReqSupplier">
+        <id column="SUP_CD" property="supplierFrom.supCd" />
+        <id column="SUP_ABBR_NAME" property="supplierFrom.supplierName.supplierAbbrName" />
+        <id column="SUP_COMPANY_CD" property="supplierFrom.supCompanyCd" />
+        <id column="QUOT_REQ_DATE" property="quotReqDate.quotReqDate.reqDate.dateOfymd" />
+        <id column="QUOT_REQ_VERSION" property="quotReqSupplierIdentify.quotReqIdentify.historyNo.historyNo" />
+        <id column="APPROVAL_IND" property="approvalIndValue" />
+        <id column="QUOT_REQ_SEND_IND" property="dataInd.reqDataSendInd.sendInd" />
+        <id column="QUOT_REQ_FIRST_DATE" property="quotReqDate.firstTimeQuotReqDate.reqDate.dateOfymd" />
+        <id column="FAX_SEND_IND" property="dataInd.faxSendInd.sendInd" />
+        <id column="PRINT_IND" property="printInd.printInd.sendInd" />
+        <id column="QUOT_ADO_SEND_IND" property="dataInd.adoDataSendInd.sendInd" />
+        <id column="QUOT_SUP_LINE_NO" property="quotReqSupplierIdentify.quotSupplierLineNo" />
+        <id column="SUBCON_IND" property="supplierFrom.subcon.subconInd" />
+        <id column="EDI_IND" property="supplierFrom.ediInd.ediInd" />
+        <id column="SUP_TEL_NO" property="supplierFrom.supplierContact.ctc.telNo.telNo" />
+        <id column="SUP_FAX_NO" property="supplierFrom.supplierContact.ctc.faxNo.faxNo" />
+        <id column="SUP_ZIP_CD" property="supplierFrom.supplierContact.ctc.zipCd.zipCd" />
+        <id column="SUP_ADDRESS1" property="supplierFrom.supplierContact.ctc.address1.address" />
+        <id column="SUP_ADDRESS2" property="supplierFrom.supplierContact.ctc.address2.address" />
+        <id column="EDI_IND" property="supplierFrom.ediInd.ediInd" />
+    </resultMap>
+    <select id="listLongSupInit"  resultMap="listLongSupInit_MAP">
+      SELECT T_QUOT_REQ_SUP.SUP_CD
+           , T_QUOT_REQ_SUP.SUP_ABBR_NAME
+           , T_QUOT_REQ_SUP.SUP_COMPANY_CD
+           , T_QUOT_REQ_SUP.QUOT_REQ_DATE
+           , T_QUOT_REQ_SUP.QUOT_REQ_VERSION
+           , T_QUOT_REQ_SUP.APPROVAL_IND
+           , T_QUOT_REQ_SUP.QUOT_REQ_SEND_IND
+           , T_QUOT_REQ_SUP.QUOT_REQ_FIRST_DATE
+           , T_QUOT_REQ_SUP.FAX_SEND_IND
+           , T_QUOT_REQ_SUP.PRINT_IND
+           , T_QUOT_REQ_SUP.QUOT_ADO_SEND_IND
+           , T_QUOT_REQ_SUP.QUOT_SUP_LINE_NO
+           , T_QUOT_REQ_SUP.SUBCON_IND
+           , T_QUOT_REQ_SUP.EDI_IND
+           , T_QUOT_REQ_SUP.SUP_TEL_NO
+           , T_QUOT_REQ_SUP.SUP_FAX_NO
+           , T_QUOT_REQ_SUP.SUP_ZIP_CD
+           , T_QUOT_REQ_SUP.SUP_ADDRESS1
+           , T_QUOT_REQ_SUP.SUP_ADDRESS2
+           , T_QUOT_REQ_SUP.EDI_IND
+        FROM T_QUOT_REQ_SUP
+       WHERE T_QUOT_REQ_SUP.QUOT_REQ_SEQ = #{quotReqSeq}
+    </select>
+
+    <select id="getQuotSupplier"  resultMap="listLongSupInit_MAP">
+         SELECT T_QUOT_REQ_SUP.QUOT_REQ_FIRST_DATE,
+                T_QUOT_REQ_SUP.QUOT_REQ_DATE,
+                T_QUOT_REQ_SUP.APPROVAL_IND,
+                T_QUOT_REQ_SUP.QUOT_REQ_SEND_IND,
+                T_QUOT_REQ_SUP.FAX_SEND_IND,
+                T_QUOT_REQ_SUP.PRINT_IND,
+                T_QUOT_REQ_SUP.QUOT_ADO_SEND_IND
+           FROM T_QUOT_REQ_SUP
+          WHERE
+                    T_QUOT_REQ_SUP.QUOT_REQ_SEQ = #{quotReqSeq}
+                AND T_QUOT_REQ_SUP.QUOT_SUP_LINE_NO = #{quotSupplierLineNo}
+    </select>
+    <select id="getQuotReqFirstVersionInfo"  resultMap="listLongSupInit_MAP">
+            SELECT
+                 QUOT_REQ_FIRST_DATE
+            FROM T_QUOT_REQ_SUP
+            WHERE T_QUOT_REQ_SUP.QUOT_REQ_NO = #{quotReqNo}
+            AND T_QUOT_REQ_SUP.SUP_CD = #{supCd}
+            ORDER BY T_QUOT_REQ_SUP.QUOT_REQ_VERSION ASC
+    </select>
+    <resultMap id="listLongDtlInit_MAP"
+        type="fw.domain.slip.quot.quotreq.QuotReqItem">
+        <id column="ITEM_CD" property="itemName.itemCd" />
+        <id column="ITEM_NAME" property="itemName.itemName" />
+        <id column="KATASHIKI" property="itemName.katashiki" />
+        <id column="MANUFACT_CD" property="itemName.manufact.manufactCd" />
+        <id column="MANUFACT_NAME" property="itemName.manufact.manufactName" />
+        <id column="CURRENCY_CD" property="currency.currencyCd" />
+        <id column="UNIT_PRICE" property="quotHopeCondition.hopePrice.amount" /> <!-- 2013/04/30 ADD DAIKO_KANEKO -->
+        <id column="QUOT_REQ_AMOUNT" property="quotHopeCondition.hopeAmount.amount" />
+        <id column="UNIT_NAME" property="quotHopeCondition.hopeUnit.unitName" />
+        <id column="QUOT_REQ_VOL" property="quotHopeCondition.hopeVol.vol" />
+        <id column="REQ_DELIV_DATE" property="quotHopeCondition.hopeDlvEst.dateOfymd" />
+        <id column="ATTACH_FILE_SEQ" property="rangeByAttachFile.attachFile.seqNo" />
+        <id column="ATTACH_FILE_NAME" property="rangeByAttachFile.attachFile.fileName" />
+        <id column="ATTACH_SCOPE" property="rangeByAttachFile.attachRange.attachRange" />
+        <id column="EXT_TXT_1" property="detailExtItem.extendTxt.extendTxt1" />
+        <id column="EXT_TXT_2" property="detailExtItem.extendTxt.extendTxt2" />
+        <id column="EXT_TXT_3" property="detailExtItem.extendTxt.extendTxt3" />
+        <id column="EXT_TXT_4" property="detailExtItem.extendTxt.extendTxt4" />
+        <id column="EXT_TXT_5" property="detailExtItem.extendTxt.extendTxt5" />
+        <id column="EXT_TXT_6" property="detailExtItem.extendTxt.extendTxt6" />
+        <id column="EXT_TXT_7" property="detailExtItem.extendTxt.extendTxt7" />
+        <id column="EXT_TXT_8" property="detailExtItem.extendTxt.extendTxt8" />
+        <id column="EXT_TXT_9" property="detailExtItem.extendTxt.extendTxt9" />
+        <id column="EXT_TXT_10" property="detailExtItem.extendTxt.extendTxt10" />
+        <id column="EXT_AREA_1" property="detailExtItem.extendArea.extendArea1" />
+        <id column="EXT_AREA_2" property="detailExtItem.extendArea.extendArea2" />
+        <id column="EXT_AREA_3" property="detailExtItem.extendArea.extendArea3" />
+        <id column="EXT_AREA_4" property="detailExtItem.extendArea.extendArea4" />
+        <id column="EXT_AREA_5" property="detailExtItem.extendArea.extendArea5" />
+        <id column="EXT_DATE_1" property="detailExtItem.extendDate.extendDate1.dateOfymd" />
+        <id column="EXT_DATE_2" property="detailExtItem.extendDate.extendDate2.dateOfymd" />
+        <id column="EXT_DATE_3" property="detailExtItem.extendDate.extendDate3.dateOfymd" />
+        <id column="EXT_DATE_4" property="detailExtItem.extendDate.extendDate4.dateOfymd" />
+        <id column="EXT_DATE_5" property="detailExtItem.extendDate.extendDate5.dateOfymd" />
+        <id column="EXT_INT_1" property="detailExtItem.extendInt.extendInt1.value" />
+        <id column="EXT_INT_2" property="detailExtItem.extendInt.extendInt2.value" />
+        <id column="EXT_INT_3" property="detailExtItem.extendInt.extendInt3.value" />
+        <id column="EXT_INT_4" property="detailExtItem.extendInt.extendInt4.value" />
+        <id column="EXT_INT_5" property="detailExtItem.extendInt.extendInt5.value" />
+        <id column="EXT_INT_6" property="detailExtItem.extendInt.extendInt6.value" />
+        <id column="EXT_INT_7" property="detailExtItem.extendInt.extendInt7.value" />
+        <id column="EXT_INT_8" property="detailExtItem.extendInt.extendInt8.value" />
+        <id column="EXT_INT_9" property="detailExtItem.extendInt.extendInt9.value" />
+        <id column="EXT_INT_10" property="detailExtItem.extendInt.extendInt10.value" />
+        <id column="EXT_DEC_1" property="detailExtItem.extendDec.extendDec1.value" />
+        <id column="EXT_DEC_2" property="detailExtItem.extendDec.extendDec2.value" />
+        <id column="EXT_DEC_3" property="detailExtItem.extendDec.extendDec3.value" />
+        <id column="EXT_DEC_4" property="detailExtItem.extendDec.extendDec4.value" />
+        <id column="EXT_DEC_5" property="detailExtItem.extendDec.extendDec5.value" />
+        <id column="EXT_SEL_1" property="detailExtItem.extendSel.extendSel1" />
+        <id column="EXT_SEL_2" property="detailExtItem.extendSel.extendSel2" />
+        <id column="EXT_SEL_3" property="detailExtItem.extendSel.extendSel3" />
+        <id column="EXT_SEL_4" property="detailExtItem.extendSel.extendSel4" />
+        <id column="EXT_SEL_5" property="detailExtItem.extendSel.extendSel5" />
+        <id column="EXT_SEL_6" property="detailExtItem.extendSel.extendSel6" />
+        <id column="EXT_SEL_7" property="detailExtItem.extendSel.extendSel7" />
+        <id column="EXT_SEL_8" property="detailExtItem.extendSel.extendSel8" />
+        <id column="EXT_SEL_9" property="detailExtItem.extendSel.extendSel9" />
+        <id column="EXT_SEL_10" property="detailExtItem.extendSel.extendSel10" />
+        <id column="EXT_CHK_1" property="detailExtItem.extendChk.extendChk1" />
+        <id column="EXT_CHK_2" property="detailExtItem.extendChk.extendChk2" />
+        <id column="EXT_CHK_3" property="detailExtItem.extendChk.extendChk3" />
+        <id column="EXT_CHK_4" property="detailExtItem.extendChk.extendChk4" />
+        <id column="EXT_CHK_5" property="detailExtItem.extendChk.extendChk5" />
+        <id column="EXT_FILE_1" property="detailExtItem.extendFile.extendFile1.fileName" />
+        <id column="EXT_FILE_2" property="detailExtItem.extendFile.extendFile2.fileName" />
+        <id column="EXT_FILE_3" property="detailExtItem.extendFile.extendFile3.fileName" />
+        <id column="EXT_FILE_BINARY_1" property="detailExtItem.extendFile.extendFile1.binary" />
+        <id column="EXT_FILE_BINARY_2" property="detailExtItem.extendFile.extendFile2.binary" />
+        <id column="EXT_FILE_BINARY_3" property="detailExtItem.extendFile.extendFile3.binary" />
+        <id column="EXT_MST_1" property="detailExtItem.extendMst.extendMst1.mstKey" />
+        <id column="EXT_MST_2" property="detailExtItem.extendMst.extendMst2.mstKey" />
+        <id column="EXT_MST_3" property="detailExtItem.extendMst.extendMst3.mstKey" />
+        <id column="EXT_MST_4" property="detailExtItem.extendMst.extendMst4.mstKey" />
+        <id column="EXT_MST_5" property="detailExtItem.extendMst.extendMst5.mstKey" />
+        <id column="EXT_MST_6" property="detailExtItem.extendMst.extendMst6.mstKey" />
+        <id column="EXT_MST_7" property="detailExtItem.extendMst.extendMst7.mstKey" />
+        <id column="EXT_MST_8" property="detailExtItem.extendMst.extendMst8.mstKey" />
+        <id column="EXT_MST_NAME_1" property="detailExtItem.extendMst.extendMst1.mstName" />
+        <id column="EXT_MST_NAME_2" property="detailExtItem.extendMst.extendMst2.mstName" />
+        <id column="EXT_MST_NAME_3" property="detailExtItem.extendMst.extendMst3.mstName" />
+        <id column="EXT_MST_NAME_4" property="detailExtItem.extendMst.extendMst4.mstName" />
+        <id column="EXT_MST_NAME_5" property="detailExtItem.extendMst.extendMst5.mstName" />
+        <id column="EXT_MST_NAME_6" property="detailExtItem.extendMst.extendMst6.mstName" />
+        <id column="EXT_MST_NAME_7" property="detailExtItem.extendMst.extendMst7.mstName" />
+        <id column="EXT_MST_NAME_8" property="detailExtItem.extendMst.extendMst8.mstName" />
+    </resultMap>
+    <select id="listLongDtlInit"  resultMap="listLongDtlInit_MAP">
+          SELECT T_QUOT_REQ_DTL.ITEM_CD,
+                 T_QUOT_REQ_DTL.ITEM_NAME,
+                 T_QUOT_REQ_DTL.KATASHIKI,
+                 T_QUOT_REQ_DTL.MANUFACT_CD,
+                 T_QUOT_REQ_DTL.MANUFACT_NAME,
+                 T_QUOT_REQ_DTL.CURRENCY_CD,
+                 T_QUOT_REQ_DTL.UNIT_PRICE,
+                 T_QUOT_REQ_DTL.QUOT_REQ_AMOUNT,
+                 T_QUOT_REQ_DTL.UNIT_NAME,
+                 T_QUOT_REQ_DTL.QUOT_REQ_VOL,
+                 T_QUOT_REQ_DTL.REQ_DELIV_DATE,
+                 T_QUOT_REQ_DTL.ATTACH_FILE_SEQ,
+                 T_ATTACH_MNG.ATTACH_FILE_NAME,
+                 T_ATTACH_MNG.ATTACH_SCOPE,
+                 ${@ps.common.util.ItemSettingUtil@getItemSettingSelectSQL("T_QUOT_REQ_DTL")}
+            FROM T_QUOT_REQ_DTL
+        LEFT JOIN T_ATTACH_MNG
+               ON T_QUOT_REQ_DTL.ATTACH_FILE_SEQ = T_ATTACH_MNG.ATTACH_FILE_SEQ
+              AND T_ATTACH_MNG.DELETE_FLG = '0'
+            WHERE T_QUOT_REQ_DTL.QUOT_REQ_SEQ = #{quotReqSeq}
+            ORDER BY T_QUOT_REQ_DTL.QUOT_REQ_DTL_NO ASC
+    </select>
+    <select id="searchQuotReqStatus" parameterType="java.lang.String" resultType="java.lang.String">
+          SELECT T_QUOT_REQUEST.QUOT_REQ_STATUS
+            FROM T_QUOT_REQUEST
+            WHERE  T_QUOT_REQUEST.QUOT_REQ_SEQ = #{preSeq}
+    </select>
+    <update id="quotRestUnLastAppUpdate">
+            UPDATE  T_QUOT_REQUEST
+               SET T_QUOT_REQUEST.QUOT_REQ_STATUS = '02'
+                 , T_QUOT_REQUEST.LAST_UPD_DATE = '${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}'
+                 , T_QUOT_REQUEST.LAST_UPD_COMPANY_CD = '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}'
+                 , T_QUOT_REQUEST.LAST_UPD_SECTION_CD = '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}'
+                 , T_QUOT_REQUEST.LAST_UPD_USER_ID = '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}'
+            WHERE
+                 T_QUOT_REQUEST.QUOT_REQ_SEQ = #{quotReqSeq}
+    </update>
+    <update id="quotRestLastAppUpdateOne">
+           UPDATE  T_QUOT_REQUEST
+               SET T_QUOT_REQUEST.QUOT_REQ_STATUS =
+                   CASE WHEN #{quotReqStatus}='06' OR #{quotReqStatus}='07'
+                   THEN
+                       '06'
+                   ELSE
+                       '05'
+                   END
+                 , T_QUOT_REQUEST.NEW_APP_FLG = '1'
+                 , T_QUOT_REQUEST.LAST_UPD_DATE = '${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}'
+                 , T_QUOT_REQUEST.LAST_UPD_COMPANY_CD = '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}'
+                 , T_QUOT_REQUEST.LAST_UPD_SECTION_CD = '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}'
+                 , T_QUOT_REQUEST.LAST_UPD_USER_ID = '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}'
+            WHERE
+                 T_QUOT_REQUEST.QUOT_REQ_SEQ = #{quotReqSeq}
+    </update>
+    <update id="quotRestLastAppUpdateTwo">
+           UPDATE  T_QUOT_REQUEST
+               SET T_QUOT_REQUEST.NEW_APP_FLG = '0'
+                 , T_QUOT_REQUEST.LAST_UPD_DATE = '${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}'
+                 , T_QUOT_REQUEST.LAST_UPD_COMPANY_CD = '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}'
+                 , T_QUOT_REQUEST.LAST_UPD_SECTION_CD = '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}'
+                 , T_QUOT_REQUEST.LAST_UPD_USER_ID = '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}'
+            WHERE
+                 T_QUOT_REQUEST.QUOT_REQ_NO = #{quotReqNo}
+             AND T_QUOT_REQUEST.NEW_APP_FLG = '1'
+    </update>
+    <update id="quotRestLastAppUpdateThree">
+           UPDATE  T_QUOT_REQUEST
+               SET T_QUOT_REQUEST.DELETE_FLG = '1'
+                 , T_QUOT_REQUEST.LAST_UPD_DATE = '${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}'
+                 , T_QUOT_REQUEST.LAST_UPD_COMPANY_CD = '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}'
+                 , T_QUOT_REQUEST.LAST_UPD_SECTION_CD = '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}'
+                 , T_QUOT_REQUEST.LAST_UPD_USER_ID = '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}'
+            WHERE
+                 T_QUOT_REQUEST.QUOT_REQ_NO = #{quotReqNo}
+             AND QUOT_REQ_VERSION = #{quotReqVersion}
+             AND T_QUOT_REQUEST.QUOT_REQ_SEQ NOT IN (#{quotReqSeq})
+    </update>
+    <update id="quotRestBackUpdate">
+           UPDATE  T_QUOT_REQUEST
+               SET T_QUOT_REQUEST.QUOT_REQ_STATUS = '03'
+                 , T_QUOT_REQUEST.LAST_UPD_DATE = '${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}'
+                 , T_QUOT_REQUEST.LAST_UPD_COMPANY_CD = '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}'
+                 , T_QUOT_REQUEST.LAST_UPD_SECTION_CD = '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}'
+                 , T_QUOT_REQUEST.LAST_UPD_USER_ID = '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}'
+            WHERE
+                 T_QUOT_REQUEST.QUOT_REQ_SEQ = #{quotReqSeq}
+    </update>
+    <update id="quotSupUnAppUpdate">
+           UPDATE  T_QUOT_REQ_SUP
+               SET T_QUOT_REQ_SUP.LAST_UPD_DATE = '${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}'
+                 , T_QUOT_REQ_SUP.LAST_UPD_COMPANY_CD = '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}'
+                 , T_QUOT_REQ_SUP.LAST_UPD_SECTION_CD = '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}'
+                 , T_QUOT_REQ_SUP.LAST_UPD_USER_ID = '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}'
+            WHERE
+                 T_QUOT_REQ_SUP.QUOT_REQ_SEQ = #{quotReqSeq}
+             AND T_QUOT_REQ_SUP.QUOT_SUP_LINE_NO = #{quotSupLineNo}
+    </update>
+    <update id="quotSupAppUpdate">
+            UPDATE T_QUOT_REQ_SUP
+               SET T_QUOT_REQ_SUP.APPROVAL_IND = '1'
+                 , T_QUOT_REQ_SUP.QUOT_REQ_FIRST_DATE = #{quotReqFirstDate}
+                 , T_QUOT_REQ_SUP.QUOT_REQ_DATE = #{quotReqDate}
+                 , T_QUOT_REQ_SUP.QUOT_REQ_SEND_IND = #{quotReqSendInd}
+                 , T_QUOT_REQ_SUP.FAX_SEND_IND = #{faxSendInd}
+                 , T_QUOT_REQ_SUP.PRINT_IND = #{printInd}
+                 , T_QUOT_REQ_SUP.QUOT_ADO_SEND_IND = #{adoDataSendInd}
+                 , T_QUOT_REQ_SUP.LAST_UPD_DATE = '${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}'
+                 , T_QUOT_REQ_SUP.LAST_UPD_COMPANY_CD = '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}'
+                 , T_QUOT_REQ_SUP.LAST_UPD_SECTION_CD = '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}'
+                 , T_QUOT_REQ_SUP.LAST_UPD_USER_ID = '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}'
+            WHERE
+                 T_QUOT_REQ_SUP.QUOT_REQ_SEQ = #{quotReqSeq}
+             AND T_QUOT_REQ_SUP.QUOT_SUP_LINE_NO = #{quotSupLineNo}
+    </update>
+
+    <update id="quotPreSupAppUpdate">
+            UPDATE T_QUOT_REQ_SUP SET
+                T_QUOT_REQ_SUP.QUOT_REQ_SEND_IND =
+                    CASE WHEN T_QUOT_REQ_SUP.QUOT_REQ_SEND_IND = '0' THEN
+                        '9'
+                    ELSE CAST(T_QUOT_REQ_SUP.QUOT_REQ_SEND_IND AS CHAR) END,
+                T_QUOT_REQ_SUP.FAX_SEND_IND =
+                    CASE WHEN T_QUOT_REQ_SUP.FAX_SEND_IND = '0' THEN
+                        '9'
+                    ELSE CAST(T_QUOT_REQ_SUP.FAX_SEND_IND AS CHAR) END,
+                T_QUOT_REQ_SUP.PRINT_IND =
+                    CASE WHEN T_QUOT_REQ_SUP.PRINT_IND = '0' THEN
+                        '9'
+                    ELSE CAST(T_QUOT_REQ_SUP.PRINT_IND AS CHAR) END,
+                T_QUOT_REQ_SUP.QUOT_ADO_SEND_IND =
+                    CASE WHEN T_QUOT_REQ_SUP.QUOT_ADO_SEND_IND = '2' THEN
+                        '9'
+                    ELSE CAST(T_QUOT_REQ_SUP.QUOT_ADO_SEND_IND AS CHAR) END
+                , T_QUOT_REQ_SUP.LAST_UPD_DATE = '${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}'
+                , T_QUOT_REQ_SUP.LAST_UPD_COMPANY_CD = '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}'
+                , T_QUOT_REQ_SUP.LAST_UPD_SECTION_CD = '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}'
+                , T_QUOT_REQ_SUP.LAST_UPD_USER_ID = '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}'
+            WHERE
+                T_QUOT_REQ_SUP.QUOT_REQ_SEQ = #{preQuotReqSeq}
+    </update>
+
+    <resultMap id="listAllSupInit_MAP"  type="fw.domain.slip.quot.quotreq.QuotReqAppItem">
+        <id column="QUOT_REQ_DATE" property="quotReqDate.dateOfymd" />
+        <id column="QUOT_REQ_VERSION" property="historyNo" />
+        <id column="QUOT_REQ_SEND_IND" property="reqDataSendInd" />
+        <id column="QUOT_REQ_FIRST_DATE" property="firstTimeQuotReqDate.dateOfymd" />
+        <id column="FAX_SEND_IND" property="faxSendInd" />
+        <id column="PRINT_IND" property="printInd" />
+        <id column="QUOT_SUP_LINE_NO" property="quotSupplierLineNo" />
+        <id column="SUP_CD" property="supCd" />
+        <id column="QUOT_REQ_NO" property="quotReqIdentify.quotReqNo.quotReqNo" />
+     </resultMap>
+    <select id="listAllSupInit"  resultMap="listAllSupInit_MAP">
+         SELECT T_QUOT_REQ_SUP.QUOT_REQ_DATE,
+                T_QUOT_REQ_SUP.QUOT_REQ_VERSION,
+                T_QUOT_REQ_SUP.QUOT_REQ_SEND_IND,
+                T_QUOT_REQ_SUP.QUOT_REQ_FIRST_DATE,
+                T_QUOT_REQ_SUP.FAX_SEND_IND,
+                T_QUOT_REQ_SUP.PRINT_IND,
+                T_QUOT_REQ_SUP.QUOT_SUP_LINE_NO,
+                T_QUOT_REQ_SUP.SUP_CD,
+                T_QUOT_REQ_SUP.QUOT_REQ_NO
+           FROM T_QUOT_REQ_SUP
+          WHERE T_QUOT_REQ_SUP.QUOT_REQ_SEQ = #{quotReqSeq}
+    </select>
+
+    <select id="attchSeq" resultType="String">
+        SELECT ATTACH_SCOPE
+        FROM T_ATTACH_MNG
+        WHERE T_ATTACH_MNG.ATTACH_FILE_SEQ = #{seq}
+    </select>
+
+    <update id="quotSupStatusUpdate">
+        UPDATE T_QUOT_REQ_SUP SET
+            T_QUOT_REQ_SUP.QUOT_SUP_STATUS = '02'
+            , T_QUOT_REQ_SUP.LAST_UPD_DATE = '${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}'
+            , T_QUOT_REQ_SUP.LAST_UPD_COMPANY_CD = '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}'
+            , T_QUOT_REQ_SUP.LAST_UPD_SECTION_CD = '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}'
+            , T_QUOT_REQ_SUP.LAST_UPD_USER_ID = '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}'
+        WHERE
+                T_QUOT_REQ_SUP.QUOT_REQ_SEQ = #{quotReqSeq}
+            AND T_QUOT_REQ_SUP.APPROVAL_IND = '1'
+            AND EXISTS (
+                    SELECT 1
+                    FROM T_QUOT_RESPONSE
+                    WHERE
+                            T_QUOT_RESPONSE.QUOT_REQ_NO = T_QUOT_REQ_SUP.QUOT_REQ_NO
+                        AND T_QUOT_RESPONSE.QUOT_REQ_VERSION = T_QUOT_REQ_SUP.QUOT_REQ_VERSION
+                        AND T_QUOT_RESPONSE.QUOT_SUP_LINE_NO = T_QUOT_REQ_SUP.QUOT_SUP_LINE_NO
+                )
+    </update>
+</mapper>

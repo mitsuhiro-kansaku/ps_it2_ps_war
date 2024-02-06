@@ -1,0 +1,329 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="ps.dataaccess.options.budget.ringibudgetdtllist.RingiBudgetDtlListMapper">
+
+    <!-- 検索する -->
+    <sql id="listKeyIdentityWhereCondition">
+        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(ringiBudgetIdentify.company.companyCd)">
+            AND RINGIBUDGETDTL.COMPANY_CD = #{ringiBudgetIdentify.company.companyCd}
+        </if>
+        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(ringiBudgetIdentify.sectionPlace.sectionPlaceCd)">
+            AND RINGIBUDGETDTL.SECTION_PLACE_CD = #{ringiBudgetIdentify.sectionPlace.sectionPlaceCd}
+        </if>
+        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(ringiBudgetIdentify.budgetNo.budgetNo)">
+            AND RINGIBUDGETDTL.BUDGET_NO = #{ringiBudgetIdentify.budgetNo.budgetNo}
+        </if>
+    </sql>
+    <sql id="RingiBudgeDtlSql">
+        SELECT
+            T_RINGI_BUDGET_DTL.COMPANY_CD
+            , T_RINGI_BUDGET_DTL.SECTION_PLACE_CD
+            , T_RINGI_BUDGET_DTL.BUDGET_NO
+            , T_RINGI_BUDGET_DTL.BUDGET_DTL_NO
+            , T_RINGI_BUDGET_DTL.BUDGET_NAME
+            , T_RINGI_BUDGET_DTL.SUBJECT_CD
+            , T_RINGI_BUDGET_DTL.SUBJECT_NAME
+            , T_RINGI_BUDGET_DTL.BUDGET_AMOUNT AS BUDGET_AMOUNT
+            , ringi_results.ACCEPT_SUM_AMOUNT AS ACCEPT_SUM
+            , NVL(T_RINGI_BUDGET_DTL.BUDGET_AMOUNT, 0) - NVL(ringi_results.ACCEPT_SUM_AMOUNT, 0) AS BUDGET_BAL_RES
+            , TO_CHAR(
+            ${@fw.common.util.options.budget.OptionBudgetUtil@getFrcIndSqlFuncName(@fw.security.SecurityUtil@getCompanyCd())}(
+             NVL(NVL(ringi_results.ACCEPT_SUM_AMOUNT, 0) / NULLIF(T_RINGI_BUDGET_DTL.BUDGET_AMOUNT, 0), 0) * 100), '999,999,999,999,990') AS PROGRESS_RATE_RES
+            , ringi_results.PUR_REQ_SUM_AMOUNT AS PUR_REQ_SUM
+            , NVL(T_RINGI_BUDGET_DTL.BUDGET_AMOUNT, 0) - NVL(ringi_results.PUR_REQ_SUM_AMOUNT, 0) + NVL(ringi_results.ORDER_DIFF_SUM_AMOUNT, 0)
+             AS BUDGET_BAL_EST
+            , TO_CHAR(
+            ${@fw.common.util.options.budget.OptionBudgetUtil@getFrcIndSqlFuncName(@fw.security.SecurityUtil@getCompanyCd())}(
+              NVL((NVL(ringi_results.PUR_REQ_SUM_AMOUNT, 0) - NVL(ringi_results.ORDER_DIFF_SUM_AMOUNT, 0)) / NULLIF(T_RINGI_BUDGET_DTL.BUDGET_AMOUNT, 0)
+            , 0) * 100), '999,999,999,999,990') AS PROGRESS_RATE_EST
+            , ringi_results.ORDER_SUM_AMOUNT AS ORDER_SUM
+            , ringi_results.ORDER_DIFF_SUM_AMOUNT AS ORDER_DIFF_SUM
+            , T_RINGI_BUDGET_DTL.BUDGET_NOTE
+            , T_RINGI_BUDGET_DTL.LAST_UPD_DATE
+        FROM
+            T_RINGI_BUDGET_DTL
+        LEFT JOIN T_RINGI_RESULTS ringi_results
+            ON ringi_results.COMPANY_CD = T_RINGI_BUDGET_DTL.COMPANY_CD
+            AND T_RINGI_BUDGET_DTL.SECTION_PLACE_CD = ringi_results.SECTION_PLACE_CD
+            AND T_RINGI_BUDGET_DTL.BUDGET_NO = ringi_results.BUDGET_NO
+            AND T_RINGI_BUDGET_DTL.BUDGET_DTL_NO = ringi_results.BUDGET_DTL_NO
+    </sql>
+    <!-- キー項目検索 -->
+    <resultMap type="fw.domain.options.budget.ringibudget.RingiBudgetDtlIdentify"
+        id="RingiBudgetDtlIdentify_Map">
+        <id column="COMPANY_CD" property="company.companyCd" />
+        <id column="SECTION_PLACE_CD" property="sectionPlace.sectionPlaceCd" />
+        <id column="BUDGET_NO" property="budgetNo.budgetNo" />
+        <id column="BUDGET_DTL_NO" property="budgetDtlNo.budgetDtlNo" />
+        <id column="LAST_UPD_DATE" property="lastUpdDate" />
+    </resultMap>
+    <select id="listKeyIdentity"
+        parameterType="fw.domain.options.budget.ringibudgetdtllist.RingiBudgetDtlListSearchCondition"
+        resultMap="RingiBudgetDtlIdentify_Map">
+        WITH RINGIBUDGETDTL AS (
+            <include refid="RingiBudgeDtlSql"/>
+        )
+        SELECT
+            RINGIBUDGETDTL.COMPANY_CD
+            , RINGIBUDGETDTL.SECTION_PLACE_CD
+            , RINGIBUDGETDTL.BUDGET_NO
+            , RINGIBUDGETDTL.BUDGET_DTL_NO
+            , RINGIBUDGETDTL.LAST_UPD_DATE
+        FROM
+            RINGIBUDGETDTL
+        <where>
+            <include refid="listKeyIdentityWhereCondition"/>
+        </where>
+        ORDER BY ${searchCondition.columnOrder.columnOrder()}
+    </select>
+    <!-- 一覧取得 -->
+    <resultMap type="fw.domain.options.budget.ringibudgetdtllist.RingiBudgetDtlListItem"
+        id="RingiBudgetDtlListItem_Map">
+            <id column="COMPANY_CD" property="ringiBudgetDtlIdentify.company.companyCd" />
+            <id column="SECTION_PLACE_CD" property="ringiBudgetDtlIdentify.sectionPlace.sectionPlaceCd" />
+            <id column="BUDGET_NO" property="ringiBudgetDtlIdentify.budgetNo.budgetNo" />
+            <id column="BUDGET_DTL_NO" property="ringiBudgetDtlIdentify.budgetDtlNo.budgetDtlNo" />
+            <id column="BUDGET_NAME" property="budgetTitleName" />
+            <id column="SUBJECT_CD" property="subjectCd" />
+            <id column="SUBJECT_NAME" property="subjectName" />
+            <id column="BUDGET_AMOUNT" property="budgetAmount.amount" />
+            <id column="ACCEPT_SUM" property="acceptSum.amount" />
+            <id column="BUDGET_BAL_RES" property="budgetBalRes.amount" />
+            <id column="PROGRESS_RATE_RES" property="progressRateRes" />
+            <id column="PUR_REQ_SUM" property="purReqSum.amount" />
+            <id column="BUDGET_BAL_EST" property="budgetBalEst.amount" />
+            <id column="PROGRESS_RATE_EST" property="progressRateEst" />
+            <id column="ORDER_SUM" property="orderSum.amount" />
+            <id column="ORDER_DIFF_SUM" property="orderDiffSum.amount" />
+            <id column="LAST_UPD_DATE" property="ringiBudgetDtlIdentify.lastUpdDate" />
+    </resultMap>
+    <select id="listPageItem"
+        parameterType="fw.domain.options.budget.ringibudgetdtllist.RingiBudgetDtlListSearchCondition"
+        resultMap="RingiBudgetDtlListItem_Map">
+        WITH RINGIBUDGETDTL AS (
+            <include refid="RingiBudgeDtlSql"/>
+        )
+        SELECT
+            RINGIBUDGETDTL.COMPANY_CD
+            , RINGIBUDGETDTL.SECTION_PLACE_CD
+            , RINGIBUDGETDTL.BUDGET_NO
+            , RINGIBUDGETDTL.BUDGET_DTL_NO
+            , RINGIBUDGETDTL.BUDGET_NAME
+            , RINGIBUDGETDTL.SUBJECT_CD
+            , RINGIBUDGETDTL.SUBJECT_NAME
+            , RINGIBUDGETDTL.BUDGET_AMOUNT
+            , RINGIBUDGETDTL.ACCEPT_SUM
+            , RINGIBUDGETDTL.BUDGET_BAL_RES
+            , RINGIBUDGETDTL.PROGRESS_RATE_RES
+            , RINGIBUDGETDTL.PUR_REQ_SUM
+            , RINGIBUDGETDTL.BUDGET_BAL_EST
+            , RINGIBUDGETDTL.PROGRESS_RATE_EST
+            , RINGIBUDGETDTL.ORDER_SUM
+            , RINGIBUDGETDTL.ORDER_DIFF_SUM
+            , RINGIBUDGETDTL.LAST_UPD_DATE
+        FROM
+            RINGIBUDGETDTL
+        <where>
+            <include refid="listKeyIdentityWhereCondition"/>
+            AND (
+                RINGIBUDGETDTL.COMPANY_CD
+                , RINGIBUDGETDTL.SECTION_PLACE_CD
+                , RINGIBUDGETDTL.BUDGET_NO
+                , RINGIBUDGETDTL.BUDGET_DTL_NO
+            ) IN
+            <foreach collection="searchCondition.page.keyDomainEntityList" item="keyList"  open="(" separator="," close=")">
+                (
+                    #{keyList.company.companyCd, jdbcType=VARCHAR}
+                    , #{keyList.sectionPlace.sectionPlaceCd, jdbcType=VARCHAR}
+                    , #{keyList.budgetNo.budgetNo, jdbcType=VARCHAR}
+                    , #{keyList.budgetDtlNo.budgetDtlNo, jdbcType=VARCHAR}
+                )
+            </foreach>
+        </where>
+        ORDER BY ${searchCondition.columnOrder.columnOrder()}
+    </select>
+
+    <!-- 親情報取得 -->
+    <resultMap type="fw.domain.options.budget.ringibudget.RingiBudgetManagement"
+        id="RingiBudgetManagement_Map">
+        <id column="COMPANY_CD" property="ringiBudgetIdentify.company.companyCd" />
+        <id column="SECTION_PLACE_CD" property="ringiBudgetIdentify.sectionPlace.sectionPlaceCd" />
+        <id column="BUDGET_NO" property="ringiBudgetIdentify.budgetNo.budgetNo" />
+        <id column="REQ_SECTION_CD" property="planInfo.reqSection.sectionCd" />
+        <id column="REQ_SECTION_NAME" property="planInfo.reqSection.sectionName" />
+        <id column="BUDGET_TITLE_NAME" property="titleName.titleName" />
+        <id column="PLAN_USER_ID" property="planInfo.planUser.userID" />
+        <id column="PLAN_USER_NAME" property="planInfo.planUser.userName" />
+        <id column="PERMIT_DATE" property="permitDate.permitDate.dateOfymd" />
+        <id column="CURRENCY_CD" property="ringiBudgetIdentify.company.currency.currencyCd" />
+        <id column="BUDGET_AMOUNT" property="budgetAmount.budgetAmount.amount" />
+        <id column="END_EXP_DATE" property="endExpDate.endExpDate.dateOfymd" />
+        <id column="END_DATE" property="endDate.endDate.dateOfymd" />
+        <id column="RIN_TOTAL_CHK_IND" property="rinTotalChkInd.rinTotalChkInd" />
+        <id column="DIFF_MAX_AMOUNT" property="diffMaxAmount.diffMaxAmount.amount" />
+        <id column="BUDGET_NOTE" property="sectionNote.sectionNote.comment" />
+        <id column="LAST_UPD_DATE1" property="ringiBudgetIdentify.lastUpdDate" />
+        <id column="LAST_UPD_DATE2" property="registInfo.lastUpdDate" />
+        <id column="LAST_UPD_COMPANY_CD" property="registInfo.lastUpdCompanyCd" />
+        <id column="LAST_UPD_SECTION_CD" property="registInfo.lastUpdSectionCd" />
+        <id column="LAST_UPD_USER_ID" property="registInfo.lastUpdUserId" />
+        <id column="REG_DATE" property="registInfo.regDate" />
+        <id column="REG_COMPANY_CD" property="registInfo.regCompanyCd" />
+        <id column="REG_SECTION_CD" property="registInfo.regSectionCd" />
+        <id column="REG_USER_ID" property="registInfo.regUserId" />
+    </resultMap>
+    <select id="getRingiBudgetManagement"
+            parameterType="fw.domain.options.budget.ringibudget.RingiBudgetIdentify"
+            resultMap="RingiBudgetManagement_Map">
+        SELECT
+            COMPANY_CD
+            , SECTION_PLACE_CD
+            , BUDGET_NO
+            , REQ_SECTION_CD
+            , REQ_SECTION_NAME
+            , BUDGET_TITLE_NAME
+            , PLAN_USER_ID
+            , PLAN_USER_NAME
+            , PERMIT_DATE
+            , CURRENCY_CD
+            , BUDGET_AMOUNT
+            , END_EXP_DATE
+            , END_DATE
+            , RIN_TOTAL_CHK_IND
+            , DIFF_MAX_AMOUNT
+            , BUDGET_NOTE
+            , AUTO_DELETE_FLG
+            , AUTO_DELETE_DATE
+            , LAST_UPD_DATE AS LAST_UPD_DATE1
+            , LAST_UPD_DATE AS LAST_UPD_DATE2
+            , LAST_UPD_COMPANY_CD
+            , LAST_UPD_SECTION_CD
+            , LAST_UPD_USER_ID
+            , REG_DATE
+            , REG_COMPANY_CD
+            , REG_SECTION_CD
+            , REG_USER_ID
+        FROM
+            T_RINGI_BUDGET
+        <where>
+            <if test="@org.apache.commons.lang.StringUtils@isNotBlank(company.companyCd)">
+                AND COMPANY_CD = #{company.companyCd}
+            </if>
+            <if test="@org.apache.commons.lang.StringUtils@isNotBlank(sectionPlace.sectionPlaceCd)">
+                AND SECTION_PLACE_CD = #{sectionPlace.sectionPlaceCd}
+            </if>
+            <if test="@org.apache.commons.lang.StringUtils@isNotBlank(budgetNo.budgetNo)">
+                AND BUDGET_NO = #{budgetNo.budgetNo}
+            </if>
+        </where>
+    </select>
+
+    <!-- 明細合計 -->
+    <resultMap type="fw.domain.mst.basicvocabulary.candidate.Amount"
+        id="BudgetDtlTotal_Map">
+        <id column="SUM_BUDGET_AMOUNT" property="amount" />
+    </resultMap>
+    <select id="budgetDtlTotal"
+        resultMap="BudgetDtlTotal_Map">
+        WITH RINGIBUDGETDTL AS (
+            <include refid="RingiBudgeDtlSql"/>
+        )
+        SELECT
+            SUM(RINGIBUDGETDTL.BUDGET_AMOUNT) AS SUM_BUDGET_AMOUNT
+        FROM
+            RINGIBUDGETDTL
+        <where>
+            <if test="@org.apache.commons.lang.StringUtils@isNotBlank(companyCd)">
+                AND RINGIBUDGETDTL.COMPANY_CD = #{companyCd}
+            </if>
+            <if test="@org.apache.commons.lang.StringUtils@isNotBlank(sectionPlaceCd)">
+                AND RINGIBUDGETDTL.SECTION_PLACE_CD = #{sectionPlaceCd}
+            </if>
+            <if test="@org.apache.commons.lang.StringUtils@isNotBlank(budgetNo)">
+                AND RINGIBUDGETDTL.BUDGET_NO = #{budgetNo}
+            </if>
+        </where>
+    </select>
+
+    <!-- ダウンロードする。 -->
+    <resultMap type="fw.domain.options.budget.ringibudgetdtllist.RingiBudgetDtlListDownload"
+        id="RingiBudgetDtlListDownload_Map">
+        <id column="COMPANY_CD" property="ringiBudgetDtlIdentify.company.companyCd" />
+        <id column="SECTION_PLACE_CD" property="ringiBudgetDtlIdentify.sectionPlace.sectionPlaceCd" />
+        <id column="BUDGET_NO" property="ringiBudgetDtlIdentify.budgetNo.budgetNo" />
+        <id column="BUDGET_DTL_NO" property="ringiBudgetDtlIdentify.budgetDtlNo.budgetDtlNo" />
+        <id column="BUDGET_NAME" property="budgetDtlTitleName" />
+        <id column="SUBJECT_CD" property="subjectCd" />
+        <id column="SUBJECT_NAME" property="subjectName" />
+        <id column="BUDGET_AMOUNT" property="budgetDtlAmount.amount" />
+        <id column="ACCEPT_SUM" property="acceptSum.amount" />
+        <id column="BUDGET_BAL_RES" property="budgetBalRes.amount" />
+        <id column="PROGRESS_RATE_RES" property="progressRateRes" />
+        <id column="PUR_REQ_SUM" property="purReqSum.amount" />
+        <id column="BUDGET_BAL_EST" property="budgetBalEst.amount" />
+        <id column="PROGRESS_RATE_EST" property="progressRateEst" />
+        <id column="ORDER_SUM" property="orderSum.amount" />
+        <id column="ORDER_DIFF_SUM" property="orderDiffSum.amount" />
+        <id column="BUDGET_NOTE" property="budgetDtlNote" />
+        <id column="LAST_UPD_DATE" property="ringiBudgetDtlIdentify.lastUpdDate" />
+
+    </resultMap>
+    <select id="listDownload"
+            parameterType="fw.domain.options.budget.ringibudgetdtllist.RingiBudgetDtlListSearchCondition"
+            resultMap="RingiBudgetDtlListDownload_Map">
+        WITH RINGIBUDGETDTL AS (
+            <include refid="RingiBudgeDtlSql"/>
+        )
+        <include refid="pageHeader"/>
+        SELECT
+            RINGIBUDGETDTL.COMPANY_CD
+            , RINGIBUDGETDTL.SECTION_PLACE_CD
+            , RINGIBUDGETDTL.BUDGET_NO
+            , RINGIBUDGETDTL.BUDGET_DTL_NO
+            , RINGIBUDGETDTL.BUDGET_NAME
+            , RINGIBUDGETDTL.SUBJECT_CD
+            , RINGIBUDGETDTL.SUBJECT_NAME
+            , RINGIBUDGETDTL.BUDGET_AMOUNT
+            , RINGIBUDGETDTL.ACCEPT_SUM
+            , RINGIBUDGETDTL.BUDGET_BAL_RES
+            , RINGIBUDGETDTL.PROGRESS_RATE_RES
+            , RINGIBUDGETDTL.PUR_REQ_SUM
+            , RINGIBUDGETDTL.BUDGET_BAL_EST
+            , RINGIBUDGETDTL.PROGRESS_RATE_EST
+            , RINGIBUDGETDTL.ORDER_SUM
+            , RINGIBUDGETDTL.ORDER_DIFF_SUM
+            , RINGIBUDGETDTL.BUDGET_NOTE
+            , RINGIBUDGETDTL.LAST_UPD_DATE
+        FROM
+            RINGIBUDGETDTL
+        <where>
+            <include refid="listKeyIdentityWhereCondition"/>
+        </where>
+        ORDER BY
+             RINGIBUDGETDTL.BUDGET_NO
+        <include refid="pageRoot"/>
+    </select>
+    <select id="downloadCount"
+            parameterType="fw.domain.options.budget.ringibudgetdtllist.RingiBudgetDtlListSearchCondition"
+            resultType="java.lang.Long">
+        WITH RINGIBUDGETDTL AS (
+            <include refid="RingiBudgeDtlSql"/>
+        )
+        SELECT
+            COUNT(*)
+        FROM
+            RINGIBUDGETDTL
+        <where>
+            <include refid="listKeyIdentityWhereCondition"/>
+        </where>
+    </select>
+    <sql id="pageHeader">
+       SELECT * FROM (
+    </sql>
+    <sql id="pageRoot">
+        ) WHERE  ROWNUM &lt;=${@fw.common.util.PropertiesUtil@getLong("DOWNLOAD_MAXCNT")}
+    </sql>
+
+</mapper>

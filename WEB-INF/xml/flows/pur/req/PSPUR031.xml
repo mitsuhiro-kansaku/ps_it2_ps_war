@@ -1,0 +1,130 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<flow xmlns="http://www.springframework.org/schema/webflow"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.springframework.org/schema/webflow
+        http://www.springframework.org/schema/webflow/spring-webflow-2.0.xsd"
+    parent="base">
+    
+    <var name="purAplIdentify" class="fw.domain.slip.purreq.everypurreq.purreqmng.PurAplIdentify" />
+    
+    <input name="searchCondition" />
+    <input name="isCurrentPageSearch" />
+    
+    <decision-state id="isSearchByKey">
+       <if test="flowScope.isCurrentPageSearch" then="searchByKey" else="searchByCondition" />
+    </decision-state>
+    
+    <action-state id="searchByCondition">
+        <evaluate expression="PSPUR031Service.init(searchCondition)" result="flowScope.itemList" />
+        <transition to="PSPUR031"/> 
+    </action-state>
+
+    <action-state  id="searchByKey" >
+        <evaluate expression="PSPUR031Service.page(searchCondition)" result="flowScope.itemList" />
+        <transition to="PSPUR031"/>
+    </action-state>
+     
+    <view-state id="PSPUR031" view="pur/req/PSPUR031" model="purAplIdentify">
+        <transition on="page" validate="false">
+            <evaluate expression="PSPUR031Service.page(searchCondition)"
+                result="flowScope.itemList" />
+        </transition>
+        <transition on="order" validate="false">
+            <evaluate expression="PSPUR031Service.order(searchCondition)"
+                result="flowScope.itemList" />
+        </transition>
+        <transition on="back" to="home" validate="false" />
+        
+        <transition on="delete" validate="true" to="searchByKey">
+            <evaluate expression="PSPUR031Service.delete(purAplIdentify)" />
+            <set name="flashScope.isSuccessDelete" value="true"></set>
+            <set name="purAplIdentify.purAplSeqNum" value="requestParameters.purAplSeqNum"/>
+            <set name="purAplIdentify.lastUpdDate" value="requestParameters.lastUpdDate"/>
+            <!-- 強化-00281-000 2013/03/22 DEL SBO_pangzhen START -->
+            <!-- <set name="purAplIdentify.lastUpdDateReq" value="requestParameters.lastUpdDateReq"/>-->
+            <!-- 強化-00281-000 2013/03/22 DEL SBO_pangzhen -END- -->
+            <set name="purAplIdentify.purReqNo" value="requestParameters.purReqNo"/>
+        </transition>
+        <transition on="applyCancel" validate="true" to="searchByKey">
+            <evaluate expression="PSPUR031Service.applyCancel(purAplIdentify)" />
+            <set name="flashScope.isSuccess" value="true"></set>
+            <set name="purAplIdentify.purAplSeqNum" value="requestParameters.purAplSeqNum"/>
+            <set name="purAplIdentify.lastUpdDate" value="requestParameters.lastUpdDate"/>
+            <!-- 強化-00281-000 2013/03/22 DEL SBO_pangzhen START -->
+            <!-- <set name="purAplIdentify.lastUpdDateReq" value="requestParameters.lastUpdDateReq"/>-->
+            <!-- 強化-00281-000 2013/03/22 DEL SBO_pangzhen -END- -->
+            <set name="purAplIdentify.purReqNo" value="requestParameters.purReqNo"/>
+        </transition>
+        <!-- 強化-00096-000 2013/03/22 DEL SBO_CHENCHENG START -->
+        <!--<transition on="detail" to="PSPUR040" validate="false" >
+            <set name="purAplIdentify.purAplSeqNum" value="requestParameters.purAplSeqNum"/>
+            <set name="purAplIdentify.purReqNo" value="requestParameters.purReqNo"/>
+            <set name="purAplIdentify.lastUpdDate" value="requestParameters.lastUpdDate"/>
+            <set name="purAplIdentify.lastUpdDateReq" value="requestParameters.lastUpdDateReq"/>
+        </transition>
+        <transition on="everyPurReqInputFromEdit" to="PSPUR010Edit" validate="false" >
+            <set name="purAplIdentify.purAplSeqNum" value="requestParameters.purAplSeqNum"/>
+            <set name="purAplIdentify.purReqNo" value="requestParameters.purReqNo"/>
+        </transition>
+        <transition on="everyPurReqInputFromReApply" to="PSPUR010ReApply" validate="false" >
+            <set name="purAplIdentify.purAplSeqNum" value="requestParameters.purAplSeqNum"/>
+            <set name="purAplIdentify.purReqNo" value="requestParameters.purReqNo"/>
+        </transition>-->
+        <!-- 強化-00096-000 2013/03/22 DEL SBO_CHENCHENG -END- -->
+        <!-- 強化-00096-000 2013/03/22 ADD SBO_CHENCHENG START -->
+        <!--詳細 -->
+        <transition on="detailValidate" validate="true">
+            <set name="purAplIdentify.purAplSeqNum" value="requestParameters.purAplSeqNum"/>
+            <set name="purAplIdentify.purReqNo" value="requestParameters.purReqNo"/>
+            <set name="purAplIdentify.lastUpdDate" value="requestParameters.lastUpdDate"/>
+            <!-- 強化-00281-000 2013/03/22 DEL SBO_pangzhen START -->
+            <!-- <set name="purAplIdentify.lastUpdDateReq" value="requestParameters.lastUpdDateReq"/>-->
+            <!-- 強化-00281-000 2013/03/22 DEL SBO_pangzhen -END- -->
+            <set name="flashScope.isShowDetail" value="true"/>
+        </transition>
+        <transition on="detail" to="PSPUR040" validate="false" /> 
+        <!--編集 -->
+        <!-- 強化-00852-000 2013/05/28 ADD SBO_pangzhen START -->
+        <transition on="editValidate" validate="true">
+            <set name="flashScope.isShowEdit" value="true"/>
+        </transition>
+        <!-- 強化-00852-000 2013/05/28 ADD SBO_pangzhen -END- -->
+        <transition on="edit" to="PSPUR010Edit" validate="false" >
+        <!-- 強化-00852-000 2013/05/28 DEL SBO_pangzhen START -->
+            <!-- <set name="purAplIdentify.purAplSeqNum" value="requestParameters.purAplSeqNum"/> -->
+            <!-- <set name="purAplIdentify.purReqNo" value="requestParameters.purReqNo"/> -->
+        <!-- 強化-00852-000 2013/05/28 DEL SBO_pangzhen -END- -->
+        </transition>
+        <!-- 強化-00852-000 2013/05/28 ADD SBO_pangzhen START -->
+        <!--再申請 -->
+        <transition on="applyAgainValidate" validate="true">
+            <set name="flashScope.isShowApplyAgain" value="true"/>
+        </transition>
+        <!-- 強化-00852-000 2013/05/28 ADD SBO_pangzhen -END- -->
+        <transition on="applyAgain" to="PSPUR010ReApply" validate="false" >
+        <!-- 強化-00852-000 2013/05/28 DEL SBO_pangzhen START -->
+            <!-- <set name="purAplIdentify.purAplSeqNum" value="requestParameters.purAplSeqNum"/> -->
+            <!-- <set name="purAplIdentify.purReqNo" value="requestParameters.purReqNo"/> -->
+        <!-- 強化-00852-000 2013/05/28 DEL SBO_pangzhen -END- -->
+        </transition>
+        <!-- 強化-00096-000 2013/03/22 ADD SBO_CHENCHENG -END- -->
+    </view-state>
+    
+    <subflow-state id="PSPUR040" subflow="pur/req/PSPUR040TOP">
+        <input name="identify" value="purAplIdentify" />
+    </subflow-state>
+    
+    <subflow-state id="PSPUR010Edit" subflow="pur/req/PSPUR010Edit">
+        <input name="purAplIdentify" value="purAplIdentify" />
+        <input name="patternName" value="'Edit'" />
+        <input name="isInitIndividualApr" value="true" />
+        
+    </subflow-state>
+    <subflow-state id="PSPUR010ReApply" subflow="pur/req/PSPUR010ReApply">
+        <input name="purAplIdentify" value="purAplIdentify" />
+        <input name="patternName" value="'ReApply'" />
+        <input name="isInitIndividualApr" value="true" />
+        <input name="SessionKey" value="SessionKey" />
+    </subflow-state>
+
+</flow> 

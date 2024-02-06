@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<flow xmlns="http://www.springframework.org/schema/webflow"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.springframework.org/schema/webflow
+        http://www.springframework.org/schema/webflow/spring-webflow-2.0.xsd"
+    parent="base">
+    <!-- 価格マスタ登録承認（一覧部） -->
+    
+    <!-- 価格マスタ登録一括承認 -->
+    <var name="priceRegisterPackageApproval" class="fw.domain.slip.price.register.purprice.priceregisterapp.PriceRegisterPackageApproval" />
+    <!-- 価格マスタ登録識別情報 -->
+    <var name="identify" class="fw.domain.slip.price.register.purprice.priceregisterapp.Identify" />
+    <!-- 価格マスタ詳細識別情報 -->
+    <var name="priceIdentify" class="fw.domain.slip.price.pricemasterlist.PriceIdentify" />
+
+    <input name="searchCondition" />
+    <input name="isCurrentPageSearch" />
+    <input name="isQuickLink" />
+    
+    <decision-state id="isSearchByKey">
+       <if test="flowScope.isCurrentPageSearch" then="searchByKey" else="searchByCondition" />
+    </decision-state>
+    
+    <action-state id="searchByCondition">
+        <evaluate expression="PSAPR121Service.init(searchCondition)" result="flowScope.itemList" />
+        <transition to="PSAPR121"/> 
+    </action-state>
+
+    <action-state  id="searchByKey" >
+        <evaluate expression="PSAPR121Service.page(searchCondition)" result="flowScope.itemList" />
+        <transition to="PSAPR121"/>
+    </action-state>
+    
+    <!-- 価格マスタ登録承認一覧  -->
+    <view-state id="PSAPR121" model="priceRegisterPackageApproval" view="apr/prc/PSAPR121">
+        <transition on="order" validate="false">
+            <evaluate expression="PSAPR121Service.order(searchCondition)" result="flowScope.itemList" />
+        </transition>
+        <transition on="page" validate="false">
+             <evaluate expression="PSAPR121Service.page(searchCondition)" result="flowScope.itemList" /> 
+        </transition>
+        <transition on="back" to="home" validate="false" />
+        
+        <!--個別承認 -->
+        <transition on="individualApprovalValidate" validate="false" to="searchByKey">
+            <set name="identify.buyerCompanyCd" value="requestParameters.buyerCompanyCd"/><!-- 購買会社コード -->
+            <set name="identify.buyerSectionCd" value="requestParameters.buyerSectionCd"/><!-- 購買部門コード-->
+            <set name="identify.supCd" value="requestParameters.supCd"/><!-- 取引先コード -->
+            <set name="identify.itemCd" value="requestParameters.itemCd"/><!-- 品名コード -->
+            <set name="identify.validPeriodStart.dateOfymd" value="requestParameters.validPeriodStart"/><!-- 有効期間（開始）  -->
+            <set name="identify.validPeriodEnd.dateOfymd" value="requestParameters.validPeriodEnd"/><!-- 有効期間（終了） -->
+            <set name="identify.lastUpdDate" value="requestParameters.lastUpdDate"/><!-- 最終更新日時 -->
+            <set name="flashScope.isShowApproval" value="true"/>
+        </transition>
+        <!--詳細 -->
+        <transition on="detailValidate" validate="true">
+            <set name="priceIdentify.buyerCompanyCd" value="requestParameters.buyerCompanyCd"/><!-- 購買会社コード -->
+            <set name="priceIdentify.buyerSectionCd" value="requestParameters.buyerSectionCd"/><!-- 購買部門コード-->
+            <set name="priceIdentify.supCd" value="requestParameters.supCd"/><!-- 取引先コード -->
+            <set name="priceIdentify.itemCd" value="requestParameters.itemCd"/><!-- 品名コード -->
+            <set name="priceIdentify.validStartDate.dateOfymd" value="requestParameters.validPeriodStart"/><!-- 有効期間（開始）  -->
+            <set name="priceIdentify.validEndDate.dateOfymd" value="requestParameters.validPeriodEnd"/><!-- 有効期間（終了） -->
+            <set name="priceIdentify.lastUpdDate" value="requestParameters.lastUpdDate"/><!-- 最終更新日時 -->
+            <set name="flashScope.isShowDetail" value="true"/>
+        </transition>
+        <!--一括承認 -->
+        <transition on="packageApproval" to="searchByKey" validate="false">
+            <evaluate expression="PSAPR121Service.packageApproval(priceRegisterPackageApproval)" />
+            <set name="flashScope.isSuccess" value="true"></set>
+        </transition>
+        
+        <transition on="individualApproval" to="PSAPR122" validate="false"/>
+        <transition on="detail" to="PSPRC050" validate="false" />
+    </view-state>
+    
+    <!--個別承認 -->
+    <subflow-state id="PSAPR122" subflow="apr/prc/PSAPR122">
+        <input name="identify" value="identify" />
+        <input name="isInitIndividualApr" value="true" />
+        <input name="SessionKey" value="SessionKey" />
+        <input name="searchCondition" value="searchCondition.getSearchCondition()"/>
+    </subflow-state>
+    
+    <!--詳細 -->
+    <subflow-state id="PSPRC050" subflow="prc/price/PSPRC050" >
+        <input name="priceIdentify" value="priceIdentify" />
+    </subflow-state>
+   
+</flow>

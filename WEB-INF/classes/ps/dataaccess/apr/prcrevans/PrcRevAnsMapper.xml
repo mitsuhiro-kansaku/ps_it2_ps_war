@@ -1,0 +1,748 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="ps.dataaccess.apr.prcrevans.PrcRevAnsMapper">
+    
+    <!-- 回答価格改定依頼承認一覧のキーを取得(検索) -->
+    <sql id="listKeyIdentityWhereCondition">
+            AND T_PRICE_REV.DELETE_FLG = '0'
+            AND T_PRICE_REV.PRICE_STATUS IN ('21', '23')
+            AND T_APPROVAL.NOW_APP_COMPANY_CD = '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}'
+            <if test="@org.apache.commons.lang.StringUtils@isNotBlank(appUser)">
+                AND T_APPROVAL.NOW_APP_USER_ID = #{appUser}
+            </if>
+            <if test="@org.apache.commons.lang.StringUtils@isBlank(appUser)">
+                AND T_APPROVAL.NOW_APP_USER_ID = '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}'
+            </if>
+            <if test="@org.apache.commons.lang.StringUtils@isNotBlank(titleName)">
+                AND T_PRICE_REV.TITLE_NAME ${@fw.common.util.SearchModeUtil@getSearchSQL("fw.domain.slip.price.revision.resp.resppricerevisionapp.RespPriceRevAppSearchCondition","titleName")}
+            </if>
+            <if test="@org.apache.commons.lang.StringUtils@isNotBlank(supplierCd)">
+                AND T_PRICE_REV.SUP_CD = #{supplierCd}
+            </if>
+            <if test="@org.apache.commons.lang.StringUtils@isNotBlank(priceReqDateFrom.dateOfymd)">
+                AND T_PRICE_REV.PRICE_REQ_DATE >= #{priceReqDateFrom.dateOfymd}
+            </if>
+            <if test="@org.apache.commons.lang.StringUtils@isNotBlank(priceReqDateTo.dateOfymd)">
+                AND T_PRICE_REV.PRICE_REQ_DATE &lt;= #{priceReqDateTo.dateOfymd}
+            </if>
+            <if test="@org.apache.commons.lang.StringUtils@isNotBlank(priceReqUserCd)">
+                AND T_PRICE_REV.PRICE_REQ_USER_ID = #{priceReqUserCd}
+            </if>
+    </sql>
+       
+    <select id="listKeyIdentity" 
+        parameterType="fw.domain.slip.price.revision.resp.resppricerevisionapp.RespPriceRevAppSearchCondition"
+        resultType="fw.domain.slip.price.revision.resp.RespPriceRevIdentify">
+        SELECT
+            T_PRICE_REV.PRICE_REV_SEQ AS "priceRevSeq"
+        FROM
+            T_PRICE_REV
+        INNER JOIN T_APPROVAL ON
+            T_APPROVAL.APP_VOUCHER_IND = 'F'
+        AND T_APPROVAL.APP_VOUCHER_KEY = T_PRICE_REV.PRICE_REV_SEQ
+        AND T_APPROVAL.APP_STATUS_IND IN ('0', '1')
+        AND T_APPROVAL.DELETE_FLG = '0'
+        <where>
+            <include refid="listKeyIdentityWhereCondition"/>
+        </where> 
+            
+        ORDER BY 
+            ${searchCondition.columnOrder.columnOrder()}
+    </select>
+    
+    <!-- キーで回答価格改定依頼承認一覧を取得 -->
+    <select id="listPageItem" parameterType="fw.domain.mst.searchcondition.SearchCondition"
+        resultMap="RespPriceRevAppDetail_MAP">
+        SELECT
+              T_APPROVAL.APP_SEQ
+            , T_APPROVAL.NOW_APP_USER_NAME
+            , T_APPROVAL.NEXT_APP_USER_NAME
+            , T_APPROVAL.BACK_APP_COMMENTS
+            , T_APPROVAL.BACK_APP_USER_ID
+            , T_APPROVAL.BACK_APP_USER_NAME
+            , T_PRICE_REV.PRICE_REQ_COMPANY_CD
+            , T_PRICE_REV.PRICE_REQ_SECTION_CD
+            , T_PRICE_REV.PRICE_REQ_USER_ID
+            , T_PRICE_REV.PRICE_REQ_USER_NAME
+            , T_PRICE_REV.UPD_YM
+            , T_PRICE_REV.PRICE_REQ_DATE
+            , T_PRICE_REV.TITLE_NAME
+            , T_PRICE_REV.SUP_CD
+            , T_PRICE_REV.SUP_ABBR_NAME
+            , T_PRICE_REV.PRICE_REV_ITME_VOL
+            , T_PRICE_REV.PRICE_REV_SEQ
+            , T_PRICE_REV.LAST_UPD_DATE
+        FROM
+            T_PRICE_REV
+        INNER JOIN T_APPROVAL ON
+            T_APPROVAL.APP_VOUCHER_IND = 'F'
+        AND T_APPROVAL.APP_VOUCHER_KEY = T_PRICE_REV.PRICE_REV_SEQ
+        AND T_APPROVAL.APP_STATUS_IND IN ('0', '1')
+        AND T_APPROVAL.DELETE_FLG = '0'
+        <where>
+            T_PRICE_REV.PRICE_REV_SEQ IN
+            <foreach collection="searchCondition.page.keyDomainEntityList" item="keyList" open="(" separator="," close=")">
+                #{keyList.priceRevSeq}
+            </foreach>
+            <include refid="listKeyIdentityWhereCondition"/>
+        </where> 
+        ORDER BY
+            ${searchCondition.columnOrder.columnOrder()}
+    </select>
+    
+    <resultMap type="fw.domain.slip.price.revision.resp.resppricerevisionapp.RespPriceRevAppDetail" 
+        id="RespPriceRevAppDetail_MAP">
+        <id column="APP_SEQ" property="appSeq" />
+        <id column="NOW_APP_USER_NAME" property="appUser" />
+        <id column="NEXT_APP_USER_NAME" property="nextAppUser" />
+        <id column="BACK_APP_COMMENTS" property="backAppComments" />
+        <id column="BACK_APP_USER_ID" property="backAppUserId" />
+        <id column="BACK_APP_USER_NAME" property="backAppUserName" />
+        <id column="PRICE_REQ_COMPANY_CD" property="buyerUserCompanyCd" />
+        <id column="PRICE_REQ_SECTION_CD" property="buyerUserSectionCd" />
+        <id column="PRICE_REQ_USER_ID" property="buyerUserId" />
+        <id column="PRICE_REQ_USER_NAME" property="buyerUserName" />
+        <id column="UPD_YM" property="updYm" />
+        <id column="PRICE_REQ_DATE" property="priceReqDate.dateOfymd" />
+        <id column="TITLE_NAME" property="titleName" />
+        <id column="SUP_CD" property="supplierCd" />
+        <id column="SUP_ABBR_NAME" property="supplierName" />
+        <id column="PRICE_REV_ITME_VOL" property="priceRevItemVol.vol" />
+        <id column="PRICE_REV_SEQ" property="respPriceRevIdentify.priceRevSeq" />
+        <id column="LAST_UPD_DATE" property="respPriceRevIdentify.lastUpdDate" />
+    </resultMap>
+    
+    <!-- 価格改定を更新 -->
+    <update id="updatePriceRev">
+        UPDATE
+            T_PRICE_REV
+        SET
+              PRICE_STATUS = #{priceStatus}
+            , LAST_UPD_DATE = '${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}'
+            , LAST_UPD_COMPANY_CD = '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}'
+            , LAST_UPD_SECTION_CD = '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}'
+            , LAST_UPD_USER_ID = '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}'
+        WHERE
+            PRICE_REV_SEQ = #{priceRevSeq}
+    </update>
+    
+    <!-- 購買価格マスタを更新 -->
+    <update id="updatePurPrice">
+        UPDATE
+            M_PUR_PRICE
+        SET
+              M_PUR_PRICE.VALID_END_DATE = #{valideEndDate}
+            , M_PUR_PRICE.LAST_UPD_DATE = '${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}'
+            , M_PUR_PRICE.LAST_UPD_COMPANY_CD = '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}'
+            , M_PUR_PRICE.LAST_UPD_SECTION_CD = '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}'
+            , M_PUR_PRICE.LAST_UPD_USER_ID = '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}'
+        WHERE
+            M_PUR_PRICE.BUYER_COMPANY_CD = #{respPriceDetail.buyerUserCompanyCd}
+        AND M_PUR_PRICE.BUYER_SECTION_CD = #{respPriceDetail.buyerUserSectionCd}
+        AND M_PUR_PRICE.ITEM_CD = #{itemCd}
+        AND M_PUR_PRICE.SUP_CD = #{respPriceDetail.supplierCd}
+        AND M_PUR_PRICE.TERM_FLG = '0'
+        <!-- ##### 強化-01695-000 2013.05.29 DEL SBO_WANGXM  
+        AND M_PUR_PRICE.VALID_END_DATE > #{validStartDate}
+        --> 
+        <!-- ##### 強化-01695-000 2013.05.29 ADD SBO_WANGXM --> 
+        AND M_PUR_PRICE.VALID_END_DATE >= #{validStartDate}
+    </update>
+    
+        <resultMap type="fw.domain.slip.price.register.purprice.BuyerPrice" 
+        id="purPricebk_MAP">
+	        <id column="UPDATE_NO" property="managementInfo.historyNo.historyNo"/>
+	        <id column="PRICE_TYPE" property="managementInfo.priceType"/>
+	        <id column="MNG_IND" property="managementInfo.priceManagementInd.priceManagementInd"/>
+	        <id column="INSPECT_IND" property="orderDeliv.inspectInd.inspectInd"/>
+	        <id column="CURRENCY_CD" property="identify.supplierFrom.currency.currencyCd"/>
+	        <id column="BUYER_USER_COMPANY_CD" property="managementInfo.buyerUserCompanyCd"/>
+	        <id column="BUYER_USER_SECTION_CD" property="managementInfo.buyerUserSectionCd"/>
+	        <id column="BUYER_USER_ID" property="managementInfo.buyerUser.buyerUserId"/>
+	        <id column="PRICE_MNG_COMPANY_CD" property="managementInfo.priceMngCompanyCd"/>
+	        <id column="PRICE_MNG_SECTION_CD" property="managementInfo.priceMngSectionCd"/>
+	        <id column="PRICE_MNG_USER_ID" property="managementInfo.priceMngUser.priceMngUserId"/>
+	        <id column="ORDER_UNIT" property="orderDeliv.custUnitVol.custUnitVol.vol"/>
+	        <id column="MIN_ORDER_VOL" property="orderDeliv.minCustVol.minCustVol.vol"/>
+	        <id column="TAX_IND" property="supItem.amountTypePrice.taxCalculationInd.taxInd.taxInd"/>
+	        <id column="CONSUMPT_IND" property="supItem.amountTypePrice.taxCalculationInd.consumptInd.consumptInd"/>
+	        <id column="AUTO_ORDER_FLG" property="orderDeliv.autoOrderFlg.autoOrderFlg"/>
+	        <id column="CATALOG_IND" property="managementInfo.catalogInd"/>
+	        <id column="PRICE_LIST_NO" property="supple.priceNo"/>
+            <id column="UPDATE_CYCLE" property="revision.updateCycle.updateCycle"/>
+	        <id column="NEXT_UPD_YM" property="revision.lastUpdYm.lastUpdYm.dateOfym"/>
+	        <id column="PRICE_REMARKS" property="supple.buyerPriceRemarks"/>
+	        <id column="PIECE_FLG" property="orderDeliv.autoTerminateFlg.autoTerminateFlg"/>
+	        <id column="GREEN_FLG" property="supple.green.greenPur"/>
+	        <id column="GREEN_LABEL" property="supple.green.priceLabel"/>
+	        <id column="GREEN_FILE_NAME" property="supple.green.greenItemAttach.fileName"/>
+	        <id column="GREEN_FILE" property="supple.green.greenItemAttach.data"/>
+	        <id column="REF_URL" property="supple.refUrl"/>
+	        <id column="IMG_FILE_NAME" property="supple.imgFile.fileName"/>
+	        <id column="IMG_FILE" property="supple.imgFile.data"/>
+	        <id column="CATALOG_FLG" property="supItem.kind.materialType.materialType"/>
+	        <id column="CONNECT_TYPE" property="orderDeliv.connectType.connectTypeInd"/>
+    </resultMap>
+    
+    <select id="purPricebk" resultMap="purPricebk_MAP">
+        SELECT 
+             (M_PUR_PRICE.UPDATE_NO + 1)AS UPDATE_NO
+            , M_PUR_PRICE.PRICE_TYPE
+            , M_PUR_PRICE.MNG_IND
+            , M_PUR_PRICE.INSPECT_IND
+            , M_PUR_PRICE.CURRENCY_CD
+            , M_PUR_PRICE.BUYER_USER_COMPANY_CD
+            , M_PUR_PRICE.BUYER_USER_SECTION_CD
+            , M_PUR_PRICE.BUYER_USER_ID
+            , M_PUR_PRICE.PRICE_MNG_COMPANY_CD
+            , M_PUR_PRICE.PRICE_MNG_SECTION_CD
+            , M_PUR_PRICE.PRICE_MNG_USER_ID
+            , M_PUR_PRICE.ORDER_UNIT
+            , M_PUR_PRICE.MIN_ORDER_VOL
+            , M_PUR_PRICE.TAX_IND
+            , M_PUR_PRICE.CONSUMPT_IND
+            , M_PUR_PRICE.AUTO_ORDER_FLG
+            , M_PUR_PRICE.CATALOG_IND
+            , M_PUR_PRICE.PRICE_LIST_NO
+            , M_PUR_PRICE.UPDATE_CYCLE
+            , M_PUR_PRICE.NEXT_UPD_YM
+            , M_PUR_PRICE.PRICE_REMARKS
+            , M_PUR_PRICE.PIECE_FLG
+            , M_PUR_PRICE.GREEN_FLG
+            , M_PUR_PRICE.GREEN_LABEL
+            , M_PUR_PRICE.GREEN_FILE_NAME
+            , M_PUR_PRICE.GREEN_FILE
+            , M_PUR_PRICE.REF_URL
+            , M_PUR_PRICE.IMG_FILE_NAME
+            , M_PUR_PRICE.IMG_FILE
+            , M_PUR_PRICE.CATALOG_FLG
+            , M_PUR_PRICE.CONNECT_TYPE
+        FROM M_PUR_PRICE 
+        WHERE 
+            M_PUR_PRICE.BUYER_COMPANY_CD = #{respPriceDetail.buyerUserCompanyCd}
+        AND M_PUR_PRICE.BUYER_SECTION_CD = #{respPriceDetail.buyerUserSectionCd}
+        AND M_PUR_PRICE.ITEM_CD = #{xlsDetail.itemCd}
+        AND M_PUR_PRICE.SUP_CD = #{respPriceDetail.supplierCd}
+        AND M_PUR_PRICE.VALID_START_DATE = #{xlsDetail.validStartDate}
+        AND M_PUR_PRICE.VALID_END_DATE = #{xlsDetail.validEndDate}
+    </select>
+    
+    <!-- 購買価格マスタを登録 -->
+    <insert id="insertPurPrice">
+        INSERT INTO M_PUR_PRICE 
+           (BUYER_COMPANY_CD
+			,BUYER_SECTION_CD
+			,ITEM_CD
+			,SUP_CD
+			,VALID_START_DATE
+			,VALID_END_DATE
+			,UPDATE_NO
+			,MODIFY_IND
+			,APP_STATUS_IND
+			,PRICE_TYPE
+			,MNG_IND
+			,INSPECT_IND
+			,CURRENCY_CD
+			,BUYER_USER_COMPANY_CD
+			,BUYER_USER_SECTION_CD
+			,BUYER_USER_ID
+			,PRICE_MNG_COMPANY_CD
+			,PRICE_MNG_SECTION_CD
+			,PRICE_MNG_USER_ID
+			,ORDER_UNIT
+			,MIN_ORDER_VOL
+			,TAX_IND
+			,CONSUMPT_IND
+			,BUY_PRICE
+			,AUTO_ORDER_FLG
+			,ORDER_LT
+			,CATALOG_IND
+			,QUOT_REQ_NO
+			,PRICE_LIST_NO
+			,UPDATE_CYCLE
+			,NEXT_UPD_YM
+			,PRICE_REMARKS
+			,PIECE_FLG
+			,GREEN_FLG
+			,GREEN_LABEL
+			,GREEN_FILE_NAME
+			,GREEN_FILE
+			,REF_URL
+			,IMG_FILE_NAME
+			,IMG_FILE
+			,PUR_STOP_FROM
+			,PUR_STOP_TO
+			,CATALOG_FLG
+			,CONNECT_TYPE
+			,PUR_PRICE_JNL_SEQ
+			,APP_PRICE_REG_ROUTE
+			,APP_PRICE_REG_ROUTE_NAME
+			,TERM_FLG
+			,LAST_UPD_DATE
+			,LAST_UPD_COMPANY_CD
+			,LAST_UPD_SECTION_CD
+			,LAST_UPD_USER_ID
+			,REG_DATE
+			,REG_COMPANY_CD
+			,REG_SECTION_CD
+			,REG_USER_ID
+        )VALUES(
+              #{respPriceDetail.buyerUserCompanyCd}
+            , #{respPriceDetail.buyerUserSectionCd}
+            , #{xlsDetail.itemCd}
+            , #{respPriceDetail.supplierCd}
+            , #{xlsDetail.estValidStartDate}
+            , #{xlsDetail.estValidEndDate}
+            , #{buyerPrice.managementInfo.historyNo.historyNo}
+            , '3'
+            , '2'
+            , #{buyerPrice.managementInfo.priceType}
+            , #{buyerPrice.managementInfo.priceManagementInd.priceManagementInd}
+            , #{buyerPrice.orderDeliv.inspectInd.inspectInd}
+            , #{buyerPrice.identify.supplierFrom.currency.currencyCd}
+            , #{buyerPrice.managementInfo.buyerUserCompanyCd}
+            , #{buyerPrice.managementInfo.buyerUserSectionCd}
+            , #{buyerPrice.managementInfo.buyerUser.buyerUserId}
+            , #{buyerPrice.managementInfo.priceMngCompanyCd}
+            , #{buyerPrice.managementInfo.priceMngSectionCd}
+            , #{buyerPrice.managementInfo.priceMngUser.priceMngUserId}
+            , #{buyerPrice.orderDeliv.custUnitVol.custUnitVol.vol}
+            , #{buyerPrice.orderDeliv.minCustVol.minCustVol.vol}
+            , #{buyerPrice.supItem.amountTypePrice.taxCalculationInd.taxInd.taxInd}
+            , #{buyerPrice.supItem.amountTypePrice.taxCalculationInd.consumptInd.consumptInd}
+            , #{xlsDetail.estBuyPrice}
+            , #{buyerPrice.orderDeliv.autoOrderFlg.autoOrderFlg}
+            , #{xlsDetail.estOrderLt}
+            , #{buyerPrice.managementInfo.catalogInd}
+            , ''
+            , #{buyerPrice.supple.priceNo}
+            , #{buyerPrice.revision.updateCycle.updateCycle}
+            , #{respPriceDetail.updYm}
+            , #{buyerPrice.supple.buyerPriceRemarks}
+            , #{buyerPrice.orderDeliv.autoTerminateFlg.autoTerminateFlg}
+            , #{buyerPrice.supple.green.greenPur}
+            , #{buyerPrice.supple.green.priceLabel}
+            , #{buyerPrice.supple.green.greenItemAttach.fileName}
+            , #{buyerPrice.supple.green.greenItemAttach.data}
+            
+            , #{buyerPrice.supple.refUrl}
+            , #{buyerPrice.supple.imgFile.fileName}
+            , #{buyerPrice.supple.imgFile.data}
+            , ''
+            , ''
+            , #{buyerPrice.supItem.kind.materialType.materialType}
+            , #{buyerPrice.orderDeliv.connectType.connectTypeInd}
+            , #{seq}
+            , ''
+            , ''
+            , #{xlsDetail.priceRevInd}
+            , '${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}'
+            , '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}'
+            , '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}'
+            , '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}'
+            , '${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}'
+            , '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}'
+            , '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}'
+            , '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}'
+            )
+    </insert>
+    
+    <!-- 購買価格ジャーナルマスタを登録 -->
+    <insert id="insertPurPriceJnl">
+        INSERT
+        INTO
+            M_PUR_PRICE_JNL
+        (
+            PUR_PRICE_HIST_SEQ,
+            BUYER_COMPANY_CD,
+            BUYER_SECTION_CD,
+            ITEM_CD,
+            ITEM_NAME,
+            SUP_CD,
+            SUP_NAME,
+            VALID_START_DATE,
+            VALID_END_DATE,
+            UPDATE_NO,
+            MODIFY_IND,
+            APP_STATUS_IND,
+            ITEM_CLASS_L,
+            ITEM_CLASS_L_NAME,
+            ITEM_CLASS_M,
+            ITEM_CLASS_M_NAME,
+            ITEM_CLASS_S,
+            ITEM_CLASS_S_NAME,
+            KATASHIKI,
+            MANUFACT_CD,
+            MANUFACT_NAME,
+            PRICE_TYPE,
+            MNG_IND,
+            INSPECT_IND,
+            CURRENCY_CD,
+            BUYER_USER_COMPANY_CD,
+            BUYER_USER_SECTION_CD,
+            BUYER_USER_ID,
+            PRICE_MNG_COMPANY_CD,
+            PRICE_MNG_SECTION_CD,
+            PRICE_MNG_USER_ID,
+            UNIT_CD,
+            UNIT_NAME,
+            ORDER_UNIT,
+            MIN_ORDER_VOL,
+            TAX_IND,
+            CONSUMPT_IND,
+            BUY_PRICE,
+            AUTO_ORDER_FLG,
+            ORDER_LT,
+            CATALOG_IND,
+            QUOT_REQ_NO,
+            PRICE_LIST_NO,
+            UPDATE_CYCLE,
+            NEXT_UPD_YM,
+            PRICE_REMARKS,
+            PIECE_FLG,
+            GREEN_FLG,
+            GREEN_LABEL,
+            GREEN_FILE_NAME,
+            GREEN_FILE,
+            PUR_PRICE_JNL_SEQ,
+            APP_PRICE_REG_ROUTE,
+            APP_PRICE_REG_ROUTE_NAME,
+            REF_URL,
+            IMG_FILE_NAME,
+            IMG_FILE,
+            PUR_STOP_FROM,
+            PUR_STOP_TO,
+            CATALOG_FLG,
+            CONNECT_TYPE,
+            TERM_FLG,
+            LAST_UPD_DATE,
+            LAST_UPD_COMPANY_CD,
+            LAST_UPD_SECTION_CD,
+            LAST_UPD_USER_ID,
+            REG_DATE,
+            REG_COMPANY_CD,
+            REG_SECTION_CD,
+            REG_USER_ID
+        )
+        VALUES (
+            #{histSeq},
+            #{respPriceDetail.buyerUserCompanyCd},
+            #{respPriceDetail.buyerUserSectionCd},
+            #{xlsDetail.itemCd},
+            #{item.itemName},
+            #{respPriceDetail.supplierCd},
+            #{respPriceDetail.supplierAbbrName},
+            #{xlsDetail.estValidStartDate},
+            #{xlsDetail.estValidEndDate},
+            #{buyerPrice.managementInfo.historyNo.historyNo},
+            '3',
+            '2',
+            #{item.itemClass.itemClassL},
+            #{item.itemClass.itemClassNameL},
+            #{item.itemClass.itemClassM},
+            #{item.itemClass.itemClassNameM},
+            #{item.itemClass.itemClassS},
+            #{item.itemClass.itemClassNameS},
+            #{item.katashiki},
+            #{item.manufact.manufactCd},
+            #{item.manufact.manufactName},
+            #{buyerPrice.managementInfo.priceType},
+            #{buyerPrice.managementInfo.priceManagementInd.priceManagementInd},
+            #{buyerPrice.orderDeliv.inspectInd.inspectInd},
+            #{buyerPrice.identify.supplierFrom.currency.currencyCd},
+            #{buyerPrice.managementInfo.buyerUserCompanyCd},
+            #{buyerPrice.managementInfo.buyerUserSectionCd},
+            #{buyerPrice.managementInfo.buyerUser.buyerUserId},
+            #{buyerPrice.managementInfo.priceMngCompanyCd},
+            #{buyerPrice.managementInfo.priceMngSectionCd},
+            #{buyerPrice.managementInfo.priceMngUser.priceMngUserId},
+            #{item.unit.unitCd},
+            #{item.unit.unitName},
+            #{buyerPrice.orderDeliv.custUnitVol.custUnitVol.vol},
+            #{buyerPrice.orderDeliv.minCustVol.minCustVol.vol},
+            #{buyerPrice.supItem.amountTypePrice.taxCalculationInd.taxInd.taxInd},
+            #{buyerPrice.supItem.amountTypePrice.taxCalculationInd.consumptInd.consumptInd},
+            #{xlsDetail.estBuyPrice},
+            #{buyerPrice.orderDeliv.autoOrderFlg.autoOrderFlg},
+            #{xlsDetail.estOrderLt},
+            #{buyerPrice.managementInfo.catalogInd},
+            '',
+            #{buyerPrice.supple.priceNo},
+            #{buyerPrice.revision.updateCycle.updateCycle},
+            #{respPriceDetail.updYm},
+            #{buyerPrice.supple.buyerPriceRemarks},
+            #{buyerPrice.orderDeliv.autoTerminateFlg.autoTerminateFlg},
+            #{buyerPrice.supple.green.greenPur},
+            #{buyerPrice.supple.green.priceLabel},
+            #{buyerPrice.supple.green.greenItemAttach.fileName},
+            #{buyerPrice.supple.green.greenItemAttach.data},
+            #{seq},
+            '',
+            '',
+            #{buyerPrice.supple.refUrl},
+            #{buyerPrice.supple.imgFile.fileName},
+            #{buyerPrice.supple.imgFile.data},
+            '',
+            '',
+            #{buyerPrice.supItem.kind.materialType.materialType},
+            #{buyerPrice.orderDeliv.connectType.connectTypeInd},
+            #{xlsDetail.priceRevInd},
+            '${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}',
+            '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}',
+            '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}',
+            '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}',
+            '${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}',
+            '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}',
+            '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}',
+            '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}'
+        )
+    </insert> 
+    
+    <!-- 購買価格明細マスタを登録 -->
+    <insert id="insertPurPriceDtl">
+        INSERT INTO M_PUR_PRICE_DTL 
+		        (BUYER_COMPANY_CD
+				,BUYER_SECTION_CD
+				,ITEM_CD
+				,SUP_CD
+				,VALID_START_DATE
+				,VALID_END_DATE
+				,LOWER_VOL
+				,UPPER_VOL
+				,UPDATE_NO
+				,BUY_PRICE
+				,LAST_UPD_DATE
+				,LAST_UPD_COMPANY_CD
+				,LAST_UPD_SECTION_CD
+				,LAST_UPD_USER_ID
+				,REG_DATE
+				,REG_COMPANY_CD
+				,REG_SECTION_CD
+				,REG_USER_ID)
+		VALUES(
+              #{respPriceDetail.buyerUserCompanyCd}
+            , #{respPriceDetail.buyerUserSectionCd}
+            , #{xlsDetail.itemCd}
+            , #{respPriceDetail.supplierCd}
+            , #{xlsDetail.estValidStartDate}
+            , #{xlsDetail.estValidEndDate}
+            , #{xlsDetail.lowerVol}
+            , #{xlsDetail.upperVol}
+            , #{updateNo}
+            , #{xlsDetail.estBuyPrice}
+            , '${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}'
+            , '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}'
+            , '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}'
+            , '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}'
+            , '${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}'
+            , '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}'
+            , '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}'
+            , '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}'
+            )
+    </insert>
+    
+    <!-- 更新仕様（購買価格明細ジャーナル） -->
+    <insert id="insertPurPriceDtlJnl">
+        INSERT INTO M_PUR_PRICE_DTL_JNL (
+              PUR_PRICE_HIST_SEQ
+            , LOWER_VOL
+            , UPPER_VOL
+            , BUYER_COMPANY_CD
+            , BUYER_SECTION_CD
+            , SUP_CD
+            , VALID_START_DATE
+            , VALID_END_DATE
+            , UPDATE_NO
+            , BUY_PRICE
+            , LAST_UPD_DATE
+            , LAST_UPD_COMPANY_CD
+            , LAST_UPD_SECTION_CD
+            , LAST_UPD_USER_ID
+            , REG_DATE
+            , REG_COMPANY_CD
+            , REG_SECTION_CD
+            , REG_USER_ID
+        )
+        VALUES (
+              #{histSeq}
+            , #{xlsDetail.lowerVol}
+            , #{xlsDetail.upperVol}
+            , #{respPriceDetail.buyerUserCompanyCd}
+            , #{respPriceDetail.buyerUserSectionCd}
+            , #{respPriceDetail.supplierCd}
+            , #{xlsDetail.estValidStartDate}
+            , #{xlsDetail.estValidEndDate}
+            , #{updateNo}
+            , #{xlsDetail.estBuyPrice}
+            , '${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}'
+            , '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}'
+            , '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}'
+            , '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}'
+            , '${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}'
+            , '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}'
+            , '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}'
+            , '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}'
+          )
+    </insert>
+    
+    <select id="purPriceDtlbk" resultType="String">
+        SELECT 
+        (M_PUR_PRICE_DTL.UPDATE_NO + 1)
+        FROM M_PUR_PRICE_DTL
+        WHERE 
+            M_PUR_PRICE_DTL.BUYER_COMPANY_CD = #{respPriceDetail.buyerUserCompanyCd}
+        AND M_PUR_PRICE_DTL.BUYER_SECTION_CD = #{respPriceDetail.buyerUserSectionCd}
+        AND M_PUR_PRICE_DTL.ITEM_CD = #{xlsDetail.itemCd}
+        AND M_PUR_PRICE_DTL.SUP_CD = #{respPriceDetail.supplierCd}
+        AND M_PUR_PRICE_DTL.VALID_START_DATE = #{xlsDetail.validStartDate}
+        AND M_PUR_PRICE_DTL.VALID_END_DATE = #{xlsDetail.validEndDate}
+        <!-- ##### 強化-01695-000 2013.05.29 ADD SBO_WANGXM START --> 
+        AND M_PUR_PRICE_DTL.LOWER_VOL = #{xlsDetail.lowerVol}
+        AND M_PUR_PRICE_DTL.UPPER_VOL = #{xlsDetail.upperVol}
+        <!-- ##### 強化-01695-000 2013.05.29 ADD SBO_WANGXM -END- --> 
+    </select>
+    
+    <!-- 購買価格明細マスタを更新 -->
+    <update id="updatePurPriceDtl">
+        UPDATE
+            M_PUR_PRICE_DTL
+        SET
+              M_PUR_PRICE_DTL.VALID_END_DATE = #{valideEndDate}
+            , M_PUR_PRICE_DTL.LAST_UPD_DATE = '${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}'
+            , M_PUR_PRICE_DTL.LAST_UPD_COMPANY_CD = '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}'
+            , M_PUR_PRICE_DTL.LAST_UPD_SECTION_CD = '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}'
+            , M_PUR_PRICE_DTL.LAST_UPD_USER_ID = '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}'
+        WHERE
+            M_PUR_PRICE_DTL.BUYER_COMPANY_CD = #{respPriceDetail.buyerUserCompanyCd}
+        AND M_PUR_PRICE_DTL.BUYER_SECTION_CD = #{respPriceDetail.buyerUserSectionCd}
+        AND M_PUR_PRICE_DTL.ITEM_CD = #{itemCd}
+        AND M_PUR_PRICE_DTL.SUP_CD = #{respPriceDetail.supplierCd}
+        <!-- ##### 強化-01695-000 2013.05.29 DEL SBO_WANGXM  
+        AND M_PUR_PRICE_DTL.VALID_END_DATE > #{validStartDate}
+        -->
+        <!-- ##### 強化-01695-000 2013.05.29 ADD SBO_WANGXM START -->
+        AND M_PUR_PRICE_DTL.VALID_END_DATE >= #{validStartDate}
+        AND M_PUR_PRICE_DTL.LOWER_VOL = #{lowerVol}
+        AND M_PUR_PRICE_DTL.UPPER_VOL = #{upperVol}
+        <!-- ##### 強化-01695-000 2013.05.29 ADD SBO_WANGXM -END- -->
+    </update>
+    
+    <select id="getPurPriceCount" resultType="int">
+		SELECT COUNT(1) 
+		FROM M_PUR_PRICE 
+		WHERE BUYER_COMPANY_CD = #{respPriceDetail.buyerUserCompanyCd} 
+		      AND BUYER_SECTION_CD = #{respPriceDetail.buyerUserSectionCd}
+		      AND ITEM_CD = #{itemCd}
+		      AND SUP_CD = #{respPriceDetail.supplierCd}
+		      AND VALID_START_DATE = #{validStartDate}
+		      AND VALID_END_DATE = #{valideEndDate}
+	</select>
+	
+	<!-- 購買価格表示制御マスタテーブル 改定前データ抽出SQL -->
+	<select id="purPriceDspAuthbk" resultType="fw.domain.slip.price.register.purprice.Requester">
+        SELECT 
+          M_PUR_PRICE_DSP_AUTH.REQ_COMPANY_CD as reqCompanyCd
+         ,M_PUR_PRICE_DSP_AUTH.REQ_SECTION_PLACE_CD as reqSectionPlaceCd
+        FROM M_PUR_PRICE_DSP_AUTH
+        WHERE 
+            M_PUR_PRICE_DSP_AUTH.BUYER_COMPANY_CD = #{respPriceDetail.buyerUserCompanyCd}
+        AND M_PUR_PRICE_DSP_AUTH.BUYER_SECTION_CD = #{respPriceDetail.buyerUserSectionCd}
+        AND M_PUR_PRICE_DSP_AUTH.ITEM_CD = #{xlsDetail.itemCd}
+        AND M_PUR_PRICE_DSP_AUTH.SUP_CD = #{respPriceDetail.supplierCd}
+        AND M_PUR_PRICE_DSP_AUTH.VALID_START_DATE = #{xlsDetail.validStartDate}
+        AND M_PUR_PRICE_DSP_AUTH.VALID_END_DATE = #{xlsDetail.validEndDate}
+    </select>
+ 
+     <!-- 購買価格表示制御マスタを更新 -->
+    <update id="updatePurPriceDspAuth">
+        UPDATE
+            M_PUR_PRICE_DSP_AUTH
+        SET
+              M_PUR_PRICE_DSP_AUTH.VALID_END_DATE = #{valideEndDate}
+            , M_PUR_PRICE_DSP_AUTH.LAST_UPD_DATE = '${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}'
+            , M_PUR_PRICE_DSP_AUTH.LAST_UPD_COMPANY_CD = '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}'
+            , M_PUR_PRICE_DSP_AUTH.LAST_UPD_SECTION_CD = '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}'
+            , M_PUR_PRICE_DSP_AUTH.LAST_UPD_USER_ID = '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}'
+        WHERE
+            M_PUR_PRICE_DSP_AUTH.BUYER_COMPANY_CD = #{respPriceDetail.buyerUserCompanyCd}
+        AND M_PUR_PRICE_DSP_AUTH.BUYER_SECTION_CD = #{respPriceDetail.buyerUserSectionCd}
+        AND M_PUR_PRICE_DSP_AUTH.ITEM_CD = #{itemCd}
+        AND M_PUR_PRICE_DSP_AUTH.SUP_CD = #{respPriceDetail.supplierCd}
+        AND M_PUR_PRICE_DSP_AUTH.VALID_END_DATE >= #{validStartDate}
+    </update>
+    
+    <!-- 購買価格表示制御マスタ 登録SQL -->
+    <insert id="insertPurPriceDspAuth">
+        insert into M_PUR_PRICE_DSP_AUTH
+          (
+           BUYER_COMPANY_CD,
+           BUYER_SECTION_CD,
+           ITEM_CD,
+           SUP_CD,
+           VALID_START_DATE,
+           VALID_END_DATE,
+           REQ_COMPANY_CD,
+           REQ_SECTION_PLACE_CD,
+           LAST_UPD_DATE,
+           LAST_UPD_COMPANY_CD,
+           LAST_UPD_SECTION_CD,
+           LAST_UPD_USER_ID,
+           REG_DATE,
+           REG_COMPANY_CD,
+           REG_SECTION_CD,
+           REG_USER_ID
+           )
+        values
+          (
+           #{respPriceDetail.buyerUserCompanyCd},    <!--購買会社コード-->
+           #{respPriceDetail.buyerUserSectionCd},    <!--購買部門コード-->
+           #{xlsDetail.itemCd},                      <!--品名コード-->           
+           #{respPriceDetail.supplierCd},            <!--取引先コード-->
+           #{xlsDetail.estValidStartDate},           <!--有効期間（開始）-->
+           #{xlsDetail.estValidEndDate},             <!--有効期間（終了）-->
+           #{requester.reqCompanyCd},       <!--依頼元会社コード-->
+           #{requester.reqSectionPlaceCd},  <!--依頼元事業所コード-->
+           '${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}',           <!--最終更新日時-->
+           '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}',             <!--最終更新会社コード-->
+           '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}',      <!--最終更新部門コード-->
+           '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}',                <!--最終更新ユーザーID-->
+           '${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}',           <!--登録日時-->
+           '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}',             <!--登録会社コード-->
+           '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}',      <!--登録部門コード-->
+           '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}'                 <!--登録ユーザーID-->
+           )
+    </insert>
+    
+    <!-- 購買価格表示制御ジャーナルマスタ 登録SQL -->
+    <insert id="insertPurPriceDspAuthJnl">
+       INSERT INTO M_PUR_PRICE_DSP_AUTH_JNL( 
+                PUR_PRICE_HIST_SEQ
+              , REQ_COMPANY_CD
+              , REQ_SECTION_PLACE_CD
+              , LAST_UPD_DATE
+              , LAST_UPD_COMPANY_CD
+              , LAST_UPD_SECTION_CD
+              , LAST_UPD_USER_ID
+              , REG_DATE
+              , REG_COMPANY_CD
+              , REG_SECTION_CD
+              , REG_USER_ID
+            ) 
+            VALUES 
+            (
+                #{histSeq}
+              , #{requester.reqCompanyCd}
+              , #{requester.reqSectionPlaceCd}
+              , '${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}'
+              , '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}'
+              , '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}'
+              , '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}'
+              , '${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}'
+              , '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}'
+              , '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}'
+              , '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}' 
+            )
+    </insert>
+    
+ </mapper>

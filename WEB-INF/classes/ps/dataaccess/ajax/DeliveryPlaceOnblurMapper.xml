@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="ps.dataaccess.ajax.DeliveryPlaceOnblurMapper">
+    <select id="getDeliveryPlaceInfoOnBlur"  resultType="fw.domain.mst.organization.deliveryplace.DeliveryPlacePopupItem">
+      SELECT 
+          M_DELIVERY_PLACE.DELIV_PLACE_CD AS "delivPlaceCd",
+          M_DELIVERY_PLACE.TEL_NO AS "telNo",
+          M_DELIVERY_PLACE.FAX_NO AS "faxNo",
+          M_DELIVERY_PLACE_LANG.DELIV_PLACE_NAME AS "delivPlaceName",
+          M_DELIVERY_PLACE_LANG.DELIV_PLACE_NAME_INB AS "delivPlaceNameInb",
+          M_DELIVERY_PLACE_LANG.ADDRESS1 AS "address1",
+          M_DELIVERY_PLACE_LANG.ADDRESS2 AS "address2"
+        FROM M_DELIVERY_PLACE
+        INNER JOIN M_COMPANY
+        ON 
+              M_DELIVERY_PLACE.COMPANY_CD=M_COMPANY.COMPANY_CD
+          AND M_COMPANY.COMPANY_USE_LANGUAGE_IND = '${@fw.security.SecurityUtil@getCompanyUseLanguageIndByEscapeSql()}'
+        LEFT JOIN M_DELIVERY_PLACE_LANG
+        ON 
+           M_DELIVERY_PLACE.DELIV_PLACE_CD=M_DELIVERY_PLACE_LANG.DELIV_PLACE_CD
+           AND M_DELIVERY_PLACE.COMPANY_CD=M_DELIVERY_PLACE_LANG.COMPANY_CD
+           AND M_DELIVERY_PLACE.SECTION_PLACE_CD=M_DELIVERY_PLACE_LANG.SECTION_PLACE_CD
+           AND M_DELIVERY_PLACE.VALID_START_DATE=M_DELIVERY_PLACE_LANG.VALID_START_DATE
+           AND M_DELIVERY_PLACE.VALID_END_DATE=M_DELIVERY_PLACE_LANG.VALID_END_DATE
+           AND M_DELIVERY_PLACE_LANG.LANGUAGE_IND=M_COMPANY.COMPANY_USE_LANGUAGE_IND
+        WHERE 
+            '${@fw.common.util.AppUtil@getSysDate(@fw.common.util.AppUtil@DATE_SHORT)}' BETWEEN M_DELIVERY_PLACE.VALID_START_DATE AND M_DELIVERY_PLACE.VALID_END_DATE
+            AND M_DELIVERY_PLACE.DELIV_PLACE_CD = #{delivPlaceCd}
+            AND (M_DELIVERY_PLACE.COMPANY_CD = #{companyCd} OR M_DELIVERY_PLACE.COMPANY_CD = '${@fw.common.constant.ApplicationConstant@COMPANY_CD_ALL}')
+         <if test="@org.apache.commons.lang.StringUtils@isNotBlank(termFlag) and termFlag==0">
+               AND M_DELIVERY_PLACE.TERM_FLG = #{termFlag, jdbcType=VARCHAR}
+         </if>
+    </select>
+</mapper>

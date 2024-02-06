@@ -1,0 +1,139 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="ps.dataaccess.apr.prcrev.PrcRevMapper">
+
+    <sql id="listKeyIdentityWhereCondition">
+      AND T_PRICE_REV.DELETE_FLG = '0'
+      AND T_PRICE_REV.PRICE_STATUS IN ('00', '02')
+      AND T_APPROVAL.APP_STATUS_IND IN ('0', '1')
+      AND T_APPROVAL.NOW_APP_COMPANY_CD = '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}'
+      AND T_APPROVAL.DELETE_FLG = '0'
+      <choose>
+          <when test="@org.apache.commons.lang.StringUtils@isNotBlank(appUserName)">
+              AND T_APPROVAL.NOW_APP_USER_ID = #{appUserName}
+          </when>
+          <otherwise>
+              AND T_APPROVAL.NOW_APP_USER_ID = '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}'
+          </otherwise>
+      </choose>
+      <if test="@org.apache.commons.lang.StringUtils@isNotBlank(titleName)">
+          AND T_PRICE_REV.TITLE_NAME ${@fw.common.util.SearchModeUtil@getSearchSQL("fw.domain.slip.price.revision.req.pricerevisionapp.PriceReqAppSearchCondition","titleName")}
+      </if>
+      <if test="@org.apache.commons.lang.StringUtils@isNotBlank(priceReqDateFrom.dateOfymd)">
+          AND T_PRICE_REV.PRICE_REQ_DATE >= #{priceReqDateFrom.dateOfymd}
+      </if>
+      <if test="@org.apache.commons.lang.StringUtils@isNotBlank(priceReqDateTo.dateOfymd)">
+          AND T_PRICE_REV.PRICE_REQ_DATE &lt;= #{priceReqDateTo.dateOfymd}
+      </if>
+      <if test="@org.apache.commons.lang.StringUtils@isNotBlank(supplierCd)">
+          AND T_PRICE_REV.SUP_CD = #{supplierCd}
+      </if>
+      <if test="@org.apache.commons.lang.StringUtils@isNotBlank(buyerUserId)">
+          AND T_PRICE_REV.PRICE_REQ_USER_ID = #{buyerUserId}
+      </if>
+       
+    </sql>
+    <!-- 価格改定依頼承認一覧のキーを取得(検索) -->
+    <select id="listKeyIdentity" 
+        parameterType="fw.domain.slip.price.revision.req.pricerevisionapp.PriceReqAppSearchCondition"
+        resultType="fw.domain.slip.price.revision.req.pricerevisionreq.PriceRevIdentify">
+        SELECT
+            T_PRICE_REV.PRICE_REV_SEQ AS "priceRevSeq"
+        FROM
+            T_PRICE_REV
+        LEFT JOIN T_APPROVAL ON
+            T_APPROVAL.APP_VOUCHER_KEY = T_PRICE_REV.PRICE_REV_SEQ
+        AND T_APPROVAL.APP_VOUCHER_IND = 'E'
+        <where>
+            <include refid="listKeyIdentityWhereCondition"/>
+        </where> 
+            
+        ORDER BY ${searchCondition.columnOrder.columnOrder()}
+    </select>
+    
+    <!-- キーで価格改定依頼承認一覧を取得 -->
+    <select id="listPageItem" parameterType="fw.domain.mst.searchcondition.SearchCondition"
+        resultMap="PriceReqAppListDetail_MAP">
+        SELECT
+              T_PRICE_REV.PRICE_REV_SEQ
+            , T_PRICE_REV.LAST_UPD_DATE
+            , T_PRICE_REV.PRICE_REQ_DATE
+            , T_PRICE_REV.TITLE_NAME
+            , T_PRICE_REV.SUP_CD
+            <!-- 2013/06/10 DEL DAIKO_TAKEDA 
+            , T_PRICE_REV.SUP_NAME
+            -->
+            <!-- 2013/06/10 ADD DAIKO_TAKEDA -->
+            , T_PRICE_REV.SUP_ABBR_NAME
+            , T_PRICE_REV.PRICE_REQ_ITME_VOL
+            , T_PRICE_REV.UPD_YM
+            , T_PRICE_REV.PRICE_REQ_COMPANY_CD
+            , T_PRICE_REV.PRICE_REQ_SECTION_CD
+            , T_PRICE_REV.PRICE_REQ_USER_ID
+            , T_PRICE_REV.PRICE_REQ_USER_NAME
+            , T_APPROVAL.BACK_APP_COMMENTS
+            , T_APPROVAL.BACK_APP_USER_ID
+            , T_APPROVAL.BACK_APP_USER_NAME
+            , T_APPROVAL.APP_SEQ
+            , T_APPROVAL.NOW_APP_USER_NAME
+            , T_APPROVAL.NEXT_APP_USER_NAME
+        FROM
+            T_PRICE_REV
+        LEFT JOIN T_APPROVAL ON
+            T_APPROVAL.APP_VOUCHER_KEY = T_PRICE_REV.PRICE_REV_SEQ
+        AND T_APPROVAL.APP_VOUCHER_IND = 'E'
+        <where>
+            T_PRICE_REV.PRICE_REV_SEQ IN
+            <foreach collection="searchCondition.page.keyDomainEntityList" item="keyList" open="(" separator="," close=")">
+                #{keyList.priceRevSeq}
+            </foreach>
+            <include refid="listKeyIdentityWhereCondition"/>
+        </where> 
+        ORDER BY
+            ${searchCondition.columnOrder.columnOrder()}
+    </select>
+    
+    <resultMap type="fw.domain.slip.price.revision.req.pricerevisionapp.PriceReqAppListDetail" 
+        id="PriceReqAppListDetail_MAP">
+        <id column="PRICE_REV_SEQ" property="priceRevIdentify.priceRevSeq" />
+        <id column="LAST_UPD_DATE" property="priceRevIdentify.lastUpdDate" />
+        <id column="PRICE_REQ_DATE" property="priceReqDate.dateOfymd" />
+        <id column="TITLE_NAME" property="titleName" />
+        <id column="SUP_CD" property="supplierCd" />
+        <!-- 2013/06/10 DEL DAIKO_TAKEDA 
+        <id column="SUP_NAME" property="supplierName" />
+        -->
+        <!-- 2013/06/10 ADD DAIKO_TAKEDA -->
+        <id column="SUP_ABBR_NAME" property="supplierName" />
+        <id column="PRICE_REQ_ITME_VOL" property="priceReqItemVol.vol" />
+        <id column="UPD_YM" property="nextUpdYm.dateOfym" />
+        <id column="PRICE_REQ_COMPANY_CD" property="buyerUserCompanyCd" />
+        <id column="PRICE_REQ_SECTION_CD" property="buyerUserSectionCd" />
+        <id column="PRICE_REQ_USER_ID" property="buyerUserId" />
+        <id column="PRICE_REQ_USER_NAME" property="buyerUserName" />
+        <id column="BACK_APP_COMMENTS" property="backAppComments" />
+        <id column="BACK_APP_USER_ID" property="backAppUserId" />
+        <id column="BACK_APP_USER_NAME" property="backAppUserName" />
+        <id column="APP_SEQ" property="appSeq" />
+        <id column="NOW_APP_USER_NAME" property="appUser" />
+        <id column="NEXT_APP_USER_NAME" property="nextAppUser" />
+    </resultMap>
+    
+    <!-- 価格改定を更新 -->
+    <update id="updatePriceRev">
+        UPDATE
+            T_PRICE_REV
+        SET
+              PRICE_STATUS = #{priceStatus}
+              <if test="@org.apache.commons.lang.StringUtils@isNotEmpty(sendInd)">
+                , SEND_IND = #{sendInd}
+              </if>
+            , LAST_UPD_DATE = '${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}'
+            , LAST_UPD_COMPANY_CD = '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}'
+            , LAST_UPD_SECTION_CD = '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}'
+            , LAST_UPD_USER_ID = '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}'
+        WHERE
+            PRICE_REV_SEQ = #{priceRevSeq}
+    </update>
+</mapper>

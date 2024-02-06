@@ -1,0 +1,287 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="ps.dataaccess.mst.currency.CurrencyMapper">
+
+	<select id="listCurrency" resultType="fw.domain.mst.amount.currency.CurrencyManagement">
+        SELECT
+                M_CURRENCY.CURRENCY_CD as "currencyIdentify.currencyCd",
+                CURRENCY_NAME as "currencyName"
+         FROM M_CURRENCY 
+             INNER JOIN M_CURRENCY_LANG
+             ON 
+                 M_CURRENCY.CURRENCY_CD = M_CURRENCY_LANG.CURRENCY_CD
+                 AND M_CURRENCY_LANG.LANGUAGE_IND = '${@fw.security.SecurityUtil@getCompanyUseLanguageIndByEscapeSql()}'
+                 AND TERM_FLG = '0'
+         ORDER BY M_CURRENCY.DSP_ORDER
+	</select>
+
+	<!-- SRC-00115-00 include化共通-->
+	<sql id="listKeyIdentityWhereCondition">
+	    <if test="@org.apache.commons.lang.StringUtils@isNotBlank(currencyCd)">
+	       AND M_CURRENCY.CURRENCY_CD ${@fw.common.util.SearchModeUtil@getSearchSQL("fw.domain.mst.amount.currency.CurrencySearchCondition","currencyCd")}
+	    </if>
+	    <if test="@org.apache.commons.lang.StringUtils@isNotBlank(currencyName)">
+	       AND CURRENCY_COMPANY.CURRENCY_NAME ${@fw.common.util.SearchModeUtil@getSearchSQL("fw.domain.mst.amount.currency.CurrencySearchCondition","currencyName")}
+	    </if>
+	    <if test="@fw.domain.mst.searchcondition.SearchCondition@termFlgIsNotEmpty(searchCondition.termFlg)">
+	       AND M_CURRENCY.TERM_FLG = #{searchCondition.termFlg, jdbcType=VARCHAR}
+	    </if>
+	</sql>
+    <select id="listKeyIdentity" parameterType="fw.domain.mst.amount.currency.CurrencySearchCondition" resultType="fw.domain.mst.amount.currency.CurrencyIdentify">
+        SELECT 
+            M_CURRENCY.CURRENCY_CD as "currencyCd",
+            CASE
+              WHEN CURRENCY_COMPANY.CURRENCY_NAME IS NOT NULL THEN
+                CURRENCY_COMPANY.CURRENCY_NAME
+              ELSE
+                CURRENCY_SYSTEM.CURRENCY_NAME
+            END AS currencyName
+        FROM M_CURRENCY 
+            LEFT JOIN M_CURRENCY_LANG CURRENCY_COMPANY
+            ON 
+                M_CURRENCY.CURRENCY_CD = CURRENCY_COMPANY.CURRENCY_CD
+                AND CURRENCY_COMPANY.LANGUAGE_IND = '${@fw.security.SecurityUtil@getCompanyUseLanguageIndByEscapeSql()}'
+            LEFT JOIN M_CURRENCY_LANG CURRENCY_SYSTEM
+            ON 
+                M_CURRENCY.CURRENCY_CD = CURRENCY_SYSTEM.CURRENCY_CD
+                AND CURRENCY_SYSTEM.LANGUAGE_IND = '${@fw.common.util.AppUtil@getSysLanguageByEscapeSql()}'
+        <where>
+            <include refid="listKeyIdentityWhereCondition"/>
+        </where> 
+        ORDER BY ${searchCondition.columnOrder.columnOrder()}
+    </select>
+    
+    <select id="listPageItem"
+        resultType="fw.domain.mst.amount.currency.CurrencyItem">
+            SELECT
+                M_CURRENCY.CURRENCY_CD as "currencyIdentify.currencyCd",
+                M_CURRENCY.LAST_UPD_DATE as "currencyIdentify.lastUpdDate",
+                CURRENCY_MARK as "currencyMark",
+                DSP_ORDER as "dspOrder",
+                CASE
+	              WHEN CURRENCY_COMPANY.CURRENCY_NAME IS NOT NULL THEN
+	                CURRENCY_COMPANY.CURRENCY_NAME
+	              ELSE
+	                CURRENCY_SYSTEM.CURRENCY_NAME
+	            END AS currencyName,
+                TERM_FLG as "termFlg"
+            FROM M_CURRENCY 
+                LEFT JOIN M_CURRENCY_LANG CURRENCY_COMPANY
+                ON 
+                    M_CURRENCY.CURRENCY_CD = CURRENCY_COMPANY.CURRENCY_CD
+                    AND CURRENCY_COMPANY.LANGUAGE_IND = '${@fw.security.SecurityUtil@getCompanyUseLanguageIndByEscapeSql()}'
+                LEFT JOIN M_CURRENCY_LANG CURRENCY_SYSTEM
+                ON 
+                    M_CURRENCY.CURRENCY_CD = CURRENCY_SYSTEM.CURRENCY_CD
+                    AND CURRENCY_SYSTEM.LANGUAGE_IND = '${@fw.common.util.AppUtil@getSysLanguageByEscapeSql()}'
+            <where>
+                M_CURRENCY.CURRENCY_CD in 
+                <foreach collection="searchCondition.page.keyDomainEntityList" item="keyList"  open="(" separator="," close=")">  
+                    #{keyList.currencyCd}
+                </foreach>
+                <include refid="listKeyIdentityWhereCondition"/>
+            </where>
+            ORDER BY ${searchCondition.columnOrder.columnOrder()}
+    </select>
+
+    <!-- 強化-01784-000 2013/06/12 DEL SBO_SOKOU START -->
+    <!-- 
+    <select id="search" parameterType="fw.domain.mst.amount.currency.CurrencyIdentify" resultType="fw.domain.mst.amount.currency.CurrencyManagement">
+        SELECT
+            M_CURRENCY.CURRENCY_CD as "currencyIdentify.currencyCd",
+            M_CURRENCY.LAST_UPD_DATE as "currencyIdentify.lastUpdDate",
+            CURRENCY_MARK as "currencyMark.currencyMark",
+            DSP_ORDER as "dspOrder",
+            CASE
+              WHEN CURRENCY_COMPANY.CURRENCY_NAME IS NOT NULL THEN
+                CURRENCY_COMPANY.CURRENCY_NAME
+              ELSE
+                CURRENCY_SYSTEM.CURRENCY_NAME
+            END AS "currencyName",
+            CASE
+              WHEN CURRENCY_COMPANY.CURRENCY_NAME IS NOT NULL THEN
+                '${@fw.security.SecurityUtil@getCompanyUseLanguageIndByEscapeSql()}'
+              ELSE
+                '${@fw.common.util.AppUtil@getSysLanguageByEscapeSql()}'
+            END AS "baseLanguageInd.languageInd",
+            UNITPRICE_DEC_NUM as "unitPriceDecNum",
+            TOTALPRICE_DEC_NUM as "totalPriceDecNum",
+            TERM_FLG as "termFlg"
+        FROM M_CURRENCY 
+        LEFT JOIN M_CURRENCY_LANG CURRENCY_COMPANY
+        ON 
+            M_CURRENCY.CURRENCY_CD = CURRENCY_COMPANY.CURRENCY_CD
+            AND CURRENCY_COMPANY.LANGUAGE_IND = '${@fw.security.SecurityUtil@getCompanyUseLanguageIndByEscapeSql()}'
+        LEFT JOIN M_CURRENCY_LANG CURRENCY_SYSTEM
+        ON 
+            M_CURRENCY.CURRENCY_CD = CURRENCY_SYSTEM.CURRENCY_CD
+            AND CURRENCY_SYSTEM.LANGUAGE_IND = '${@fw.common.util.AppUtil@getSysLanguageByEscapeSql()}'
+        WHERE
+             M_CURRENCY.CURRENCY_CD = #{currencyCd}
+    </select>
+    -->
+    <!-- 強化-01784-000 2013/06/12 DEL SBO_SOKOU -END- -->
+    <!-- 強化-01784-000 2013/06/12 ADD SBO_SOKOU START -->
+    <select id="search"
+            parameterType="fw.domain.mst.amount.currency.CurrencyIdentify"
+            resultType="fw.domain.mst.amount.currency.CurrencyManagement">
+        SELECT M_CURRENCY.CURRENCY_CD        AS "currencyIdentify.currencyCd"
+             , M_CURRENCY.LAST_UPD_DATE      AS "currencyIdentify.lastUpdDate"
+             , M_CURRENCY.CURRENCY_MARK      AS "currencyMark.currencyMark"
+             , M_CURRENCY.DSP_ORDER          AS "dspOrder"
+             , M_CURRENCY.UNITPRICE_DEC_NUM  AS "unitPriceDecNum"
+             , M_CURRENCY.TOTALPRICE_DEC_NUM AS "totalPriceDecNum"
+             , M_CURRENCY.TERM_FLG           AS "termFlg"
+             , M_CURRENCY_LANG.CURRENCY_NAME AS "currencyName"
+             , M_CURRENCY_LANG.LANGUAGE_IND  AS "baseLanguageInd.languageInd"
+          FROM M_CURRENCY
+         INNER JOIN M_CURRENCY_LANG
+                 ON M_CURRENCY.CURRENCY_CD = M_CURRENCY_LANG.CURRENCY_CD
+                AND M_CURRENCY_LANG.LANGUAGE_IND = '${@fw.common.util.AppUtil@getSysLanguageByEscapeSql()}'
+         WHERE M_CURRENCY.CURRENCY_CD = #{currencyCd}
+    </select>
+    <!-- 強化-01784-000 2013/06/12 ADD SBO_SOKOU -END- -->
+
+    <select id="searchExclusive" parameterType="fw.domain.mst.amount.currency.CurrencyIdentify" resultType="fw.domain.mst.amount.currency.CurrencyIdentify">
+        SELECT
+            M_CURRENCY.CURRENCY_CD as "currencyCd"
+        FROM M_CURRENCY 
+        WHERE
+            M_CURRENCY.CURRENCY_CD = #{currencyCd}
+            AND M_CURRENCY.LAST_UPD_DATE = #{lastUpdDate}
+    </select>
+
+    <!-- 強化-01784-000 2013/06/12 DEL SBO_SOKOU START -->
+    <!-- 
+    <select id="listCurrencyLanguage" parameterType="fw.domain.mst.amount.currency.CurrencyIdentify" resultType="fw.domain.mst.amount.currency.CurrencyLanguage">
+        SELECT
+            M_CURRENCY_LANG.CURRENCY_CD as "currencyIdentify.currencyCd",
+            LANGUAGE_IND as "languageInd.languageInd",
+            CURRENCY_NAME as "currencyName"
+        FROM M_CURRENCY_LANG
+            INNER JOIN M_CURRENCY
+            ON 
+                M_CURRENCY.CURRENCY_CD = M_CURRENCY_LANG.CURRENCY_CD
+                AND M_CURRENCY.CURRENCY_CD = #{currencyCd}
+                AND M_CURRENCY_LANG.LANGUAGE_IND != '${@fw.security.SecurityUtil@getCompanyUseLanguageIndByEscapeSql()}'
+            INNER JOIN M_CODE_NAME M_CODE_NAME_DSP_ORDER
+            ON
+                M_CODE_NAME_DSP_ORDER.CODE_KEY = 'LANGUAGE_IND'
+                AND M_CODE_NAME_DSP_ORDER.CODE_VALUE = M_CURRENCY_LANG.LANGUAGE_IND
+        ORDER BY M_CODE_NAME_DSP_ORDER.DSP_ORDER
+    </select>
+    -->
+    <!-- 強化-01784-000 2013/06/12 DEL SBO_SOKOU -END- -->
+    <!-- 強化-01784-000 2013/06/12 ADD SBO_SOKOU START -->
+    <select id="listCurrencyLanguage"
+            parameterType="fw.domain.mst.amount.currency.CurrencyIdentify"
+            resultType="fw.domain.mst.amount.currency.CurrencyLanguage">
+        SELECT M_CURRENCY_LANG.CURRENCY_CD   AS "currencyIdentify.currencyCd",
+               M_CURRENCY_LANG.LANGUAGE_IND  AS "languageInd.languageInd",
+               M_CURRENCY_LANG.CURRENCY_NAME AS "currencyName"
+          FROM M_CURRENCY_LANG
+         INNER JOIN M_CURRENCY
+                 ON M_CURRENCY.CURRENCY_CD = M_CURRENCY_LANG.CURRENCY_CD
+                AND M_CURRENCY_LANG.LANGUAGE_IND != '${@fw.common.util.AppUtil@getSysLanguageByEscapeSql()}'
+         INNER JOIN M_CODE_NAME
+                 ON M_CODE_NAME.CODE_KEY = 'LANGUAGE_IND'
+                AND M_CODE_NAME.CODE_VALUE = M_CURRENCY_LANG.LANGUAGE_IND
+         WHERE M_CURRENCY.CURRENCY_CD = #{currencyCd}
+         ORDER BY M_CODE_NAME.DSP_ORDER
+    </select>
+    <!-- 強化-01784-000 2013/06/12 ADD SBO_SOKOU -END- -->
+
+    <insert id="insert" parameterType="fw.domain.mst.amount.currency.CurrencyManagement">
+        INSERT INTO M_CURRENCY
+        (
+            CURRENCY_CD,
+            CURRENCY_MARK,
+            DSP_ORDER,
+            UNITPRICE_DEC_NUM,
+            TOTALPRICE_DEC_NUM,
+            TERM_FLG,
+            LAST_UPD_DATE,
+            LAST_UPD_COMPANY_CD,
+            LAST_UPD_SECTION_CD,
+            LAST_UPD_USER_ID,
+            REG_DATE,
+            REG_COMPANY_CD,
+            REG_SECTION_CD,
+            REG_USER_ID
+        ) VALUES (
+            #{currencyIdentify.currencyCd, jdbcType=VARCHAR},
+            #{currencyMark.currencyMark,jdbcType=VARCHAR},
+            #{dspOrder,jdbcType=VARCHAR},
+            #{unitpriceDecNum,jdbcType=VARCHAR},
+            #{totalpriceDecNum,jdbcType=VARCHAR},
+            #{termFlg, jdbcType=VARCHAR},
+            #{registInfo.lastUpdDate, jdbcType=VARCHAR},
+            #{registInfo.lastUpdCompanyCd, jdbcType=VARCHAR},
+            #{registInfo.lastUpdSectionCd, jdbcType=VARCHAR},
+            #{registInfo.lastUpdUserId, jdbcType=VARCHAR},
+            #{registInfo.regDate, jdbcType=VARCHAR},
+            #{registInfo.regCompanyCd, jdbcType=VARCHAR},
+            #{registInfo.regSectionCd, jdbcType=VARCHAR},
+            #{registInfo.regUserId, jdbcType=VARCHAR}
+        )
+    </insert>
+
+    <insert id="insertCurrencyLanguage" parameterType="fw.domain.mst.amount.currency.CurrencyLanguage">
+        INSERT INTO M_CURRENCY_LANG
+        (
+            CURRENCY_CD,
+            LANGUAGE_IND,
+            CURRENCY_NAME,
+            LAST_UPD_DATE,
+            LAST_UPD_COMPANY_CD,
+            LAST_UPD_SECTION_CD,
+            LAST_UPD_USER_ID,
+            REG_DATE,
+            REG_COMPANY_CD,
+            REG_SECTION_CD,
+            REG_USER_ID
+        )VALUES(
+            #{currencyIdentify.currencyCd, jdbcType=VARCHAR},
+            #{languageInd.languageInd, jdbcType=VARCHAR},
+            #{currencyName, jdbcType=VARCHAR},
+            #{registInfo.lastUpdDate, jdbcType=VARCHAR},
+            #{registInfo.lastUpdCompanyCd, jdbcType=VARCHAR},
+            #{registInfo.lastUpdSectionCd, jdbcType=VARCHAR},
+            #{registInfo.lastUpdUserId, jdbcType=VARCHAR},
+            #{registInfo.regDate, jdbcType=VARCHAR},
+            #{registInfo.regCompanyCd, jdbcType=VARCHAR},
+            #{registInfo.regSectionCd, jdbcType=VARCHAR},
+            #{registInfo.regUserId, jdbcType=VARCHAR}
+        )
+    </insert>
+
+    <update id="update" parameterType="fw.domain.mst.amount.currency.CurrencyManagement">
+        UPDATE M_CURRENCY
+        SET
+            CURRENCY_MARK = #{currencyMark.currencyMark},
+            DSP_ORDER = #{dspOrder},
+            UNITPRICE_DEC_NUM = #{unitpriceDecNum},
+            TOTALPRICE_DEC_NUM = #{totalpriceDecNum},
+            TERM_FLG = #{termFlg},
+            LAST_UPD_DATE = #{registInfo.lastUpdDate},
+            LAST_UPD_COMPANY_CD = #{registInfo.lastUpdCompanyCd},
+            LAST_UPD_SECTION_CD = #{registInfo.lastUpdSectionCd},
+            LAST_UPD_USER_ID = #{registInfo.lastUpdUserId}
+        WHERE
+            CURRENCY_CD = #{currencyIdentify.currencyCd}
+    </update>
+
+    <delete id="delete" parameterType="fw.domain.mst.amount.currency.CurrencyIdentify">
+        DELETE FROM M_CURRENCY
+        WHERE
+            CURRENCY_CD = #{currencyCd}
+    </delete>
+    
+    <delete id="deleteCurrencyLanguage" parameterType="fw.domain.mst.amount.currency.CurrencyIdentify">
+        DELETE FROM M_CURRENCY_LANG
+        WHERE
+            CURRENCY_CD = #{currencyCd}
+    </delete>
+</mapper>

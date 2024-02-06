@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<flow xmlns="http://www.springframework.org/schema/webflow"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.springframework.org/schema/webflow
+        http://www.springframework.org/schema/webflow/spring-webflow-2.0.xsd"
+    parent="base">
+    <var name="slipSearchByBuyerItem" class="fw.domain.slip.slipsearchbybuyer.SlipSearchByBuyerItem" />
+    <var name="catalogIdentify" class="fw.domain.slip.purreq.purreqcatalog.CatalogIdentify" />
+    <var name="everyPurReq" class="fw.domain.slip.purreq.everypurreq.EveryPurReq" />
+    <input name="searchCondition" />
+    <input name="isCurrentPageSearch" />
+    
+    <decision-state id="isSearchByKey">
+       <if test="flowScope.isCurrentPageSearch" then="searchByKey" else="searchByCondition" />
+    </decision-state>
+    <action-state id="searchByCondition">
+    <evaluate expression="PSHIS151Service.init(searchCondition)" result="flowScope.itemList" />
+        <transition to="PSHIS151"/> 
+    </action-state>
+
+    <action-state  id="searchByKey" >
+        <evaluate expression="PSHIS151Service.page(searchCondition)" result="flowScope.itemList" />
+        <transition to="PSHIS151"/>
+    </action-state>
+
+    <view-state id="PSHIS151" view="his/history/PSHIS151" model="itemList">
+       <transition on="order" validate="false">
+            <evaluate expression="PSHIS151Service.order(searchCondition)" 
+                 result="flowScope.itemList" />
+        </transition>
+        <transition on="page" validate="false">
+             <evaluate expression="PSHIS151Service.page(searchCondition)" 
+                result="flowScope.itemList" /> 
+        </transition>
+        <transition on="history" to="PSHIS152" validate="false">
+             <set name="flowScope.index" value="requestParameters.index"/>
+             <set name="flowScope.itemList" value="itemList"/>
+             <set name="catalogIdentify.purReqNo.purReqNo" value="requestParameters.purReqNo" />
+             <set name="everyPurReq.purReqNo.purReqNo" value="requestParameters.purReqNo" />
+        </transition>
+        <transition on="detail" to="PSVIW060" validate="false" >
+        <set name="slipSearchByBuyerItem.slipStatus" value="requestParameters.slipStatus"/>
+        <set name="slipSearchByBuyerItem.receiveStatusInd" value="requestParameters.receiveStatus"/>
+        <set name="slipSearchByBuyerItem.acceptanceStatusInd" value="requestParameters.acceptanceStatus"/>
+        <set name="slipSearchByBuyerItem.inspectStatusInd" value="requestParameters.inspectStatus"/>
+        <set name="slipSearchByBuyerItem.delivVol.vol" value="requestParameters.delivVol"/>
+        <set name="slipSearchByBuyerItem.quotAcqAplStat" value="requestParameters.quotAcqAplStatus"/>
+        <set name="slipSearchByBuyerItem.reqInd" value="requestParameters.reqInd"/>
+        <set name="slipSearchByBuyerItem.quotReqSeqNo" value="requestParameters.quotReqSeqNo"/>
+        <set name="slipSearchByBuyerItem.quotReqNo" value="requestParameters.quotReqNo"/>
+        <set name="slipSearchByBuyerItem.kenshu" value="requestParameters.count"/>
+        <set name="slipSearchByBuyerItem.orderSeq" value="requestParameters.orderSeq"/>
+        <set name="slipSearchByBuyerItem.orderNo" value="requestParameters.orderNo"/>
+        <set name="slipSearchByBuyerItem.purAplSeqNo" value="requestParameters.purAplSeq"/>
+        <set name="slipSearchByBuyerItem.appUnitNo" value="requestParameters.appUnitNo"/>
+        <!-- 2013.01.05 ADD DAIKO_KANEKO START -->
+        <set name="slipSearchByBuyerItem.purAplNo" value="requestParameters.purAplNo"/>
+        <set name="slipSearchByBuyerItem.quotAcqAplSeqNo" value="requestParameters.quotAcqAplSeqNo"/>
+        <!-- 2013.01.05 ADD DAIKO_KANEKO -END- -->
+        <set name="slipSearchByBuyerItem.purReqNo" value="requestParameters.purReqNo" />
+        </transition>
+        <transition on="back" to="home" validate="false" />
+    </view-state>
+    <subflow-state id="PSHIS152" subflow="his/history/PSHIS152">
+        <input name="index" value="flowScope.index" />
+        <input name="itemList" value="flowScope.itemList" />
+        <input name="catalogIdentify" value="catalogIdentify" />
+        <input name="everyPurReq" value="everyPurReq" />
+    </subflow-state>
+    <subflow-state id="PSVIW060" subflow="viw/slip/PSVIW060" >
+        <input name="slipSearchByBuyerItem" value="slipSearchByBuyerItem" />
+    </subflow-state>
+    
+</flow>

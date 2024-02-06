@@ -1,0 +1,718 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="ps.dataaccess.mst.deliveryplace.DeliveryPlaceMapper">
+    <select id="searchCountDeliveryPlace" parameterType="fw.domain.mst.organization.deliveryplace.DeliveryPlaceIdentify" resultType="int">
+        SELECT 
+            COUNT(1)
+        FROM 
+            M_DELIVERY_PLACE
+        WHERE 
+            COMPANY_CD = #{companyCd, jdbcType=VARCHAR}
+        AND DELIV_PLACE_CD = #{delivPlaceCd, jdbcType=VARCHAR}
+    </select>
+
+    <sql id="listKeyIdentityWhereCondition">
+        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(companyCd)">
+            AND M_DELIVERY_PLACE.COMPANY_CD = #{companyCd, jdbcType=VARCHAR}
+        </if>
+        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(sectionPlaceCd)">
+            AND M_DELIVERY_PLACE.SECTION_PLACE_CD = #{sectionPlaceCd, jdbcType=VARCHAR}
+        </if>
+        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(delivPlaceCd)">
+            AND M_DELIVERY_PLACE.DELIV_PLACE_CD ${@fw.common.util.SearchModeUtil@getSearchSQL("fw.domain.mst.organization.deliveryplace.DeliveryPlaceSearchCondition","delivPlaceCd")}
+        </if>
+        <if test="@fw.domain.mst.searchcondition.SearchCondition@termFlgIsNotEmpty(searchCondition.termFlg)">
+            AND M_DELIVERY_PLACE.TERM_FLG = #{searchCondition.termFlg, jdbcType=VARCHAR}
+        </if>
+        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(delivPlaceNameInb)">
+            AND deliveryPlace_lang_company.DELIV_PLACE_NAME_INB ${@fw.common.util.SearchModeUtil@getSearchSQL("fw.domain.mst.organization.deliveryplace.DeliveryPlaceSearchCondition","delivPlaceNameInb")}
+        </if>
+        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(validStartDateFrom.dateOfymd)">
+            AND M_DELIVERY_PLACE.VALID_START_DATE >= #{validStartDateFrom.dateOfymd}
+        </if>
+        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(validStartDateTo.dateOfymd)">
+            <![CDATA[AND M_DELIVERY_PLACE.VALID_START_DATE <= #{validStartDateTo.dateOfymd}]]>
+        </if>
+        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(validEndDateFrom.dateOfymd)">
+            AND M_DELIVERY_PLACE.VALID_END_DATE >= #{validEndDateFrom.dateOfymd}
+        </if>
+        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(validEndDateTo.dateOfymd)">
+            <![CDATA[AND M_DELIVERY_PLACE.VALID_END_DATE <= #{validEndDateTo.dateOfymd}]]>
+        </if>
+        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(delivPlaceName)">
+            AND deliveryPlace_lang_company.DELIV_PLACE_NAME ${@fw.common.util.SearchModeUtil@getSearchSQL("fw.domain.mst.organization.deliveryplace.DeliveryPlaceSearchCondition","delivPlaceName")}
+        </if>
+    </sql>
+
+    <select id="listKeyIdentity" parameterType="fw.domain.mst.organization.deliveryplace.DeliveryPlaceSearchCondition" resultType="fw.domain.mst.organization.deliveryplace.DeliveryPlaceIdentify">
+         SELECT 
+              M_DELIVERY_PLACE.DELIV_PLACE_CD AS "delivPlaceCd",
+              M_DELIVERY_PLACE.COMPANY_CD AS "companyCd",
+              M_DELIVERY_PLACE.SECTION_PLACE_CD AS "sectionPlaceCd",
+              M_DELIVERY_PLACE.VALID_START_DATE AS "validStartDate.dateOfymd",
+              M_DELIVERY_PLACE.VALID_END_DATE AS "validEndDate.dateOfymd",
+              M_DELIVERY_PLACE.LAST_UPD_DATE AS "lastUpdDate",
+          CASE
+            WHEN deliveryPlace_lang_company.DELIV_PLACE_NAME_INB IS NOT NULL THEN
+             deliveryPlace_lang_company.DELIV_PLACE_NAME_INB
+            ELSE
+             deliveryPlace_lang_system.DELIV_PLACE_NAME_INB
+            END AS delivPlaceNameInb,
+          CASE
+            WHEN deliveryPlace_lang_company.DELIV_PLACE_NAME IS NOT NULL THEN
+             deliveryPlace_lang_company.DELIV_PLACE_NAME
+            ELSE
+             deliveryPlace_lang_system.DELIV_PLACE_NAME
+            END AS delivPlaceName,
+            CASE
+            WHEN deliveryPlace_lang_company.DELIV_PLACE_COMPANY_NAME IS NOT NULL THEN
+             deliveryPlace_lang_company.DELIV_PLACE_COMPANY_NAME
+            ELSE
+             deliveryPlace_lang_system.DELIV_PLACE_COMPANY_NAME
+            END AS delivPlaceCompanyName,
+          CASE
+            WHEN sectionPlace_lang_company.SECTION_PLACE_NAME IS NOT NULL THEN
+             sectionPlace_lang_company.SECTION_PLACE_NAME
+            ELSE
+             sectionPlace_lang_system.SECTION_PLACE_NAME
+            END AS sectionPlaceName
+            FROM M_DELIVERY_PLACE
+            INNER JOIN M_COMPANY
+        ON 
+              M_DELIVERY_PLACE.COMPANY_CD=M_COMPANY.COMPANY_CD
+        LEFT JOIN M_DELIVERY_PLACE_LANG deliveryPlace_lang_company
+        ON 
+           M_DELIVERY_PLACE.DELIV_PLACE_CD=deliveryPlace_lang_company.DELIV_PLACE_CD
+           AND M_DELIVERY_PLACE.COMPANY_CD=deliveryPlace_lang_company.COMPANY_CD
+           AND M_DELIVERY_PLACE.SECTION_PLACE_CD=deliveryPlace_lang_company.SECTION_PLACE_CD
+           AND M_DELIVERY_PLACE.VALID_START_DATE=deliveryPlace_lang_company.VALID_START_DATE
+           AND M_DELIVERY_PLACE.VALID_END_DATE=deliveryPlace_lang_company.VALID_END_DATE
+           AND deliveryPlace_lang_company.LANGUAGE_IND=M_COMPANY.COMPANY_USE_LANGUAGE_IND
+           
+        LEFT JOIN M_DELIVERY_PLACE_LANG deliveryPlace_lang_system
+        ON 
+           M_DELIVERY_PLACE.DELIV_PLACE_CD=deliveryPlace_lang_system.DELIV_PLACE_CD
+           AND M_DELIVERY_PLACE.COMPANY_CD=deliveryPlace_lang_system.COMPANY_CD
+           AND M_DELIVERY_PLACE.SECTION_PLACE_CD=deliveryPlace_lang_system.SECTION_PLACE_CD
+           AND M_DELIVERY_PLACE.VALID_START_DATE=deliveryPlace_lang_system.VALID_START_DATE
+           AND M_DELIVERY_PLACE.VALID_END_DATE=deliveryPlace_lang_system.VALID_END_DATE
+           AND deliveryPlace_lang_system.LANGUAGE_IND='${@fw.common.util.AppUtil@getSysLanguageByEscapeSql()}'
+           
+        LEFT JOIN M_SECTION_PLACE_LANG sectionPlace_lang_company
+            ON sectionPlace_lang_company.SECTION_PLACE_CD = M_DELIVERY_PLACE.SECTION_PLACE_CD
+            AND M_DELIVERY_PLACE.COMPANY_CD=sectionPlace_lang_company.COMPANY_CD
+            AND sectionPlace_lang_company.LANGUAGE_IND = M_COMPANY.COMPANY_USE_LANGUAGE_IND
+            
+        LEFT JOIN M_SECTION_PLACE_LANG sectionPlace_lang_system
+            ON sectionPlace_lang_system.SECTION_PLACE_CD = M_DELIVERY_PLACE.SECTION_PLACE_CD
+            AND M_DELIVERY_PLACE.COMPANY_CD=sectionPlace_lang_system.COMPANY_CD
+            AND sectionPlace_lang_system.LANGUAGE_IND = '${@fw.common.util.AppUtil@getSysLanguageByEscapeSql()}'
+        <where>
+            <include refid="listKeyIdentityWhereCondition"/>
+        </where>
+         ORDER BY ${searchCondition.columnOrder.columnOrder()}
+    </select>
+
+    <resultMap type="fw.domain.mst.organization.deliveryplace.DeliveryPlaceItem" id="DeliveryPlaceItem_Map">
+        <id column="delivPlaceCd" property="deliveryPlaceIdentify.delivPlaceCd"/>
+        <id column="companyCd" property="deliveryPlaceIdentify.companyCd"/>
+        <id column="sectionPlaceCd" property="deliveryPlaceIdentify.sectionPlaceCd"/>
+        <id column="validStartDate" property="deliveryPlaceIdentify.validStartDate.dateOfymd"/>
+        <id column="validEndDate" property="deliveryPlaceIdentify.validEndDate.dateOfymd"/>
+         <id column="lastUpdDate" property="deliveryPlaceIdentify.lastUpdDate"/>
+        <id column="delivPlaceNameInb" property="delivPlaceNameInb.delivPlaceNameInb"/>
+    </resultMap>
+    <select id="listPageItem" resultMap="DeliveryPlaceItem_Map">
+      SELECT 
+          M_DELIVERY_PLACE.DELIV_PLACE_CD AS "delivPlaceCd",
+          M_DELIVERY_PLACE.COMPANY_CD AS "companyCd",
+          M_DELIVERY_PLACE.SECTION_PLACE_CD AS "sectionPlaceCd",
+          M_DELIVERY_PLACE.VALID_START_DATE AS "validStartDate",
+          M_DELIVERY_PLACE.VALID_END_DATE AS "validEndDate",
+          M_DELIVERY_PLACE.TERM_FLG AS "termFlg",
+          M_DELIVERY_PLACE.LAST_UPD_DATE AS "lastUpdDate",
+          CASE
+            WHEN deliveryPlace_lang_company.DELIV_PLACE_NAME_INB IS NOT NULL THEN
+             deliveryPlace_lang_company.DELIV_PLACE_NAME_INB
+            ELSE
+             deliveryPlace_lang_system.DELIV_PLACE_NAME_INB
+            END AS delivPlaceNameInb,
+          CASE
+            WHEN deliveryPlace_lang_company.DELIV_PLACE_NAME IS NOT NULL THEN
+             deliveryPlace_lang_company.DELIV_PLACE_NAME
+            ELSE
+             deliveryPlace_lang_system.DELIV_PLACE_NAME
+            END AS delivPlaceName,
+            CASE
+            WHEN deliveryPlace_lang_company.DELIV_PLACE_COMPANY_NAME IS NOT NULL THEN
+             deliveryPlace_lang_company.DELIV_PLACE_COMPANY_NAME
+            ELSE
+             deliveryPlace_lang_system.DELIV_PLACE_COMPANY_NAME
+            END AS delivPlaceCompanyName,
+          CASE
+            WHEN sectionPlace_lang_company.SECTION_PLACE_NAME IS NOT NULL THEN
+             sectionPlace_lang_company.SECTION_PLACE_NAME
+            ELSE
+             sectionPlace_lang_system.SECTION_PLACE_NAME
+            END AS sectionPlaceName
+        FROM M_DELIVERY_PLACE
+        LEFT JOIN M_COMPANY
+        ON 
+              M_DELIVERY_PLACE.COMPANY_CD=M_COMPANY.COMPANY_CD
+              
+        LEFT JOIN M_DELIVERY_PLACE_LANG deliveryPlace_lang_company
+        ON 
+           M_DELIVERY_PLACE.DELIV_PLACE_CD=deliveryPlace_lang_company.DELIV_PLACE_CD
+           AND M_DELIVERY_PLACE.COMPANY_CD=deliveryPlace_lang_company.COMPANY_CD
+           AND M_DELIVERY_PLACE.SECTION_PLACE_CD=deliveryPlace_lang_company.SECTION_PLACE_CD
+           AND M_DELIVERY_PLACE.VALID_START_DATE=deliveryPlace_lang_company.VALID_START_DATE
+           AND M_DELIVERY_PLACE.VALID_END_DATE=deliveryPlace_lang_company.VALID_END_DATE
+           AND deliveryPlace_lang_company.LANGUAGE_IND=M_COMPANY.COMPANY_USE_LANGUAGE_IND
+           
+        LEFT JOIN M_DELIVERY_PLACE_LANG deliveryPlace_lang_system
+        ON 
+           M_DELIVERY_PLACE.DELIV_PLACE_CD=deliveryPlace_lang_system.DELIV_PLACE_CD
+           AND M_DELIVERY_PLACE.COMPANY_CD=deliveryPlace_lang_system.COMPANY_CD
+           AND M_DELIVERY_PLACE.SECTION_PLACE_CD=deliveryPlace_lang_system.SECTION_PLACE_CD
+           AND M_DELIVERY_PLACE.VALID_START_DATE=deliveryPlace_lang_system.VALID_START_DATE
+           AND M_DELIVERY_PLACE.VALID_END_DATE=deliveryPlace_lang_system.VALID_END_DATE
+           AND deliveryPlace_lang_system.LANGUAGE_IND='${@fw.common.util.AppUtil@getSysLanguageByEscapeSql()}'
+           
+        LEFT JOIN M_SECTION_PLACE_LANG sectionPlace_lang_company
+            ON sectionPlace_lang_company.SECTION_PLACE_CD = M_DELIVERY_PLACE.SECTION_PLACE_CD
+            AND sectionPlace_lang_company.LANGUAGE_IND = M_COMPANY.COMPANY_USE_LANGUAGE_IND
+            AND sectionPlace_lang_company.COMPANY_CD = M_DELIVERY_PLACE.COMPANY_CD
+        LEFT JOIN M_SECTION_PLACE_LANG sectionPlace_lang_system
+            ON sectionPlace_lang_system.SECTION_PLACE_CD = M_DELIVERY_PLACE.SECTION_PLACE_CD
+            AND sectionPlace_lang_system.LANGUAGE_IND = '${@fw.common.util.AppUtil@getSysLanguageByEscapeSql()}'
+            AND sectionPlace_lang_system.COMPANY_CD = M_DELIVERY_PLACE.COMPANY_CD
+        <where>
+            (M_DELIVERY_PLACE.DELIV_PLACE_CD,
+             M_DELIVERY_PLACE.COMPANY_CD,
+             M_DELIVERY_PLACE.VALID_START_DATE,
+             M_DELIVERY_PLACE.VALID_END_DATE) IN 
+            <foreach collection="searchCondition.page.keyDomainEntityList" item="keyList"  open="(" separator="," close=")">  
+                (#{keyList.delivPlaceCd},#{keyList.companyCd},'${@fw.common.util.AppUtil@convertDateForValid(keyList.validStartDate.dateOfymd,@fw.common.util.AppUtil@VALID_START_DATE)}','${@fw.common.util.AppUtil@convertDateForValid(keyList.validEndDate.dateOfymd,@fw.common.util.AppUtil@VALID_END_DATE)}') 
+            </foreach>
+            <include refid="listKeyIdentityWhereCondition"/>
+        </where>
+        ORDER BY ${searchCondition.columnOrder.columnOrder()}
+    </select>
+
+    <select id="searchExclusive" parameterType="fw.domain.mst.organization.deliveryplace.DeliveryPlaceIdentify" resultType="fw.domain.mst.organization.deliveryplace.DeliveryPlaceIdentify" >
+       SELECT 
+          COMPANY_CD AS "companyCd",
+          DELIV_PLACE_CD AS "delivPlaceCd",
+          SECTION_PLACE_CD AS "sectionPlaceCd",
+          VALID_START_DATE AS "validStartDate.dateOfymd",
+          VALID_END_DATE AS "validEndDate.dateOfymd",
+          LAST_UPD_DATE AS "lastUpdDate"
+        FROM M_DELIVERY_PLACE
+        WHERE  
+           COMPANY_CD=#{companyCd, jdbcType=VARCHAR}
+           AND DELIV_PLACE_CD=#{delivPlaceCd, jdbcType=VARCHAR}
+           AND VALID_START_DATE='${@fw.common.util.AppUtil@convertDateForValid(validStartDate.dateOfymd,@fw.common.util.AppUtil@VALID_START_DATE)}'
+           AND VALID_END_DATE='${@fw.common.util.AppUtil@convertDateForValid(validEndDate.dateOfymd,@fw.common.util.AppUtil@VALID_END_DATE)}'
+           AND LAST_UPD_DATE = #{lastUpdDate, jdbcType=VARCHAR}
+    </select>
+    
+       <resultMap type="fw.domain.mst.organization.deliveryplace.DeliveryPlaceManagement" id="DeliveryPlaceManagement_Map">
+        <id column="delivPlaceCd" property="deliveryPlaceIdentify.delivPlaceCd"/>
+        <id column="companyCd" property="deliveryPlaceIdentify.companyCd"/>
+        <id column="sectionPlaceCd" property="deliveryPlaceIdentify.sectionPlaceCd"/>
+        <id column="validStartDate" property="deliveryPlaceIdentify.validStartDate.dateOfymd"/>
+        <id column="validEndDate" property="deliveryPlaceIdentify.validEndDate.dateOfymd"/>
+        <id column="startDate" property="validity.validityPeriod.period.startDate.dateOfymd"/>
+        <id column="endDate" property="validity.validityPeriod.period.endDate.dateOfymd"/>
+        <id column="lastUpdDate" property="deliveryPlaceIdentify.lastUpdDate"/>
+        <id column="delivPlaceNameInb" property="delivPlaceNameInb.delivPlaceNameInb"/>
+        <id column="termFlg" property="validity.term.termFlg"/>
+        <id column="sectionCd" property="sectionPlace.sectionPlaceCd"/>
+    </resultMap>
+      <select id="search" parameterType="fw.domain.mst.organization.deliveryplace.DeliveryPlaceIdentify" resultMap="DeliveryPlaceManagement_Map">
+          SELECT 
+            M_DELIVERY_PLACE.COMPANY_CD AS "companyCd",
+            M_DELIVERY_PLACE.SECTION_PLACE_CD AS "sectionPlaceCd",
+            M_DELIVERY_PLACE.DELIV_PLACE_CD AS "delivPlaceCd",
+            M_DELIVERY_PLACE.COUNTRY_CD AS "contact.country.cyCd",
+            M_DELIVERY_PLACE.ZIP_CD AS "contact.zipCd.zipCd",
+            M_DELIVERY_PLACE.TEL_NO AS "contact.telNo.telNo",
+            M_DELIVERY_PLACE.FAX_NO AS "contact.faxNo.faxNo",
+            M_DELIVERY_PLACE.VALID_START_DATE AS "validStartDate",
+            M_DELIVERY_PLACE.VALID_END_DATE AS "validEndDate",
+            M_DELIVERY_PLACE.VALID_START_DATE AS "startDate",
+            M_DELIVERY_PLACE.VALID_END_DATE AS "endDate",
+            M_DELIVERY_PLACE.TERM_FLG AS "termFlg",
+            M_DELIVERY_PLACE.LAST_UPD_DATE AS "lastUpdDate",
+            CASE
+            WHEN deliveryPlace_lang_company.CONTACT_NAME IS NOT NULL THEN
+             deliveryPlace_lang_company.CONTACT_NAME
+            ELSE
+             deliveryPlace_lang_system.CONTACT_NAME
+            END AS "contactName.contactName",
+            CASE
+            WHEN deliveryPlace_lang_company.ADDRESS1 IS NOT NULL THEN
+             deliveryPlace_lang_company.ADDRESS1
+            ELSE
+             deliveryPlace_lang_system.ADDRESS1
+            END AS "contact.address1.address",
+            CASE
+            WHEN deliveryPlace_lang_company.ADDRESS2 IS NOT NULL THEN
+             deliveryPlace_lang_company.ADDRESS2
+            ELSE
+             deliveryPlace_lang_system.ADDRESS2
+            END AS "contact.address2.address",
+            CASE
+            WHEN deliveryPlace_lang_company.DELIV_PLACE_NAME_INB IS NOT NULL THEN
+             deliveryPlace_lang_company.DELIV_PLACE_NAME_INB
+            ELSE
+             deliveryPlace_lang_system.DELIV_PLACE_NAME_INB
+            END AS "delivPlaceNameInb",
+            CASE
+            WHEN deliveryPlace_lang_company.DELIV_PLACE_NAME IS NOT NULL THEN
+             deliveryPlace_lang_company.DELIV_PLACE_NAME
+            ELSE
+             deliveryPlace_lang_system.DELIV_PLACE_NAME
+            END AS "delivPlaceName",
+            CASE
+            WHEN deliveryPlace_lang_company.DELIV_PLACE_COMPANY_NAME IS NOT NULL THEN
+             deliveryPlace_lang_company.DELIV_PLACE_COMPANY_NAME
+            ELSE
+             deliveryPlace_lang_system.DELIV_PLACE_COMPANY_NAME
+            END AS "delivPlaceCompanyName",
+            <if test="companyCd=='ALL'">
+             '${@fw.common.util.AppUtil@getSysLanguageByEscapeSql()}' as "companySummary.languageInd",
+            </if>
+            <if test="companyCd!='ALL'">
+             M_COMPANY.COMPANY_USE_LANGUAGE_IND as "companySummary.languageInd",
+            </if>
+            M_COMPANY_LANG.COMPANY_NAME as "companySummary.companyName",
+            CASE
+            WHEN sectionPlace_lang_company.SECTION_PLACE_NAME IS NOT NULL THEN
+             sectionPlace_lang_company.SECTION_PLACE_NAME
+            ELSE
+             sectionPlace_lang_system.SECTION_PLACE_NAME
+            END AS "sectionPlaceName",
+            M_DELIVERY_PLACE.SECTION_PLACE_CD AS "sectionCd"
+        FROM M_DELIVERY_PLACE
+        INNER JOIN M_COMPANY
+            ON M_DELIVERY_PLACE.COMPANY_CD=M_COMPANY.COMPANY_CD
+        LEFT JOIN M_COMPANY_LANG
+            ON M_COMPANY_LANG.COMPANY_CD = M_COMPANY.COMPANY_CD
+            AND M_COMPANY_LANG.LANGUAGE_IND=M_COMPANY.COMPANY_USE_LANGUAGE_IND
+        LEFT JOIN M_DELIVERY_PLACE_LANG deliveryPlace_lang_company
+        ON 
+           M_DELIVERY_PLACE.DELIV_PLACE_CD=deliveryPlace_lang_company.DELIV_PLACE_CD
+           AND M_DELIVERY_PLACE.COMPANY_CD=deliveryPlace_lang_company.COMPANY_CD
+           AND M_DELIVERY_PLACE.SECTION_PLACE_CD=deliveryPlace_lang_company.SECTION_PLACE_CD
+           AND M_DELIVERY_PLACE.VALID_START_DATE=deliveryPlace_lang_company.VALID_START_DATE
+           AND M_DELIVERY_PLACE.VALID_END_DATE=deliveryPlace_lang_company.VALID_END_DATE
+           AND deliveryPlace_lang_company.LANGUAGE_IND=M_COMPANY.COMPANY_USE_LANGUAGE_IND
+        LEFT JOIN M_DELIVERY_PLACE_LANG deliveryPlace_lang_system
+        ON 
+           M_DELIVERY_PLACE.DELIV_PLACE_CD=deliveryPlace_lang_system.DELIV_PLACE_CD
+           AND M_DELIVERY_PLACE.COMPANY_CD=deliveryPlace_lang_system.COMPANY_CD
+           AND M_DELIVERY_PLACE.SECTION_PLACE_CD=deliveryPlace_lang_system.SECTION_PLACE_CD
+           AND M_DELIVERY_PLACE.VALID_START_DATE=deliveryPlace_lang_system.VALID_START_DATE
+           AND M_DELIVERY_PLACE.VALID_END_DATE=deliveryPlace_lang_system.VALID_END_DATE
+           AND deliveryPlace_lang_system.LANGUAGE_IND='${@fw.common.util.AppUtil@getSysLanguageByEscapeSql()}'
+        LEFT JOIN M_SECTION_PLACE_LANG sectionPlace_lang_company
+            ON sectionPlace_lang_company.SECTION_PLACE_CD = M_DELIVERY_PLACE.SECTION_PLACE_CD
+            AND sectionPlace_lang_company.COMPANY_CD = M_DELIVERY_PLACE.COMPANY_CD
+            AND sectionPlace_lang_company.LANGUAGE_IND = M_COMPANY.COMPANY_USE_LANGUAGE_IND
+        LEFT JOIN M_SECTION_PLACE_LANG sectionPlace_lang_system
+            ON sectionPlace_lang_system.SECTION_PLACE_CD = M_DELIVERY_PLACE.SECTION_PLACE_CD
+            AND sectionPlace_lang_system.COMPANY_CD = M_DELIVERY_PLACE.COMPANY_CD
+            AND sectionPlace_lang_system.LANGUAGE_IND = '${@fw.common.util.AppUtil@getSysLanguageByEscapeSql()}'
+          WHERE  
+             M_DELIVERY_PLACE.COMPANY_CD=#{companyCd, jdbcType=VARCHAR}
+            AND M_DELIVERY_PLACE.DELIV_PLACE_CD=#{delivPlaceCd, jdbcType=VARCHAR}
+            AND M_DELIVERY_PLACE.SECTION_PLACE_CD=#{sectionPlaceCd, jdbcType=VARCHAR}
+            AND M_DELIVERY_PLACE.VALID_START_DATE='${@fw.common.util.AppUtil@convertDateForValid(validStartDate.dateOfymd,@fw.common.util.AppUtil@VALID_START_DATE)}'
+            AND M_DELIVERY_PLACE.VALID_END_DATE='${@fw.common.util.AppUtil@convertDateForValid(validEndDate.dateOfymd,@fw.common.util.AppUtil@VALID_END_DATE)}'
+    </select>
+    
+    <select id="listDate" parameterType="fw.domain.mst.organization.deliveryplace.DeliveryPlaceManagement" resultType="fw.domain.mst.organization.deliveryplace.DeliveryPlaceIdentify">
+    SELECT 
+            VALID_START_DATE AS "validStartDate.dateOfymd",
+            VALID_END_DATE AS "validEndDate.dateOfymd"
+    FROM M_DELIVERY_PLACE
+    WHERE COMPANY_CD=#{deliveryPlaceIdentify.companyCd, jdbcType=VARCHAR}
+        AND DELIV_PLACE_CD=#{deliveryPlaceIdentify.delivPlaceCd, jdbcType=VARCHAR}
+    </select>
+
+        <resultMap type="fw.domain.mst.organization.deliveryplace.DeliveryPlaceLanguage" id="DeliveryPlaceIdentify_Map">
+            <id column="delivPlaceCd" property="deliveryPlaceIdentify.delivPlaceCd"/>
+            <id column="companyCd" property="deliveryPlaceIdentify.companyCd"/>
+            <id column="sectionPlaceCd" property="deliveryPlaceIdentify.sectionPlaceCd"/>
+            <id column="validStartDate" property="deliveryPlaceIdentify.validStartDate.dateOfymd"/>
+            <id column="validEndDate" property="deliveryPlaceIdentify.validEndDate.dateOfymd"/>
+            <id column="lastUpdDate" property="deliveryPlaceIdentify.lastUpdDate"/>
+            <id column="delivPlaceNameInb" property="delivPlaceNameInb.delivPlaceNameInb"/>
+        </resultMap>
+     <select id="listDeliveryPlaceLanguage" parameterType="fw.domain.mst.organization.deliveryplace.DeliveryPlaceIdentify" resultMap="DeliveryPlaceIdentify_Map">
+         SELECT 
+            M_DELIVERY_PLACE.COMPANY_CD AS "companyCd",
+            M_DELIVERY_PLACE.SECTION_PLACE_CD AS "sectionPlaceCd",
+            M_DELIVERY_PLACE.DELIV_PLACE_CD AS "delivPlaceCd",
+            M_DELIVERY_PLACE.LAST_UPD_DATE AS "lastUpdDate",
+            M_DELIVERY_PLACE.VALID_START_DATE AS "validStartDate",
+            M_DELIVERY_PLACE.VALID_END_DATE AS "validEndDate",
+            M_DELIVERY_PLACE_LANG.CONTACT_NAME AS "contactName.contactName",
+            M_DELIVERY_PLACE_LANG.LANGUAGE_IND AS "languageInd.languageInd",
+            M_DELIVERY_PLACE_LANG.ADDRESS1 AS "address1.address",
+            M_DELIVERY_PLACE_LANG.ADDRESS2 AS "address2.address",
+            M_DELIVERY_PLACE_LANG.DELIV_PLACE_NAME_INB AS "delivPlaceNameInb",
+            M_DELIVERY_PLACE_LANG.DELIV_PLACE_NAME AS "delivPlaceName",
+            M_DELIVERY_PLACE_LANG.DELIV_PLACE_COMPANY_NAME AS "delivPlaceCompanyName"
+        FROM M_DELIVERY_PLACE
+        LEFT JOIN M_DELIVERY_PLACE_LANG
+            ON 
+               M_DELIVERY_PLACE.DELIV_PLACE_CD=M_DELIVERY_PLACE_LANG.DELIV_PLACE_CD
+               AND M_DELIVERY_PLACE.COMPANY_CD=M_DELIVERY_PLACE_LANG.COMPANY_CD
+               AND M_DELIVERY_PLACE.SECTION_PLACE_CD=M_DELIVERY_PLACE_LANG.SECTION_PLACE_CD
+               AND M_DELIVERY_PLACE.VALID_START_DATE=M_DELIVERY_PLACE_LANG.VALID_START_DATE
+               AND M_DELIVERY_PLACE.VALID_END_DATE=M_DELIVERY_PLACE_LANG.VALID_END_DATE
+	        <if test="companyCd=='ALL'">
+	         AND M_DELIVERY_PLACE_LANG.LANGUAGE_IND != '${@fw.common.util.AppUtil@getSysLanguageByEscapeSql()}'
+	        </if>
+        <if test="companyCd!='ALL'">
+         INNER JOIN M_COMPANY
+            ON M_DELIVERY_PLACE.COMPANY_CD = M_COMPANY.COMPANY_CD
+            AND M_DELIVERY_PLACE_LANG.LANGUAGE_IND != M_COMPANY.COMPANY_USE_LANGUAGE_IND
+        </if>
+          INNER JOIN M_CODE_NAME
+           ON M_DELIVERY_PLACE_LANG.LANGUAGE_IND = M_CODE_NAME.CODE_VALUE
+           AND M_CODE_NAME.CODE_KEY = 'LANGUAGE_IND'
+          WHERE  
+            M_DELIVERY_PLACE.COMPANY_CD=#{companyCd, jdbcType=VARCHAR}
+            AND M_DELIVERY_PLACE.DELIV_PLACE_CD=#{delivPlaceCd, jdbcType=VARCHAR}
+            AND M_DELIVERY_PLACE.SECTION_PLACE_CD=#{sectionPlaceCd, jdbcType=VARCHAR}
+            AND M_DELIVERY_PLACE.VALID_START_DATE='${@fw.common.util.AppUtil@convertDateForValid(validStartDate.dateOfymd,@fw.common.util.AppUtil@VALID_START_DATE)}'
+            AND M_DELIVERY_PLACE.VALID_END_DATE='${@fw.common.util.AppUtil@convertDateForValid(validEndDate.dateOfymd,@fw.common.util.AppUtil@VALID_END_DATE)}'
+         ORDER BY M_CODE_NAME.DSP_ORDER
+     </select>
+     
+     <insert id="insertDeliveryPlace" parameterType="fw.domain.mst.organization.deliveryplace.DeliveryPlaceManagement">
+        INSERT INTO M_DELIVERY_PLACE
+        (
+            COMPANY_CD,
+            DELIV_PLACE_CD,
+            SECTION_PLACE_CD,
+            VALID_START_DATE,
+            VALID_END_DATE,
+            COUNTRY_CD,
+            ZIP_CD,
+            TEL_NO,
+            FAX_NO,
+            TERM_FLG,
+            LAST_UPD_DATE,
+            LAST_UPD_COMPANY_CD,
+            LAST_UPD_SECTION_CD,
+            LAST_UPD_USER_ID,
+            REG_DATE,
+            REG_COMPANY_CD,
+            REG_SECTION_CD,
+            REG_USER_ID
+        ) VALUES (
+            #{deliveryPlaceIdentify.companyCd, jdbcType=VARCHAR},
+            #{deliveryPlaceIdentify.delivPlaceCd, jdbcType=VARCHAR},
+            #{deliveryPlaceIdentify.sectionPlaceCd, jdbcType=VARCHAR},
+            '${@fw.common.util.AppUtil@convertDateForValid(validity.validityPeriod.period.startDate.dateOfymd,@fw.common.util.AppUtil@VALID_START_DATE)}',
+            '${@fw.common.util.AppUtil@convertDateForValid(validity.validityPeriod.period.endDate.dateOfymd,@fw.common.util.AppUtil@VALID_END_DATE)}',
+            #{contact.country.cyCd, jdbcType=VARCHAR},
+            #{contact.zipCd.zipCd, jdbcType=VARCHAR},
+            #{contact.telNo.telNo, jdbcType=VARCHAR},
+            #{contact.faxNo.faxNo, jdbcType=VARCHAR},
+            #{validity.term.termFlg, jdbcType=VARCHAR},
+            #{registInfo.lastUpdDate, jdbcType=VARCHAR},
+            #{registInfo.lastUpdCompanyCd, jdbcType=VARCHAR},
+            #{registInfo.lastUpdSectionCd, jdbcType=VARCHAR},
+            #{registInfo.lastUpdUserId, jdbcType=VARCHAR},
+            #{registInfo.regDate, jdbcType=VARCHAR},
+            #{registInfo.regCompanyCd, jdbcType=VARCHAR},
+            #{registInfo.regSectionCd, jdbcType=VARCHAR},
+            #{registInfo.regUserId, jdbcType=VARCHAR}
+        )
+     </insert>
+     
+       <insert id="insertDeliveryPlaceLanguage" parameterType="fw.domain.mst.organization.deliveryplace.DeliveryPlaceLanguage" >
+         INSERT INTO M_DELIVERY_PLACE_LANG
+         (
+            COMPANY_CD,
+            DELIV_PLACE_CD,
+            SECTION_PLACE_CD,
+            VALID_START_DATE,
+            VALID_END_DATE,
+            LANGUAGE_IND,
+            DELIV_PLACE_NAME,
+            DELIV_PLACE_NAME_INB,
+            DELIV_PLACE_COMPANY_NAME,
+            ADDRESS1,
+            ADDRESS2,
+            CONTACT_NAME,
+            LAST_UPD_DATE,
+            LAST_UPD_COMPANY_CD,
+            LAST_UPD_SECTION_CD,
+            LAST_UPD_USER_ID,
+            REG_DATE,
+            REG_COMPANY_CD,
+            REG_SECTION_CD,
+            REG_USER_ID
+         ) VALUES (
+            #{deliveryPlaceIdentify.companyCd, jdbcType=VARCHAR},
+            #{deliveryPlaceIdentify.delivPlaceCd, jdbcType=VARCHAR},
+            #{deliveryPlaceIdentify.sectionPlaceCd, jdbcType=VARCHAR},
+            '${@fw.common.util.AppUtil@convertDateForValid(deliveryPlaceIdentify.validStartDate.dateOfymd,@fw.common.util.AppUtil@VALID_START_DATE)}',
+            '${@fw.common.util.AppUtil@convertDateForValid(deliveryPlaceIdentify.validEndDate.dateOfymd,@fw.common.util.AppUtil@VALID_END_DATE)}',
+            #{languageInd.languageInd, jdbcType=VARCHAR},
+            #{delivPlaceName, jdbcType=VARCHAR},
+            #{delivPlaceNameInb.delivPlaceNameInb, jdbcType=VARCHAR},
+            #{delivPlaceCompanyName, jdbcType=VARCHAR},
+            #{address1.address, jdbcType=VARCHAR},
+            #{address2.address, jdbcType=VARCHAR},
+            #{contactName.contactName, jdbcType=VARCHAR},
+            #{registInfo.lastUpdDate, jdbcType=VARCHAR},
+            #{registInfo.lastUpdCompanyCd, jdbcType=VARCHAR},
+            #{registInfo.lastUpdSectionCd, jdbcType=VARCHAR},
+            #{registInfo.lastUpdUserId, jdbcType=VARCHAR},
+            #{registInfo.regDate, jdbcType=VARCHAR},
+            #{registInfo.regCompanyCd, jdbcType=VARCHAR},
+            #{registInfo.regSectionCd, jdbcType=VARCHAR},
+            #{registInfo.regUserId, jdbcType=VARCHAR}
+        )
+       </insert>
+       
+       <update id="updateDeliveryPlaceLanguage">
+         UPDATE M_DELIVERY_PLACE_LANG
+         SET    
+             VALID_START_DATE = '${@fw.common.util.AppUtil@convertDateForValid(validity.validityPeriod.period.startDate.dateOfymd,@fw.common.util.AppUtil@VALID_START_DATE)}',
+             VALID_END_DATE = '${@fw.common.util.AppUtil@convertDateForValid(validity.validityPeriod.period.endDate.dateOfymd,@fw.common.util.AppUtil@VALID_END_DATE)}'
+         WHERE
+              COMPANY_CD=#{deliveryPlaceLanguage.deliveryPlaceIdentify.companyCd, jdbcType=VARCHAR}
+              AND DELIV_PLACE_CD=#{deliveryPlaceLanguage.deliveryPlaceIdentify.delivPlaceCd, jdbcType=VARCHAR}
+              AND VALID_START_DATE='${@fw.common.util.AppUtil@convertDateForValid(deliveryPlaceLanguage.deliveryPlaceIdentify.validStartDate.dateOfymd,@fw.common.util.AppUtil@VALID_START_DATE)}'
+              AND VALID_END_DATE='${@fw.common.util.AppUtil@convertDateForValid(deliveryPlaceLanguage.deliveryPlaceIdentify.validEndDate.dateOfymd,@fw.common.util.AppUtil@VALID_END_DATE)}'
+       </update>
+       
+       <update id="updateDeliveryPlaceLanguageSectionPlaceCd">
+         UPDATE M_DELIVERY_PLACE_LANG
+         SET    
+             SECTION_PLACE_CD = #{deliveryPlaceIdentify.sectionPlaceCd, jdbcType=VARCHAR}
+         WHERE
+              COMPANY_CD=#{deliveryPlaceIdentify.companyCd, jdbcType=VARCHAR}
+              AND DELIV_PLACE_CD=#{deliveryPlaceIdentify.delivPlaceCd, jdbcType=VARCHAR}
+              AND VALID_START_DATE='${@fw.common.util.AppUtil@convertDateForValid(deliveryPlaceIdentify.validStartDate.dateOfymd,@fw.common.util.AppUtil@VALID_START_DATE)}'
+              AND VALID_END_DATE='${@fw.common.util.AppUtil@convertDateForValid(deliveryPlaceIdentify.validEndDate.dateOfymd,@fw.common.util.AppUtil@VALID_END_DATE)}'
+       </update>
+
+        <update id="updateDeliveryPlaceOldRec" parameterType="fw.domain.mst.organization.deliveryplace.DeliveryPlaceManagement">
+            UPDATE M_DELIVERY_PLACE
+            SET 
+                VALID_START_DATE = '${@fw.common.util.AppUtil@convertDateForValid(validity.validityPeriod.period.startDate.dateOfymd,@fw.common.util.AppUtil@VALID_START_DATE)}',
+                VALID_END_DATE = '${@fw.common.util.AppUtil@convertDateForValid(validity.validityPeriod.period.endDate.dateOfymd,@fw.common.util.AppUtil@VALID_END_DATE)}',
+                LAST_UPD_DATE = #{registInfo.lastUpdDate, jdbcType=VARCHAR},
+                LAST_UPD_COMPANY_CD = #{registInfo.lastUpdCompanyCd, jdbcType=VARCHAR},
+                LAST_UPD_SECTION_CD = #{registInfo.lastUpdSectionCd, jdbcType=VARCHAR},
+                LAST_UPD_USER_ID = #{registInfo.lastUpdUserId, jdbcType=VARCHAR}
+            WHERE
+                COMPANY_CD=#{deliveryPlaceIdentify.companyCd, jdbcType=VARCHAR}
+                AND DELIV_PLACE_CD=#{deliveryPlaceIdentify.delivPlaceCd, jdbcType=VARCHAR}
+                AND VALID_START_DATE='${@fw.common.util.AppUtil@convertDateForValid(deliveryPlaceIdentify.validStartDate.dateOfymd,@fw.common.util.AppUtil@VALID_START_DATE)}'
+                AND VALID_END_DATE='${@fw.common.util.AppUtil@convertDateForValid(deliveryPlaceIdentify.validEndDate.dateOfymd,@fw.common.util.AppUtil@VALID_END_DATE)}'
+        </update>
+
+        <update id="updateDeliveryPlace" parameterType="fw.domain.mst.organization.deliveryplace.DeliveryPlaceManagement">
+            UPDATE M_DELIVERY_PLACE
+            SET 
+                SECTION_PLACE_CD = #{deliveryPlaceIdentify.sectionPlaceCd, jdbcType=VARCHAR},
+                VALID_START_DATE = '${@fw.common.util.AppUtil@convertDateForValid(validity.validityPeriod.period.startDate.dateOfymd,@fw.common.util.AppUtil@VALID_START_DATE)}',
+                VALID_END_DATE = '${@fw.common.util.AppUtil@convertDateForValid(validity.validityPeriod.period.endDate.dateOfymd,@fw.common.util.AppUtil@VALID_END_DATE)}',
+                COUNTRY_CD=#{contact.country.cyCd, jdbcType=VARCHAR},
+                ZIP_CD= #{contact.zipCd.zipCd, jdbcType=VARCHAR},
+                TEL_NO=#{contact.telNo.telNo, jdbcType=VARCHAR},
+                FAX_NO= #{contact.faxNo.faxNo, jdbcType=VARCHAR},
+                TERM_FLG=#{validity.term.termFlg, jdbcType=VARCHAR},
+                LAST_UPD_DATE=#{registInfo.lastUpdDate, jdbcType=VARCHAR},
+                LAST_UPD_COMPANY_CD=#{registInfo.lastUpdCompanyCd, jdbcType=VARCHAR},
+                LAST_UPD_SECTION_CD=#{registInfo.lastUpdSectionCd, jdbcType=VARCHAR},
+                LAST_UPD_USER_ID=#{registInfo.lastUpdUserId, jdbcType=VARCHAR}
+            WHERE
+                COMPANY_CD=#{deliveryPlaceIdentify.companyCd, jdbcType=VARCHAR}
+                AND DELIV_PLACE_CD=#{deliveryPlaceIdentify.delivPlaceCd, jdbcType=VARCHAR}
+                AND VALID_START_DATE='${@fw.common.util.AppUtil@convertDateForValid(deliveryPlaceIdentify.validStartDate.dateOfymd,@fw.common.util.AppUtil@VALID_START_DATE)}'
+                AND VALID_END_DATE='${@fw.common.util.AppUtil@convertDateForValid(deliveryPlaceIdentify.validEndDate.dateOfymd,@fw.common.util.AppUtil@VALID_END_DATE)}'
+        </update>
+        
+         <delete id="deleteDeliveryPlace" parameterType="fw.domain.mst.organization.deliveryplace.DeliveryPlaceIdentify" >
+            DELETE FROM M_DELIVERY_PLACE
+            WHERE
+                COMPANY_CD=#{companyCd, jdbcType=VARCHAR}
+                AND DELIV_PLACE_CD=#{delivPlaceCd, jdbcType=VARCHAR}
+                AND SECTION_PLACE_CD=#{sectionPlaceCd, jdbcType=VARCHAR}
+                AND VALID_START_DATE='${@fw.common.util.AppUtil@convertDateForValid(validStartDate.dateOfymd,@fw.common.util.AppUtil@VALID_START_DATE)}'
+                AND VALID_END_DATE='${@fw.common.util.AppUtil@convertDateForValid(validEndDate.dateOfymd,@fw.common.util.AppUtil@VALID_END_DATE)}'
+          </delete>
+          
+         <delete id="deleteDeliveryPlaceLanguage" parameterType="fw.domain.mst.organization.deliveryplace.DeliveryPlaceIdentify" >
+             DELETE FROM M_DELIVERY_PLACE_LANG
+             WHERE
+                COMPANY_CD=#{companyCd, jdbcType=VARCHAR}
+                AND DELIV_PLACE_CD=#{delivPlaceCd, jdbcType=VARCHAR}
+	            AND VALID_START_DATE='${@fw.common.util.AppUtil@convertDateForValid(validStartDate.dateOfymd,@fw.common.util.AppUtil@VALID_START_DATE)}'
+	            AND VALID_END_DATE='${@fw.common.util.AppUtil@convertDateForValid(validEndDate.dateOfymd,@fw.common.util.AppUtil@VALID_END_DATE)}'
+         </delete>
+         
+       <select id="downloadCount" parameterType="fw.domain.mst.organization.deliveryplace.DeliveryPlaceSearchCondition" resultType="java.lang.Long" >
+          SELECT 
+            COUNT(*)
+          FROM M_DELIVERY_PLACE
+          INNER JOIN M_COMPANY
+            ON M_DELIVERY_PLACE.COMPANY_CD=M_COMPANY.COMPANY_CD
+          LEFT JOIN M_DELIVERY_PLACE_LANG deliveryPlace_lang_company
+          ON 
+            M_DELIVERY_PLACE.DELIV_PLACE_CD=deliveryPlace_lang_company.DELIV_PLACE_CD
+            AND M_DELIVERY_PLACE.COMPANY_CD=deliveryPlace_lang_company.COMPANY_CD
+            AND M_DELIVERY_PLACE.SECTION_PLACE_CD=deliveryPlace_lang_company.SECTION_PLACE_CD
+            AND M_DELIVERY_PLACE.VALID_START_DATE=deliveryPlace_lang_company.VALID_START_DATE
+            AND M_DELIVERY_PLACE.VALID_END_DATE=deliveryPlace_lang_company.VALID_END_DATE
+            AND deliveryPlace_lang_company.LANGUAGE_IND=M_COMPANY.COMPANY_USE_LANGUAGE_IND
+          LEFT JOIN M_DELIVERY_PLACE_LANG deliveryPlace_lang_system
+          ON 
+            M_DELIVERY_PLACE.DELIV_PLACE_CD=deliveryPlace_lang_system.DELIV_PLACE_CD
+            AND M_DELIVERY_PLACE.COMPANY_CD=deliveryPlace_lang_system.COMPANY_CD
+            AND M_DELIVERY_PLACE.SECTION_PLACE_CD=deliveryPlace_lang_system.SECTION_PLACE_CD
+            AND M_DELIVERY_PLACE.VALID_START_DATE=deliveryPlace_lang_system.VALID_START_DATE
+            AND M_DELIVERY_PLACE.VALID_END_DATE=deliveryPlace_lang_system.VALID_END_DATE
+             <where>
+                 <include refid="listKeyIdentityWhereCondition"/>
+             </where>
+         </select>
+         
+         <resultMap type="fw.domain.mst.organization.deliveryplace.DeliveryPlaceManagement" id="DeliveryPlaceManagement_Map_For_Download">
+             <id column="companyCd"             property="deliveryPlaceIdentify.companyCd"/>
+             <id column="sectionPlaceCd"        property="deliveryPlaceIdentify.sectionPlaceCd"/>
+             <id column="delivPlaceCd"          property="deliveryPlaceIdentify.delivPlaceCd"/>
+             <id column="delivPlaceName"        property="delivPlaceName"/>
+             <id column="languageInd"           property="languageInd.languageInd"/>
+             <id column="validStartDate"        property="deliveryPlaceIdentify.validStartDate.dateOfymd"/>
+             <id column="validEndDate"          property="deliveryPlaceIdentify.validEndDate.dateOfymd"/>
+             <id column="delivPlaceNameInb"     property="delivPlaceNameInb.delivPlaceNameInb"/>
+             <id column="delivPlaceCompanyName" property="delivPlaceCompanyName"/>
+             <id column="cyCd"                  property="contact.country.cyCd"/>
+             <id column="zipCd"                 property="contact.zipCd.zipCd"/>
+             <id column="address1"              property="contact.address1.address"/>
+             <id column="address2"              property="contact.address2.address"/>
+             <id column="telNo"                 property="contact.telNo.telNo"/>
+             <id column="faxNo"                 property="contact.faxNo.faxNo"/>
+             <id column="contactName"           property="contactName.contactName"/>
+             <id column="termFlg"               property="validity.term.termFlg"/>
+             <id column="masterModifyInd"       property="masterModifyInd"/>
+         </resultMap>
+         
+      <select id="download" parameterType="fw.domain.mst.organization.deliveryplace.DeliveryPlaceSearchCondition" resultMap="DeliveryPlaceManagement_Map_For_Download" >
+          <include refid="pageHeader"/>
+          SELECT 
+            M_DELIVERY_PLACE.COMPANY_CD       AS "companyCd",
+            M_DELIVERY_PLACE.SECTION_PLACE_CD AS "sectionPlaceCd",
+            M_DELIVERY_PLACE.DELIV_PLACE_CD   AS "delivPlaceCd",
+            M_DELIVERY_PLACE.COUNTRY_CD       AS "contact.country.cyCd",
+            M_DELIVERY_PLACE.ZIP_CD           AS "contact.zipCd.zipCd",
+            M_DELIVERY_PLACE.TEL_NO           AS "contact.telNo.telNo",
+            M_DELIVERY_PLACE.FAX_NO           AS "contact.faxNo.faxNo",
+            M_DELIVERY_PLACE.VALID_START_DATE AS "validStartDate",
+            M_DELIVERY_PLACE.VALID_END_DATE   AS "validEndDate",
+            M_DELIVERY_PLACE.TERM_FLG         AS "termFlg",
+            deliveryPlace_lang_system.CONTACT_NAME  AS "contactName.contactName",
+            deliveryPlace_lang_system.ADDRESS1 AS "contact.address1.address",
+            deliveryPlace_lang_system.ADDRESS2 AS "contact.address2.address",
+            deliveryPlace_lang_system.DELIV_PLACE_NAME_INB AS "delivPlaceNameInb",
+            deliveryPlace_lang_system.DELIV_PLACE_NAME AS "delivPlaceName",
+            CASE
+            WHEN deliveryPlace_lang_system.DELIV_PLACE_COMPANY_NAME IS NOT NULL THEN
+             deliveryPlace_lang_system.DELIV_PLACE_COMPANY_NAME
+            ELSE
+             deliveryPlace_lang_company.DELIV_PLACE_COMPANY_NAME
+            END AS "delivPlaceCompanyName",
+            deliveryPlace_lang_system.LANGUAGE_IND as "languageInd.languageInd",
+            M_DELIVERY_PLACE.SECTION_PLACE_CD AS "sectionCd",
+            '' AS masterModifyInd
+          FROM M_DELIVERY_PLACE
+          INNER JOIN M_COMPANY
+            ON M_DELIVERY_PLACE.COMPANY_CD=M_COMPANY.COMPANY_CD
+          LEFT JOIN M_DELIVERY_PLACE_LANG deliveryPlace_lang_company
+          ON 
+            M_DELIVERY_PLACE.DELIV_PLACE_CD=deliveryPlace_lang_company.DELIV_PLACE_CD
+            AND M_DELIVERY_PLACE.COMPANY_CD=deliveryPlace_lang_company.COMPANY_CD
+            AND M_DELIVERY_PLACE.SECTION_PLACE_CD=deliveryPlace_lang_company.SECTION_PLACE_CD
+            AND M_DELIVERY_PLACE.VALID_START_DATE=deliveryPlace_lang_company.VALID_START_DATE
+            AND M_DELIVERY_PLACE.VALID_END_DATE=deliveryPlace_lang_company.VALID_END_DATE
+            AND deliveryPlace_lang_company.LANGUAGE_IND=M_COMPANY.COMPANY_USE_LANGUAGE_IND
+          LEFT JOIN M_DELIVERY_PLACE_LANG deliveryPlace_lang_system
+          ON 
+            M_DELIVERY_PLACE.DELIV_PLACE_CD=deliveryPlace_lang_system.DELIV_PLACE_CD
+            AND M_DELIVERY_PLACE.COMPANY_CD=deliveryPlace_lang_system.COMPANY_CD
+            AND M_DELIVERY_PLACE.SECTION_PLACE_CD=deliveryPlace_lang_system.SECTION_PLACE_CD
+            AND M_DELIVERY_PLACE.VALID_START_DATE=deliveryPlace_lang_system.VALID_START_DATE
+            AND M_DELIVERY_PLACE.VALID_END_DATE=deliveryPlace_lang_system.VALID_END_DATE
+             <where>
+                 <include refid="listKeyIdentityWhereCondition"/>
+             </where>
+          ORDER BY M_DELIVERY_PLACE.DELIV_PLACE_CD,M_COMPANY.COMPANY_USE_LANGUAGE_IND,M_DELIVERY_PLACE.VALID_START_DATE DESC
+          <include refid="pageRoot"/>
+     </select>
+     <sql id="pageHeader">
+        SELECT * FROM (
+     </sql>
+     <sql id="pageRoot">
+         ) WHERE  ROWNUM &lt;=${@fw.common.util.PropertiesUtil@getLong("DOWNLOAD_MAXCNT")}
+     </sql>
+     
+     <delete id="deleteDeliveryPlaceLanguageBylangageInd" >
+         DELETE FROM M_DELIVERY_PLACE_LANG
+         WHERE
+            COMPANY_CD=#{deliveryPlaceIdentify.companyCd, jdbcType=VARCHAR}
+            AND DELIV_PLACE_CD=#{deliveryPlaceIdentify.delivPlaceCd, jdbcType=VARCHAR}
+            AND VALID_START_DATE='${@fw.common.util.AppUtil@convertDateForValid(deliveryPlaceIdentify.validStartDate.dateOfymd,@fw.common.util.AppUtil@VALID_START_DATE)}'
+            AND VALID_END_DATE='${@fw.common.util.AppUtil@convertDateForValid(deliveryPlaceIdentify.validEndDate.dateOfymd,@fw.common.util.AppUtil@VALID_END_DATE)}'
+            AND M_DELIVERY_PLACE_LANG.LANGUAGE_IND = #{languageInd.languageInd}
+     </delete>
+     
+     <select id="searchDeliveryPlaceIdentify" parameterType="fw.domain.mst.organization.deliveryplace.DeliveryPlaceIdentify" resultType="fw.domain.mst.organization.deliveryplace.DeliveryPlaceIdentify">
+       SELECT 
+            COMPANY_CD AS "companyCd",
+            DELIV_PLACE_CD AS "delivPlaceCd",
+            SECTION_PLACE_CD AS "sectionPlaceCd",
+            VALID_START_DATE AS "validStartDate.dateOfymd",
+            VALID_END_DATE AS "validEndDate.dateOfymd"
+       FROM 
+            M_DELIVERY_PLACE
+       WHERE
+            COMPANY_CD=#{companyCd, jdbcType=VARCHAR}
+            AND DELIV_PLACE_CD=#{delivPlaceCd, jdbcType=VARCHAR}
+            AND VALID_START_DATE='${@fw.common.util.AppUtil@convertDateForValid(validStartDate.dateOfymd,@fw.common.util.AppUtil@VALID_START_DATE)}'
+            AND VALID_END_DATE='${@fw.common.util.AppUtil@convertDateForValid(validEndDate.dateOfymd,@fw.common.util.AppUtil@VALID_END_DATE)}'
+     </select>
+     
+     <select id="searchForUploadRevision" parameterType="fw.domain.mst.organization.deliveryplace.DeliveryPlaceManagement" resultType="fw.domain.mst.organization.deliveryplace.DeliveryPlaceIdentify">
+        SELECT
+            M_DELIVERY_PLACE.DELIV_PLACE_CD as "delivPlaceCd",
+            M_DELIVERY_PLACE.COMPANY_CD as "companyCd",
+            M_DELIVERY_PLACE.VALID_START_DATE as "validStartDate.dateOfymd",
+            M_DELIVERY_PLACE.VALID_END_DATE as "validEndDate.dateOfymd"
+        FROM M_DELIVERY_PLACE 
+        WHERE
+            M_DELIVERY_PLACE.COMPANY_CD=#{deliveryPlaceIdentify.companyCd, jdbcType=VARCHAR}
+            AND M_DELIVERY_PLACE.DELIV_PLACE_CD=#{deliveryPlaceIdentify.delivPlaceCd, jdbcType=VARCHAR}
+            AND M_DELIVERY_PLACE.VALID_START_DATE &lt;= '${@fw.common.util.AppUtil@convertDateForValid(validity.validityPeriod.period.startDate.dateOfymd,@fw.common.util.AppUtil@VALID_START_DATE)}'
+            AND M_DELIVERY_PLACE.Valid_End_Date >= '${@fw.common.util.AppUtil@convertDateForValid(validity.validityPeriod.period.startDate.dateOfymd,@fw.common.util.AppUtil@VALID_START_DATE)}'
+    </select>
+    <select id="getNewVersionRecordCount" parameterType="fw.domain.mst.organization.deliveryplace.DeliveryPlaceManagement" resultType="int">
+        SELECT      COUNT(*)
+        FROM        M_DELIVERY_PLACE
+        WHERE       COMPANY_CD = #{deliveryPlaceIdentify.companyCd, jdbcType=VARCHAR}
+        AND         DELIV_PLACE_CD = #{deliveryPlaceIdentify.delivPlaceCd, jdbcType=VARCHAR}
+        AND         VALID_START_DATE > '${@fw.common.util.AppUtil@convertDateForValid(deliveryPlaceIdentify.validStartDate.dateOfymd,@fw.common.util.AppUtil@VALID_START_DATE)}'
+    </select>
+</mapper>

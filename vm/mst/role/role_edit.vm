@@ -1,0 +1,362 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<title>#customSpringMessage('M_ROLE')</title><!--ロールマスタ-->
+<meta http-equiv="Content-type" content="text/html; charset=UTF-8">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Content-script-type" content="text/javascript">
+<link rel="stylesheet" href="../../include/searchbox.css" type="text/css">
+<link id="CSS_FONT" rel="stylesheet" href="../../include/FontS.css" type="text/css">
+<link rel="stylesheet" href="../../include/Layout.css" type="text/css">
+<link rel="stylesheet" href="../../include/Color.css" type="text/css">
+<script language="javascript" type="text/javascript" src="../../include/common.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/check.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/date.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/searchbox.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/jquery-1.7.2.min.js"></script>
+<script language="javascript" type="text/javascript">
+<!--
+#parse("./common/common_js.vm")
+
+function onLoad() {
+    setFocus();
+	var alertMessage = "$!alertMessage";
+    if (alertMessage != ""){
+        alert(alertMessage);
+    }
+    var errorMsg = "$!errorMessage";
+    if (errorMsg != ""){
+        document.getElementById("TR_ERROR").style.display = "";
+        return;
+        }
+	 var isSuccess = '#jsEscape($!isSuccess)';
+        if(isSuccess == 'true'){
+            #set( $mRole = "#customSpringMessage('M_ROLE')" )
+            #if($!type == "Update")
+                alert('#customMessageArgs("I002",[$mRole])');
+            #else
+                alert('#customMessageArgs("I005",[$mRole])');
+            #end
+            buttonDisable();
+            top.iframeChange("${flowExecutionUrl}&_eventId=back");
+        }
+
+}
+
+function exec() {
+    #set( $mmRole = "#customSpringMessage('M_ROLE')" )
+    #if($!type == "Update")
+        #set( $register = "#customSpringMessage('UPDATE')" )
+        if( !confirm('#customMessageArgs("W001",[$mmRole,$register])') ) {
+            return;
+        }
+    #else
+        #set( $register = "#customSpringMessage('ACTION_REGISTER')" )
+        if( !confirm('#customMessageArgs("W001",[$mmRole,$register])') ) {
+            return;
+        }
+    #end
+
+    buttonDisable();
+    getObj("Body").submit();
+
+}
+
+function checkChildren(parentCheckBox, parentTableId)
+{
+    var parentTable = document.getElementById(parentTableId);
+    var children = parentTable.getElementsByTagName('input');
+
+    for(var i = 0; i < children.length; i++)
+    {
+        if(children[i].type == 'checkbox'){
+            checkChild(children[i], parentCheckBox.checked);
+        }
+        else
+        {
+            if(children[i].type == 'hidden'){
+                checkChildForHidden(children[i], parentCheckBox.checked);
+            }
+            else
+            {
+                continue;
+            }
+        }
+    }
+}
+
+function checkChild(childCheckBox, isParentChecked)
+{
+    if(isParentChecked)
+    {
+        childCheckBox.disabled = false;
+        childCheckBox.checked = true;
+    }
+    else
+    {
+        childCheckBox.checked = false;
+        childCheckBox.disabled = true;
+    }
+}
+
+function checkChildForHidden(childHidden, isParentChecked)
+{
+    if(isParentChecked)
+    {
+        childHidden.value = '1';
+    }
+    else
+    {
+        childHidden.value = '0';
+    }
+}
+
+//ENTERキーを遮ります
+function quickQueryCust(event) {
+    if(event.keyCode == 13){
+        event.returnValue = false;
+    }
+}
+
+//-->
+</script>
+</head>
+<body class="Body" style="text-align:center;" topmargin="10" leftmargin="10" marginwidth="10" marginheight="10" align="left" onLoad="onLoad();" >
+<form name="Body" id="Body" action="${flowExecutionUrl}&_eventId=submit" method="post">
+    <table width="70%" style="height:20px; margin-right:auto; margin-left:auto;">
+       <tr id ="TR_ERROR" style="display:none;">
+           <td class="error">
+               $!errorMessage
+           </td>
+       </tr>
+       <tr>
+            <td class="FontSmallBold DarkBlue">
+                #if($!{type} == "Insert")
+                    #customSpringMessage("PSMST102_ADD_HEADER_COMMENT")
+                #else
+                    #customSpringMessage("PSMST102_EDIT_HEADER_COMMENT")
+                #end
+            </td>
+       </tr>
+    </table>
+    <table class="DTL_BOX" width="40%">
+        <tr>
+            <td class="DTL_TITLE_BOX" >
+                <table class="NoBorder" width="100%">
+                    <tr>
+                        #if("Update" == "$!type")
+                        <td class="ScreenName" style="text-align:left;">#customSpringMessage("SCREEN_M_ROLE_EDIT")</td><!--ロールマスタ登録-->
+                        #else
+                        <td class="ScreenName" style="text-align:left;">#customSpringMessage("SCREEN_M_ROLE_CREATE")</td><!--ロールマスタ編集-->
+                        #end
+                        <td class="FontSmall" align="right">
+                        <input type="button" class="MiddleButton" value="#customSpringMessage('ACTION_REGISTER')" onclick="javascript:exec();">
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+        <tr>
+            <td class="DTL_INTER_BOX">
+                <table class="NoBorder" width="100%">
+                    #if("$!isUseAll"=="false")
+                    <tr>
+                        <td class="DTL_OUTHEAD">
+                            <div class="DTL_INHEAD">
+                                <span class="FontDetailHeader">#customSpringMessage("COMPANY_CD")<!--会社コード--></span>
+                            </div>
+                        </td>
+                        <td class="DTL_OUTBODY">
+                            <div class="DTL_INBODY">
+                                <table class="NoBorder" width="100%">
+                                    <tr>
+                                        <td class="FontDetailData">
+                                            #out($domain.roleIdentify.companyCd)
+                                        </td>
+                                        <td align="right">
+                                            #customFormSingCheckboxByType("TERMINATION" "domain.termFlg" "" $termFlagList "class='FontMiddle'")<!--廃止-->&nbsp;
+                                        </td>
+                                    </tr>
+                                </table>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="DTL_OUTHEAD">
+                            <div class="DTL_INHEAD">
+                                <span class="FontDetailHeader">#customSpringMessage("COMPANY_NAME")<!--会社名--></span>
+                            </div>
+                        </td>
+                        <td class="DTL_OUTHEAD">
+                            <div class="DTL_INBODY">
+                                <table class="NoBorder" width="100%">
+                                    <tr>
+                                        <td class="FontDetailData">
+                                           #out($domain.companySummary.companyName)
+                                        </td>
+                                    </tr>
+                                </table>
+                            </div>
+                        </td>
+                    </tr>
+                    #end
+                    <tr>
+                        <td class="DTL_OUTHEAD">
+                            <div class="DTL_INHEAD">
+                                <span class="FontDetailHeader">#customSpringMessage("ROLE_NO")<!--ロール番号--></span>
+                            </div>
+                        </td>
+                        <td class="DTL_OUTHEAD">
+                            <div class="DTL_INBODY">
+                                <table class="NoBorder" width="100%">
+                                    <tr>
+                                        <td class="FontDetailData">
+                                            #if("Update" == "$!type" ||
+                                                ("Insert" == "$!type" && $domain.roleIdentify.roleNo != 9999))
+                                                $domain.roleIdentify.roleNo
+                                            #end
+                                        </td>
+                                        #if("$!isUseAll"=="true")
+                                           <td align="right">
+                                           #customFormSingCheckboxByType("TERMINATION" "domain.termFlg" "" $termFlagList "class='FontMiddle'")<!--廃止-->&nbsp;
+                                           </td>
+                                        #end
+                                    </tr>
+                                </table>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="DTL_OUTHEAD">
+                            <div class="DTL_INHEAD">
+                                <span class="FontDetailHeader">#customSpringMessage("ROLE_NAME")</span><!--ロール名--><span class="FontWarn">&nbsp;※</span>
+                            </div>
+                        </td>
+                        <td class="DTL_OUTHEAD">
+                            <div class="DTL_INBODY">
+                            <table class="NoBorder" width="100%">
+                                    <tr>
+                                        <td class="FontDetailData">
+                                            #customFormInputByType("domain.roleName" "class='Middle' maxLength='30' size='77' onkeydown='return quickQueryCust(event)'" "true" "" "")
+                                        </td>
+                                    </tr>
+                                </table>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="DTL_OUTHEAD">
+                            <div class="DTL_INHEAD" style="height:30px;line-height:30px;">
+                                    <span class="FontDetailHeader">#customSpringMessage("ROLL_REMARK")<!--ロール説明-->&nbsp;&nbsp;
+                                    </span>
+                            </div>
+                        </td>
+                        <td class="DTL_OUTHEAD">
+                            <div class="DTL_INBODY">
+                                #springFormTextarea("domain.roleRemark" "cols='70' maxlength='200' name='roleRemark'")
+                            </div>
+                        </td>
+                    </tr>
+                </table>
+                <table style="width:100%;">
+                    <tr>
+                        <td>
+                            <table class="DTL_OUTHEAD" width="100%">
+                                <tr>
+                                    <td></td>
+                                    <td class="NoBorder"></td>
+                                    <td></td>
+                                </tr>
+                                <tr>
+                                    #set ($fatherCheckFlag=1)
+                                    #set ($columnIsEndFlag = 0)
+                                    #set ($rowIsEndFlag=0)
+                                    #set ($Number=1)
+                                    #foreach($!roleDtl in $!domain.roleDtlList.roleDtlList)
+                                        #if($!roleDtl.authName.authTopFlg==1)
+                                            #if($columnIsEndFlag == 1)
+                                                    </div>
+                                                    </td>
+                                                </tr>
+                                            </table>
+                                        </td>
+                                                #if($rowIsEndFlag != 0&&($rowIsEndFlag)%2 == 0)
+                                    </tr>
+                                    <tr>
+                                                #end
+                                            #end
+                                        <td valign="top">
+                                            <table class="FontSmall BoxInfo" width="90%">
+                                                <tr>
+                                                    <td>
+                                                        <table class="NoBorder" width="100%" valign="top">
+                                                            <tr nowrap>
+                                                            <td>
+                                            #customFormCheckbox("domain.roleDtlList.roleDtlList[$velocityCount].authInd" "onchange='checkChildren(this,&quot;auth_$rowIsEndFlag&quot;)'" "1" "0")
+                                            #if($roleDtl.authInd==1)
+                                                #set ($fatherCheckFlag=1)
+                                            #else
+                                                #set ($fatherCheckFlag=0)
+                                            #end
+                                                                <span class="DTL_INHEAD FontBigBold">
+                                                                    #out($!roleDtl.authName.authName)
+                                                                </span>
+                                                                </td>
+                                                            </tr>
+                                                        </table>
+                                                        <div class="NoBorder DTL_authArea" id="auth_$rowIsEndFlag">
+                                            #set ($rowIsEndFlag=$rowIsEndFlag+1)
+                                        #end
+                                        #if($!roleDtl.authName.authTopFlg==0)
+                                            #set ($columnIsEndFlag=1)
+                                                            <div style="margin-bottom:4px;">
+                                                                &nbsp;&nbsp;&nbsp;
+                                                                <span class="DTL_authSpan">
+                                            #if($fatherCheckFlag==1)
+                                                #customFormCheckbox("domain.roleDtlList.roleDtlList[$velocityCount].authInd" "" "1" "0")
+                                            #else
+                                                #customFormCheckbox("domain.roleDtlList.roleDtlList[$velocityCount].authInd" "disabled" "1" "0")
+                                            #end
+                                                                </span>
+                                                                <span class="DTL_authno DTL_authSpan" >
+                                            #if($Number<10)
+                                                0$Number
+                                            #else
+                                                $Number
+                                            #end
+                                                                </span>&nbsp;
+                                            #set ($Number=$Number+1)
+                                                                <span class="FontSmallAnk DTL_authSpan">#out($!roleDtl.authName.authName)</span>
+                                                            </div>
+                                        #end
+                                    #end
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        </table>
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+                </table>
+                <table class="NoBorder" style="width:100%;">
+                    <tr>
+                        <td class="DTL_MSGBOX" nowrap>
+                            #if($!{type} == "Insert")
+                                #customSpringMessage("PSMST102_ADD_FOOTER_COMMENT")
+                            #else
+                                #customSpringMessage("PSMST102_EDIT_FOOTER_COMMENT")
+                            #end
+                        </td>
+                        <td class="DTL_MSGBOX" align="right">
+                            <input type="button" class="MiddleButton" value="#customSpringMessage('ACTION_REGISTER')" onclick="javascript:exec();">
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+</form>
+</body>
+</html>

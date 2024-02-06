@@ -1,0 +1,205 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="ps.dataaccess.common.attachfile.AttachFileMapper">
+
+    <!-- 購買価格マスタから添付ファイル取得SQL -->
+    <select id="searchFileFromPurPriceAttach" resultType="fw.domain.slip.common.attachfile.AttachFile">
+        SELECT 
+        <choose>
+            <when test="downFlag == 1">
+                M_PUR_PRICE.GREEN_FILE_NAME as "fileName",
+                M_PUR_PRICE.GREEN_FILE as "data"
+            </when>
+            <when test="downFlag == 2">
+                M_PUR_PRICE.IMG_FILE_NAME as "fileName",
+                M_PUR_PRICE.IMG_FILE as "data"
+            </when>
+        </choose>
+          FROM M_PUR_PRICE
+         WHERE M_PUR_PRICE.BUYER_COMPANY_CD = #{identify.buyerCompanyCd}
+           AND M_PUR_PRICE.BUYER_SECTION_CD = #{identify.buyerSectionCd}
+           AND M_PUR_PRICE.ITEM_CD = #{identify.itemCd}
+           AND M_PUR_PRICE.SUP_CD = #{identify.supCd}
+           AND M_PUR_PRICE.VALID_START_DATE = #{identify.validPeriodStart.dateOfymd}
+           AND M_PUR_PRICE.VALID_END_DATE = #{identify.validPeriodEnd.dateOfymd}
+    </select>
+
+    <!-- 価格一括登録から添付ファイル取得SQL -->
+    <select id="searchFileFromPriceUploadAttach" resultType="fw.domain.slip.common.attachfile.AttachFile">
+        SELECT T_PRICE_UPLOAD.TITLE_NAME as "fileName",
+               T_PRICE_UPLOAD.PRICE_UPL_FILE as "data"
+          FROM T_PRICE_UPLOAD
+         WHERE T_PRICE_UPLOAD.PRICE_UPL_SEQ = #{priceUplSeq}
+    </select>
+
+    <!-- 添付管理から添付ファイル取得SQL -->
+    <select id="searchFileFromAttach" resultType="fw.domain.slip.common.attachfile.AttachFile">
+        SELECT
+        T_ATTACH_MNG.ATTACH_FILE_NAME as "fileName",
+        T_ATTACH_MNG.ATTACH_FILE
+        as "data"
+        FROM T_ATTACH_MNG
+        WHERE T_ATTACH_MNG.ATTACH_FILE_SEQ =
+        #{attachFileSeq}
+    </select>
+
+	<!-- 見積回答添付から添付ファイル取得SQL -->
+	<select id="searchFileFromQuotRespAttach" resultType="fw.domain.slip.common.attachfile.AttachFile">
+		SELECT
+		T_QUOT_RESP_ATTACH.ATTACH_FILE_NAME as "fileName",
+		T_QUOT_RESP_ATTACH.ATTACH_FILE as "data"
+		FROM T_QUOT_RESP_ATTACH
+		WHERE
+		T_QUOT_RESP_ATTACH.ATTACH_FILE_SEQ = #{attachFileSeq}
+	</select>
+	<!-- 支払添付テーブルから添付ファイル情報を取得 SQL -->
+	<select id="searchFileFromPPayAttach" resultType="fw.domain.slip.common.attachfile.AttachFile">
+		SELECT
+		T_P_PAY_ATTACH.ATTACH_FILE_NAME as "fileName",
+		T_P_PAY_ATTACH.ATTACH_FILE as "data"
+		FROM
+		T_P_PAY_ATTACH
+		WHERE
+		T_P_PAY_ATTACH.ATTACH_FILE_SEQ = #{attachFileSeq}
+
+	</select>
+	<!-- 価格改定添付テーブルから添付ファイル情報を取得SQL -->
+	<select id="searchAttachFileFromPriceRevAttach" resultType="fw.domain.slip.common.attachfile.AttachFile">
+		SELECT
+		T_PRICE_REV_ATTACH.ATTACH_FILE_NAME as "fileName",
+		T_PRICE_REV_ATTACH.ATTACH_FILE as "data"
+		FROM
+		T_PRICE_REV_ATTACH
+		WHERE
+		T_PRICE_REV_ATTACH.PRICE_REV_SEQ =#{attachFileSeq}
+
+	</select>
+	<!-- 価格改定添付テーブルから価格表ファイル情報を取得 SQL -->
+	<select id="searchPriceFileFromPriceRevAttach" resultType="fw.domain.slip.common.attachfile.AttachFile">
+		SELECT
+		T_PRICE_REV_ATTACH.PRICE_FILE_NAME as "fileName",
+		T_PRICE_REV_ATTACH.PRICE_FILE as "data"
+		FROM
+		T_PRICE_REV_ATTACH
+		WHERE
+		T_PRICE_REV_ATTACH.PRICE_REV_SEQ =#{attachFileSeq}
+
+	</select>
+	<!-- 価格改定添付テーブルから価格回答ファイル情報を取得 SQL -->
+	<select id="searchResponseFileFromPriceRevAttach" resultType="fw.domain.slip.common.attachfile.AttachFile">
+		SELECT
+		T_PRICE_REV_ATTACH.RESPONSE_FILE_NAME as "fileName",
+		T_PRICE_REV_ATTACH.RESPONSE_FILE as "data"
+		FROM
+		T_PRICE_REV_ATTACH
+		WHERE
+		T_PRICE_REV_ATTACH.PRICE_REV_SEQ =#{attachFileSeq}
+
+	</select>
+	<!-- 価格改定添付テーブルから価格回答確認ファイル情報を取得 SQL -->
+	<select id="searchResponseCheckFileFromPriceRevAttach"
+		resultType="fw.domain.slip.common.attachfile.AttachFile">
+		SELECT
+		T_PRICE_REV_ATTACH.RESPONSE_CHECK_FILE_NAME as
+		"fileName",
+		T_PRICE_REV_ATTACH.RESPONSE_CHECK_FILE as "data"
+		FROM
+		T_PRICE_REV_ATTACH
+		WHERE
+		T_PRICE_REV_ATTACH.PRICE_REV_SEQ=#{attachFileSeq}
+
+	</select>
+	<!-- ファイルを添付管理テーブルに登録する -->
+	<insert id="insertFileToAttachMng" parameterType="fw.domain.slip.common.attachfile.RangeByAttachFile">
+		INSERT INTO T_ATTACH_MNG
+		(
+		ATTACH_FILE_SEQ,
+		ATTACH_FILE_NAME,
+		ATTACH_FILE,
+		ATTACH_FILE_SIZE,
+		ATTACH_SCOPE,
+		DELETE_FLG,
+		LAST_UPD_DATE,
+		LAST_UPD_COMPANY_CD,
+		LAST_UPD_SECTION_CD,
+		LAST_UPD_USER_ID,
+		REG_DATE,
+		REG_COMPANY_CD,
+		REG_SECTION_CD,
+		REG_USER_ID
+		) VALUES (
+		#{attachFile.seqNo, jdbcType=VARCHAR},
+        #{attachFile.fileName, jdbcType=VARCHAR},
+        #{attachFile.compressData, jdbcType=BLOB},
+        #{attachFile.size,jdbcType=VARCHAR},
+        #{attachRange.attachRange,jdbcType=VARCHAR},
+        '0',
+        '${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}',
+        '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}',
+        '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}',
+        '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}',
+        '${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}',
+        '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}',
+        '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}',
+        '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}'
+		)
+	</insert>
+	<!-- 添付管理テーブルから添付ファイルを削除するメソッド -->
+	<!--
+	<delete id="deleteFileFromAttachMng" parameterType="String">
+        DELETE 
+            FROM T_ATTACH_MNG
+        WHERE
+            ATTACH_FILE_SEQ = #{attachFileSeq}       
+    </delete>
+     -->
+    <!-- 添付管理テーブルから添付ファイルを更新するメソッド -->
+	<update id="updateFileFromAttachMng" parameterType="fw.domain.slip.common.attachfile.RangeByAttachFile">
+	   UPDATE
+	       T_ATTACH_MNG
+	    SET
+	       ATTACH_SCOPE = #{attachRange.attachRange,jdbcType=VARCHAR},
+	       LAST_UPD_DATE='${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}',
+           LAST_UPD_COMPANY_CD='${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}',
+           LAST_UPD_SECTION_CD='${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}',
+           LAST_UPD_USER_ID='${@fw.security.SecurityUtil@getUserIdByEscapeSql()}'	       
+	    WHERE ATTACH_FILE_SEQ = #{attachFile.seqNo, jdbcType=VARCHAR}
+	    AND ATTACH_SCOPE &lt;&gt; #{attachRange.attachRange, jdbcType=VARCHAR}
+</update>
+
+    <!-- 強化-01083-000 2013/04/25 ADD SBO_pangzhen START -->
+    <update id="deleteFileFromAttachMng" parameterType="String">
+       UPDATE
+           T_ATTACH_MNG
+        SET
+           <!-- 2013/06/19 DEL DAIKO_M.TAKEDA
+           DELETE_FLG = '1',
+            -->
+           LAST_UPD_DATE='${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}',
+           LAST_UPD_COMPANY_CD='${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}',
+           LAST_UPD_SECTION_CD='${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}',
+           LAST_UPD_USER_ID='${@fw.security.SecurityUtil@getUserIdByEscapeSql()}'         
+        WHERE ATTACH_FILE_SEQ = #{attachFileSeq}
+    </update>
+    <!-- 強化-01083-000 2013/04/25 ADD SBO_pangzhen -END- -->
+
+    <!-- 2013/03/13 ADD DAIKO_TAKEDA START -->
+    <resultMap type="fw.domain.slip.common.attachfile.AttachRange" id="attachRangeResult">
+        <result property="attachRange" column="ATTACH_SCOPE"/>
+    </resultMap>
+    <select id="listAttachRangeBySequenceList" resultMap="attachRangeResult">
+        SELECT
+            ATTACH_SCOPE
+        FROM
+            T_ATTACH_MNG
+        WHERE
+            ATTACH_FILE_SEQ IN
+           <foreach collection="sequenceList" item="sequence"  open="(" separator="," close=")">  
+                 #{sequence}
+           </foreach>
+           AND DELETE_FLG = '0'
+    </select>
+    <!-- 2013/03/13 ADD DAIKO_TAKEDA -END- -->
+</mapper>

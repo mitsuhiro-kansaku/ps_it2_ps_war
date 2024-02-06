@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="ps.dataaccess.hme.home.PSHME010Mapper">
+
+    <select id="getInformationList"
+            resultType="fw.domain.mst.operation.news.NewsManagement">
+        SELECT T_NEWS.NEWS_SEQ as "newsIdentify.newsSeq",
+               T_NEWS.TITLE as "title",
+               T_NEWS.SEND_USER_NAME as "sendUserName",
+               T_NEWS.LAST_UPD_DATE as "newsIdentify.lastUpdDate",
+               T_NEWS.CONTENTS as "contents"
+          FROM T_NEWS
+         WHERE (T_NEWS.COMPANY_CD = #{companyCd}
+            OR T_NEWS.COMPANY_CD = 'ALL')
+           AND (T_NEWS.RECV_USER_IND = '0'
+            OR T_NEWS.RECV_USER_IND = '1')
+           AND T_NEWS.VALID_START_DATE &lt;= '${@fw.common.util.AppUtil@getSysDate()}'
+           AND T_NEWS.VALID_END_DATE >= '${@fw.common.util.AppUtil@getSysDate()}'
+           ORDER BY T_NEWS.LAST_UPD_DATE DESC
+    </select>
+
+    <select id="getLibraryList"
+            resultType="fw.domain.mst.operation.library.LibraryManagement">
+        SELECT M_LIBRALY.COMPANY_CD as "libraryIdentify.companyCd",
+               M_LIBRALY.HELP_NO as "libraryIdentify.helpNo",
+               M_LIBRALY.LAST_UPD_DATE as "libraryIdentify.lastUpdDate",
+               CASE WHEN BUL1.TITLE_NAME IS NOT NULL
+                    THEN BUL1.TITLE_NAME
+                    ELSE BUL2.TITLE_NAME
+                     END AS "titleName",
+               CASE WHEN BUL1.DESCRIPTION IS NOT NULL
+                    THEN BUL1.DESCRIPTION
+                    ELSE BUL2.DESCRIPTION
+                     END AS "description",
+               M_LIBRALY.FILE_NAME as "libraryFile.fileName"
+          FROM M_LIBRALY
+          LEFT JOIN M_LIBRALY_LANG BUL1
+                 ON M_LIBRALY.COMPANY_CD = BUL1.COMPANY_CD
+                AND M_LIBRALY.HELP_NO = BUL1.HELP_NO
+                AND BUL1.LANGUAGE_IND = #{companyLanguageInd, jdbcType=VARCHAR}
+          LEFT JOIN M_LIBRALY_LANG BUL2
+                 ON M_LIBRALY.COMPANY_CD = BUL2.COMPANY_CD
+                AND M_LIBRALY.HELP_NO = BUL2.HELP_NO
+                AND BUL2.LANGUAGE_IND = #{sysLanguageInd, jdbcType=VARCHAR}
+        <where>
+            <include refid="libraryWhere"/>
+        </where>
+          ORDER BY M_LIBRALY.DSP_ORDER
+    </select>
+    
+    <select id="getLibraryFile"
+            resultType="fw.domain.mst.operation.library.LibraryManagement">
+        SELECT 
+               M_LIBRALY.FILE_NAME as "libraryFile.fileName",
+               M_LIBRALY.FILE_DATA as "libraryFile.fileData"
+          FROM M_LIBRALY
+        <where>
+            <include refid="libraryWhere"/>
+            AND HELP_NO = #{helpNo, jdbcType=INTEGER}
+            AND M_LIBRALY.LAST_UPD_DATE = #{lastUpdDate, jdbcType=VARCHAR}
+        </where>
+    </select>
+
+    <sql id="libraryWhere">
+            AND (M_LIBRALY.COMPANY_CD = #{companyCd, jdbcType=VARCHAR}
+             OR M_LIBRALY.COMPANY_CD = '${@fw.common.constant.ApplicationConstant@COMPANY_CD_ALL}')
+            AND (M_LIBRALY.LIBRALY_IND = '1'
+             OR M_LIBRALY.LIBRALY_IND = '0')
+            AND M_LIBRALY.VALID_START_DATE &lt;= '${@fw.common.util.AppUtil@getSysDate()}'
+            AND M_LIBRALY.VALID_END_DATE >= '${@fw.common.util.AppUtil@getSysDate()}'
+            AND M_LIBRALY.TERM_FLG = '0'
+    </sql>
+</mapper>

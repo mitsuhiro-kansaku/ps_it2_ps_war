@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<flow xmlns="http://www.springframework.org/schema/webflow"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.springframework.org/schema/webflow
+        http://www.springframework.org/schema/webflow/spring-webflow-2.0.xsd"
+	parent="base">
+
+	<!-- 初期検索条件 -->
+	<input name="patternName" />
+	<input name="identify" />
+	<input name="isInitIndividualApr" />
+	<input name="SessionKey" />
+	<input name="quotStatusIdentify"/>
+	<input name="slipNo"/>
+
+    <decision-state id="isInitIndividualApr">
+        <if test="flowScope.isExclusiveCheck != null and flowScope.isExclusiveCheck" then="PSQOT040" />
+        <if test="flowScope.isInitIndividualApr == null or flowScope.isInitIndividualApr" then="initDetail" else="back" />
+    </decision-state>
+
+    <action-state id="initDetail">
+        <evaluate expression="PSQOT040Service.init(identify, patternName, slipNo)" result="flowScope.domain" />
+        <transition to="PSQOT040"/> 
+    </action-state>
+
+	<view-state id="PSQOT040" view="qot/est/PSQOT040"
+		model="domain">
+		<!-- 申請 -->
+		<transition on="validate" validate="true">
+			<set name="flashScope.isApply" value="true"></set>
+		</transition>
+		
+		<transition on="apply" validate="false">
+			<evaluate expression="PSQOT040Service.apply(domain,quotStatusIdentify)" result="flowScope.identify" />
+			<set name="flashScope.isSuccess" value="true"></set>
+			<set name="flashScope.tempFlg" value="false"></set>
+		</transition>
+		
+        <!-- 一時保存 -->		
+		<transition on="tempSave" validate="true">
+            <evaluate expression="PSQOT040Service.tempSave(domain)" result="flowScope.identify" />
+            <set name="flashScope.isSuccess" value="true"></set>
+            <set name="flashScope.tempFlg" value="true"></set>
+            <set name="flashScope.isTempSave" value="true"></set>
+        </transition>
+        <!-- 差戻し -->
+        <transition on="sendBack" validate="false">
+            <evaluate expression="PSQOT040Service.sendBack(domain)" result="flowScope.identify" />
+            <set name="flashScope.isSuccess" value="true"></set>
+            <set name="flashScope.isSendBack" value="true"></set>
+        </transition>
+        
+        <!--取引先追加-->
+		<transition on="addSupDetail" validate="false">
+			<evaluate expression="PSQOT040Service.addSupDetail(domain)" />
+		</transition>
+		<transition on="delSupDetail" validate="false">
+			<evaluate
+				expression="PSQOT040Service.delSupDetail(domain, requestParameters.supplierIndex)" />
+		</transition>
+		<!--明細追加-->
+        <transition on="addItemDetail" validate="false">
+            <evaluate expression="PSQOT040Service.addItemDetail(domain)" />
+        </transition>
+        <transition on="delItemDetail" validate="false">
+            <evaluate
+                expression="PSQOT040Service.delItemDetail(domain, requestParameters.itemIndex)" />
+        </transition>
+        <!-- 次のpage -->
+        <transition on="next" validate="false" to="isInitIndividualApr">
+             <evaluate expression="PSQOT040Service.next()" result="flowScope.identify"/> 
+        </transition>
+        
+        <transition on="page" validate="false" to="isInitIndividualApr">
+             <evaluate expression="PSQOT040Service.page()" result="flowScope.identify"/> 
+        </transition>
+        <!-- 添付管理からダウンロード -->
+        <transition on="download" validate="false">
+            <evaluate expression="PSQOT040Service.downloadByteFile(domain, requestParameters.seqNo,requestParameters.index, requestParameters.detailindex)"  />
+        </transition>
+        <transition on="showdetail" validate="false"/>
+        <transition on="downloadext" validate="false">
+            <evaluate expression="PSQOT040Service.downloadExt()" />
+        </transition>
+        <transition on="backlist" validate="false" to="backlist">
+        </transition>
+	</view-state>
+    <end-state id="backlist"/>
+</flow>

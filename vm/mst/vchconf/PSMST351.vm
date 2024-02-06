@@ -1,0 +1,186 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<title>#customSpringMessage("S_VOUCHER_CONFIG")</title> <!-- 伝票定義マスタ -->
+<meta http-equiv="Content-type" content="text/html; charset=UTF-8">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Content-script-type" content="text/javascript">
+<link rel="stylesheet" href="../../include/searchbox.css" type="text/css">
+<link id="CSS_FONT" rel="stylesheet" href="../../include/FontS.css" type="text/css">
+<link rel="stylesheet" href="../../include/Layout.css" type="text/css">
+<link rel="stylesheet" href="../../include/Color.css" type="text/css">
+<script language="javascript" type="text/javascript" src="../../include/jquery-1.7.2.min.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/jquery.tablefix.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/common.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/check.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/date.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/tablesort.js"></script>
+<script language="javascript" type="text/javascript">
+<!--
+#set($searchCondition=$voucherConfigSearchCondition)
+#parse("./common/common_js.vm")
+function onLoad() {
+    var alertMessage = "$!alertMessage";
+    if (alertMessage != ""){
+        ## +++++ 強化-01732-000　2013/06/07 ADD SBO_KANGJW START +++++
+        buttonUsableForList(alertMessage);
+        ## +++++ 強化-01732-000　2013/06/07 ADD SBO_KANGJW END +++++
+        alert(alertMessage);
+    }
+	
+    #if($!enableSaveOrder == "1")
+        parent.getObj("saveOrderButton").disabled = false;
+    #else
+        parent.getObj("saveOrderButton").disabled = true;
+    #end
+    var errorMsg = "$!errorMessage";
+    if (errorMsg != ""){
+        return;
+    }
+    var isShowUpdate = "#jsEscape($isShowUpdate)";
+    if (isShowUpdate == 'true'){
+        top.iframeChange("${flowExecutionUrl}&_eventId=edit","pageid","voucherConfigUpdate");
+    }
+}
+function openDetail(elementSeq,voucherType,lastUpdDate) {
+    ## +++++ 強化-01732-000　2013/06/07 ADD SBO_KANGJW START +++++
+    buttonDisable();
+    parentButtonDisable();
+    ## +++++ 強化-01732-000　2013/06/07 ADD SBO_KANGJW END +++++
+    parent.iframeChange("${flowExecutionUrl}&_eventId=editValidate","elementSeq",elementSeq,"voucherType",voucherType,"lastUpdDate",lastUpdDate,"HIDDENAREA");
+}
+function orderOption(index){
+    var orderCheckBox = document.getElementsByName("orderCheckBox");
+    var itemIndex = new Array();
+    var count = 0;
+    for(var i = 0; i<orderCheckBox.length; i++){
+        if(orderCheckBox[i].checked){
+            itemIndex[count] =i ;
+            count++;
+        }
+    }
+    ## 強化-01795-000 2013.06.30 ADD SBO_WANGXM START
+    if (count==0){
+        alert("#nothingSelectedMessage()");
+    } else {
+    ## 強化-01795-000 2013.06.30 ADD SBO_WANGXM -END-
+        getObj("BodyForm").action="${flowExecutionUrl}&_eventId=orderOption&itemIndex="+itemIndex+"&orderIndex="+index;
+        getObj("BodyForm").submit();
+    ## 強化-01795-000 2013.06.30 ADD SBO_WANGXM
+    }
+}
+function saveOrder() {
+    getObj("BodyForm").action="${flowExecutionUrl}&_eventId=saveOrder";
+    getObj("BodyForm").submit();
+}
+//-->
+</script>
+
+<style type="text/css">
+<!--
+.disp_setting_order_style{
+    border-top:0px !important; 
+    border-right:0px !important; 
+    border-bottom:0px !important;
+    white-space:nowrap !important;
+    text-align:left !important;
+    vertical-align:bottom !important;
+    background:#fff;
+    width:1%;
+}
+//-->
+</style>
+</head>
+<body id="BODY" class="Body" topmargin="10" leftmargin="10" marginwidth="0" marginheight="0" align="left" onload="onLoad();">
+#if($!errorMessage && $!errorMessage !="")
+<div class="error">
+    $!errorMessage
+</div>
+#end
+<form id="BodyForm" name="Body" method="post">
+<table id="TABLE" class="ListArea" width="100%">
+    <thead>
+    #if($!voucherConfigList.voucherConfigItemList.size()!=0)
+        <tr id="Header">
+            <th class="BoxHeaderCenter FontSmall ">No.</th>
+            <th class="BoxHeaderCenter FontSmall" width="5%;">#customSpringMessage("ACTION")</th> <!-- 処理 -->
+            <th class="BoxHeaderLeft FontSmall">#customSpringMessage('ELEMENT_NAME_CD')</th>
+            <th class="BoxHeaderLeft FontSmall">#customSpringMessage('ELEMENT_NAME')</th><!--名称-->
+            <th class="BoxHeaderLeft FontSmall">#customSpringMessage('ELEMENT_CONFIG_KIND')</th><!--項目種別-->
+            <th class="BoxHeaderCenter FontSmall">#customSpringMessage('VALIDITY')</th><!--有効-->
+            ## ----- 強化-01664-000 2013/05/30 DEL SBO_lichao START -----
+            ##<th class="BoxHeaderLeft FontSmall">#customSpringMessage('ACTION_CREATE')</th><!--新規登録入力-->
+            ##<th class="BoxHeaderLeft FontSmall">#customSpringMessage('UPDATE_INPUT')</th><!--更新入力-->
+            ## ----- 強化-01664-000 2013/05/30 DEL SBO_lichao -END- -----
+            <th class="BoxHeaderCenter FontSmall">#customSpringMessage('INDISPENSABLE')</th><!--必須-->
+            <th class="BoxHeaderLeft FontSmall">#customSpringMessage("INSPECTION_TYPE")</th> <!-- 検索種別 -->
+            <th class="BoxHeaderLeft FontSmall">#customSpringMessage('SEARCH_INPUT_KIND')</th><!---->
+            <th class="BoxHeaderLeft FontSmall">#customSpringMessage('SEARCH_DEFAULT_VALUE')</th><!--検索デフォルト値-->
+            #if($!enableSaveOrder == "1")
+            <th class="BoxHeaderLeft FontSmall">#customSpringMessage("DSP_ORDER")</th> <!-- 表示順 -->
+            <th>
+                <img src="../../image/order_right.gif" name="order_icon0" onclick="orderOption(0);">
+            </th>
+            #end
+        </tr>
+    </thead>
+    <tbody>
+    #foreach($!voucherConfigItem in $voucherConfigList.voucherConfigItemList)
+        <tr #if($velocityCount % 2 == 0) bgcolor="#dce4ef" #else bgcolor="#ffffff" #end>
+            <td class="BoxDetailCenter FontList">
+                #set( $velocityCount = $velocityCount + 1 )$velocityCount
+            </td>
+            <td class="BoxDetailCenter">
+                <input type="button" class="SmallButton" value="#customSpringMessage("ACTION_EDIT")" onclick="openDetail('#jsEscapeInHTML($!voucherConfigItem.voucherConfigIdentify.elementSeq)','#jsEscapeInHTML($!voucherConfigItem.voucherConfigIdentify.voucherType)','#jsEscapeInHTML($!voucherConfigItem.voucherConfigIdentify.lastUpdDate)');">
+            </td>
+            <td class="BoxDetailLeft FontList"><span class="FontList">#out($!voucherConfigItem.itemNameCd)</span></td><!-- 名称コード  -->
+            <td class="BoxDetailLeft FontList"><span class="FontList">#out($!voucherConfigItem.itemName)</span></td><!-- 名称  -->
+            <td class="BoxDetailLeft FontList"><span class="FontList">#out($!voucherConfigItem.itemType_PageValue)</span></td><!-- 項目種別-->
+            <td class="BoxDetailCenter FontList"><span class="FontList">#if($!voucherConfigItem.useFlg == "1") ○ #end </span></td><!-- 有効-->
+            ## ----- 強化-01664-000 2013/05/30 DEL SBO_lichao START -----
+            ##<td class="BoxDetailLeft FontList"><span class="FontList">#out($!voucherConfigItem.regFlg_PageValue)</span></td><!--新規登録入力-->
+            ##<td class="BoxDetailLeft FontList"><span class="FontList">#out($!voucherConfigItem.updFlg_PageValue)</span></td><!--更新入力 -->
+            ## ----- 強化-01664-000 2013/05/30 DEL SBO_lichao -END- -----
+            <td class="BoxDetailCenter FontList"><span class="FontList">#if($!voucherConfigItem.mustEnterFlg == "1") ○ #end </span></td><!--必須 -->
+            <td class="BoxDetailLeft FontList"><span class="FontList">#out($!voucherConfigItem.searchType_PageValue)</span></td><!-- 検索種別-->
+            <td class="BoxDetailLeft FontList"><span class="FontList">#out($!voucherConfigItem.searchInputType_PageValue)</span></td><!-- 検索入力種別-->
+            <td class="BoxDetailLeft FontList">
+                <span class="FontList">
+                    #out($!voucherConfigItem.defaultTxtValue)
+                    #out($!voucherConfigItem.defaultAreaValue)
+                    #out($!voucherConfigItem.minDefaultIntValue.value)
+                    #if($!{voucherConfigItem.minDefaultIntValue.value} != "" && $!{voucherConfigItem.maxDefaultIntValue.value} != "")～#end
+                    #out($!voucherConfigItem.maxDefaultIntValue.value)
+                    #out($!voucherConfigItem.minDefaultDecValue.value)
+                    #if($!{voucherConfigItem.minDefaultDecValue.value} != "" && $!{voucherConfigItem.maxDefaultDecValue.value} != "")～#end
+                    #out($!voucherConfigItem.maxDefaultDecValue.value)
+                    #out($!voucherConfigItem.defaultDateValue_PageValue)
+                    #out($!voucherConfigItem.defaultSelValue)
+                    #out($!voucherConfigItem.defaultChkValue)
+                </span></td><!-- 検索デフォルト値-->
+            #if($!enableSaveOrder == "1")
+            <td class="BoxDetailCenter">
+                <input name="orderCheckBox" type="checkbox">
+            </td>
+            <td class="disp_setting_order_style">
+                 <img src="../../image/order_right.gif" name="order_icon0" onclick="orderOption($velocityCount);">
+            </td>
+            #end
+        </tr>
+    #end
+    ## 強化-01835-000 2013.06.29 DEL SBO_WANGXM
+    ##<tbody/>
+    ## 強化-01835-000 2013.06.29 ADD SBO_WANGXM
+    </tbody>
+    #end
+</table>
+<br>
+<table id="WAIT" class="NoBorder" style="display:none;" width="100%">
+    <tr>
+        <td align="center"><br><br>
+        <img src="../../image/wait.gif"><br><span class="FontMini"><br>#customSpringMessage("SEARCH_MESSAGE")...</span>
+    </tr>
+</table>
+</form>
+</body>
+</html>

@@ -1,0 +1,313 @@
+<!doctype html>
+<HTML LANG="ja">
+<HEAD>
+<META http-equiv="Content-type" content="text/html; charset=UTF-8">
+<META http-equiv="Pragma" content="no-cache">
+<META http-equiv="Content-script-type" CONTENT="text/javascript">
+<LINK REL="stylesheet" HREF="../include/default.css" TYPE="text/css">
+<LINK REL="stylesheet" HREF="../include/Layout.css" TYPE="text/css">
+<LINK href="../include/ADxMenu.css" type=text/css rel=stylesheet>
+<!--[if lte IE 6]>
+<LINK 
+href="../include/ADxMenuIE.css" type=text/css rel=stylesheet>
+<SCRIPT src="../include/ADxMenu.js" type=text/javascript></SCRIPT>
+<![endif]-->
+<SCRIPT LANGUAGE="javascript" TYPE="text/javascript" SRC="../include/common.js"></SCRIPT>
+<SCRIPT LANGUAGE="javascript" TYPE="text/javascript">
+<!--
+
+menu = new Array("HOME","依頼元業務","購買業務","受入業務","予算進捗管理","承認業務","ﾏｽﾀﾒﾝﾃﾅﾝｽ");
+icon = new Array("cmdBack","cmdUser","cmdPassword","cmdLogout");
+page = new Array("../wfm/body.vm","pur.vm","order.vm","","budget.vm","aprRequest.vm","master.vm");
+alarm = new Array(0,1,0,1,0,0,0,0);
+
+var MenuList = new Array (
+	"ワークフローマップ",
+	"依頼元業務",
+	"依頼元業務|||購入依頼伝票を起票する___../purCreateSlip/body.vm",
+	"依頼元業務|||伝票を確認する___../purViewSlip/body.vm___(保1/差1)",
+	"依頼元業務|||見積を依頼する___../estCreateSlip/body.vm",
+	"購買業務",
+	"購買業務|||伝票受付箱___../odrSortingSlip/body.vm___（3）",
+	"購買業務|||発注処理___../odrOrder/body.vm",
+	"受入業務",
+	"予算進捗管理",
+	"予算進捗管理|||進捗を確認する___../bdtViewBudget/body.vm",
+	"承認業務",
+	"承認業務|||購入依頼承認処理___../aprRequest/data.vm",
+	"マスタ保守",
+	"マスタ保守|||項目名称マスタ___../mstItemName/body.vm"
+);
+
+var indent = -1;
+var COUNTER=0;
+var id=0;
+
+function getIndentNo(data) {
+	//return split(data,"|||").length - 1;
+	return data.split("|||").length - 1;
+}
+function getMenuItem(data,classno) {
+	var ret;
+	if( classno<0 || classno>4 ) {
+		return;
+	}
+	//w = split(data,"|||");
+	w = data.split("|||");
+	if( w.length > classno ) {
+		return w[classno];
+	} else {
+		return "";
+	}
+	return ret;
+}
+
+function outputNode() {
+	var w;
+	document.write("<TABLE CLASS='NoBorder' WIDTH='100%' STYLE='z-order:0;'><TR>");
+
+	for(; COUNTER<MenuList.length; COUNTER++ ) {
+		if( getIndentNo(MenuList[COUNTER]) == 0 ) {
+			id++;
+			w = getMenuItem(MenuList[COUNTER],0).split("___");
+			document.write("<TD CLASS='MENU0'>");
+			document.write(w);
+			document.write("</TD>");
+		}
+	}
+	document.write("</TR></TABLE>");	
+
+}
+
+function outputNode2() {
+	var w;
+	for(; COUNTER<MenuList.length; COUNTER++ ) {
+		if( getIndentNo(MenuList[COUNTER]) == indent ) {
+			id++;
+			// w = split(getMenuItem(MenuList[COUNTER],indent),"___");
+			w = getMenuItem(MenuList[COUNTER],indent).split("___");
+			document.write("<TABLE CLASS='NoBorder' WIDTH='100%'><TR><TD CLASS='Menu' STYLE='text-align:left;vertical-align:top;padding:0px,0px,0px,"+(indentsize*indent)+"px;' NOWRAP>");
+			// 差戻し等があるとき、アラームアイコンにする。
+			if( w.length > 2 ) {
+				document.write("<IMG ID='NODEIMG" + id + "' SRC='../image/mnuAlarm2.gif' STYLE='cursor:pointer;' ONCLICK='openNode("+id+")'/>");
+			} else {
+				document.write("<IMG ID='NODEIMG" + id + "' SRC='../image/mnu2.gif' STYLE='cursor:pointer;' ONCLICK='openNode("+id+")'/>");
+			}
+			if( indent == 0 ) {
+				document.write("</TD><TD WIDTH='100%' CLASS='Menu2' NOWRAP STYLE='text-align:left;'>");
+			} else {
+				document.write("</TD><TD WIDTH='100%' CLASS='Menu' NOWRAP STYLE='text-align:left;'>");
+			}
+			if( w.length > 1 ) {
+				document.write("<A ID='NODENAME" + id + "' CLASS='NoBorder' HREF='#' ONCLICK=\"selectNode('" + id + "');");
+				// メニュー名に続き、"___"区切りでＵＲＬが記載されていれば、メニュー名クリック時にはそのページを表示。
+				document.write(" parent.document.getElementById('BODYAREA').src = '"+w[1]+"'");
+				document.write("\">");
+			} else if( indent == 0 ) {
+				document.write("<A ID='NODENAME" + id + "' CLASS='NoBorder' HREF='#' ONCLICK=\"selectNode('" + id + "');");
+				// トップレベルのメニューのとき、ヘッダーのタグを切り替える。
+				document.write(" parent.parent.document.getElementById('HEADAREA').contentWindow.document.getElementById('MENU_STR" + (++TopMenuNo) +"').click();");
+				document.write("\">");
+			}
+			if( indent == 0 && top.MENUID == TopMenuNo ) {
+				document.write("<U>"+w[0]+"</U>");
+			} else {
+				document.write(w[0]);
+			}
+			// 差戻し件数等の表示
+			if( w.length > 2 ) {
+				document.write("<SPAN CLASS='Font_MenuAlert'>&nbsp;" + w[2] + "</SPAN>");
+			}
+			if( w.length > 1 ) {
+				document.write("</A>");
+			}
+			document.write("</TD></TR></TABLE>");
+		} else if( getIndentNo(MenuList[COUNTER]) > indent ) {
+			document.write("<TABLE WIDTH='100%' ID='NODE" + id + "' CLASS='NoBorder' STYLE='display:");
+			parentFlg[COUNTER] = id;
+			// デフォルト表示状態　トップメニューの場合はヘッダで選択しているタグと同じ場合のみＯＮ、それ以外はＯＦＦ。子メニューの場合はすべてＯＮ。
+			if( indent == 0 ) {
+				if( top.MENUID == TopMenuNo )
+					document.write("block;");
+				else {
+					document.write("none;");
+				}
+			} else {
+				document.write("block;");
+			}
+			document.write("'>");
+			id++;
+			document.write("<TR><TD CLASS='Font1' STYLE='text-align:left;'>");
+			indent++;
+			outputNode();
+			indent--;
+		} else {
+			document.write("</TD></TR></TABLE>");
+			indent--;
+			COUNTER--;
+		}
+	}
+
+	document.write("</TD></TR></TABLE>");
+
+}
+
+
+function onLoad() {
+	changeTag(top.MENUID);
+
+	var i;
+	document.Body.Roles.length = top.ROLES.length;
+	for(i=0; i<top.ROLES.length; i++) {
+		document.Body.Roles.options[i].value = 0;
+		document.Body.Roles.options[i].text = top.ROLES[i][0]+" （"+top.ROLES[i][1]+"）";
+	}
+
+}
+
+function changeRole() {
+	setText("ROLENAME",top.ROLES[document.Body.Roles.selectedIndex][1]);
+	// ＨＯＭＥのときは、再表示。
+	if( top.MENUID==0 ) {
+		parent.getObj('BODYAREA').contentWindow.getObj('DATAAREA').contentWindow.reDraw(top.ROLES[document.Body.Roles.selectedIndex][2]);
+	}
+}
+
+// メニュータグの表示更新
+function changeTag( no ) {
+	
+	top.MENUID = no;
+	
+	for(i=0; i<7; i++) {
+		getObj('MENU0').src = "../image/picHome.gif";
+		if( i == no ) {
+			// 選択中のタグ
+			if( i == 0 ) {
+				getObj('MENU'+i).src = "../image/picHome_.gif";
+			} else {
+				getObj("MENU"+i).style.backgroundColor = "#FFCC33";
+				setText("MENU_STR"+i,menu[i]);
+				getObj("MENU_STR"+i).style.textDecoration = "none";
+			}
+		} else if( i != 0 ) {
+			if( menu[i] != "" ) {
+				// 選択していないタグ
+				if( alarm[i]==1 ) {
+					getObj('MENU'+i).background = "../image/picMenuAlarm.gif";
+				} else {
+					getObj('MENU'+i).background = "";
+				}
+				getObj("MENU"+i).style.backgroundColor = "#CCCCCC";
+				setText("MENU_STR"+i,menu[i]);
+				getObj("MENU_STR"+i).style.textDecoration = "underline";
+			} else {
+				// 表示されないタグ
+				setDisplay('MENU'+i,false);
+				setDisplay("MENU_STR"+i,false);
+				setText("MENU_STR"+i,"");
+			}
+		}
+
+	}
+}
+
+// ページ切替え
+function changePage( no ) {
+	parent.body.location = page[no];
+}
+
+//-->
+</SCRIPT>
+</HEAD>
+<BODY ONLOAD="onLoad();" CLASS="Body" ALIGN="center" BACKGROUND="../image/header.gif">
+<FORM NAME="Body">
+	<TABLE CLASS="NoBorder" STYLE="width:100%;"><TR>
+		<TD BACKGROUND="../image/header1.gif" STYLE="width:208px;height:64px;background-repeat:no-repeat;"></TD>
+		<TD BACKGROUND="../image/header2.gif" STYLE="margin:4px,4px,4px,4px;">
+			<A HREF="#"><IMG SRC="../image/back.gif" ONMOUSEOVER="this.src='../image/_back.gif'" ONMOUSEOUT="this.src='../image/back.gif'" BORDER="0"></A>
+			<A HREF="#"><IMG SRC="../image/user.gif" ONMOUSEOVER="this.src='../image/_user.gif'" ONMOUSEOUT="this.src='../image/user.gif'" BORDER="0"></A>
+			<A HREF="#"><IMG SRC="../image/logout.gif" ONMOUSEOVER="this.src='../image/_logout.gif'" ONMOUSEOUT="this.src='../image/logout.gif'" BORDER="0"></A>
+<!--<DIV><SCRIPT LANGUAGE="javascript" TYPE="text/javascript">outputNode();</SCRIPT></DIV>-->
+
+<div class="example">
+<ul class="adxm menu">
+	<li><a href="/">Home</a></li>
+	<li><a href="#">Archive</a>
+		<ul>
+			<li><a href="#">2007年</a>
+				<ul>
+					<li><a href="#">2007/01</a></li>
+				</ul>
+			</li>
+			<li><a href="#">2006年</a>
+				<ul>
+					<li><a href="#">2006/12</a></li>
+					<li><a href="#">2006/11</a></li>
+					<li><a href="#">2006/09</a></li>
+					<li><a href="#">2006/08</a></li>
+					<li><a href="#">2006/07</a></li>
+					<li><a href="#">2006/06</a></li>
+					<li><a href="#">2006/05</a></li>
+					<li><a href="#">2006/04</a></li>
+					<li><a href="#">2006/03</a></li>
+					<li><a href="#">2006/02</a></li>
+					<li><a href="#">2006/01</a></li>
+				</ul>
+			</li>
+		</ul>
+	<li><a href="#">Category</a>
+		<ul>
+			<li><a href="#">Affiliate</a></li>
+			<li><a href="#">Blog</a></li>
+			<li><a href="#">del.icio.us</a></li>
+			<li><a href="#">Design</a></li>
+			<li><a href="#">Entertainment</a></li>
+			<li><a href="#">Food</a></li>
+			<li><a href="#">Football</a></li>
+			<li><a href="#">Game</a></li>
+			<li><a href="#">JavaScript</a></li>
+			<li><a href="#">Misc</a></li>
+			<li><a href="#">News</a></li>
+			<li><a href="#">Nucleus</a></li>
+			<li><a href="#">RSS</a></li>
+			<li><a href="#">Science</a></li>
+			<li><a href="#">Server</a></li>
+			<li><a href="#">Software</a></li>
+			<li><a href="#">Sports</a></li>
+			<li><a href="#">Web Service</a></li>
+		</ul>
+	</li>
+	<li><a href="http://pamgau.net/member/1">About</a></li>
+	</ul>
+</div>
+
+			<TABLE CLASS="NoBorder" STYLE="display:none;"><TR>
+				<TD ID="MENU0" STYLE="border:1px solid #000000;"><A CLASS="MenuTags" HREF="javascript:changeTag(0);javascript:changePage(0);"><IMG ID="MENU_STR0" SRC="../image/picHome.gif" BORDER="0"></A></TD>
+				<TD ID="MENU1" CLASS="BoxMenu" NOWRAP STYLE="width:80px;background-color:#CCCCCC;color:#FFFFFF;"><A ID="MENU_STR1" CLASS="MenuTags" HREF="javascript:changeTag(1);javascript:changePage(1);">メニュー１</A></TD>
+				<TD ID="MENU2" CLASS="BoxMenu" NOWRAP STYLE="width:80px;background-color:#CCCCCC;color:#FFFFFF;"><A ID="MENU_STR2" CLASS="MenuTags" HREF="javascript:changeTag(2);javascript:changePage(2);">メニュー２</A></TD>
+				<TD ID="MENU3" CLASS="BoxMenu" NOWRAP STYLE="width:80px;background-color:#CCCCCC;color:#FFFFFF;"><A ID="MENU_STR3" CLASS="MenuTags" HREF="javascript:changeTag(3);javascript:changePage(3);">メニュー３</A></TD>
+				<TD ID="MENU4" CLASS="BoxMenu" NOWRAP STYLE="width:80px;background-color:#CCCCCC;color:#FFFFFF;"><A ID="MENU_STR4" CLASS="MenuTags" HREF="javascript:changeTag(4);javascript:changePage(4);">メニュー４</A></TD>
+				<TD ID="MENU5" CLASS="BoxMenu" NOWRAP STYLE="width:80px;background-color:#CCCCCC;color:#FFFFFF;"><A ID="MENU_STR5" CLASS="MenuTags" HREF="javascript:changeTag(5);javascript:changePage(5);">メニュー５</A></TD>
+				<TD ID="MENU6" CLASS="BoxMenu" NOWRAP STYLE="width:80px;background-color:#CCCCCC;color:#FFFFFF;"><A ID="MENU_STR6" CLASS="MenuTags" HREF="javascript:changeTag(6);javascript:changePage(6);">メニュー６</A></TD>
+			</TR></TABLE>
+
+		</TD>
+		<TD BACKGROUND="../image/header2.gif" STYLE="margin:4px,4px,4px,4px;">
+			<TABLE CLASS="NoBorder"><TR>
+				<TD STYLE="vertical-align:top;"><IMG SRC="../image/mrkUsericon.gif">&nbsp;</TD>
+				<TD NOWRAP CLASS="RoleName" ALIGN="left">
+					<SPAN ID="ROLENAME">購入依頼者権限</SPAN><BR>
+					<SPAN CLASS="UserName">風呂木屋 粋人</SPAN><BR>
+					<SELECT NAME="Roles" CLASS="Small" STYLE="font-size:7pt;" ONCHANGE="changeRole()">
+						<OPTION VALUE="0">□□事業所 □□製造部</OPTION>
+					</SELECT>
+				</TD>
+			</TR></TABLE>
+		</TD>
+		<TD CLASS="NoBorder" STYLE="width:12px;"><IMG SRC="../image/header3.gif" BORDER="0"></TD>
+	</TR></TABLE>
+
+</FORM>
+
+</BODY>
+</HTML>

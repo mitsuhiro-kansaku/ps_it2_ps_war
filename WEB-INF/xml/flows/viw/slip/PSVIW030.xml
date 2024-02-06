@@ -1,0 +1,149 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<flow xmlns="http://www.springframework.org/schema/webflow"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.springframework.org/schema/webflow
+        http://www.springframework.org/schema/webflow/spring-webflow-2.0.xsd"
+    parent="base">
+    <!-- 開発用domainの定義 -->
+    <var name="quotAcqReqIdentify" class="fw.domain.slip.quot.quotacqreq.QuotAcqReqIdentify" />
+    <var name="catalogIdentify" class="fw.domain.slip.purreq.purreqcatalog.CatalogIdentify" />
+    <var name="orderIdentify" class="fw.domain.slip.order.order.OrderIdentify" />
+    <var name="orderNo" class="fw.domain.slip.common.identify.OrderNo" />
+    <var name="identify" class="fw.domain.slip.receive.receive.Identify" />
+    <var name="accIdentify" class="fw.domain.slip.receive.acceptance.Identify" />
+    <var name="purAplIdentify" class="fw.domain.slip.purreq.everypurreq.purreqmng.PurAplIdentify" />
+    <var name="quotReqIdentify" class="fw.domain.slip.quot.quotreq.QuotReqIdentify" />
+    <input name="quotReqNo" />
+    <input name="slipSearchItem" />
+    <input name="strOrderNo" />
+
+    <on-start>
+        <set name="flowScope.slipSearchItem" value="slipSearchItem"></set>
+        <evaluate expression="PSVIW030Service.init(slipSearchItem)" />
+    </on-start>
+    
+    <view-state id="PSVIW030"  view="viw/slip/PSVIW030">
+        <transition on="TRPSREQ040" to="PSREQ040" validate="false">
+            <set name="quotAcqReqIdentify.quotAcqAplSeqNo" value="slipSearchItem.quotAcqAplSeqNo"/><!-- 見積依頼番号 -->
+        </transition>
+        <transition on="TRPSQOT020" to="PSQOT020" validate="false">
+            <set name="quotReqIdentify.quotReqSeqNo.seqNumber" value="slipSearchItem.quotReqSeqNo"/>
+        </transition>
+        <transition on="TRPSQOT080" to="PSQOT080" validate="false">
+            <set name="quotReqNo" value="slipSearchItem.quotReqNo" />
+        </transition>
+        <transition on="TRPSCAT040" to="PSCAT040" validate="false">
+            <!-- 購入申請シーケンス番号 -->
+            <set name="catalogIdentify.purAplSeqNo" value="slipSearchItem.purAplSeqNo"/>
+            <!-- 購入依頼番号 -->                 
+            <set name="catalogIdentify.purReqNo.purReqNo" value="slipSearchItem.purReqNo"/>
+        </transition>
+         <transition on="TRPSPUR040" to="PSPUR040" validate="false">
+            <!-- 購入申請シーケンス番号 -->
+            <set name="purAplIdentify.purAplSeqNum" value="slipSearchItem.purAplSeqNo"/>
+            <set name="purAplIdentify.purReqNo" value="slipSearchItem.purReqNo"/>
+        </transition>
+        
+        <transition on="TRPSORD090" to="PSORD090" validate="false">
+            <set name="orderIdentify.orderSeq" value="slipSearchItem.orderSeq"/>
+        </transition>
+        <!-- 2013.01.05 ADD DAIKO_KANEKO START -->
+        <transition on="TRPSDLV021_CHECK" to="PSDLV021_CHECK" validate="false">
+            <set name="strOrderNo" value="slipSearchItem.orderNo"/>
+        </transition>
+        <!-- 2013.01.05 ADD DAIKO_KANEKO -END- -->
+
+        <!-- 2013.01.05 DEL DAIKO_KANEKO
+        <transition on="TRPSDLV021" to="PSDLV021" validate="false">
+        -->
+        <!-- 2013.01.05 ADD DAIKO_KANEKO  -->
+        <transition on="TRPSDLV021_ANS" to="PSDLV021_ANS" validate="false">
+
+            <set name="strOrderNo" value="slipSearchItem.orderNo"/>
+        </transition>
+        <transition on="TRPSRCV050" to="PSRCV050" validate="false">
+            <set name="orderNo.orderNo" value="slipSearchItem.orderNo"/>
+        </transition>
+        <transition on="TRPSTST050" to="PSTST050" validate="false">
+            <set name="identify.orderNo" value="slipSearchItem.orderNo"/>
+        </transition>
+        <transition on="TRPSACP050" to="PSACP050" validate="false">
+            <set name="accIdentify.orderNo" value="slipSearchItem.orderNo"/>
+        </transition>
+    </view-state>
+    <!-- 見積取得依頼詳細 -->
+    <subflow-state id="PSREQ040" subflow="req/est/PSREQ040">
+        <input name="quotAcqReqIdentify" value="quotAcqReqIdentify"/>
+    </subflow-state>
+    
+     <!-- 見積依頼詳細 -->
+    <subflow-state id="PSQOT020" subflow="qot/est/PSQOT020">
+        <input name="quotReqIdentify" value="quotReqIdentify"/>
+    </subflow-state>
+    
+     <!-- 見積回答詳細 -->
+     <!-- 2013/01/11 DEL DAIKO_KANEKO
+    <subflow-state id="PSQOT080" subflow="qot/ans/PSQOT080">
+     -->
+    <subflow-state id="PSQOT080" subflow="qot/ans/PSQOT080_01"> <!-- 2013/01/11 ADD DAIKO_KANEKO -->
+        <!-- 見積依頼番号 -->
+        <input name="quotReqNo" value="quotReqNo" />
+    </subflow-state>
+    
+    <!-- カタログ購入依頼詳細 -->
+    <subflow-state id="PSCAT040" subflow="cat/catalog/PSCAT040">
+        <!-- 購入申請シーケンス番号,購入依頼番号 ,伝票ステータス(カタログ購入依頼詳細用) -->
+        <input name="catalogIdentify" value="catalogIdentify"/>
+    </subflow-state>
+    
+     <!-- _都度購入依頼詳細 -->
+    <subflow-state id="PSPUR040" subflow="pur/req/PSPUR040">
+        <!-- 購入申請シーケンス番号 -->
+        <input name="identify" value="purAplIdentify"/>
+    </subflow-state>
+    
+    <!-- 注文詳細 -->
+    <subflow-state id="PSORD090" subflow="ord/order/PSORD090">
+        <input name="orderIdentify" value="orderIdentify"/>
+    </subflow-state>
+    
+    <!-- 2013.01.05 ADD DAIKO_KANEKO START -->
+    <!-- 納期確認詳細 -->
+    <subflow-state id="PSDLV021_CHECK" subflow="dlv/ans/PSDLV021">
+        <input name="orderNo" value="strOrderNo"/>
+        <input name="isResp" value="false"/>
+    </subflow-state>
+    <!-- 2013.01.05 ADD DAIKO_KANEKO -END- -->
+
+    <!-- 納期回答詳細 -->
+    <!-- 2013.01.05 DEL DAIKO_KANEKO
+    <subflow-state id="PSDLV021" subflow="dlv/ans/PSDLV021">
+    -->
+    <!-- 2013.01.05 ADD DAIKO_KANEKO -->
+    <subflow-state id="PSDLV021_ANS" subflow="dlv/ans/PSDLV021">
+
+	    <input name="orderNo" value="strOrderNo"/>
+	    <input name="isResp" value="true"/>
+    </subflow-state>
+    
+    <!-- 受入詳細 -->
+    <subflow-state id="PSRCV050" subflow="rcv/rcv/PSRCV050">
+        <input name="identify" value="orderNo"/>
+        <input name="range" value="0" />
+        <input name="approveFlg" value="1" />
+    </subflow-state>
+    
+    <!-- 検査詳細 -->
+    <subflow-state id="PSTST050" subflow="tst/ins/PSTST050">
+        <input name="identify" value="identify"/>
+        <input name="range" value="0" />
+        <input name="approveFlg" value="1" />
+    </subflow-state>
+    
+    <!-- 検収詳細 -->
+    <subflow-state id="PSACP050" subflow="acp/acc/PSACP050">
+        <input name="acp050Identify" value="accIdentify"/>
+        <input name="range" value="0" />
+        <input name="approveFlg" value="1" />
+    </subflow-state>
+</flow>

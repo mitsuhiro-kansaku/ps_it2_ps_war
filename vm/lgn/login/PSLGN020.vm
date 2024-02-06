@@ -1,0 +1,329 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<title>#customSpringMessage('USER_COND')</title><!--ユーザー設定-->
+<meta http-equiv="Content-type" content="text/html; charset=UTF-8">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Content-script-type" content="text/javascript">
+
+<link id="CSS_FONT" rel="stylesheet" href="../../include/FontS.css" type="text/css">
+<link rel="stylesheet" href="../../include/Layout.css" type="text/css">
+<link rel="stylesheet" href="../../include/Color.css" type="text/css">
+<link rel="stylesheet" href="../../include/searchbox.css" type="text/css">
+<link rel="stylesheet" href="../../include/ime.css" type="text/css">
+
+<script language="javascript" type="text/javascript" src="../../include/common.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/check.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/date.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/jquery-1.7.2.min.js"></script>
+
+<script language="javascript" type="text/javascript">
+<!--
+#parse("./common/common_js.vm")
+function onLoad() {
+    setFocusForInput();
+    top.document.title = document.title;
+    //setFocus();
+    var alertMessage = "$!alertMessage";
+    if (alertMessage != ""){
+        alert(alertMessage);
+    }
+    setInfo();
+    var errorMsg = "$!errorMessage";
+    if (errorMsg != ""){
+        document.getElementById("TR_ERROR").style.display = "";
+        return;
+    }
+    var isSuccess = '#jsEscape($!isSuccess)';
+    if(isSuccess == 'true'){
+         #set( $args = ["#customSpringMessage('USER_COND')"]);//<!--ログインユーザ情報-->
+         alert("#customMessageArgs("I002",$args)");
+         top.homeUrl = "";
+         top.iframeChange("${flowExecutionUrl}&_eventId=home");
+    }
+}
+
+function setInfo(){
+	getObj("affiliation.defaultLoginSectionCd").value = '#jsEscape($!domain.affiliation.defaultLoginSectionCd)';
+    
+	//通常ログインする部門 を判断する
+	if(getObj("affiliation.editSectionCd").value == getObj("affiliation.defaultLoginSectionCd").value){
+		getObj("Chk").checked = true;
+	}
+
+    var obj = getObj("languageInd.languageInd");
+    #foreach($!languageIndList in $!domain.languageIndList)
+        var item = new Option('#jsEscape($!languageIndList.languageInd.languageInd_PageValue)','#jsEscape($!languageIndList.languageInd.languageInd)');
+        obj.options.add(item);
+    #end
+    getObj("languageInd.languageInd").value = '#jsEscape($!userLanguageInd)';
+}
+
+function exec() {
+    #set( $args = ["#customSpringMessage('USER_COND')","#customSpringMessage('UPDATE')"]);//<!--ログインユーザ情報--><!--更新-->
+    if( !confirm("#customMessageArgs("W001",$args)") ) {
+            return;
+    }
+    // 変更中の部門info
+    if(getObj("Chk").checked == true){
+        getObj("affiliation.defaultLoginSectionCd").value = getObj("affiliation.editSectionCd").value
+    }
+    buttonDisable();
+    getObj("Body").submit();
+}
+
+function changeUrl(sectionCd) {
+	top.iframeChange("${flowExecutionUrl}&_eventId=changeUrl","sectionCd",sectionCd);
+    }
+
+//-->
+</script>
+</head>
+<body class="Transparent" topmargin="0" leftmargin="0" marginwidth="0" marginheight="0" onload="onLoad();">
+<form id="Body" name="Body" action="${flowExecutionUrl}&_eventId=save" method="post">
+    <br/>
+    <table width="70%" height="0" align="center">
+        <tr id ="TR_ERROR" class="error" style="display:none;">
+            <td>$!errorMessage</td>
+        </tr>
+        <tr>
+            <td class="FontSmallBold DarkBlue">
+                #customSpringMessage("PSLGN020_HEADER_COMMENT")
+            </td>
+        </tr>
+    </table>
+    <table class="DTL_BOX" width="70%" align="center">
+        <tr>
+            <td class="DTL_TITLE_BOX">
+                <table class="NoBorder" width="100%">
+                    <tr>
+                        <td class="ScreenName">#customSpringMessage('USER_COND')</td><!--ユーザー設定 -->
+                        <td class="FontSmall" align="right">
+                            <input type="button" class="MiddleButton" value="#customSpringMessage("ACTION_REGISTER")" onClick="javascript:exec();"><!--登　録-->
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+          <tr>
+            <td class="DTL_INTER_BOX">
+                <table class="NoBorder" width="100%">
+                    <tr>
+                        <td class="DTL_OUTHEAD" width="30%">
+                            <div class="DTL_INHEAD">
+                                <span class="FontSmallBold">#customSpringMessage("USER_SECTION")</span><!--所属部門-->
+                            </div>
+                        </td>
+                        <td class="DTL_OUTBODY">
+                            <div class="DTL_INBODY">
+                                #customFormHiddenInput("affiliation.defaultLoginSectionCd" "")
+                                #customFormSingleSelect("domain.affiliation.editSectionCd" $sectionLists "class='Small' onchange='changeUrl(this.value);'")
+
+                                <input name="Chk" id="Chk" type="checkbox">&nbsp;<span class="FontSmall">#customSpringMessage("LOGIN_SECTION")</span><!--通常ログインする部門 -->
+                            </div>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="DTL_OUTHEAD" width="30%">
+                            <div class="DTL_INHEAD">
+                                <span class="FontSmallBold">#customSpringMessage("POST")</span><!--役職-->
+                            </div>
+                        </td>
+                        <td class="DTL_OUTHEAD">
+                            <div class="DTL_INBODY">
+                                #springFormInput("domain.affiliation.official.officialName" "size=50 maxLength=20 class='Small onIME' ")
+                            </div>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="DTL_OUTHEAD"  width="30%">
+                            <div class="DTL_INHEAD">
+                                <span class="FontSmallBold">#customSpringMessage("USE_LANGUAGE")</span><span class="FontSmall Red">&nbsp;※</span><!--使用言語-->
+                            </div>
+                        </td>
+                        <td class="DTL_OUTHEAD">
+                            <div class="DTL_INBODY">
+                                <select id="languageInd.languageInd" name="languageInd.languageInd">
+                                </select>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="DTL_OUTHEAD"  width="30%">
+                            <div class="DTL_INHEAD">
+                                <span class="FontSmallBold">#customSpringMessage("MAIL_ADDR")</span><!--メールアドレス-->
+                            </div>
+                        </td>
+                        <td class="DTL_OUTHEAD">
+                            <div class="DTL_INBODY">
+                                #springFormInput("domain.contact.mailAddr.mail" "size=60 maxLength=100 class='Small noIME' ")
+                            </div>
+                        </td>
+                    </tr>
+                     <tr>
+                        <td class="DTL_OUTHEAD"  width="30%">
+                            <div class="DTL_INHEAD">
+                                <span class="FontSmallBold">#customSpringMessage("EXTENSION_NO")</span><!--内線番号-->
+                            </div>
+                        </td>
+                        <td class="DTL_OUTHEAD">
+                            <div class="DTL_INBODY">
+                                #springFormInput("domain.contact.extNo.extensionNo" "size=25 maxLength=20 class='Small noIME' ")
+                            </div>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="DTL_OUTHEAD"  width="30%">
+                            <div class="DTL_INHEAD">
+                                <span class="FontSmallBold">#customSpringMessage("EXTERNAL_NO")</span><!--外線番号-->
+                            </div>
+                        </td>
+                        <td class="DTL_OUTHEAD">
+                            <div class="DTL_INBODY">
+                                #springFormInput("domain.contact.telNo.telNo" "size=25 maxLength=20 class='Small noIME' ")
+                            </div>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="DTL_OUTHEAD"  width="30%">
+                            <div class="DTL_INHEAD">
+                                <span class="FontSmallBold">#customSpringMessage("FAX_NO")</span><!--FAX番号-->
+                            </div>
+                        </td>
+                        <td class="DTL_OUTHEAD">
+                            <div class="DTL_INBODY">
+                                #springFormInput("domain.contact.faxNo.faxNo" "size=25 maxLength=20 class='Small noIME' ")
+                            </div>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="DTL_OUTHEAD" width="30%">
+                            <div class="DTL_INHEAD">
+                                <span class="FontSmallBold">#customSpringMessage("ROLE")</span><!--ロール-->
+                            </div>
+                        </td>
+                        <td class="DTL_OUTHEAD">
+                            <div class="DTL_INBODY">
+                                <table class="NoBorder" width="100%"><tr>
+                                    <td class="FontMiniAnkBold"><span id="ROLE_NAME" class="Brown">#out($!domain.affiliation.roleName)</span></td>
+                                </tr></table>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="DTL_OUTHEAD"  width="30%">
+                            <div class="DTL_INHEAD">
+                                <span class="FontSmallBold">#customSpringMessage("NOW_PASSWORD")</span><!--現在のパスワード-->
+                            </div>
+                        </td>
+                        <td class="DTL_OUTHEAD">
+                            <div class="DTL_INBODY">
+## TODO 14/11/14 mod パスワード暗号化 daiko t.watanabe start
+                                #springFormPasswordInput("domain.authentication.passwordNow" "size=40 maxLength=128 class='Middle'")
+## TODO 14/11/14 mod パスワード暗号化 daiko t.watanabe end
+                            </div>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="DTL_OUTHEAD"  width="30%">
+                            <div class="DTL_INHEAD">
+                                <span class="FontSmallBold">#customSpringMessage("NEW_PASSWORD")</span><!--新しいパスワード-->
+                            </div>
+                        </td>
+                        <td class="DTL_OUTHEAD">
+                            <div class="DTL_INBODY">
+## TODO 14/11/14 mod パスワード暗号化 daiko t.watanabe start
+                                 #springFormPasswordInput("domain.authentication.passwordNew" "size=40 maxLength=128 class='Middle'")
+## TODO 14/11/14 mod パスワード暗号化 daiko t.watanabe end
+                            </div>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="DTL_OUTHEAD"  width="30%">
+                            <div class="DTL_INHEAD">
+                                <span class="FontSmallBold">#customSpringMessage("PASSWORD_CONFIRMATION")</span><!--パスワードの確認-->
+                            </div>
+                        </td>
+                        <td class="DTL_OUTHEAD">
+                            <div class="DTL_INBODY">
+## TODO 14/11/14 mod パスワード暗号化 daiko t.watanabe start
+                                #springFormPasswordInput("domain.authentication.passwordConfirmation" "size=40 maxLength=128 class='Middle'")
+## TODO 14/11/14 mod パスワード暗号化 daiko t.watanabe end
+                            </div>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td colspan="2"><span class="FontSmall Red">#springMessage('NEW_PASSWORD_ERROR_COMMENT')<!--※ 新しいパスワードに入力が行われなかった場合、パスワードは変更されません。--></span></td>
+                    </tr>
+## TODO 14/11/14 add パスワード暗号化 daiko t.watanabe start
+                    ## パスワード有効期限チェック機能が有効な場合のみ
+                    #if ($!domain.authentication.passwordValidEnabled)
+                    <tr>
+                        <td class="DTL_OUTHEAD" width="30%">
+                            <div class="DTL_INHEAD">
+                                <span class="FontSmallBold">#customSpringMessage('PASSWORD_LIMIT_TIME')</span><!-- パスワード有効期限 -->
+                            </div>
+                        </td>
+                        <td class="DTL_OUTHEAD">
+                            <div class="DTL_INBODY">
+                                <table class="NoBorder" width="100%"><tr>
+                                    <td class="FontMiniAnkBold"><span class="Brown">#out($!domain.authentication.passwordValidEndTime.dateOfymdDispYMDHMS)</span></td>
+                                </tr></table>
+                            </div>
+                        </td>
+                    </tr>
+                    #end
+## TODO 14/11/14 add パスワード暗号化 daiko t.watanabe end
+                </table>
+                <hr>
+
+                <table class="NoBorder" width="100%">
+                    <tr>
+                        <td class="DTL_OUTHEAD"  width="30%" colspan="2">
+                            <div class="DTL_INHEAD">
+                                <span><span class="DarkBlue FontBigBold">#customSpringMessage("MAIL_RCV_FLG")</span></span><!--メール受信設定-->
+                            </div>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="DTL_OUTHEAD"  width="30%">
+                            <div class="DTL_INHEAD">
+                                <span class="FontSmallBold">#customSpringMessage("MAIL_RCV_NOTICE")</span><span class="FontSmall Red">&nbsp;※</span><!--承認依頼通知メール-->
+                            </div>
+                        </td>
+                        <td class="DTL_OUTHEAD">
+                            <div class="FontSmall">
+                                #customFormRadioButtons("domain.mailRcvFlg.mailRcvNotice" $APPROVAL_MAIL_RCV_FLG "" "")
+                            </div>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="DTL_OUTHEAD"  width="30%">
+                            <div class="DTL_INHEAD">
+                                <span class="FontSmallBold">#customSpringMessage("MAIL_RCV_REJECT")</span><span class="FontSmall Red">&nbsp;※</span><!--承認差戻メール-->
+                            </div>
+                        </td>
+                        <td class="DTL_OUTHEAD">
+                            <div class="FontSmall">
+                                #customFormRadioButtons("domain.mailRcvFlg.mailRcvReject" $REJECT_MAIL_RCV_FLG "" "")
+                            </div>
+                        </td>
+                    </tr>
+                </table>
+                <hr/>
+                <table class="NoBorder" style="width:100%;">
+                    <tr>
+                        <td class="DTL_MSGBOX" nowrap>
+                            #customSpringMessage("PSLGN020_FOOTER_COMMENT")
+                        </td>
+                        <td class="DTL_MSGBOX" align="right">
+                            <input type="button" class="MiddleButton" value="#customSpringMessage("ACTION_REGISTER")" onclick="javascript:exec();"><!--登　録-->
+                        </td>
+                    </tr>
+            </table>
+            </td>
+        </tr>            
+    </table>
+</form>
+</body>
+</html>

@@ -1,0 +1,392 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<title>#customSpringMessage("M_USER")#customSpringMessage("ACTION_USER_SECTION")</title>
+<meta http-equiv="Content-type" content="text/html; charset=UTF-8">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Content-script-type" content="text/javascript">
+<link rel="stylesheet" href="../../include/searchbox.css" type="text/css">
+<link rel="stylesheet" href="../../include/Color.css" type="text/css">
+<link id="CSS_FONT" rel="stylesheet" href="../../include/FontS.css" type="text/css">
+<link rel="stylesheet" href="../../include/Layout.css" type="text/css">
+<link rel="stylesheet" href="../../include/ime.css" type="text/css">
+
+<script language="javascript" type="text/javascript" src="../../include/common.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/searchbox.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/check.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/date.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/jquery-1.7.2.min.js"></script>
+<script language="javascript" type="text/javascript">
+<!--
+#parse("./common/common_js.vm")
+function onLoad() {
+    setFocus();
+     var alertMessage = "$!alertMessage";
+    if (alertMessage != ""){
+        alert(alertMessage);
+    }
+    var sectionName = "#jsEscape($!SectionName)";
+    if (sectionName != ""){
+        getObj('userSectionInfo.userSection.sectionName').value = sectionName;
+        getObj('userSectionInfo.userSection.sectionCd').focus();
+    }
+    var errorMsg = "$!errorMessage";
+    if (errorMsg != ""){
+        document.getElementById("TR_ERROR").style.display = "";
+        return;
+    }
+      var isSuccess = '#jsEscape($!isSuccess)';
+      if(isSuccess == 'true'){
+          #set($mUserSection = "#customSpringMessage('M_USER')" )
+          #if($!type == "Update")
+              alert('#customMessageArgs("I002",[$mUserSection])');
+          #else
+              alert('#customMessageArgs("I005",[$mUserSection])');
+          #end
+          buttonDisable();
+          top.iframeChange("${flowExecutionUrl}&_eventId=back");
+      }
+
+}
+
+function exec() {
+    #set( $mmUserSection = "#customSpringMessage('M_USER')" )   
+    #set( $register = "#customSpringMessage('ACTION_REGISTER')" )  
+    if( !confirm('#customMessageArgs("W001",[$mmUserSection,$register])') ) {
+        return;
+    }
+    buttonDisable();
+    getObj("Body").submit();
+}
+function getCalendar(num,objName){
+    var obj = document.getElementsByName(objName)[0];
+    initSearchBox(num,obj);
+}
+
+function sectionCdLostFocus(){
+    var termFlg = "0";
+    var companyCd = getObj('userIdentify.companyCd').value;
+    var sectionCd = getObj('userSectionInfo.userSection.sectionCd').value;
+    if(sectionCd == ""){
+    getObj('userSectionInfo.userSection.sectionName').value = "";
+    return;
+    }
+    $.post(
+    "../../getSectionInfoOnBlur",
+    {
+    "termFlag":termFlg,
+    "companyCd":cleanXss(companyCd),
+    "sectionCd":cleanXss(sectionCd),
+    "validDateFlg":"1"
+    },
+    function(data){
+    getObj("userSectionInfo.userSection.sectionName").value= data.sectionName;
+    }
+    );
+}
+
+//-->
+</script>
+</head>
+<body class="Body" topmargin="10" leftmargin="10" marginwidth="10" marginheight="10" align="center" onload="onLoad();">
+<table class="NoBorder" style="height:0;"><tr><td>
+<!-- ＊＊＊＊＊　カレンダーボックス　＊＊＊＊＊ -->
+<iframe id="CALENDARBOX" class="CALENDARBOX" framespacing="0"scrolling="no" frameborder="0" src="../../sbxCalendar/body.vm"></iframe>
+</td></tr></table>
+<form id="Body" name="Body" action="${flowExecutionUrl}&_eventId=submit"  method="post">
+    #customFormHiddenInput("pageid" "userAddSection")
+    #customFormHiddenInput("userIdentify.lastUpdDate" "$!domain.userIdentify.lastUpdDate")
+<table width="70%" style="height:20px; margin-right:auto; margin-left:auto;"><tr id ="TR_ERROR" style="display:none;"><td class="error">
+    $!errorMessage
+</td></tr>
+       <tr>
+            <td class="FontSmallBold DarkBlue">
+               #customSpringMessage("PSMST062_ADDSECTION_HEADER_COMMENT") 
+            </td>
+       </tr>    
+</table>
+    <table class="DTL_BOX" width="70%">
+        <tr>
+            <td class="DTL_TITLE_BOX">
+                <table class="NoBorder" width="100%">
+                    <tr>
+                        <td style="text-align:left;"><span class="DarkBlue FontBigBold">#customSpringMessage("ACTION_USER_SECTION")</span></td> <!--ユーザー所属部門追加-->
+                        <td class="FontSmall" align="right">
+                            <input type="button" class="MiddleButton" value="#customSpringMessage('ACTION_REGISTER')" onclick="exec();">
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+        <tr>
+            <td class="DTL_INTER_BOX">
+                <table class="NoBorder" width="100%">
+                    <tr>
+                        <td class="DTL_OUTHEAD" width="30%">
+                            <div class="DTL_INHEAD">
+                                <span class="FontBoxHeader">#customSpringMessage("COMPANY_CD") </span><!--会社コード -->
+                            </div>
+                        </td>
+                        <td class="DTL_OUTBODY">
+                            <div class="DTL_INBODY">
+                             <table class="NoBorder" width="100%">
+                                <tr>
+                                    <td class="FontMiniAnkBold">
+                                        <span class="Brown">
+                                            #customFormHiddenInput("userIdentify.companyCd" "$!domain.userIdentify.companyCd")
+                                            #out($domain.userIdentify.companyCd)
+                                        </span>
+                                    </td>
+                                </tr>
+                             </table>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="DTL_OUTHEAD" width="30%">
+                            <div class="DTL_INHEAD">
+                                <span class="FontBoxHeader">#customSpringMessage("COMPANY_NAME") </span><!--会社名 -->
+                            </div>
+                        </td>
+                        <td class="DTL_OUTBODY">
+                            <div class="DTL_INBODY">
+                             <table class="NoBorder" width="100%">
+                                <tr>
+                                    <td class="FontMiniAnkBold">
+                                        <span class="Brown">
+                                            #out($!domain.companySummary.companyName)
+                                        </span>
+                                    </td>
+                                </tr>
+                             </table>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="DTL_OUTHEAD" width="30%">
+                            <div class="DTL_INHEAD">
+                                <span class="FontBoxHeader">#customSpringMessage("USER_ID")</span><!--ユーザーID -->
+                            </div>
+                        </td>
+                        <td class="DTL_OUTHEAD">
+                            <div class="DTL_INBODY">
+                                <table class="NoBorder" width="100%">
+                                    <tr>
+                                        <td class="FontMiniAnkBold">
+                                            <span class="Brown"> #out($!domain.userIdentify.userId) </span>
+                                        </td>
+                                    </tr>
+                                </table>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="DTL_OUTHEAD" width="30%">
+                            <div class="DTL_INHEAD">
+                                <span class="FontBoxHeader">#customSpringMessage("COMPANY_USE_LANGUAGE")</span><!--言語  -->
+                            </div>
+                        </td>
+                        <td class="DTL_OUTHEAD">
+                            <div class="DTL_INBODY">
+                                <table class="NoBorder" width="100%">
+                                    <tr>
+                                        <td class="FontMiniAnkBold">
+                                            <span class="Brown">
+                                               #out($!domain.companySummary.languageInd_PageValue)
+                                             </span>
+                                        </td>
+                                    </tr>
+                                </table>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="DTL_OUTHEAD" width="30%">
+                            <div class="DTL_INHEAD">
+                                <span class="FontBoxHeader">#customSpringMessage("USER_NAME") </span> <!--ユーザー名 -->
+                            </div>
+                        </td>
+                        <td class="DTL_OUTHEAD">
+                            <div class="DTL_INBODY">
+                                <table class="NoBorder" width="100%">
+                                    <tr>
+                                        <td class="FontMiniAnkBold">
+                                        <span class="Brown">#out($!domain.userName)</span>
+                                        </td>
+                                    </tr>
+                                </table>
+                            </div>
+                        </td>
+                    </tr>
+                </table>
+                
+                <hr>
+                    
+                <table class="NoBorder" width="100%">
+                    <tr>
+                        <td class="DTL_OUTHEAD"  width="30%">
+                            <div class="DTL_INHEAD">
+                                <span class="FontDetailHeader">#customSpringMessage("USER_SECTION")</span><span class="FontWarn" >&nbsp;※</span><!-- 所属部門 -->
+                            </div>
+                        </td>
+                        <td class="DTL_OUTBODY">
+                            <div class="DTL_INBODY">
+                               <table class="NoBorder" width="100%">
+                                    <tr>
+                                      <td class="FontMiniAnkBold">
+                                        <span class="Brown"> 
+                                                #springFormInput("domain.userSectionInfo.userSection.sectionCd" "class='Middle noIME' maxlength='12' size='16' onblur='javascript:sectionCdLostFocus();'  onfocus='this.select();if(nowWarning==this) { closeWarningBox();}' onmouseover='reDrowWbx(this);'")
+                                                ## ----- 強化-01058-000 2013/04/29  DEL SBO_KANGJW START -----
+                                                ###springFormInput("domain.userSectionInfo.userSection.sectionName" " class='MiddleDsp' type='text'  readonly onfocus= 'blur();' onselectstart= 'return false;'  size='40' ")
+                                                ## ----- 強化-01058-000 2013/04/29  DEL SBO_KANGJW END -----
+                                                ## +++++ 強化-01058-000 2013/04/29 ADD SBO_KANGJW START +++++
+                                                #springFormInput("domain.userSectionInfo.userSection.sectionName" " class='MiddleDsp' type='text'  readonly tabIndex='-1' onselectstart= 'return false;'  size='40' ")
+                                                ## +++++ 強化-01058-000 2013/04/29 ADD SBO_KANGJW END +++++
+                                               <img class="Icon" name="ItemSearch" src="../../image/btnLupe.gif" onclick="sectionPopup.setParam('0',getObj('userIdentify.companyCd').value,'0','','1');sectionPopup.setObject(getObj('userSectionInfo.userSection.sectionCd'),getObj('userSectionInfo.userSection.sectionName'),getObj('userIdentify.companyCd'));masterSearch('../../src/sectionPopup/search?pageid=sectionPopupSearch&popupPageid=PSMST062','SectionSearch','700','500');">
+                                                  #customFormCheckbox("domain.userSectionInfo.isDefaultLoginSection" "class='FontMiddle Black'" "1" "0")
+                                                <span class="FontMiddle Black">#customSpringMessage("LOGIN_SECTION")</span>
+                                            </span>
+                                        </td>
+                                    </tr>
+                                </table>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="DTL_OUTHEAD" width="30%">
+                            <div class="DTL_INHEAD">
+                                <span class="FontBoxHeader">#customSpringMessage("VALID_PERIOD")</span><!--有効期間 -->
+                            </div>
+                        </td>
+                          <td class="DTL_OUTHEAD">
+                           <div class="DTL_INBODY">
+                             #springFormInput("domain.userSectionInfo.validity.validityPeriod.period.startDate.dateOfymdFormat" "maxLength=10 size=12 class='MiddleAnk noIME' onblur='dateOnBlur(this);' onfocus='dateOnFocus(this);' ")
+                            <img class="Icon" src="../../image/btnCalendar.gif" onclick="getCalendar(1,'userSectionInfo.validity.validityPeriod.period.startDate.dateOfymdFormat');"><!--カレンダー-->
+                                                                                            ～
+                                 #springFormInput("domain.userSectionInfo.validity.validityPeriod.period.endDate.dateOfymdFormat" "maxLength=10 size=12 class='MiddleAnk noIME' 
+                                                        onblur='dateOnBlur(this);' 
+                                                        onfocus='dateOnFocus(this);' 
+                                                        ")
+                                <img class="Icon" src="../../image/btnCalendar.gif" onclick="getCalendar(1,'userSectionInfo.validity.validityPeriod.period.endDate.dateOfymdFormat');">
+                            </div>
+                        </td>
+                    </tr>
+                     <tr>
+                        <td class="DTL_OUTHEAD" width="30%">
+                            <div class="DTL_INHEAD">
+                                <span class="FontBoxHeader">#customSpringMessage("POST") </span><!-- 役職  -->
+                            </div>
+                        </td>
+                        <td class="DTL_OUTHEAD">
+                            <div class="DTL_INBODY">
+                                <table class="NoBorder" width="100%">
+                                    <tr>
+                                      <td class="FontMiniAnkBold">
+                                        <span class="Brown"> 
+                                            #springFormInput("domain.userSectionInfo.official.officialName" "class='Middle onIME' maxLength='20' size='30'" "true" "class='FontMiniAnkBold'" "class='Brown'")
+                                            
+                                        </span>
+                                        </td>
+                                    </tr>
+                                </table>
+                            </div>
+                        </td>
+                    </tr>
+                      <tr>
+                        <td class="DTL_OUTHEAD" width="30%">
+                            <div class="DTL_INHEAD">
+                                <span class="FontBoxHeader">#customSpringMessage("EXTENSION_NO") </span><!-- 内線番号   -->
+                            </div>
+                        </td>
+                        <td class="DTL_OUTHEAD">
+                            <div class="DTL_INBODY">
+                                <table class="NoBorder" width="100%">
+                                    <tr>
+                                      <td class="FontMiniAnkBold">
+                                        <span class="Brown"> 
+                                             #springFormInput("domain.userSectionInfo.contact.extNo.extensionNo" "class='Middle noIME' maxLength='20' size='30'" "true" "class='FontMiniAnkBold'" "class='Brown'")
+                                        </span>
+                                        </td>
+                                    </tr>
+                                </table>
+                            </div>
+                        </td>
+                    </tr>
+                      <tr>
+                        <td class="DTL_OUTHEAD" width="30%">
+                            <div class="DTL_INHEAD">
+                                <span class="FontBoxHeader">#customSpringMessage("EXTERNAL_NO") </span><!-- 外線番号   -->
+                            </div>
+                        </td>
+                        <td class="DTL_OUTHEAD">
+                            <div class="DTL_INBODY">
+                                <table class="NoBorder" width="100%">
+                                    <tr>
+                                      <td class="FontMiniAnkBold">
+                                        <span class="Brown"> 
+                                             #springFormInput("domain.userSectionInfo.contact.telNo.telNo" "class='Middle noIME' maxLength='20' size='30'" "true" "class='FontMiniAnkBold'" "class='Brown'")
+                                        </span>
+                                        </td>
+                                    </tr>
+                                </table>
+                            </div>
+                        </td>
+                    </tr>
+                     <tr>
+                        <td class="DTL_OUTHEAD" width="30%">
+                            <div class="DTL_INHEAD">
+                                <span class="FontBoxHeader">#customSpringMessage("FAX_NO") </span><!-- FAX番号   -->
+                            </div>
+                        </td>
+                        <td class="DTL_OUTHEAD">
+                            <div class="DTL_INBODY">
+                                <table class="NoBorder" width="100%">
+                                    <tr>
+                                      <td class="FontMiniAnkBold">
+                                        <span class="Brown"> 
+                                             #springFormInput("domain.userSectionInfo.contact.faxNo.faxNo" "class='Middle noIME' maxLength='20' size='30'" "true" "class='FontMiniAnkBold'" "class='Brown'")
+                                        </span>
+                                        </td>
+                                    </tr>
+                                </table>
+                            </div>
+                        </td>
+                    </tr>
+                      <tr>
+                        <td class="DTL_OUTHEAD" width="30%">
+                            <div class="DTL_INHEAD">
+                                <span class="FontBoxHeader">#customSpringMessage("AUTH_ROLE") </span><!-- 権限（ロール）  -->
+                            </div>
+                        </td>
+                        <td class="DTL_OUTHEAD">
+                            <div class="DTL_INBODY">
+                                <table class="NoBorder" width="100%">
+                                    <tr>
+                                      <td class="FontMiniAnkBold">
+                                        <span class="Brown"> 
+                                               #customFormSingleSelect("domain.userSectionInfo.roleManagement.roleIdentify.roleNo" $roleList "class='small'")
+                                        </span>
+                                        </td>
+                                    </tr>
+                                </table>
+                            </div>
+                        </td>
+                    </tr>
+                </table>
+                
+                <table class="NoBorder" style="width:100%;">
+                    <tr>
+                        <td class="DTL_MSGBOX" nowrap>
+                            #customSpringMessage("PSMST062_ADDSECTION_FOOTER_COMMENT") 
+                        </td>
+                        <td class="DTL_MSGBOX" align="right">
+                            <input type="button" class="MiddleButton" value="#customSpringMessage("ACTION_REGISTER")" onclick="exec();">
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+</form>
+</body>
+</html>

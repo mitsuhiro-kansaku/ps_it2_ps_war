@@ -1,0 +1,332 @@
+<!doctype html>
+<html LANG="ja">
+<head>
+<META http-equiv="Content-type" content="text/html; charset=UTF-8">
+<title>
+    #if("" == "$!searchCondition.quotReqStatus" && "" == "$!searchCondition.quotAdoStatus")
+        #customSpringMessage('QUOT_STATUS_LIST_ALL')
+    #elseif("" != "$!searchCondition.quotAdoStatus")
+        #if("16" == "$!searchCondition.quotAdoStatus")
+            ## 見積採否
+            #customSpringMessage('QUOT_STATUS_LIST_ALL')(#customSpringMessage('QUOT_ADOPTION'))
+        #else
+            #customSpringMessage('QUOT_STATUS_LIST_ALL')($!searchCondition.quotAdoStatus_PageValue)
+        #end
+    #else
+        #if("0607" == "$!searchCondition.quotReqStatus")
+            ## 見積回答
+            #customSpringMessage('QUOT_STATUS_LIST_ALL')(#customSpringMessage('QUOT_REPLY'))
+        #elseif("050607" == "$!searchCondition.quotReqStatus")
+            ## 見積中
+            #customSpringMessage('QUOT_STATUS_LIST_ALL')(#customSpringMessage('QUOT_MIDST'))
+        #elseif("05" == "$!searchCondition.quotReqStatus")
+            ## 未回答
+            #customSpringMessage('QUOT_STATUS_LIST_ALL')(#customSpringMessage('NOTHING_RCV'))
+        #elseif("15" == "$!searchCondition.quotReqStatus")
+            ## 新着回答あり
+            #customSpringMessage('QUOT_STATUS_LIST_ALL')(#customSpringMessage('NEW_RESP'))
+        #elseif("01020304" == "$!searchCondition.quotReqStatus")
+            ## 未承認
+            #customSpringMessage('QUOT_REQUEST_LIST_NOT_YET'))
+        #else
+            #customSpringMessage('QUOT_STATUS_LIST_ALL')($!searchCondition.quotReqStatus_PageValue)
+        #end
+    #end
+</title><!--見積状況一覧-->
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Content-script-type" CONTENT="text/javascript">
+<link id="CSS_FONT" rel="stylesheet" href="../../include/FontS.css" type="text/css">
+<link rel="stylesheet" href="../../include/Layout.css" type="text/css">
+<link rel="stylesheet" href="../../include/Color.css" type="text/css">
+<link rel="stylesheet" href="../../include/searchbox.css" type="text/css">
+<link rel="stylesheet" href="../../include/ime.css" type="text/css">
+<script language="javascript" type="text/javascript" src="../../include/jquery-1.7.2.min.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/common.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/date.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/check.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/searchbox.js"></script>
+<script language="javascript" type="text/javascript">
+<!--
+    #if("" == "$!searchCondition.quotReqStatus" && "" == "$!searchCondition.quotAdoStatus")
+        #set($commonTitle = "#customSpringMessage('QUOT_STATUS_LIST_ALL')")
+    #elseif("" != "$!searchCondition.quotAdoStatus")
+        #if("16" == "$!searchCondition.quotAdoStatus")
+            ## 見積採否
+            #set($commonTitle = "#customSpringMessage('QUOT_STATUS_LIST_ALL')(#customSpringMessage('QUOT_ADOPTION'))")
+        #else
+            #set($commonTitle = "#customSpringMessage('QUOT_STATUS_LIST_ALL')"+"($!searchCondition.quotAdoStatus_PageValue)")
+        #end
+    #else
+        #if("0607" == "$!searchCondition.quotReqStatus")
+            ## 見積回答
+            #set($commonTitle = "#customSpringMessage('QUOT_STATUS_LIST_ALL')"+"(#customSpringMessage('QUOT_REPLY'))")
+        #elseif("050607" == "$!searchCondition.quotReqStatus")
+            ## 見積中
+            #set($commonTitle = "#customSpringMessage('QUOT_STATUS_LIST_ALL')"+"(#customSpringMessage('QUOT_MIDST'))")
+        #elseif("05" == "$!searchCondition.quotReqStatus")
+            ## 未回答
+            #set($commonTitle = "#customSpringMessage('QUOT_STATUS_LIST_ALL')"+"(#customSpringMessage('NOTHING_RCV'))")
+        #elseif("15" == "$!searchCondition.quotReqStatus")
+            ## 新着回答あり
+            #set($commonTitle = "#customSpringMessage('QUOT_STATUS_LIST_ALL')"+"(#customSpringMessage('NEW_RESP'))")
+        #elseif("01020304" == "$!searchCondition.quotReqStatus")
+            ## 未承認
+            #set($commonTitle = "#customSpringMessage('QUOT_REQUEST_LIST_NOT_YET')")
+        #else
+            #set($commonTitle = "#customSpringMessage('QUOT_STATUS_LIST_ALL')"+"($!searchCondition.quotReqStatus_PageValue)")
+        #end
+    #end
+#set($searchViewStateID='PSQOT090')
+#set($listViewStateID='PSQOT091')
+var pinName="PSQOT090_Pin";
+#parse("./common/common_js.vm")
+var maxSearchHeight = 160;
+var minSearchHeight = 30;
+function onLoad(){
+    setFocusForInput();
+    var reqStatus = "#jsEscape($!searchCondition.quotReqStatus)";
+    var adoStatus = "#jsEscape($!searchCondition.quotAdoStatus)";
+    var statusFlag = true;
+    var linkFlag = false;
+    var type = "";
+    if(reqStatus != "" || adoStatus != ""){
+        linkFlag = true;
+        type = "1";
+    }
+    bodyLoad();
+    var alertMessage = "$!alertMessage";
+    if (alertMessage != ""){
+        alert(alertMessage);
+    }
+    var errorMsg = "$!errorMessage";
+    if (errorMsg != ""){
+        setErrorMessage("ERRORDIV", errorMsg, "DATAAREA");
+        return;
+    }
+    var isDownload = "#jsEscape($!isDownLoadValidate)";
+    if (isDownload == 'true') {
+        iframeChange("${flowExecutionUrl}&_eventId=download","pageid","PSQOT090","HIDDENAREA");
+    } else {
+        var isShowList = "#jsEscape($isShowList)";
+        if (isShowList == 'true'){
+            iframeChange("${flowExecutionUrl}&_eventId=search",'type',type);
+            statusFlag = false;
+        }
+   
+        if( linkFlag && statusFlag){
+            iframeChange("${flowExecutionUrl}&_eventId=search",'type',type);
+            #if("15" == "$!searchCondition.quotReqStatus" || "PSORD" == "$!searchCondition.fromKubun") 
+                openSearchArea();
+            #end
+        }
+    }
+}
+function execSearch(){
+    getObj("BodyForm").target="_self";
+    buttonDisable();
+    setItemDisabled("itemClassM","itemClassS");
+    getObj('BodyForm').action = "${flowExecutionUrl}&_eventId=validate";
+    getObj('BodyForm').submit();
+}
+function doDownload() {
+    //メッセージは空設定
+    getObj("TR_ERROR").style.display = "none";
+    getObj("ERRORDIV").innerHTML="";
+    buttonDisable();
+    setItemDisabled("itemClassM","itemClassS");
+    setTimeout(buttonUsable,1000);
+    getObj("BodyForm").target = "HIDDENAREA";
+    getObj("BodyForm").action = "${flowExecutionUrl}&_eventId=downloadValidate";
+    getObj("BodyForm").submit();
+}
+function checkBoxClear() {
+    searchConditionCheckBoxClear("priceReqFlg");
+    searchConditionCheckBoxClear("priceRegisterdFlg");
+    searchConditionCheckBoxClear("purAplDisplayFlg");
+    searchConditionCheckBoxClear("cancelByRequester");
+}
+//-->
+</script>
+</head>
+<body topmargin="0" leftmargin="0" marginwidth="0" marginheight="0" align="center" width="100%" height="100%" onload="onLoad();" style="overflow-y:hidden;">
+<form id="BodyForm" name="Body" method="post">
+    #customFormHiddenInput("userId" "")
+    #customFormHiddenInput("userName" "")
+    #customFormHiddenInput("buyerUserId.hidden" "")
+    #customFormHiddenInput("buyerUserName.hidden" "")
+    #customFormHiddenInput("isClassify" "false")
+    <iframe id="CALENDARBOX" class="CALENDARBOX" framespacing="0"scrolling="no" frameborder="0" src="../../sbxCalendar/body.vm"></iframe>
+    <!--検索部テーブル開始-->
+    <table class="NoBorder" width="100%" height="100%">
+        <tr>
+            <td id="SEARCH_AREA" class="SearchArea"><!-- onLoadで変更 -->
+                #if("15" == "$!searchCondition.quotReqStatus" || "PSORD" == "$!searchCondition.fromKubun") 
+                    #parse("./common/common_title_listonly.vm")
+                #else
+                    #parse("./common/common_title_tran_with_personal_setting.vm")
+                #end
+                <table width="100%">
+                    <tr id="SEARCH_AREA2">
+                        <td id="Adjust" align="right" valign="top">
+                            <!-- 検索条件入力部 -->
+                            <table class="NoBorder"  width="100%">
+                                <tr><td align="left" colspan="4" nowrap>#customSpringMessage('PSQOT090_HEADER_COMMENT')</td></tr>
+                                 $!PSQOT090PageCreaterForSearch.build('_td_style_left','class="FontSmallBold" align="right"','_td_style_right','class="FontSmall" align="left"','_item_style','Small')
+                                 #set($isFirstItem = true)
+                                 #foreach($item in $PSQOT090PageCreaterForSearch.getItemListForBody())
+                                    #set($currentOneRowFlag = $!PSQOT090PageCreaterForSearch.getOneRowFlag($!item))
+                                    #if($isFirstItem)
+                                        $!PSQOT090PageCreaterForSearch.printTRtag()
+                                    #elseif($currentOneRowFlag)
+                                        $!PSQOT090PageCreaterForSearch.printTDtag()
+                                        $!PSQOT090PageCreaterForSearch.printTRtagClose()
+                                        #set($isFirstItem = true)
+                                        $!PSQOT090PageCreaterForSearch.printTRtag()
+                                    #end
+                                    #if($!item.getColumnName() == "T_QUOT_REQUEST.QUOT_REQ_NO")
+                                        $!PSQOT090PageCreaterForSearch.printDefault($!item)
+                                    #elseif($!item.getColumnName() == "T_QUOT_REQUEST.TITLE_NAME")
+                                        $!PSQOT090PageCreaterForSearch.printDefault($!item)
+                                    #elseif($!item.getColumnName() == "T_QUOT_REQ_DTL.ITEM_CD")
+                                        $!PSQOT090PageCreaterForSearch.printSpecial("m11_inputItemCodeOnly",$!item,'popupPageid','PSQOT090',
+                                                '_masterCdIme','noIME')
+                                    #elseif($!item.getColumnName() == "T_QUOT_REQ_DTL.ITEM_NAME")
+                                        $!PSQOT090PageCreaterForSearch.printDefault($!item)
+                                    #elseif($!item.getColumnName() == "T_QUOT_REQUEST.ITEM_CLASS_S")
+                                        $!PSQOT090PageCreaterForSearch.printSpecial("m14_inputItemKindSelect",$!item,'_termFlag',"0")
+                                    #elseif($!item.getColumnName() == "T_QUOT_REQ_SUP.SUP_CD")
+                                        $!PSQOT090PageCreaterForSearch.printSpecial("m12_inputSupplierCodeOnly",$!item,"popupPageid","PSQOT090", '_masterCdIme','noIME')
+                                    #elseif($!item.getColumnName() == "T_QUOT_REQ_SUP.SUP_ABBR_NAME")
+                                        $!PSQOT090PageCreaterForSearch.printDefault($!item)
+                                    #elseif($!item.getColumnName() == "T_QUOT_REQUEST.DELIV_PLACE_CD")
+                                        $!PSQOT090PageCreaterForSearch.printSpecial("m04_inputDelivery",$!item,'popupPageid','PSQOT090','_masterCdIme','noIME')
+                                    #elseif($!item.getColumnName() == "T_QUOT_REQ_SUP.QUOT_REQ_DATE")
+                                        $!PSQOT090PageCreaterForSearch.printDefault($!item)
+                                    #elseif($!item.getColumnName() == "T_QUOT_REQUEST.QUOT_RESP_LIMIT_DATE")
+                                        $!PSQOT090PageCreaterForSearch.printDefault($!item)
+                                    #elseif($!item.getColumnName() == "T_QUOT_REQ_DTL.REQ_DELIV_DATE")
+                                        $!PSQOT090PageCreaterForSearch.printDefault($!item)
+                                    #elseif($!item.getColumnName() == "T_QUOT_REQUEST.BUYER_USER_ID")
+                                        $!PSQOT090PageCreaterForSearch.printSpecial("BUYER_USER","m13_inputUserForSearch",$!item,"popupPageid","PSQOT090",
+                                             "projectId","buyerUser",'_masterCdIme','noIME')
+                                    #elseif($!item.getColumnName() == "T_QUOT_REQUEST.REQ_SECTION_CD")
+                                        $!PSQOT090PageCreaterForSearch.printSpecial("m03_inputSection",$!item ,'popupPageid','PSQOT090','projectId','reqSection','_masterCdIme','noIME')
+                                    #elseif($!item.getColumnName() == "T_QUOT_REQUEST.REQ_USER_ID")
+                                        $!PSQOT090PageCreaterForSearch.printSpecial("m13_inputUserForSearch",$!item,"popupPageid","PSQOT090",
+                                            "projectId","client",'_masterCdIme','noIME')
+                                    #else
+                                        $!PSQOT090PageCreaterForSearch.printDefault($!item)
+                                    #end
+                                    #if($currentOneRowFlag)
+                                        $!PSQOT090PageCreaterForSearch.printTRtagClose()
+                                        #set($isFirstItem = true)
+                                    #else
+                                        #if($isFirstItem)
+                                            #set($isFirstItem = false)
+                                        #else
+                                            $!PSQOT090PageCreaterForSearch.printTRtagClose()
+                                            #set($isFirstItem = true)
+                                        #end
+                                    #end
+                                 #end
+                                 #if(!$isFirstItem)
+                                    $!PSQOT090PageCreaterForSearch.printTDtag()
+                                    $!PSQOT090PageCreaterForSearch.printTRtagClose()
+                                 #end
+                                 <!-- 見積有効期間 -->
+                                 <tr>
+                                    <td class="FontSmallBold" align="right" nowrap>#customSpringMessage('QUOT_RESP_END_DATE')</td>
+                                    <td nowrap>
+                                        #springFormInput("searchCondition.quotRespEndDateFrom.dateOfymdFormat" "class='SmallAnk noIME' maxlength='8' size='12' onblur='dateOnBlur(this);' onfocus='dateOnFocus(this);' ")
+                                        <img class="Icon" src="../../image/btnCalendar.gif" onclick="initSearchBox(1,getObj('quotRespEndDateFrom.dateOfymdFormat'));">
+                                        &nbsp;～&nbsp;
+                                        #springFormInput("searchCondition.quotRespEndDateTo.dateOfymdFormat" "class='SmallAnk noIME' maxlength='8' size='12' onblur='dateOnBlur(this);' onfocus='dateOnFocus(this);' ")
+                                        <img class="Icon" src="../../image/btnCalendar.gif" onclick="initSearchBox(1,getObj('quotRespEndDateTo.dateOfymdFormat'));">
+                                    </td>
+                                 </tr>
+                                 <!--見積状況-->
+                                 <tr>
+                                    <td nowrap class="FontSmallBold" align="right">#customSpringMessage('QUOT_STATUS')</td>
+                                    <td nowrap align="left" class="BoxHeaderLeft FontSmall" colspan="3">
+                                        #customFormCheckboxes("searchCondition.quotReqStatusList" $QUOT_REQ_STATUS "" "class='FontSmall'")<br/>
+                                        <input type="hidden" name="_${status.expression}" value="on"/>
+                                        #customFormCheckboxes("searchCondition.quotAdoStatusList" $QUOT_ADO_STATUS "" "class='FontSmall'")
+                                        <input type="hidden" name="_${status.expression}" value="on"/>
+                                    </td>
+                                 </tr>
+                                 <tr>
+                                    <td nowrap class="FontSmallBold" align="right"></td>
+                                    <td nowrap class="FontSmallBold" align="left">
+                                        ## 価格マスタ登録希望のみ表示
+                                        #customFormCheckbox("searchCondition.priceReqFlg" "" "1" "")#customSpringMessage('SCREEN_M_PRICE_HOPE')
+                                    </td>
+                                    <td nowrap class="FontSmallBold" align="right"></td>
+                                    <td nowrap class="FontSmallBold" align="left">
+                                        ## 購入依頼済も表示する
+                                        #customFormCheckbox("searchCondition.purAplDisplayFlg" "" "1" "")#customSpringMessage('SEARCH_WITH_REQUESTED')
+                                    </td>
+                                </tr>
+                                 <tr>
+                                    <td nowrap class="FontSmallBold" align="right"></td>
+                                    <td nowrap class="FontSmallBold" align="left">
+                                        ## 価格登録済のみ表示する
+                                        #customFormCheckbox("searchCondition.priceRegisterdFlg" "" "1" "")#customSpringMessage('M_PRICE_REGISTERED_ONLY')
+                                    </td>
+                                    <td nowrap class="FontSmallBold" align="right"></td>
+                                    <td nowrap class="FontSmallBold" align="left">
+                                        ## 依頼元取消済も表示する
+                                        #customFormCheckbox("searchCondition.cancelByRequester" "" "1" "")#customSpringMessage('SEARCH_WITH_CANCEL_BY_REQUESTER')
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td nowrap class="FontSmallBold" align="right">#customSpringMessage('INPUT')</td>
+                                    <td nowrap align="left" class="BoxHeaderLeft FontSmall" colspan="3">
+                                        #customFormCheckboxes("searchCondition.quotRequestInputIndList" $QUOT_REQUEST_INPUT_IND "" "class='FontSmall'")
+                                        <input type="hidden" name="_${status.expression}" value="on"/>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td align="left" colspan="4" nowrap class="FontComment">
+                                        #customSpringMessage("PSQOT090_FOOTER_COMMENT") ## ＊:前方一致 / ％:中間一致 / なし:完全一致
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                        <td nowrap class="FontSmallBold" align="right" valign="top">
+                            <br>
+                            <!-- ＊＊＊＊＊　検索実行　＊＊＊＊＊ -->
+                            <input type="button" onclick="javascript:execSearch();" class="LargeButton" value="#customSpringMessage('ACTION_SEARCH')"> 
+                            <br>
+                            <br><a href="javascript:clear();searchConditionCheckBoxClearForExt();checkBoxClear();resetItemKindBySession('itemClassL', 'itemClassM', 'itemClassS', '$!searchCondition.itemClassL', '$!searchCondition.itemClassM', '$!searchCondition.itemClassS', '');" id="clearSearch">#customSpringMessage("ACTION_CLEAR_SEARCH_CRITERIA")<!--検索条件をクリアする--></a>&nbsp;
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+        <tr>
+            <td id="UPLOAD_AREA" class="NoBorder" id="UploadArea" style="background-color:#eaeaea;height:35px;border-bottom:1px solid #999999;text-align:left;vertical-align:top;">
+                #parse("./common/common_download.vm")
+            </td>
+        </tr>
+        <tr id ="TR_ERROR" style="display:none;"><td class="error" style="height:0px;">
+            <div id="ERRORDIV">$!errorMessage</div>
+        </td></tr>
+        <tr>
+            <td class="NoBorder" style="height:auto;">
+                <iframe id="DATAAREA" name="DATAAREA" framespacing="0" frameborder="0" src="../../layout/default.vm" scrolling="no" frameborder="no" style="position:static;width:100%;border:0px solid #999999;height:100%;z-index:0;"></iframe>
+            </td>
+        </tr>
+    </table>
+<iframe id="HIDDENAREA" name="HIDDENAREA" framespacing="0" frameborder="0" src="" scrolling="no" frameborder="no" style="display:none"></iframe>
+</FORM>
+<script type="text/javascript">
+    document.getElementById("clearSearch").onclick = function (){
+        document.getElementById("itemClassL").selectedIndex = 0;
+        document.getElementById("itemClassM").selectedIndex = 0;
+        document.getElementById("itemClassM").disabled = true;
+        document.getElementById("itemClassS").selectedIndex = 0;
+        document.getElementById("itemClassS").disabled = true;
+    }
+</script>
+</BODY>
+</html>

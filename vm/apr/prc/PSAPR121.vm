@@ -1,0 +1,287 @@
+<!doctype html>
+<html LANG="ja">
+<head>
+<title>#customSpringMessage('SCREEN_M_PRICE_APP_LIST')</title>
+<meta http-equiv="Content-type" content="text/html; charset=UTF-8">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Content-script-type" content="text/javascript">
+<link id="CSS_FONT" rel="stylesheet" href="../../include/FontS.css" type="text/css">
+<link rel="stylesheet" href="../../include/Layout.css" type="text/css">
+<link rel="stylesheet" href="../../include/Color.css" type="text/css">
+<link id="CSS_FONT" rel="stylesheet" href="../../include/FontS.css" type="text/css">
+<script language="javascript" TYPE="text/javascript" src="../../include/common.js"></script>
+<script language="javascript" TYPE="text/javascript" src="../../include/check.js"></script>
+<script language="javascript" TYPE="text/javascript" src="../../include/date.js"></script>
+<script language="javascript" TYPE="text/javascript" src="../../include/tablesort.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/searchbox.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/jquery-1.7.2.min.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/jquery.tablefix.js"></script>
+
+<script language="javascript" TYPE="text/javascript">
+<!--
+#set($searchCondition=$priceRegisterAppSearchCondition)
+#parse("./common/common_js.vm")
+function onLoad() {
+    parentButtonEnable();
+    TableSort.init();
+    dataLoadHasPage();
+    var alertMessage = "$!alertMessage";
+    var isSuccess = '#jsEscape($!isSuccess)';
+            if(isSuccess == 'true'){
+            ##2013.07.04 DEL DAIKO_KIN
+               ## #set( $mMPurPrice = "#customSpringMessage('M_PUR_PRICE')" );
+            ##2013.07.04 ADD DAIKO_KIN
+            #set( $mMPurPrice = "#customSpringMessage('PRICE_M_REGISTER')" );
+
+                alert('#customMessageArgs("I028",[$mMPurPrice])');
+            }
+    if (alertMessage != ""){
+        ## +++++ 強化-00852-000 2013/05/27 ADD SBO_CHENCHENG START +++++
+        buttonUsableForList(alertMessage);
+        ## +++++ 強化-00852-000 2013/05/27 ADD SBO_CHENCHENG -END- +++++
+        alert(alertMessage);
+    }
+    ## +++++ IT2-01209-000 2013/03/18 ADD SBO_KANGJW START +++++
+    var errorMsg = "$!errorMessage";
+    ## +++++ IT2-01209-000 2013/03/18 ADD SBO_KANGJW END +++++
+    if (errorMsg != ""){
+        return;
+        }
+            window.parent.getObj("APPROVALAREA").style.display = "";
+            ## +++++ IT2-01209-000 2013/03/18 ADD SBO_KANGJW START +++++
+            var isShowApproval = "#jsEscape($isShowApproval)";
+            ## +++++ IT2-01209-000 2013/03/18 ADD SBO_KANGJW END +++++
+            if (isShowApproval == 'true'){
+                   ## +++++ IT2-01209-000 2013/03/18 ADD SBO_KANGJW START +++++
+                   top.iframeChange("${flowExecutionUrl}&_eventId=individualApproval");
+                   ## +++++ IT2-01209-000 2013/03/18 ADD SBO_KANGJW END +++++
+            }
+            ## +++++ IT2-01209-000 2013/03/18 ADD SBO_KANGJW START +++++
+            var isShowDetail = "#jsEscape($isShowDetail)";
+            ## +++++ IT2-01209-000 2013/03/18 ADD SBO_KANGJW END +++++
+            if (isShowDetail == 'true'){
+                   ## +++++ IT2-01209-000 2013/03/18 ADD SBO_KANGJW START +++++
+                   poppage("${flowExecutionUrl}&_eventId=detail",'DETAIL','800','700');
+                   ## +++++ IT2-01209-000 2013/03/18 ADD SBO_KANGJW END +++++
+            }
+}
+
+//個別承認
+function execIndividualApproval(buyerCompanyCd,buyerSectionCd,supCd,itemCd,validPeriodStart,validPeriodEnd,lastUpdDate) {
+    ## +++++ 強化-00041-000 2013/03/25 ADD SBO_KANGJW START +++++
+    buttonDisable();
+    ## +++++ 強化-00041-000 2013/03/25 ADD SBO_KANGJW -END- +++++
+    ## +++++ IT2-01209-000 2013/03/18 ADD SBO_KANGJW START +++++
+    parent.iframeChange("${flowExecutionUrl}&_eventId=individualApprovalValidate","buyerCompanyCd",buyerCompanyCd,"buyerSectionCd",buyerSectionCd,"supCd",supCd,"itemCd",itemCd,"validPeriodStart",validPeriodStart,"validPeriodEnd",validPeriodEnd,"lastUpdDate",lastUpdDate,"HIDDENAREA");
+    ## +++++ IT2-01209-000 2013/03/18 ADD SBO_KANGJW END +++++
+}
+//詳細
+function openDetail(buyerCompanyCd,buyerSectionCd,supCd,itemCd,validPeriodStart,validPeriodEnd,lastUpdDate) {
+    ## +++++ IT2-01209-000 2013/03/18 ADD SBO_KANGJW START +++++
+    parent.iframeChange("${flowExecutionUrl}&_eventId=detailValidate","buyerCompanyCd",buyerCompanyCd,"buyerSectionCd",buyerSectionCd,"supCd",supCd,"itemCd",itemCd,"validPeriodStart",validPeriodStart,"validPeriodEnd",validPeriodEnd,"lastUpdDate",lastUpdDate,"HIDDENAREA");
+    ## +++++ IT2-01209-000 2013/03/18 ADD SBO_KANGJW END +++++
+
+}
+
+
+//一括承認
+function exec(){
+//    parent.getObj("ERRORAREA").src="../../layout/error.vm";
+    var count=0;
+    $("input:[type=checkbox][name^=status_]").each(function(){
+        if($(this).prop("checked"))
+            count ++;
+    });
+    if(count==0){
+         #* ----- 2013/02/06 DEL DAIKO_YAMAGUCHI
+         #set( $selection = "#customSpringMessage('SELECTION')" );
+         alert('#customMessageArgs("E210",[$selection])');
+         *#
+         ## +++++ 2013/02/06 ADD DAIKO_YAMAGUCHI
+         alert("#nothingSelectedMessage()");
+    }else{
+     ## 2013.07.04 DEL DAIKO_KIN START
+       ## #set( $mPurPrice = "#customSpringMessage('M_PUR_PRICE')" )
+       ## #set( $appOval = "#customSpringMessage('APPROVAL')" )
+     ## 2013.07.04 DEL DAIKO_KIN -END-
+
+     ## 2013.07.04 ADD DAIKO_KIN START
+       #set( $mPurPrice = "#customSpringMessage('PRICE_M_REGISTER')" )
+       #set( $appOval = "#customSpringMessage('PACKAGE_APP')" )
+     ## 2013.07.04 ADD DAIKO_KIN START
+
+        if( !confirm("#customMessageArgs("W001",[$mPurPrice,$appOval])") ) {
+            return;
+        }
+        buttonDisable();
+        parentButtonDisable();
+        ## +++++ IT2-01209-000 2013/03/18 ADD SBO_KANGJW START +++++
+        getObj("BodyForm").action="${flowExecutionUrl}&_eventId=packageApproval";
+        ## +++++ IT2-01209-000 2013/03/18 ADD SBO_KANGJW END +++++
+        getObj("BodyForm").submit();
+    }
+}
+
+//check /uncheck all
+$(function(){
+    $(document).delegate('#ParentCheck','change',function() {
+        var chk = $(this).prop("checked");
+        var status = 0;
+        $("input:[type=checkbox][name^=status_]").prop("checked",chk)
+
+        if(chk){
+            $("tr:[id^=Row_]").css("background-color","#ffff99");
+            status = 1;
+        }else{
+            $("tr:[id^=Row_]").each(function(){
+                var count = $(this).attr("id").substring(4);
+                if (Number(count) % 2 != 0) {
+                    $(this).css("background-color","#ffffff");
+                } else {
+                    $(this).css("background-color","#dce4ef");
+                }
+            });
+        }
+        #foreach ( $item in $!itemList.priceRegisterAppItemList)
+            ## +++++ IT2-01209-000 2013/03/18 ADD SBO_KANGJW START +++++
+            getObj('identifyList[#out($velocityCount)].checkStatus').value=status;
+            ## +++++ IT2-01209-000 2013/03/18 ADD SBO_KANGJW END +++++
+        #end
+    });
+});
+
+//check one
+function chkData(obj, index){
+    var status = 0;
+
+    if(obj.checked == true){
+        $("tr:[id=Row_" + index+"]").css("backgroundColor","#ff9");
+        status = 1;
+    }else{
+        if (index % 2 != 0) {
+            $("tr:[id=Row_" + index+"]").css("backgroundColor","#fff");
+        } else {
+            $("tr:[id=Row_" + index+"]").css("backgroundColor","#dce4ef");
+        }
+    }
+    document.getElementById("identifyList["+index+"].checkStatus").value = status;
+}
+//-->
+</script>
+
+</head>
+<body id="BODY" topmargin="0" leftmargin="0" marginwidth="0" marginheight="0" align="left" onload="onLoad();setTablefix('#TABLE',1,4);" >
+
+#if($!errorMessage && $!errorMessage !="")
+<div class="error">
+    $!errorMessage
+</div>
+#end
+#if($!itemList.priceRegisterAppItemList && $!itemList.priceRegisterAppItemList.size()>0)
+<form id="BodyForm" name="BodyForm"  method="post">
+ <div id="show">
+    #set( $index = 0)
+    #foreach($!priceRegisterAppItem in $!itemList.priceRegisterAppItemList)
+        #customFormHiddenInput("identifyList[$index].checkStatus" "0")
+        #customFormHiddenInput("identifyList[$index].lastUpdDate" "$!priceRegisterAppItem.identify.lastUpdDate")
+        #customFormHiddenInput("identifyList[$index].buyerCompanyCd" "$!priceRegisterAppItem.identify.buyerCompanyCd")
+        #customFormHiddenInput("identifyList[$index].buyerSectionCd" "$!priceRegisterAppItem.identify.buyerSectionCd")
+        #customFormHiddenInput("identifyList[$index].supCd" "$!priceRegisterAppItem.identify.supCd")
+        #customFormHiddenInput("identifyList[$index].itemCd" "$!priceRegisterAppItem.identify.itemCd")
+        #customFormHiddenInput("identifyList[$index].validPeriodStart.dateOfymdFormat" "$!priceRegisterAppItem.identify.validPeriodStart.dateOfymdFormat")
+        #customFormHiddenInput("identifyList[$index].validPeriodEnd.dateOfymdFormat" "$!priceRegisterAppItem.identify.validPeriodEnd.dateOfymdFormat")
+        #set( $index = $index + 1 )
+    #end
+</div>
+<table id="TABLE" class="ListArea" width="100%">
+    <thead>
+        <tr id="Header">
+            <th class="BoxHeaderCenter FontSmall">No.</th>
+                <th id="CheckCol_H" label="chk" class="BoxHeaderCenter FontSmall">
+                <input name="ParentCheck" id="ParentCheck" type="checkbox"><!--全選択/全選択解除-->
+            </th>
+            <th class="BoxHeaderCenter FontSmall">#customSpringMessage('DETAIL')</th><!--詳細-->
+            <th class="BoxHeaderCenter FontSmall">#customSpringMessage('INDIVIDUAL_APP')</th><!--個別承認-->
+            <th class="BoxHeaderCenter FontSmall" >#customSpringMessage('APP_USER_NAME')</th><!--承認者名-->
+            <th class="BoxHeaderCenter FontSmall" >#customSpringMessage('NEXT_APP_USER_NAME')</th><!--次承認者名-->
+            <th label="case" id="M_PUR_PRICE.ITEM_CD" class="BoxHeaderCenter FontSmall" onclick="parent.iframeChange('${flowExecutionUrl}&_eventId=order','column','M_PUR_PRICE.ITEM_CD')"><span class="column">#customSpringMessage('ITEM_CD')</span></th><!--品名コード-->
+            <th class="BoxHeaderCenter FontSmall" >#customSpringMessage('ITEM_NAME')</th><!--品名-->
+            <th label="case" id="M_PUR_PRICE.MODIFY_IND" class="BoxHeaderCenter FontSmall" onclick="parent.iframeChange('${flowExecutionUrl}&_eventId=order','column','M_PUR_PRICE.MODIFY_IND')"><span class="column">#customSpringMessage('DIVISION')</span></th><!--区分-->
+            <th label="case" id="M_PUR_PRICE.TERM_FLG" class="BoxHeaderCenter FontSmall" onclick="parent.iframeChange('${flowExecutionUrl}&_eventId=order','column','M_PUR_PRICE.TERM_FLG')"><span class="column">#customSpringMessage('TERM_IND')</span></th><!--廃止区分 -->
+            <th class="BoxHeaderCenter FontSmall">#customSpringMessage('MANUFACT_CD')</th><!--メーカーコード -->
+            <th class="BoxHeaderCenter FontSmall">#customSpringMessage('MANUFACT_NAME')</th><!-- メーカー名-->
+            <th label="case" id="M_PUR_PRICE.SUP_CD" class="BoxHeaderCenter FontSmall" onclick="parent.iframeChange('${flowExecutionUrl}&_eventId=order','column','M_PUR_PRICE.SUP_CD')"><span class="column">#customSpringMessage('SUP_CD')</span></th><!-- 取引先コード-->
+            <th class="BoxHeaderCenter FontSmall">#customSpringMessage('SUP_NAME')</th><!-- 取引先名-->
+            <th label="case" id="M_PUR_PRICE.PRICE_TYPE" class="BoxHeaderCenter FontSmall" onclick="parent.iframeChange('${flowExecutionUrl}&_eventId=order','column','M_PUR_PRICE.PRICE_TYPE')"><span class="column">#customSpringMessage('PRICE_TYPE')</span></th><!--価格タイプ -->
+            <th label="case" id="M_PUR_PRICE.CURRENCY_CD" class="BoxHeaderCenter FontSmall" onclick="parent.iframeChange('${flowExecutionUrl}&_eventId=order','column','M_PUR_PRICE.CURRENCY_CD')"><span class="column">#customSpringMessage('CURRENCY_CD')</span></th><!-- 通貨コード-->
+            <th label="case" id="M_PUR_PRICE.BUY_PRICE" class="BoxHeaderCenter FontSmall" onclick="parent.iframeChange('${flowExecutionUrl}&_eventId=order','column','M_PUR_PRICE.BUY_PRICE')"><span class="column">#customSpringMessage('UNIT_PRICE')</span></th><!--単価 -->
+            <th class="BoxHeaderCenter FontSmall" >#customSpringMessage('UNIT')</th><!-- 単位-->
+            <th label="case" id="M_PUR_PRICE.PUR_STOP_FROM" class="BoxHeaderCenter FontSmall" onclick="parent.iframeChange('${flowExecutionUrl}&_eventId=order','column','M_PUR_PRICE.PUR_STOP_FROM')"><span class="column">#customSpringMessage('PUR_STOP_FROM')</span></th><!-- 購入停止期間（開始）-->
+            <th label="case" id="M_PUR_PRICE.PUR_STOP_TO" class="BoxHeaderCenter FontSmall" onclick="parent.iframeChange('${flowExecutionUrl}&_eventId=order','column','M_PUR_PRICE.PUR_STOP_TO')"><span class="column">#customSpringMessage('PUR_STOP_TO')</span></th><!--購入停止期間（終了） -->
+            <th label="case" id="M_PUR_PRICE.VALID_START_DATE" class="BoxHeaderCenter FontSmall" onclick="parent.iframeChange('${flowExecutionUrl}&_eventId=order','column','M_PUR_PRICE.VALID_START_DATE')"><span class="column">#customSpringMessage('VALID_START_DATE')</span></th><!-- 有効期間（開始）-->
+            <th label="case" id="M_PUR_PRICE.VALID_END_DATE" class="BoxHeaderCenter FontSmall" onclick="parent.iframeChange('${flowExecutionUrl}&_eventId=order','column','M_PUR_PRICE.VALID_END_DATE')"><span class="column">#customSpringMessage('VALID_END_DATE')</span></th><!--有効期間（終了） -->
+            <th label="case" id="M_PUR_PRICE.BUYER_SECTION_CD" class="BoxHeaderCenter FontSmall" onclick="parent.iframeChange('${flowExecutionUrl}&_eventId=order','column','M_PUR_PRICE.BUYER_SECTION_CD')"><span class="column">#customSpringMessage('BUYER_USER_SECTION_CD')</span></th><!--購買担当部門コード -->
+            <th class="BoxHeaderCenter FontSmall">#customSpringMessage('PUR_SECTION_NAME')</th><!--購買担当部門名 -->
+            <th label="case" id="M_PUR_PRICE.BUYER_USER_ID" class="BoxHeaderCenter FontSmall" onclick="parent.iframeChange('${flowExecutionUrl}&_eventId=order','column','M_PUR_PRICE.BUYER_USER_ID')"><span class="column">#customSpringMessage('BUYER_USER_ID')</span></th><!--購買担当者コード-->
+            <th class="BoxHeaderCenter FontSmall">#customSpringMessage('BUYER_USER_NAME')</th><!--購買担当者名 -->
+            <th label="case" id="M_PUR_PRICE.QUOT_REQ_NO" class="BoxHeaderCenter FontSmall" onclick="parent.iframeChange('${flowExecutionUrl}&_eventId=order','column','M_PUR_PRICE.QUOT_REQ_NO')"><span class="column">#customSpringMessage('QUOT_REQ_NO')</span></th><!--見積依頼番号-->
+            <th label="case" id="M_PUR_PRICE.NEXT_UPD_YM" class="BoxHeaderCenter FontSmall" onclick="parent.iframeChange('${flowExecutionUrl}&_eventId=order','column','M_PUR_PRICE.NEXT_UPD_YM')"><span class="column">#customSpringMessage('NEXT_UPD_YM')</span></th><!--次回見直時期 -->
+        </tr>
+    </thead>
+
+      #set($No=0)
+    #foreach($!priceRegisterAppItem in $!itemList.priceRegisterAppItemList)
+    <tbody>
+
+      #set( $No = $No + 1 )
+        <tr id="Row_$velocityCount" name="Row_$velocityCount" #if($velocityCount % 2 == 0) bgcolor="#dce4ef" #else bgcolor="#ffffff" #end>
+            <td class="BoxDetailCenter FontList">$No</td>
+              <td id="CheckCol_$velocityCount" class="BoxDetailCenter FontList">
+                <input type="checkbox" onclick="chkData(this,$velocityCount)" class="Icon" name="status_$velocityCount">
+            </td>
+            <td class="BoxDetailCenter">
+                <img id="DetailButton_$velocityCount" class="Icon" src="../../image/btnDetailDisp.gif" onclick="openDetail('#jsEscapeInHTML($!priceRegisterAppItem.identify.buyerCompanyCd)','#jsEscapeInHTML($!priceRegisterAppItem.identify.buyerSectionCd)','#jsEscapeInHTML($!priceRegisterAppItem.identify.supCd)','#jsEscapeInHTML($!priceRegisterAppItem.identify.itemCd)','#jsEscapeInHTML($!priceRegisterAppItem.identify.validPeriodStart.dateOfymd)','#jsEscapeInHTML($!priceRegisterAppItem.identify.validPeriodEnd.dateOfymd)','#jsEscapeInHTML($!priceRegisterAppItem.identify.lastUpdDate)');">
+            </td>
+            <td class="BoxDetailCenter">
+                <input type="button" class="SmallButton" value="#customSpringMessage('INDIVIDUAL_APP')" onclick="execIndividualApproval('#jsEscapeInHTML($!priceRegisterAppItem.identify.buyerCompanyCd)','#jsEscapeInHTML($!priceRegisterAppItem.identify.buyerSectionCd)','#jsEscapeInHTML($!priceRegisterAppItem.identify.supCd)','#jsEscapeInHTML($!priceRegisterAppItem.identify.itemCd)','#jsEscapeInHTML($!priceRegisterAppItem.identify.validPeriodStart.dateOfymd)','#jsEscapeInHTML($!priceRegisterAppItem.identify.validPeriodEnd.dateOfymd)','#jsEscapeInHTML($!priceRegisterAppItem.identify.lastUpdDate)');">
+            </td>
+            <td class="BoxDetailLeft FontList" nowrap>#out($!priceRegisterAppItem.appUser)</td>
+            <td class="BoxDetailLeft FontList" nowrap>#out($!priceRegisterAppItem.nextAppUser)</td>
+            <td class="BoxDetailCenter FontList" nowrap>#out($!priceRegisterAppItem.itemCd)</td>
+            <td class="BoxDetailLeft FontList" nowrap>#out($!priceRegisterAppItem.itemName)</td>
+            <td class="BoxDetailCenter FontMiniAnkBold">#out($!priceRegisterAppItem.ind_PageValue)</td>
+            <td class="BoxDetailCenter FontList">#out($!priceRegisterAppItem.termFlg_PageValue)</td>
+            <td class="BoxDetailCenter FontList">#out($!priceRegisterAppItem.manufactCd)</td>
+            <td class="BoxDetailLeft FontList">#out($!priceRegisterAppItem.manufactName)</td>
+            <td class="BoxDetailCenter FontList">#out($!priceRegisterAppItem.supplierCd)</td>
+            <td class="BoxDetailLeft FontList">#out($!priceRegisterAppItem.supplierName)</td>
+            <td class="BoxDetailCenter FontList">#out($!priceRegisterAppItem.priceType_PageValue)</td>
+            <td class="BoxDetailCenter FontList">#out($!priceRegisterAppItem.currencyCd)</td>
+            <td class="BoxDetailRight FontCurrSmall">$!priceRegisterAppItem.currencyMark$!priceRegisterAppItem.price.amountFormat</td>
+            <td class="BoxDetailCenter FontList">#out($!priceRegisterAppItem.unitName)</td>
+            <td class="BoxDetailCenter FontList">#out($!priceRegisterAppItem.purStopFrom.dateOfymdFormat)</td>
+            <td class="BoxDetailCenter FontList">#out($!priceRegisterAppItem.purStopTo.dateOfymdFormat)</td>
+            <td class="BoxDetailCenter FontList">#out($!priceRegisterAppItem.identify.validPeriodStart.dateOfymdFormat)</td>
+            #if($!priceRegisterAppItem.identify.validPeriodEnd.dateOfymd !="99999999")
+                <td class="BoxDetailCenter FontList">#out($!priceRegisterAppItem.identify.validPeriodEnd.dateOfymdFormat)</td>
+            #else
+                <td class="BoxDetailCenter FontList"></td>
+            #end
+            <td class="BoxDetailCenter FontList">#out($!priceRegisterAppItem.identify.buyerUserSectionCd)</td>
+            <td class="BoxDetailLeft FontList">#out($!priceRegisterAppItem.buyerUserSectionName)</td>
+            <td class="BoxDetailCenter FontList">#out($!priceRegisterAppItem.buyerUserId)</td>
+            <td class="BoxDetailLeft FontList">#out($!priceRegisterAppItem.buyerUserName)</td>
+            <td class="BoxDetailLeft FontSlipNo">#out($!priceRegisterAppItem.quotReqNo)</td>
+            <td class="BoxDetailCenter FontList">#out($!priceRegisterAppItem.nextUpdYm.dateOfymFormat)</td>
+        </tr>
+    </tbody>
+    #end
+</table>
+</form>
+#end
+<br>
+<table id="WAIT" class="NoBorder" style="display:none;" width="100%"><tr><td align="center"><br><br>
+<img src="../../image/wait.gif"><br><span class="FontMini"><br>#customSpringMessage('SEARCH_MESSAGE')</span></td></tr></table><!--問い合わせ中...-->
+</body>
+
+</html>

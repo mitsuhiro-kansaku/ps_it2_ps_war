@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<flow xmlns="http://www.springframework.org/schema/webflow"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.springframework.org/schema/webflow
+        http://www.springframework.org/schema/webflow/spring-webflow-2.0.xsd"
+    parent="base">
+    
+    <var name="priceIdentify" class="fw.domain.slip.price.pricemasterlist.PriceIdentify" />
+    <input name="searchCondition" />
+    <input name="isCurrentPageSearch" />
+    
+    <decision-state id="isSearchByKey">
+       <if test="flowScope.isCurrentPageSearch" then="searchByKey" else="searchByCondition" />
+    </decision-state>
+    
+    <action-state id="searchByCondition">
+        <evaluate expression="PSPRC011Service.init(searchCondition)" result="flowScope.itemList" />
+        <transition to="PSPRC011"/> 
+    </action-state>
+
+    <action-state  id="searchByKey" >
+        <evaluate expression="PSPRC011Service.page(searchCondition)" result="flowScope.itemList" />
+        <transition to="PSPRC011"/>
+    </action-state>
+     
+    <view-state id="PSPRC011" view="prc/price/PSPRC011" model="priceIdentify">
+        <transition on="page" validate="false">
+            <evaluate expression="PSPRC011Service.page(searchCondition)"
+                result="flowScope.itemList" />
+        </transition>
+        <transition on="order" validate="false">
+            <evaluate expression="PSPRC011Service.order(searchCondition)"
+                result="flowScope.itemList" />
+        </transition>
+        <transition on="back" to="home" validate="false" />
+         
+        <transition on="detailValidate" validate="true">
+            <set name="flashScope.isShowDetail" value="true"></set>
+        </transition>
+        <transition on="detail" to="PSPRC050" validate="false" />
+        <transition on="revision" validate="false">
+            <set name="flashScope.isShowRevision" value="true"></set>
+        </transition>
+        <transition on="priceReg" validate="true">
+           <set name="flashScope.isShowPriceReg" value="true"></set>
+        </transition>
+        <transition on="priceEdit" validate="true">
+           <set name="flashScope.isShowPriceEdit" value="true"></set>
+        </transition>
+        <transition on="edit" to="PSPRC020" validate="true">
+        </transition>
+        <transition on="priceRev"  validate="true" >
+           <set name="flashScope.isShowPriceRev" value="true"></set>
+        </transition>
+        
+        <transition on="to020" to="PSPRC020" validate="false">
+        </transition>
+        
+        <transition on="to030" to="PSPRC030" validate="false">
+        </transition>
+        
+        <transition on="to040" to="PSPRC040" validate="false">
+        </transition>
+    </view-state>
+    
+    <subflow-state id="PSPRC020" subflow="prc/price/PSPRC020" >
+        <input name="priceIdentify" value="priceIdentify" />
+        <input name="patternName" value="requestParameters.patternName" />
+        <input name="SessionKey" value="SessionKey" />
+    </subflow-state>
+    <subflow-state id="PSPRC030" subflow="prc/price/PSPRC030" >
+        <input name="priceIdentify" value="priceIdentify" />
+        <input name="SessionKey" value="SessionKey" />
+    </subflow-state>
+    
+    <subflow-state id="PSPRC040" subflow="prc/price/PSPRC040" >
+        <input name="priceIdentify" value="priceIdentify" />
+        <input name="SessionKey" value="SessionKey" />
+    </subflow-state>
+    
+    <subflow-state id="PSPRC050" subflow="prc/price/PSPRC050" >
+        <input name="priceIdentify" value="priceIdentify" />
+    </subflow-state>
+
+</flow> 

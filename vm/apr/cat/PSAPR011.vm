@@ -1,0 +1,307 @@
+<!doctype html>
+<html LANG="ja">
+<head>
+<title>#customSpringMessage('CATALOG_PUR_REQ_APP_LIST')</title>
+<meta http-equiv="Content-type" content="text/html; charset=UTF-8">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Content-script-type" content="text/javascript">
+<link id="CSS_FONT" rel="stylesheet" href="../../include/FontS.css" type="text/css">
+<link rel="stylesheet" href="../../include/Layout.css" type="text/css">
+<link rel="stylesheet" href="../../include/Color.css" type="text/css">
+<link rel="stylesheet" href="../../include/searchbox.css" type="text/css">
+<script language="javascript" type="text/javascript" src="../../include/jquery-1.7.2.min.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/jquery.tablefix.js"></script>
+<script language="javascript" TYPE="text/javascript" src="../../include/common.js"></script>
+<script language="javascript" TYPE="text/javascript" src="../../include/check.js"></script>
+<script language="javascript" TYPE="text/javascript" src="../../include/date.js"></script>
+<script language="javascript" TYPE="text/javascript" src="../../include/tablesort.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/searchbox.js"></script>
+<script language="javascript" TYPE="text/javascript"> 
+<!--
+
+#set($isActiveProfileBudget = "#isActiveProfile('budget')")
+
+#parse("./common/common_js.vm")
+
+function onLoad() {
+    parentButtonEnable();
+    dataLoadHasPage();
+    #if("$!errorMessage" != "" && "$!isSuccess" != "true" )
+        ## エラーメッセージがある、かつ処理成功でない場合は何もしない
+        return;    
+    
+    #elseif("$!alertMessage" != "")
+        #if(($alertMessage.indexOf('W042') != -1) 
+            || ($isActiveProfileBudget=="true" && $alertMessage.indexOf('W601') != -1))
+            if (confirm("$alertMessage")) {
+                buttonDisable();
+                parentButtonDisable();
+                #foreach($!catalogPurReqAppItem in $!itemList.catalogPurReqAppList)
+                    getObj("catalogIdentifyList[$foreach.index].checkStatus").value= "$!catalogPackageApproval.catalogIdentifyList[$foreach.index].checkStatus";
+                #end
+                getObj("BodyForm").action="${flowExecutionUrl}&_eventId=packageApproval&checkPass=1";
+                getObj("BodyForm").submit();
+            }
+        #else
+            var alertMessage = "$!alertMessage";
+            if (alertMessage != ""){
+                buttonUsableForList(alertMessage);
+                alert(alertMessage);
+            }
+        #end
+    #end
+
+    
+    #if("$!isSuccess" == "true")
+        #set( $mcatalogPurReqApp = "#customSpringMessage('CATALOG_PUR_REQ')" );
+        alert('#customMessageArgs("I028",[$mcatalogPurReqApp])');
+    #end
+
+    var errorMsg = "$!errorMessage";
+    if (errorMsg != ""){
+        return;
+    }
+    
+    var listSize = "#jsEscape($!itemList.catalogPurReqAppList.size())";
+    if(listSize && listSize > 0){
+        function  block(){
+            parent.document.getElementById('APPROVALAREA').style.display = '';
+        }
+        block();
+    }
+    var isShowApproval = "#jsEscape($isShowApproval)";
+    if (isShowApproval == 'true'){
+          top.iframeChange("${flowExecutionUrl}&_eventId=individualApproval");
+    }
+    var isShowDetail = "#jsEscape($isShowDetail)";
+    if (isShowDetail == 'true'){
+        poppage("${flowExecutionUrl}&_eventId=detail",'DETAIL','900','850');
+    }    
+}
+
+//一括承認
+function exec(){
+    var count=0;
+    $("input:[type=checkbox][name^=status_]").each(function(){
+        if($(this).prop("checked"))
+            count ++;
+    });
+    if(count==0){
+         alert("#nothingSelectedMessage()");
+    }else{
+        #set( $mmCatalogPurReq = "#customSpringMessage('CATALOG_PUR_REQ')" )   
+        #set( $appOval = "#customSpringMessage('PACKAGE_APP')" ) 
+        if( !confirm("#customMessageArgs("W001",[$mmCatalogPurReq,$appOval])") ) {
+            return;
+        }
+        buttonDisable();
+        parentButtonDisable();
+        getObj("BodyForm").action="${flowExecutionUrl}&_eventId=packageApproval";
+        getObj("BodyForm").submit();
+    }
+}
+
+//check /uncheck all
+$(function(){
+    $(document).delegate('#ParentCheck','change',function() {
+        var chk = $(this).prop("checked");
+        var status = 0;
+        $("input:[type=checkbox][name^=status_]").prop("checked",chk)
+
+        if(chk){
+            $("tr:[id^=Row_]").css("background-color","#ffff99");
+            status = 1;
+        }else{
+            $("tr:[id^=Row_]").each(function(){
+                var count = $(this).attr("id").substring(4);
+                if (Number(count) % 2 != 0) {
+                    $(this).css("background-color","#ffffff");
+                } else {
+                    $(this).css("background-color","#dce4ef");
+                }
+            });
+        }
+        #foreach ( $item in $!itemList.catalogPurReqAppList)
+            getObj('catalogIdentifyList[#out($velocityCount)].checkStatus').value=status;
+        #end
+    });
+});
+
+
+//個別承認
+function execIndividualApproval(purAplSeqNo,appUnitNo,lastUpdDate) {
+    buttonDisable();
+    parent.iframeChange('${flowExecutionUrl}&_eventId=individualApprovalValidate&purAplSeqNo='+ purAplSeqNo+'&appUnitNo='+ appUnitNo+'&lastUpdDate='+ lastUpdDate,"HIDDENAREA");
+}
+
+//check one 
+function chkData(obj, index){
+    var status = 0;
+
+    if(obj.checked == true){
+        $("tr:[id=Row_" + index+"]").css("backgroundColor","#ff9");
+        status = 1;
+    }else{
+        if (index % 2 != 0) {
+            $("tr:[id=Row_" + index+"]").css("backgroundColor","#fff");
+        } else {
+            $("tr:[id=Row_" + index+"]").css("backgroundColor","#dce4ef");
+        }
+    }
+    document.getElementById("catalogIdentifyList["+index+"].checkStatus").value = status;
+}
+
+//詳細
+function openDetail(purAplSeqNo,lastUpdDate,appUnitNo) {
+    parent.iframeChange('${flowExecutionUrl}&_eventId=detailValidate&&purAplSeqNo='+ purAplSeqNo+'&&lastUpdDate='+ lastUpdDate+'&&appUnitNo='+ appUnitNo,"HIDDENAREA");
+}
+
+//-->
+</script>
+ 
+</head>
+<body id="BODY" topmargin="0" leftmargin="0" marginwidth="0" marginheight="0" align="left" onload="onLoad();setTablefix('#TABLEFIX', 1, 4+$!PSAPR011PageCreaterForList.printLockColumn());">
+#if($!errorMessage && $!errorMessage !="")
+<div class="error">
+    $!errorMessage
+</div>
+#end
+#if($!itemList.catalogPurReqAppList && $!itemList.catalogPurReqAppList.size()>0)
+<form id="BodyForm" name="BodyForm"  method="post">
+<div id="show">
+    #set( $index = 0)
+    #foreach($!catalogPurReqAppItem in $!itemList.catalogPurReqAppList)
+        #customFormHiddenInput("catalogIdentifyList[$index].checkStatus" "0")
+        #customFormHiddenInput("catalogIdentifyList[$index].lastUpdDate" "$!catalogPurReqAppItem.catalogIdentify.lastUpdDate")
+        #customFormHiddenInput("catalogIdentifyList[$index].purAplSeqNo" "$!catalogPurReqAppItem.catalogIdentify.purAplSeqNo")
+        #customFormHiddenInput("catalogIdentifyList[$index].purAplNo.purAplNo" "$!catalogPurReqAppItem.catalogIdentify.purAplNo.purAplNo")
+        #customFormHiddenInput("catalogIdentifyList[$index].exclusiveSlipId.slipNo" "$!catalogPurReqAppItem.catalogIdentify.exclusiveSlipId.slipNo")
+        #customFormHiddenInput("catalogIdentifyList[$index].exclusiveSlipId.lastUpdDate" "$!catalogPurReqAppItem.catalogIdentify.exclusiveSlipId.lastUpdDate")
+        #set( $index = $index + 1 )
+    #end
+</div>
+<table id="TABLEFIX" class="ListArea" width="100%">
+    <thead>
+        <tr id="Header">
+            <th class="BoxHeaderCenter FontSmall">No.<!--No.--></th>
+            <th id="CheckCol_H" label="chk" class="BoxHeaderCenter FontSmall">
+                <input name="ParentCheck" id="ParentCheck" type="checkbox"><!--全選択/全選択解除-->
+            </th>
+            <th class="BoxHeaderCenter FontSmall">#customSpringMessage("DETAIL")<!--詳細--></th>
+            <th class="BoxHeaderCenter FontSmall" onclick="chkHead();">#customSpringMessage("INDIVIDUAL_APP")<!--個別承認 --></th>
+                #foreach($!item in $!PSAPR011PageCreaterForList.getItemListForBody())
+                    #set($currentOneColumnFlag = $!PSAPR011PageCreaterForList.getOneColumnFlag($!item))
+                    #if($velocityCount == 0)
+                        $!PSAPR011PageCreaterForList.printTHtag($!item,'class="BoxHeaderCenter FontSmall"')
+                    #elseif($currentOneColumnFlag)
+                        $!PSAPR011PageCreaterForList.printBRtag($!item)
+                    #else
+                        $!PSAPR011PageCreaterForList.printTHtagClose()
+                        $!PSAPR011PageCreaterForList.printTHtag($!item,'class="BoxHeaderCenter FontSmall"')
+                    #end
+                    
+                    #if($!item.getColumnName() == "T_PUR_APL.URGENT_IND")
+                        $!PSAPR011PageCreaterForList.printHead($!item)
+                    #elseif($!item.getColumnName() == "T_APPROVAL.NOW_APP_USER_NAME")
+                        $!PSAPR011PageCreaterForList.printHead($!item)
+                    #elseif($!item.getColumnName() == "T_APPROVAL.NEXT_APP_USER_NAME")
+                        $!PSAPR011PageCreaterForList.printHead($!item)
+                    #elseif($!item.getColumnName() == "T_PUR_APL.PUR_REQ_DATE")
+                        $!PSAPR011PageCreaterForList.printHead($!item)
+                    #elseif($!item.getColumnName() == "T_PUR_APL.PUR_APL_NO")
+                        $!PSAPR011PageCreaterForList.printHead($!item)
+                    #elseif($!item.getColumnName() == "T_PUR_APL.TITLE_NAME")
+                        $!PSAPR011PageCreaterForList.printHead($!item)
+                    #elseif($!item.getColumnName() == "T_PUR_REQUEST.CURRENCY_CD")
+                        $!PSAPR011PageCreaterForList.printHead($!item)
+                    #elseif($!item.getColumnName() == "T_PUR_REQUEST.PUR_REQ_CNV_AMOUNT")
+                        $!PSAPR011PageCreaterForList.printHead($!item)
+                    #elseif($!item.getColumnName() == "T_PUR_APL.DELIV_PLACE_CD")
+                        $!PSAPR011PageCreaterForList.printHead($!item)
+                    #elseif($!item.getColumnName() == "T_PUR_APL.DELIV_PLACE_NAME")
+                        $!PSAPR011PageCreaterForList.printHead($!item)
+                    #elseif($!item.getColumnName() == "T_PUR_APL.REQ_SECTION_CD")
+                        $!PSAPR011PageCreaterForList.printHead($!item)
+                    #elseif($!item.getColumnName() == "T_PUR_APL.REQ_SECTION_NAME")
+                        $!PSAPR011PageCreaterForList.printHead($!item)
+                    #elseif($!item.getColumnName() == "T_PUR_APL.REQ_USER_ID")
+                        $!PSAPR011PageCreaterForList.printHead($!item)
+                    #elseif($!item.getColumnName() == "T_PUR_APL.REQ_USER_NAME")
+                        $!PSAPR011PageCreaterForList.printHead($!item)
+                    #else
+                        $!PSAPR011PageCreaterForList.printHead($!item)
+                    #end
+                #end
+                $!PSAPR011PageCreaterForList.printTHtagClose()
+        </tr>
+    </thead>
+    <tbody id="Tbody">
+    #set($No=0)
+    #foreach($!catalogPurReqAppItem in $!itemList.catalogPurReqAppList)
+        #set( $No = $No + 1 )             
+        <tr id="Row_$velocityCount" #if($velocityCount % 2 == 0) bgcolor="#dce4ef" #else bgcolor="#ffffff" #end>
+            <td class="BoxDetailCenter FontList">#set( $index = $velocityCount + 1 )$index</td>
+            <td id="CheckCol_$velocityCount" class="BoxDetailCenter FontList">
+                <input type="checkbox" onclick="chkData(this,$velocityCount)" class="Icon" name="status_$velocityCount">
+            </td>
+            <td class="BoxDetailCenter">
+                <img id="DetailButton_0" class="Icon" src="../../image/btnDetailDisp.gif" onclick="openDetail('#jsEscapeInHTML($!catalogPurReqAppItem.catalogIdentify.purAplSeqNo)','#jsEscapeInHTML($!catalogPurReqAppItem.catalogIdentify.lastUpdDate)','#jsEscapeInHTML($!catalogPurReqAppItem.catalogIdentify.appUnitNo)');">
+            </td>
+            <td class="BoxDetailCenter">
+                <input type="button" class="SmallButton" value="#customSpringMessage('INDIVIDUAL_APP')" onclick="execIndividualApproval('#jsEscapeInHTML($!catalogPurReqAppItem.catalogIdentify.purAplSeqNo)','#jsEscapeInHTML($!catalogPurReqAppItem.catalogIdentify.appUnitNo)','#jsEscapeInHTML($!catalogPurReqAppItem.catalogIdentify.lastUpdDate)');">
+            </td>
+                #foreach($!item in $!PSAPR011PageCreaterForList.getItemListForBody($velocityCount))
+                    #set($currentOneColumnFlag = $!PSAPR011PageCreaterForList.getOneColumnFlag($!item))
+                    #if($velocityCount == 0)
+                        $!PSAPR011PageCreaterForList.printTDtag('class="BoxDetailLeft FontList"')
+                    #elseif(!$currentOneColumnFlag)
+                        $!PSAPR011PageCreaterForList.printTDtagClose()
+                        $!PSAPR011PageCreaterForList.printTDtag('class="BoxDetailLeft FontList"')
+                    #end
+                    
+                    #if($!item.getColumnName()=="T_PUR_APL.URGENT_IND")
+                        #if("$!catalogPurReqAppItem.urgentInd" =="1")
+                            $!PSAPR011PageCreaterForList.printSpecial("s25_codeNameRed", $!item, 'URGENT_IND','','_redValue','1','_boldStyle','"FontSmall Red"',"_data_style",'align="center"')
+                        #end
+                    #elseif($!item.getColumnName()=="T_APPROVAL.NOW_APP_USER_NAME")
+                        $!PSAPR011PageCreaterForList.printDefault($!item)
+                    #elseif($!item.getColumnName()=="T_APPROVAL.NEXT_APP_USER_NAME")
+                        $!PSAPR011PageCreaterForList.printDefault($!item)
+                    #elseif($!item.getColumnName()=="T_PUR_APL.PUR_REQ_DATE")
+                        $!PSAPR011PageCreaterForList.printDefault($!item,"_data_style",'align="center"')
+                    #elseif($!item.getColumnName()=="T_PUR_APL.PUR_APL_NO")
+                        $!PSAPR011PageCreaterForList.printDefault($!item,"_data_style",'class="FontSlipNo"')
+                    #elseif($!item.getColumnName()=="T_PUR_APL.TITLE_NAME")
+                        $!PSAPR011PageCreaterForList.printDefault($!item)
+                    #elseif($!item.getColumnName()=="T_PUR_REQUEST.CURRENCY_CD")
+                        $!PSAPR011PageCreaterForList.printDefault($!item,"_data_style",'align="center"')
+                    #elseif($!item.getColumnName() == "T_PUR_REQUEST.PUR_REQ_CNV_AMOUNT")
+                        $!PSAPR011PageCreaterForList.printSpecial('s27_list_data_currency', $!item, '_data_style', 'class="FontCurrSmall" align="right"')
+                    #elseif($!item.getColumnName()=="T_PUR_APL.DELIV_PLACE_CD")
+                        $!PSAPR011PageCreaterForList.printDefault($!item,"_data_style",'align="center"')
+                    #elseif($!item.getColumnName() == "T_PUR_APL.DELIV_PLACE_NAME")
+                        $!PSAPR011PageCreaterForList.printDefault($!item)
+                    #elseif($!item.getColumnName()=="T_PUR_APL.REQ_SECTION_CD")
+                        $!PSAPR011PageCreaterForList.printDefault($!item,"_data_style",'align="center"')
+                    #elseif($!item.getColumnName()=="T_PUR_APL.REQ_SECTION_NAME")
+                        $!PSAPR011PageCreaterForList.printDefault($!item)
+                    #elseif($!item.getColumnName()=="T_PUR_APL.REQ_USER_ID")
+                        $!PSAPR011PageCreaterForList.printDefault($!item,"_data_style",'class="align="center"')
+                    #elseif($!item.getColumnName()=="T_PUR_APL.REQ_USER_NAME")
+                        $!PSAPR011PageCreaterForList.printDefault($!item)
+                    #else
+                        $!PSAPR011PageCreaterForList.printDefault($!item)
+                    #end
+                #end
+                $!PSAPR011PageCreaterForList.printTDtagClose()
+            </tr>
+        #end
+    </tbody>
+    #end
+</table>
+<br>
+<table id="WAIT" class="NoBorder" style="display:none;width:100%;"><tr><td style="text-align:center;"><br><br>
+<img src="../../image/wait.gif"><br><span class="FontMini"><br>#customSpringMessage('SEARCH_MESSAGE')</span></td></tr></table><!--問い合わせ中...-->
+</form>
+</body>
+</html>

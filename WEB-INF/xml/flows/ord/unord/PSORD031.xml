@@ -1,0 +1,116 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<flow xmlns="http://www.springframework.org/schema/webflow"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.springframework.org/schema/webflow
+        http://www.springframework.org/schema/webflow/spring-webflow-2.0.xsd"
+    parent="base">
+
+    <var name="domain" class="fw.domain.slip.order.order.unactionpurreq.NotActionPurReqItem" />
+    <var name="notActionPurReqIdentify" class="fw.domain.slip.order.order.unactionpurreq.NotActionPurReqIdentify" />
+    <var name="catalogIdentify" class="fw.domain.slip.purreq.purreqcatalog.CatalogIdentify" />
+    <var name="purAplIdentify" class="fw.domain.slip.purreq.everypurreq.purreqmng.PurAplIdentify" />
+    <var name="purAplIdentify2" class="fw.domain.slip.purreq.everypurreq.purreqmng.PurAplIdentify" />
+    
+    <input name="patternName" />
+    <input name="searchCondition" />
+    <input name="isCurrentPageSearch" />
+    <input name="isNoKeyList" />
+    <input name="slipNo"/>
+    
+    <decision-state id="isSearchByCondition">
+       <if test="flowScope.isNoKeyList" then="searchByCondition" else="isSearchByKey" />
+    </decision-state>
+    
+    <decision-state id="isSearchByKey">
+       <if test="flowScope.isCurrentPageSearch" then="searchByKey" else="searchByCondition" />
+    </decision-state>
+    
+    <action-state id="searchByCondition">
+        <evaluate expression="PSORD031Service.init(searchCondition)" result="flowScope.itemList" />
+        <transition to="PSORD031"/> 
+    </action-state>
+
+    <action-state  id="searchByKey" >
+        <evaluate expression="PSORD031Service.page(searchCondition)" result="flowScope.itemList" />
+        <transition to="PSORD031"/>
+    </action-state>
+
+    <view-state id="PSORD031" view="ord/unord/PSORD031" model="domain">
+       <transition on="order" validate="false">
+            <evaluate expression="PSORD031Service.order(searchCondition)" 
+                 result="flowScope.itemList" />
+        </transition>
+        <transition on="page" validate="false">
+             <evaluate expression="PSORD031Service.page(searchCondition)" 
+                result="flowScope.itemList" /> 
+        </transition>
+        <!-- 購入依頼から見積依頼入力 -->
+        <transition on="editValidate" validate="true">
+            <set name="purAplIdentify.purAplSeqNum" value="requestParameters.purAplSeq"></set>
+            <set name="purAplIdentify.lastUpdDate" value="requestParameters.lastUpdDate"></set>
+            <set name="flashScope.isShowQuotReqInput" value="true"/>
+            <set name="slipNo" value="requestParameters.slipNo" />
+        </transition>
+        <transition on="quotReqInput" to="PSQOT040" validate="false"/>
+        <transition on="quoteInfoValidate" validate="true">
+            <set name="domain.quotStatusIdentify.quotReqSeq" value="requestParameters.quotReqSeq"></set>
+            <set name="domain.quotStatusIdentify.lastUpdDate" value="requestParameters.quotLastUpdDate"></set>
+            <set name="flashScope.isShowQuote" value="true"/>
+        </transition>
+        <transition on="quote" to="PSQOT070Status" validate="false"/>
+        <transition on="acceptModifyValidate" validate="true">
+            <set name="notActionPurReqIdentify.purReqSeq" value="requestParameters.purReqSeq"/>
+            <set name="notActionPurReqIdentify.lastUpdDate" value="requestParameters.lastUpdDate"/>
+            <set name="flashScope.isShowOrderModify" value="true"/>
+        </transition>
+        <transition on="orderModify" to="PSORD040" validate="false"/>
+        <transition on="back" to="home" validate="false" />
+        <!-- 強化-00852-000 2013/05/28 ADD SBO_pangzhen START -->
+        <transition on="detailCatValidate" validate="true" >
+            <set name="notActionPurReqIdentify.purAplSeq" value="requestParameters.purAplSeq"/>
+            <set name="catalogIdentify.purAplSeqNo" value="requestParameters.purAplSeq"/>
+            <set name="catalogIdentify.appUnitNo" value="requestParameters.purReqNo"/>
+            <set name="catalogIdentify.purReqNo.purReqNo" value="requestParameters.purReqNoNotUnit"/>
+            <set name="flashScope.isShowDetailCat" value="true"/>
+        </transition>
+        <transition on="detailPurReqValidate" validate="true" >
+            <set name="notActionPurReqIdentify.purAplSeq" value="requestParameters.purAplSeq"/>
+            <set name="purAplIdentify.purAplSeqNum" value="requestParameters.purAplSeq"/>
+            <set name="purAplIdentify.purReqNo" value="requestParameters.purReqNoNotUnit"/>
+            <set name="flashScope.isShowDetailPurReq" value="true"/>
+        </transition>
+        <transition on="detailCat" to="PSCAT040" validate="false" >
+        </transition>
+        <transition on="detailPurReq" to="PSPUR040" validate="false" >
+        </transition>
+    </view-state>
+    
+    <subflow-state id="PSCAT040" subflow="cat/catalog/PSCAT040TOP">
+        <input name="catalogIdentify" value="catalogIdentify" />
+    </subflow-state>
+    
+    <subflow-state id="PSPUR040" subflow="pur/req/PSPUR040TOP">
+        <input name="identify" value="purAplIdentify" />
+    </subflow-state>
+    
+    <subflow-state id="PSQOT040" subflow="qot/est/PSQOT040" >
+        <input name="identify" value="purAplIdentify" />
+        <input name="isInitIndividualApr" value="true" />
+        <input name="patternName" value="2" />
+        <input name="slipNo" value="slipNo" />
+    </subflow-state>
+
+    <subflow-state id="PSQOT070Status" subflow="qot/ref/PSQOT070">
+        <on-entry>
+            <evaluate expression="PSQOT070Service.quoteInfo(domain)" result="flowScope.identify" />
+        </on-entry>
+        <input name="quotStatusIdentify" value="identify" />
+    </subflow-state>
+    
+    <subflow-state id="PSORD040" subflow="ord/order/PSORD040" >
+        <input name="notActionPurReqIdentify" value="domain.notActionPurReqIdentify" />
+        <input name="eventType" value="'page'" />
+        <input name="SessionKey" value="SessionKey" />
+    </subflow-state>
+
+</flow>

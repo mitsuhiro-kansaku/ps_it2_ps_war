@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<flow xmlns="http://www.springframework.org/schema/webflow"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.springframework.org/schema/webflow
+        http://www.springframework.org/schema/webflow/spring-webflow-2.0.xsd"
+    parent="base">
+
+    <input name="fromPattern"/>
+    <input name="SessionKey" />
+
+    <on-start>
+        <evaluate expression="PSCAT010SearchService.init()"
+            result="flowScope.searchCondition" />
+    </on-start>
+    
+    <view-state id="PSCAT010Search"  model="searchCondition" view="cat/catalog/PSCAT010Search">
+        <transition on="newSearch" to="PSCAT010PriceArticleList" validate="true">
+            <set name="flowScope.isCurrentPageSearch" value="false" />
+            <set name="flowScope.isShowList" value="true"></set>
+            <set name="requestScope.pageid" value="'PriceList'"></set>
+            <evaluate expression="PSCAT010SearchService.newSearchSave(searchCondition)"></evaluate>
+        </transition>
+        <transition on="narrowSearch"  to="PSCAT010PriceArticleList" validate="true">
+            <set name="flowScope.isCurrentPageSearch" value="false" />
+            <set name="flowScope.isShowList" value="true"></set>
+            <set name="requestScope.pageid" value="'PriceList'"></set>
+            <evaluate expression="PSCAT010SearchService.narrowSearchSave(searchCondition)"></evaluate>
+        </transition>
+        <transition on="searchCategoryList" to="PSCAT010CategoryList" validate="false"/>
+        <transition on="searchPriceArticleList" to="PSCAT010PriceArticleList" validate="false">
+            <set name="flowScope.isCurrentPageSearch" value="false" />
+        </transition>
+        <transition on="searchFavoritesCatalogList" to="PSCAT010FavoritesCatalogList" validate="false">
+            <set name="flowScope.isCurrentPageSearch" value="false" />
+        </transition>
+        <transition on="searchOuterCatalogList" to="PSCAT010OuterCatalogList" validate="false">
+            <set name="flowScope.isCurrentPageSearch" value="false" />
+            <set name="flowScope.catalogName" value="requestParameters.catalogName" />
+        </transition>
+        <transition on="search" to="PSCAT010PriceArticleList" validate="false"/>
+        <transition on="PSFAV010" to="PSFAV010" validate="false" />
+        <transition on="back" to="home" validate="false"/>
+    </view-state> 
+    
+    <subflow-state id="PSCAT010CategoryList" subflow="cat/catalog/PSCAT010CategoryList" >
+        <input name="searchCondition" value="searchCondition" />
+        <input name="fromPattern" value="fromPattern" />
+        <input name="SessionKey" value="SessionKey" />
+        <transition on="back" to="PSCAT010Search" ></transition>
+    </subflow-state>
+    
+    <subflow-state id="PSCAT010PriceArticleList" subflow="cat/catalog/PSCAT010PriceArticleList" >
+        <input name="searchCondition" value="searchCondition" />
+        <input name="fromPattern" value="fromPattern" />
+        <input name="SessionKey" value="SessionKey" />
+        <input name="isCurrentPageSearch" value="isCurrentPageSearch" />
+        <transition on="back" to="PSCAT010Search" >
+            <set name="flowScope.isCurrentPageSearch" value="true" />
+        </transition>
+    </subflow-state>
+    
+    <subflow-state id="PSCAT010OuterCatalogList" subflow="cat/catalog/PSCAT010OuterCatalogList" >
+        <input name="searchCondition" value="searchCondition" />
+        <input name="fromPattern" value="fromPattern" />
+        <input name="SessionKey" value="SessionKey" />
+        <input name="catalogName" value="flowScope.catalogName"/>
+        <transition on="back" to="PSCAT010Search" ></transition>
+    </subflow-state>
+    
+    <subflow-state id="PSCAT010FavoritesCatalogList" subflow="cat/catalog/PSCAT010FavoritesCatalogList" >
+        <input name="searchCondition" value="searchCondition" />
+        <input name="fromPattern" value="fromPattern" />
+        <input name="SessionKey" value="SessionKey" />
+        <input name="isCurrentPageSearch" value="isCurrentPageSearch" />
+        <transition on="back" to="PSCAT010Search" >
+            <set name="flowScope.isCurrentPageSearch" value="true" />
+        </transition>
+    </subflow-state>
+    
+     <subflow-state id="PSFAV010" subflow="fav/favorite/PSFAV010" >
+<!-- 
+        <input name="buyerCompanyCd" value="buyerCompanyCd" />
+        <input name="buyerSectionCd" value="buyerSectionCd" />
+        <input name="itemCd" value="itemCd" />
+        <input name="supCd" value="supCd" />
+        <input name="validStartDate" value="validStartDate" />
+        <input name="validEndDate" value="validEndDate" />
+ -->
+        <input name="eventType" value="'upFav'" />
+    </subflow-state>
+</flow>

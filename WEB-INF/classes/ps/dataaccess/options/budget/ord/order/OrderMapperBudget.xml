@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="ps.dataaccess.options.budget.ord.order.OrderMapperBudget">
+
+    <resultMap type="fw.domain.slip.order.order.Order" id="order_Map">
+           <result column="INFO_CD" property="informationInd.informationInd"/>
+           <result column="LOAD_COMPANY_CD" property="user.loadSection.loadSection.company.companyCd"/>
+           <result column="LOAD_SECTION_PLACE_CD" property="user.loadSection.loadSection.sectionPlace.sectionPlaceCd"/>
+           <result column="BUDGET_NO" property="complement.budgetNumber.budgetNumber"/>
+           <result column="LOAD_SECTION_CD" property="user.loadSection.loadSection.sectionCd"/>
+           <result column="SUBJECT_CD" property="accounting.subject.subjectCd"/>
+           <result column="ORDER_FIRST_DATE" property="schedule.orderDate.orderFirstDate.dateOfymd"/>
+           <result column="CURRENCY_CD" property="accounting.orderAmount.amountMng.currency.currencyCd"/>
+           <result column="ORDER_AMOUNT" property="accounting.orderAmount.orderAmount.amount"/>
+           <result column="CURRENCY_CD" property="accounting.orderAmount.orderAmount.currencyCd"/>
+           <result column="ORDER_CANCEL_AMOUNT" property="orderCancel.orderCancelAmount.amount"/>
+           <result column="ITEM_CD" property="accounting.orderItem.item.itemCd"/>
+           <result column="DELIV_PLACE_CD" property="complement.delivPlace.delivPlaceCd"/>
+           <result column="REQ_AMOUNT" property="requestAccount.requestAmount.amount"/>
+           <result column="PUR_REQ_DATE" property="schedule.reqDate.reqDate.dateOfymd"/>
+           <result column="ORDER_INPUT_DATE" property="schedule.orderDate.orderInputDate.dateOfymd"/>
+           <result column="PUR_REQ_NO" property="orderManagement.slipOriginNo.purReqNo.purReqNo"/>
+           <result column="PRE_SEQ" property="orderIdentify.preSeq"/>
+    </resultMap>
+   <select id="searchOrder" parameterType="String" resultMap="order_Map">
+        SELECT 
+             T_ORDER.INFO_CD, 
+             T_ORDER.LOAD_COMPANY_CD, 
+             T_ORDER.LOAD_SECTION_PLACE_CD,
+             T_ORDER.BUDGET_NO,
+             T_ORDER.LOAD_SECTION_CD,
+             T_ORDER.SUBJECT_CD,
+             T_ORDER.ORDER_FIRST_DATE,
+             T_ORDER.CURRENCY_CD,
+             T_ORDER.ORDER_AMOUNT,
+             T_ORDER.ORDER_CANCEL_AMOUNT,
+             T_ORDER.ITEM_CD,
+             T_ORDER.DELIV_PLACE_CD,
+             T_PUR_REQUEST.REQ_AMOUNT,
+             T_PUR_APL.PUR_REQ_DATE,
+             T_ORDER.ORDER_INPUT_DATE,
+             T_ORDER.PUR_REQ_NO,
+             T_ORDER.PRE_SEQ
+        FROM T_ORDER
+        LEFT JOIN T_PUR_REQUEST
+                ON  T_PUR_REQUEST.PUR_REQ_NO = T_ORDER.PUR_REQ_NO
+               AND  T_PUR_REQUEST.DELETE_FLG = '0'
+               AND  T_PUR_REQUEST.NEW_FLG ='1'
+               AND  T_PUR_REQUEST.NEW_APP_FLG ='1'
+         LEFT JOIN T_PUR_APL
+                ON  T_PUR_REQUEST.PUR_APL_SEQ = T_PUR_APL.PUR_APL_SEQ
+               AND  T_PUR_APL.DELETE_FLG = '0'
+               AND  T_PUR_APL.NEW_FLG ='1'
+               AND  T_PUR_APL.NEW_APP_FLG ='1'
+        WHERE T_ORDER.ORDER_SEQ = #{orderSeq}
+    </select>
+    <select id="searchOldOrder" parameterType="String" resultMap="order_Map">
+        SELECT 
+             T_ORDER.INFO_CD, 
+             T_ORDER.LOAD_COMPANY_CD, 
+             T_ORDER.LOAD_SECTION_PLACE_CD,
+             T_ORDER.BUDGET_NO,
+             T_ORDER.LOAD_SECTION_CD,
+             T_ORDER.SUBJECT_CD,
+             T_ORDER.ORDER_FIRST_DATE,
+             T_ORDER.CURRENCY_CD,
+             T_ORDER.ORDER_AMOUNT,
+             T_ORDER.ORDER_CANCEL_AMOUNT,
+             T_ORDER.ITEM_CD,
+             T_ORDER.DELIV_PLACE_CD,
+             T_PUR_REQUEST.REQ_AMOUNT,
+             T_PUR_APL.PUR_REQ_DATE
+        FROM T_ORDER
+        LEFT JOIN T_PUR_REQUEST
+                ON  T_PUR_REQUEST.PUR_REQ_NO = T_ORDER.PUR_REQ_NO
+               AND  T_PUR_REQUEST.DELETE_FLG = '0'
+               AND  T_PUR_REQUEST.NEW_FLG ='1'
+         LEFT JOIN T_PUR_APL
+                ON  T_PUR_REQUEST.PUR_APL_SEQ = T_PUR_APL.PUR_APL_SEQ
+               AND  T_PUR_APL.DELETE_FLG = '0'
+               AND  T_PUR_APL.NEW_FLG ='1'
+               
+        WHERE
+        	T_ORDER.ORDER_SEQ = (SELECT PRE_SEQ FROM T_ORDER WHERE ORDER_SEQ =  #{orderSeq})
+    </select>
+</mapper>

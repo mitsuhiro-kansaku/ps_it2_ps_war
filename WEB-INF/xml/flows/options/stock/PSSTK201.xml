@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<flow xmlns="http://www.springframework.org/schema/webflow"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.springframework.org/schema/webflow
+        http://www.springframework.org/schema/webflow/spring-webflow-2.0.xsd"
+    parent="base">
+
+    <var name="identify" class="fw.domain.options.stock.stockplace.StockPlaceIdentify" />
+
+    <input name="searchCondition" />
+    <input name="isCurrentPageSearch" />
+
+    <decision-state id="isSearchByKey">
+        <if test="flowScope.isCurrentPageSearch" then="searchByKey" else="searchByCondition" />
+    </decision-state>
+
+    <action-state id="searchByCondition">
+        <evaluate expression="PSSTK201Service.init(searchCondition)" result="flowScope.itemList" />
+        <transition to="PSSTK201" />
+    </action-state>
+
+    <action-state id="searchByKey">
+        <evaluate expression="PSSTK201Service.page(searchCondition)" result="flowScope.itemList" />
+        <transition to="PSSTK201" />
+    </action-state>
+
+    <view-state id="PSSTK201" view="options/stock/PSSTK201" model="identify">
+        <transition on="validateBeforeUpdate" validate="true">
+            <set name="flashScope.isShowUpdate" value="true" />
+        </transition>
+        <transition on="update" to="update" validate="false" />
+        <transition on="validateBeforeDelete" validate="true">
+            <set name="flashScope.isShowDelete" value="true" />
+        </transition>
+        <transition on="delete" to="delete" validate="false" />
+        <transition on="order" validate="false">
+            <evaluate expression="PSSTK201Service.order(searchCondition)" result="flowScope.itemList" />
+        </transition>
+        <transition on="page" validate="false">
+            <evaluate expression="PSSTK201Service.page(searchCondition)" result="flowScope.itemList" />
+        </transition>
+        <transition on="back" to="home" validate="false" />
+    </view-state>
+
+    <subflow-state id="update" subflow="options/stock/PSSTK203">
+        <input name="identify" value="identify" />
+        <input name="SessionKey" value="SessionKey" />
+    </subflow-state>
+
+    <subflow-state id="delete" subflow="options/stock/PSSTK204">
+        <input name="identify" value="identify" />
+    </subflow-state>
+
+</flow>

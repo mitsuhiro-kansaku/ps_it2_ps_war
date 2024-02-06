@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<flow xmlns="http://www.springframework.org/schema/webflow"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.springframework.org/schema/webflow
+        http://www.springframework.org/schema/webflow/spring-webflow-2.0.xsd"
+    parent="base">
+
+    <!-- 識別情報-->
+    <var name="quotReqIdentify" class="fw.domain.slip.quot.quotreq.QuotReqIdentify" />
+    <var name="quotReqIssuePrint" class="fw.domain.slip.quot.quotreq.QuotReqIssuePrint"/>
+
+    <input name="searchCondition" />
+    <input name="isCurrentPageSearch" />
+    <input name="quickLink" />
+
+    <decision-state id="isSearchByKey">
+       <if test="flowScope.isCurrentPageSearch" then="searchByKey" else="searchByCondition" />
+    </decision-state>
+    
+    <action-state id="searchByCondition">
+        
+        <evaluate expression="PSQOT171Service.init(searchCondition)" result="flowScope.itemList"/>
+        <transition to="PSQOT171"/> 
+    </action-state>
+
+    <action-state  id="searchByKey" >
+        <evaluate expression="PSQOT171Service.page(searchCondition)" result="flowScope.itemList"/>
+        <transition to="PSQOT171"/>
+    </action-state>
+
+    <view-state id="PSQOT171" model="quotReqIssuePrint" view="qot/print/PSQOT171">
+       <transition on="order" validate="false">
+            <evaluate expression="PSQOT171Service.order(searchCondition)" result="flowScope.itemList"/>
+        </transition>
+        <transition on="page" validate="false">
+             <evaluate expression="PSQOT171Service.page(searchCondition)" result="flowScope.itemList" /> 
+        </transition>
+        <transition on="detail" to="PSQOT020TOP" validate="false" />
+        <transition on="detailValidate" validate="false">
+            <set name="quotReqIdentify.quotReqSeqNo.seqNumber" value="requestParameters.seqNumber"/><!-- シーケンス番号 -->
+            <set name="quotReqIdentify.lastUpdDate" value="requestParameters.lastUpdDate"/><!-- lastUpdDate -->
+            <set name="flashScope.isShowDetail" value="true"/>
+        </transition>
+        <transition on="print" validate="false" to="searchByKey">
+            <evaluate expression="PSQOT171Service.print(quotReqIssuePrint)" />
+            <set name="flashScope.isSuccess" value="true"></set>
+            <set name="flashScope.fromPrint" value="true"></set>
+        </transition>
+        <transition on="back" to="home" validate="false" />
+    </view-state>
+
+    <!--詳細 -->
+    <subflow-state id="PSQOT020TOP" subflow="qot/est/PSQOT020TOP" >
+        <input name="quotReqIdentify" value="quotReqIdentify" />
+    </subflow-state>
+</flow>

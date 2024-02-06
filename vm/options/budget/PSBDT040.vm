@@ -1,0 +1,591 @@
+<!doctype html>
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="ja" lang="ja">
+<html LANG="ja">
+<head>
+<title>#customSpringMessage('RINGI_BUDGET_INPUT')</title><!--稟議予算入力-->
+<meta http-equiv="Content-type" content="text/html; charset=UTF-8">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Content-script-type" content="text/javascript">
+<link id="CSS_FONT" rel="stylesheet" href="../../include/FontS.css" type="text/css">
+<link rel="stylesheet" href="../../include/ime.css" type="text/css">
+<link rel="stylesheet" href="../../include/searchbox.css" type="text/css">
+<link rel="stylesheet" href="../../include/Layout.css" type="text/css">
+<link rel="stylesheet" href="../../include/Color.css" type="text/css">
+<script language="javascript" type="text/javascript" src="../../include/common.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/check.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/date.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/searchbox.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/jquery-1.7.2.min.js"></script>
+<script language="javascript" type="text/javascript">
+<!--
+#parse("./common/common_js.vm")
+display();
+
+var isClickable = false;
+
+function onLoad() {
+    setFocusForInput();
+    amountByAjax();
+
+    #if("$!alertMessage" != "" && "$!isSuccess" == "" && "$!errorMessage" == "")
+        #if($!alertMessage.indexOf("E035") != -1)
+            alert("$!alertMessage");
+        #else
+            if (confirm("$!alertMessage")) {
+                getObj("Body").action="${flowExecutionUrl}&_eventId=edit&checkPass=1";
+                buttonDisable();
+                getObj("Body").submit();
+                return;
+            }
+        #end
+    #end
+
+    var errorMsg = "$!errorMessage";
+    if (errorMsg != ""){
+        document.getElementById("TR_ERROR").style.display = "";
+        isClickable = true;
+        return;
+    }
+
+    var isSuccess = '#jsEscape($!isSuccess)';
+    var from = '#jsEscape($!pageFrom)';
+    if (isSuccess == 'true') {
+        #set( $param = "#customSpringMessage('RINGI_BUDGET')" )
+        #if ($!pattern == "new" || $!pattern == "")
+            alert('#customMessageArgs("I005",[$param])');
+        #elseif ($!pattern ==  "edit")
+            alert('#customMessageArgs("I002",[$param])');
+        #end
+        buttonDisable();
+
+        if('PSBDT051' == from) {
+            top.iframeChange('${flowExecutionUrl}&_eventId=back');
+            return;
+        } else {
+            top.iframeChange('${flowExecutionUrl}&_eventId=showdetail','pageid','PSBDT040','pattern','new', 'from','#jsEscape($!pageFrom)','isInitIndividualApr','true' );
+            return;
+        }
+    }
+    
+    isClickable = true;
+}
+
+function display(){
+    var pattern = '#jsEscape($!pattern)';
+    if (pattern == "new" || pattern == "") {
+        top.backUrl="${flowExecutionUrl}&_eventId=home";
+    }
+}
+
+function exec() {
+    if(!isClickable) {
+        return;
+    }
+    #set( $param1 = "#customSpringMessage('RINGI_BUDGET')" )
+    #set( $param2 = "#customSpringMessage('ACTION_REGISTER')" )
+    if( !confirm('#customMessageArgs("W001",[$param1,$param2])') ) {
+        return;
+    }
+    buttonDisable();
+    getObj("Body").action="${flowExecutionUrl}&_eventId=apply";
+    getObj("Body").submit();
+}
+
+function update() {
+    if(!isClickable) {
+        return;
+    }
+    #set( $param1 = "#customSpringMessage('RINGI_BUDGET')" )
+    #set( $param2 = "#customSpringMessage('UPDATE')" )
+    if( !confirm('#customMessageArgs("W001",[$param1,$param2])') ) {
+        return;
+    }
+    buttonDisable();
+    getObj("Body").action="${flowExecutionUrl}&_eventId=edit";
+    getObj("Body").submit();
+}
+
+function addDetail() {
+    if(!isClickable) {
+        return;
+    }
+    buttonDisable();
+    getObj("Body").action="${flowExecutionUrl}&_eventId=addDetail";
+    getObj("Body").submit();
+}
+
+function deleteDetail(index) {
+    if(!isClickable) {
+        return;
+    }
+    getObj("Body").action="${flowExecutionUrl}&_eventId=deleteDetail&detailIndex="+index;
+    getObj("Body").submit();
+}
+
+function openPlanUserPop() {
+    // 起案者POPUP
+    userPopup.setObject(
+        getObj('planInfo.planUser.userID'),
+        getObj('planInfo.planUser.userName'),
+        getObj('planInfo.reqSection.sectionCd'),
+        getObj('planInfo.reqSection.sectionName')
+    );
+    masterSearch('../../src/userPopup/search?pageid=userPopupSearch&popupPageid=PSBDT040',
+                                                  'UserSearch',
+                                                  '750',
+                                                  '500',
+                                                  document.getElementById('planInfo.planUser.userID'),
+                                                  document.getElementById('planInfo.planUser.userName'));
+}
+function planUserOnBlur() {
+    var userId = getObj("planInfo.planUser.userID").value;
+    if(!userId) {
+        getObj("planInfo.planUser.userName").value = "";
+        getObj("planInfo.reqSection.sectionCd").value = "";
+        getObj("planInfo.reqSection.sectionName").value = "";
+    } else {
+         $.ajax({
+            type: "POST",
+            async:false,
+##            url:"../../getUserInfoOnBlur",
+            url:"../../getMsgUserInfoOnBlur",
+            data: {
+                termFlag:'0',
+                companyCd:'#jsEscape($!loginUserCompanyCd)',
+                sectionPlaceCd:'#jsEscape($!loginUserSectionPlaceCd)',
+                sectionCd:'',
+                referenceRangeFlg:'2',
+                userPermissionFlg:'ALL',
+                userId:userId
+            },
+            success:function(data){
+                //設定
+                getObj("planInfo.planUser.userName").value = data.userName;
+                getObj("planInfo.reqSection.sectionCd").value = data.userIdentify.sectionCd;
+                getObj("planInfo.reqSection.sectionName").value = data.sectionName;
+            }
+        });
+    }
+}
+
+function openReqSectionPop() {
+    // 依頼部門POPUP
+    sectionPopup.setObject(
+        getObj('planInfo.reqSection.sectionCd')
+        ,getObj('planInfo.reqSection.sectionName')
+    );
+    masterSearch('../../src/sectionPopup/search?pageid=sectionPopupSearch&popupPageid=PSBDT040','sectionSearch', '750', '500');
+}
+function reqSectionOnBlur() {
+    var sectionCd = getObj("planInfo.reqSection.sectionCd").value;
+    if(!sectionCd) {
+        getObj("planInfo.reqSection.sectionName").value = "";
+    } else {
+         $.ajax({
+            type: "POST",
+            async:false,
+            url:"../../getSectionInfoOnBlur",
+            data: {
+                termFlag:'0',
+                companyCd:cleanXss('#jsEscape($!loginUserCompanyCd)'),
+                sectionCd:cleanXss(sectionCd)
+            },
+            success:function(data){
+                //設定
+                getObj("planInfo.reqSection.sectionName").value = data.sectionName;
+            }
+        });
+    }
+}
+
+function openSubjectPop(index) {
+    // 科目POPUP
+    subjectPopup.setObject(
+        getObj('ringiBudgetItemList[' + index + '].subject.subjectCd')
+        ,getObj('ringiBudgetItemList[' + index + '].subject.subjectName')
+    );
+    masterSearch('../../src/subjectPopup/search?pageid=subjectPopupSearch&popupPageid=PSBDT040','subjectSearch', '750', '500');
+}
+function subjectOnBlur(index) {
+    var subjectCd = getObj('ringiBudgetItemList[' + index + '].subject.subjectCd').value;
+    if(!subjectCd) {
+        getObj('ringiBudgetItemList[' + index + '].subject.subjectName').value = "";
+    } else {
+         $.ajax({
+            type: "POST",
+            async:false,
+            url:"../../getSubjectOnBlur",
+            data: {
+                termFlag:'0',
+                companyCd:'#jsEscape($!loginUserCompanyCd)',
+                subjectCd:subjectCd
+            },
+            success:function(data){
+                //設定
+                getObj('ringiBudgetItemList[' + index + '].subject.subjectName').value = data.subjectName;
+            }
+        });
+    }
+}
+
+function amountByAjax() {
+    if(!getObj('dtlBudgetTotal.amountFormat').value) {
+        getObj('dtlBudgetTotal.amountFormat').value = "";
+    }
+    $.ajax({
+        type: "POST",
+        async:false,
+        url:"../../buyPriceController/itemAmount",
+        data: {
+            #foreach($!item in $!ringiBudget.ringiBudgetItemList)
+                "amountArray[$velocityCount].amountFormat":getObj('ringiBudgetItemList[$velocityCount].budgetAmount.amountFormat').value,
+            #end
+            currencyCd:'#jsEscape($!ringiBudget.currency.currencyCd)'
+        },
+        success:function(data){
+            getObj('dtlBudgetTotal.amountFormat').value = data.amount.amountFormat;
+        }
+    });
+
+    // 予算猶予額
+//    if (getObj('budgetAmount.amountFormat').value != "") {
+        var budgetAmount = delComma(getObj('budgetAmount.amountFormat').value);
+        var dtlBudgetTotal = delComma(getObj('dtlBudgetTotal.amountFormat').value);
+        var budgetAmountGrace = budgetAmount - dtlBudgetTotal;
+
+        $.ajax({
+            type: "POST",
+            async:false,
+            url:"../../buyPriceController/calculateCnvAmount",
+            data: {
+                "amount.amountFormat":budgetAmountGrace,
+                currencyCd:'#jsEscape($!ringiBudget.currency.currencyCd)'
+            },
+            success:function(data){
+                getObj('budgetAmountGrace.amountFormat').value = data.cnvAmount.amountFormat;
+            }
+        });
+//    }
+}
+
+function editBudgetDtlNo(obj) {
+    $('.detail_no').each(function(){
+        var detail_no = $(this).val();
+        if (detail_no) {
+            $(this).val($(obj).val() + '-' + detail_no.slice(-3));
+        }
+    });
+}
+
+function delComma( str ) {
+    var num = new String( str ).replace( /,/g, "" );
+    return num;
+}
+
+//-->
+</script>
+<style>
+    .input_no_border{
+        border-width: 0!important;
+        background: none transparent scroll repeat 0% 0%!important;
+    }
+</style>
+</head>
+<body class="CreateArea" onload="onLoad();">
+<form id="Body" name="Body" method="post">
+    #customFormHiddenInput("isClassify" "false")
+    <table class="HomeBox">
+        <tr>
+            <td>
+                <!-- カレンダーボックス  -->
+                <iframe id="CALENDARBOX" class="CALENDARBOX" framespacing="0" scrolling="no" frameborder="0" src="../../sbxCalendar/body.vm"></iframe>
+                <table>
+                    <tr>
+                        <td align="left">
+                            <table class="NoBorder" width="98%">
+                                <tr>
+                                    <td>
+                                        <u><img src="../../image/mrkCircle.gif"><span id="StepTitle" class="FontStepTitle">#customSpringMessage("RINGI_BUDGET_INPUT")</span></u><br><br>
+                                            #if ($!pattern == "new" || $!pattern == "")
+                                            <span id="STEPMSG" class="FontSmallBold DarkBlue">#customSpringMessage("PSBDT040_ADD_HEADER_COMMENT")</span><!--コメント-->
+                                            #elseif ($!pattern ==  "edit")
+                                            <span id="STEPMSG" class="FontSmallBold DarkBlue">#customSpringMessage("PSBDT040_EDIT_HEADER_COMMENT")</span><!--コメント-->
+                                            #end
+                                    </td>
+                                    <td align="right" valign="middle" nowrap>
+                                        #if ($!pattern == "new" || $!pattern == "")
+                                        <input name="Button2" type="button" class="LargeButton" value="#customSpringMessage('ACTION_REGISTER')" onclick="exec();"><!--登録-->
+                                        #elseif ($!pattern ==  "edit")
+                                        <input name="Button2" type="button" class="LargeButton" value="#customSpringMessage('UPDATE')" onclick="update();"><!--更新-->
+                                        #end
+                                    </td>
+                                </tr>
+                                <tr id ="TR_ERROR" style="display:none;">
+                                    <td class="error" style="height:0px;">
+                                        $!errorMessage
+                                    </td>
+                                </tr>
+                            </table>
+                            <table class="Box1G ListBorderWidth" width="100%" id="base_input_table">
+                                <tbody class="Box1G ListBorderWidth">
+                                    <tr>
+                                        <td class="Box1H FontBoxHeader">
+                                            #customSpringMessage('BUDGET_NO')<!--予算番号-->
+                                            #if ($!pattern == "new")
+                                                <span class="FontWarn">&nbsp;※</span>
+                                            #end
+                                        </td>
+                                        <td nowrap class="Box1D FontSmall">
+                                            #if ($!pattern == "new")
+                                                #springFormInput("ringiBudget.ringiBudgetIdentify.budgetNo.budgetNo" "class='Small noIME' maxlength='26' size='40' onchange='editBudgetDtlNo(this);'")
+                                            #elseif ($!pattern == "edit")
+                                                #out($!ringiBudget.ringiBudgetIdentify.budgetNo.budgetNo)
+                                            #end
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td class="Box1H FontBoxHeader">
+                                            #customSpringMessage('PERMIT_DATE')<!--許可日-->
+                                            #if ($!pattern == "new")
+                                                <span class="FontWarn input_img">&nbsp;※</span>
+                                            #end
+                                        </td>
+                                        <td class="Box1D FontSmall">
+                                            #if ($!pattern == "new")
+                                                #springFormInput("ringiBudget.permitDate.dateOfymdFormat" "maxLength=8 size=12 class='SmallAnk noIME' onblur='dateOnBlur(this);' onfocus='dateOnFocus(this);' ")
+                                                <img class="Icon" src="../../image/btnCalendar.gif" onclick="initSearchBox(1,getObj('permitDate.dateOfymdFormat'));">
+                                            #elseif ($!pattern == "edit")
+                                                #out($!ringiBudget.permitDate.dateOfymdDispYMD)
+                                            #end
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td class="Box1H FontBoxHeader">
+                                            #customSpringMessage('BUDGET_TITLE_NAME')<span class="FontWarn">&nbsp;※</span><!--予算件名-->
+                                        </td>
+                                        <td class="Box1D">
+                                            #springFormInput("ringiBudget.budgetTitleName.titleName" 'class="Small" size="60" maxLength="30"')
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td class="Box1H FontBoxHeader">
+                                            #customSpringMessage('PLAN_USER')<span class="FontWarn">&nbsp;※</span><!--起案者-->
+                                        </td>
+                                        <td class="Box1D">
+                                            <img class="Mark" src="../../image/mrkHuman.gif">
+                                            #springFormInput("ringiBudget.planInfo.reqSection.sectionCd" "class='Small input_no_border' size='13' tabIndex='-1' readonly='true'")
+                                            #springFormInput("ringiBudget.planInfo.reqSection.sectionName" "class='Small input_no_border' size='71' tabIndex='-1' readonly='true'")
+                                            <br/>
+                                            #springFormInput("ringiBudget.planInfo.planUser.userID" 'class="Small noIME" maxlength="12" size="12" onblur="planUserOnBlur();"')
+                                            #springFormInput("ringiBudget.planInfo.planUser.userName" 'class="SmallDsp" readonly tabIndex="-1" size="35"')
+                                            <img class="Icon" name="UserSearch" src="../../image/btnLupe.gif" onclick="openPlanUserPop();">
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td class="Box1H FontBoxHeader">
+                                            #customSpringMessage('CURRENCY_CD')<!--通貨コード-->
+                                        </td>
+                                        <td class="Box1D FontSmall">
+                                            #out($!ringiBudget.currency.currencyCd)
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td class="Box1H FontBoxHeader">
+                                            #customSpringMessage('BUDGET_AMOUNT')<span class="FontWarn">&nbsp;※</span><!--予算金額-->
+                                        </td>
+                                        <td class="Box1D">
+                                            <span class="FontCurrSmall">#out($!ringiBudget.currency.currencyMark)</span>
+                                            #springFormInput("ringiBudget.budgetAmount.amountFormat" "class='SmallRight noIME' maxLength='16' size='25' onblur='editVal(this); amountByAjax();' onfocus='deleteComma(this);'")
+                                            &nbsp;
+                                            <span class="FontBoxHeader">
+                                            #customSpringMessage('BUDGET_AMOUNT_GRACE')<!--予算猶予額-->
+                                            </span>
+                                            <span class="FontCurrSmall Brown">#out($!ringiBudget.currency.currencyMark)</span>
+                                            #springFormInput("ringiBudget.budgetAmountGrace.amountFormat" "class='FontCurrSmall Brown input_no_border' tabIndex='-1' size='25' readonly='true'")
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td class="Box1H FontBoxHeader">
+                                            #customSpringMessage('DTL_BUDGET_TOTAL')<!--明細予算合計金額-->
+                                        </td>
+                                        <td class="Box1D">
+                                            <span class="FontCurrSmall Brown">#out($!ringiBudget.currency.currencyMark)</span>
+                                            #springFormInput("ringiBudget.dtlBudgetTotal.amountFormat" "class='FontCurrSmall Brown input_no_border' tabIndex='-1' size='35' readonly='true'")
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td class="Box1H FontBoxHeader">
+                                            #customSpringMessage('END_EXP_DATE')<span class="FontWarn">&nbsp;※</span><!--完了予定日-->
+                                        </td>
+                                        <td class="Box1D">
+                                            #springFormInput("ringiBudget.endExpDate.dateOfymdFormat" "maxLength=8 size=12 class='SmallAnk noIME' onblur='dateOnBlur(this);' onfocus='dateOnFocus(this);' ")
+                                            <img class="Icon" src="../../image/btnCalendar.gif" onclick="initSearchBox(1,getObj('endExpDate.dateOfymdFormat'));">
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td class="Box1H FontBoxHeader">
+                                            #customSpringMessage('END_DATE')<!--完了日-->
+                                        </td>
+                                        <td class="Box1D">
+                                            #if ($!pattern == "new" || $!pattern == "")
+                                                #springFormInput("ringiBudget.endDate.dateOfymdFormat" 'class="SmallDsp" readonly tabIndex="-1" size=12')
+                                            #elseif ($!pattern ==  "edit")
+                                                #springFormInput("ringiBudget.endDate.dateOfymdFormat" "maxLength=8 size=12 class='SmallAnk noIME' onblur='dateOnBlur(this);' onfocus='dateOnFocus(this);' ")
+                                                <img class="Icon" src="../../image/btnCalendar.gif" onclick="initSearchBox(1,getObj('endDate.dateOfymdFormat'));">
+                                            #end
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td class="Box1H FontBoxHeader">
+                                            #customSpringMessage('CHECK_IND')<!--チェック区分-->
+                                        </td>
+                                        <td class="Box1D FontSmall">
+                                            #customFormCheckbox("ringiBudget.totalChkInd" "" "1" "0")#customSpringMessage('TOTAL_CHK')<br>
+                                            <span class="FontMini Blue">#customSpringMessage("TOTAL_CHK_RINGI_COMMENT")</span><!--コメント-->
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td class="Box1H FontBoxHeader">
+                                            #customSpringMessage('TOTAL_DIFF_MAX_AMOUNT')<!--総額差額上限金額-->
+                                        </td>
+                                        <td class="Box1D">
+                                            <span class="FontCurrSmall">#out($!ringiBudget.currency.currencyMark)</span>
+                                            #springFormInput("ringiBudget.diffMaxAmount.amountFormat" "class='SmallRight noIME' maxLength='16' size='25' onblur='editVal(this);' onfocus='deleteComma(this);'")
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td class="Box1H FontBoxHeader">
+                                            #customSpringMessage('NOTES')<!--備考-->
+                                        </td>
+                                        <td class="Box1D">
+                                            #springFormTextarea("ringiBudget.notes.comment" "rows='4' class='Small' style='width:99%;' maxLength='200'")
+                                        </td>
+                                    </tr>
+                               </tbody>
+                            </table>
+                            <br>
+                            <table class="NoBorder" width="100%">
+                                <tr>
+                                    <td>
+                                        <span class="CornerTopBrown"><span class="Corner1"></span> <span class="Corner2"></span> <span class="Corner3"></span><span class="Corner4"></span></span>
+                                        <div class="CornerMidBrown" width="100%">
+                                            <table>
+                                                <tbody>
+                                                    <tr>
+                                                        <td>
+                                                            &nbsp;<img src="../../image/mrkInfo.gif">&nbsp;
+                                                        </td>
+                                                        <td class="FontSmallBold DarkBlue" align="left">
+                                                            #customSpringMessage("DTL_ADD_COMMENT")
+                                                            <input type="button" class="SmallButton" value="#customSpringMessage('DETAIL_ADD')" onclick="addDetail();"><!--明細追加-->
+                                                        </td>
+                                                    </tr>
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                        <span class="CornerBtmBrown"><span class="Corner4"></span> <span class="Corner3"></span> <span class="Corner1"></span><span class="Corner1"></span></span>
+                                    </td>
+                                </tr>
+                            </table>
+                            <br>
+                            <!-- detail部分 -->
+                            <table id="DetailTable" class="Box1G" width="100%">
+                                <tbody class="Box1G ListBorderWidth">
+                                    #set($index = 0)
+                                    #foreach($!item in $!ringiBudget.ringiBudgetItemList)
+                                    <tr>
+                                        <td nowrap class="Box1H FontSmallAnkBold detail_row_header" rowspan="5" width="5%">
+                                            <p>#set( $index = $index + 1 )$index</p>
+                                            <a class="FontMini" href="#" onclick="deleteDetail($velocityCount)">#customSpringMessage('ACTION_CANCEL')<!--取消 -->
+                                            </a>
+                                        </td>
+                                        <td class="Box1H FontBoxHeader">
+                                            #customSpringMessage("DETAIL_NO")<!--明細番号-->
+                                        </td>
+                                        <td class="Box1D FontSmall">
+                                            #springFormInput("ringiBudget.ringiBudgetItemList[$velocityCount].ringiBudgetDtlIdentify.budgetDtlNo.budgetDtlNo" "class='Small input_no_border detail_no' size='46' tabIndex='-1' readonly='true'")
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td class="Box1H FontBoxHeader">
+                                            #customSpringMessage('BUDGET_NAME')<span class="FontWarn input_img">&nbsp;※</span><!--予算名-->
+                                        </td>
+                                        <td nowrap class="Box1D FontSmall">
+                                            #springFormInput("ringiBudget.ringiBudgetItemList[$velocityCount].budgetName.titleName" 'class="Small" size="60" maxLength="30"')
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td class="Box1H FontBoxHeader">
+                                            #customSpringMessage('SUBJECT')<!--科目-->
+                                        </td>
+                                        <td class="Box1D">
+                                            #springFormInput("ringiBudget.ringiBudgetItemList[$velocityCount].subject.subjectCd" "class='Small noIME' maxlength='12' size='20' onblur='subjectOnBlur($velocityCount);'")
+                                            #springFormInput("ringiBudget.ringiBudgetItemList[$velocityCount].subject.subjectName" 'class="SmallDsp" readonly tabIndex="-1" size="71"')
+                                            <img class="Icon" src="../../image/btnLupe.gif" onclick="openSubjectPop($velocityCount);">
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td class="Box1H FontBoxHeader">
+                                            #customSpringMessage('BUDGET_AMOUNT')<span class="FontWarn">&nbsp;※</span><!--予算金額-->
+                                        </td>
+                                        <td class="Box1D">
+                                            <span class="FontCurrSmall">#out($!ringiBudget.currency.currencyMark)</span>
+                                            #springFormInput("ringiBudget.ringiBudgetItemList[$velocityCount].budgetAmount.amountFormat" "class='SmallRight noIME' maxLength='16' size='25' onblur='editVal(this); amountByAjax();' onfocus='deleteComma(this);'")
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td class="Box1H FontBoxHeader">
+                                            #customSpringMessage('NOTES')<!--備考-->
+                                        </td>
+                                        <td class="Box1D">
+                                            #springFormTextarea("ringiBudget.ringiBudgetItemList[$velocityCount].notes.comment" "rows='4' class='Small' style='width:99%;' maxLength='200'")
+                                        </td>
+                                    </tr>
+                                    #end
+                                </tbody>
+                            </table>
+                            <br>
+                            <span class="CornerTopBrown"><span class="Corner1"></span> <span class="Corner2"></span> <span class="Corner3"></span><span class="Corner4"></span></span>
+                            <div class="CornerMidBrown" width="100%">
+                                <table>
+                                    <tbody>
+                                        <tr>
+                                            <td>
+                                                &nbsp;<img src="../../image/mrkInfo.gif">&nbsp;
+                                            </td>
+                                            <td class="FontSmallBold DarkBlue" align="left">
+                                                #customSpringMessage("DTL_ADD_COMMENT")
+                                                <input type="button" class="SmallButton" value="#customSpringMessage('DETAIL_ADD')" onclick="addDetail();"><!--明細追加-->
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                            <br>
+                            <table class="NoBorder" width="100%">
+                                <tr>
+                                    <td>
+                                        #if ($!pattern == "new" || $!pattern == "")
+                                        <span class="FontWarn">#customSpringMessage("PSBDT040_ADD_FOOTER_COMMENT")</span><br>
+                                        #elseif ($!pattern ==  "edit")
+                                        <span class="FontWarn">#customSpringMessage("PSBDT040_EDIT_FOOTER_COMMENT")</span><br>
+                                        #end
+                                    </td>
+                                    <td align="right" valign="middle" nowrap>
+                                        #if ($!pattern == "new" || $!pattern == "")
+                                        <input name="Button2" type="button" class="LargeButton" value="#customSpringMessage('ACTION_REGISTER')" onclick="exec();"><!--登録-->
+                                        #elseif ($!pattern ==  "edit")
+                                        <input name="Button2" type="button" class="LargeButton" value="#customSpringMessage('UPDATE')" onclick="update();"><!--更新-->
+                                        #end
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+</form>
+</body>
+</html>

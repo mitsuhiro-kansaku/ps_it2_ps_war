@@ -1,0 +1,622 @@
+<!doctype html>
+<html LANG="ja">
+<head>
+<title></title>
+<meta http-equiv="Content-type" content="text/html; charset=UTF-8">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Content-script-type" content="text/javascript">
+<link id="CSS_FONT" rel="stylesheet" href="../../include/FontS.css" type="text/css">
+<link rel="stylesheet" href="../../include/Layout.css" type="text/css">
+<link rel="stylesheet" href="../../include/Color.css" type="text/css">
+<script language="javascript" type="text/javascript" src="../../include/common.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/check.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/date.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/searchbox.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/jquery-1.7.2.min.js"></script>
+<script language="javascript" type="text/javascript">
+<!--
+var items = null;
+function onLoad() {
+
+    ## +++++ 強化-00017-000 2013/04/26 ADD SBO_CHENCHENG START +++++
+    // フォルダは、操作が成功です
+    if("#jsEscape($!isFolderSuccess)" == "true"){
+        parent.isFolderSuccess = "#jsEscape($!isFolderSuccess)";
+    }
+    ## +++++ 強化-00017-000 2013/04/26 ADD SBO_CHENCHENG -END- +++++
+   
+    ## +++++ 強化-00522-000 2013/04/08 ADD SBO_CHENCHENG START +++++
+    var alertMessage = "$!alertMessage";
+    if (alertMessage != ""){
+        alert(alertMessage);
+    }
+    ## +++++ 強化-00522-000 2013/04/08 ADD SBO_CHENCHENG -END- +++++
+
+    // フォルダの数
+    var listCount0 = List_0.rows.length;
+    var listCount1 = List_1.rows.length;
+    items = new Array(listCount0, listCount1);
+    changeFontSize0();
+    var itemCount = "#jsEscape($!itemCount)";
+    parent.setText("ItemListHeader",itemCount);
+    
+    var errorMsg = "$!errorMessage";
+    parent.getObj("error").innerHTML=errorMsg;
+    if(errorMsg!=""){
+        parent.getObj("error").style.display = "";
+    }
+    
+    #foreach($!favoritesCatalog in $!domain.yourFavorites.favoritesCatalogList)
+            var favoritesSeqNo = '#jsEscape($!favoritesCatalog.favoritesSeqNo)';
+            if(favoritesSeqNo ==getObj("checkState").value){
+             selectRow1($velocityCount, favoritesSeqNo,'#jsEscape($!favoritesCatalog.lastUpdDate)','false');
+            }
+    #end
+    #foreach($!favoritesCatalog in $!domain.sectionFavorites.favoritesCatalogList)
+        var favoritesSeqNo = '#jsEscape($!favoritesCatalog.favoritesSeqNo)';
+        if(favoritesSeqNo ==getObj("checkState").value){
+         selectRow2($velocityCount, favoritesSeqNo,'#jsEscape($!favoritesCatalog.lastUpdDate)','false');
+        }
+    #end
+
+        var no = '#jsEscape($!no)';
+    if (errorMsg==""){
+        var isNoError = '#jsEscape($!isNoError)';
+        if(isNoError == 'true'){
+           var favSeqNo = '#jsEscape($!favoritesSeqNo)';
+           var comanyCd = '#jsEscape($!buyerCompanyCd)';
+           var sectionCd = '#jsEscape($!buyerSectionCd)';
+           var supCd = '#jsEscape($!supCd)';
+           var itemCd = '#jsEscape($!itemCd)';
+           if(no == 'flg1'){
+                iframeChange("${flowExecutionUrl}&_eventId=addYourFavNoError&&favoritesSeqNo=" + favSeqNo , "ItemList");
+           }else if(no == 'flg2'){
+                iframeChange("${flowExecutionUrl}&_eventId=addSecFavNoError&&favoritesSeqNo=" + favSeqNo , "ItemList");
+           }else if(no == 'flg3'){
+                iframeChange("${flowExecutionUrl}&_eventId=addYourFavAllNoError&&favoritesSeqNo=" + favSeqNo + "&&buyerCompanyCd=" + encodeURIComponent(comanyCd) + "&&buyerSectionCd=" + encodeURIComponent(sectionCd) + "&&supCd=" + encodeURIComponent(supCd) + "&&itemCd=" + encodeURIComponent(itemCd) , "ItemList");
+           }else if(no == 'flg4'){
+                iframeChange("${flowExecutionUrl}&_eventId=addSecFavAllNoError&&favoritesSeqNo=" + favSeqNo + "&&buyerCompanyCd=" + encodeURIComponent(comanyCd) + "&&buyerSectionCd=" + encodeURIComponent(sectionCd) + "&&supCd=" + encodeURIComponent(supCd) + "&&itemCd=" + encodeURIComponent(itemCd) , "ItemList");
+           }
+        }
+    }
+
+    ## ＩＴ３-00381-000 2013.07.24 ADD SBO_WANGXM START
+    ## Enter key 制御
+    $('input').keypress(function(ev) {
+        if ((ev.which && ev.which === 13) || (ev.keyCode && ev.keyCode === 13)) {
+            return false;
+        } else {
+            return true;
+        }
+    });
+    ## ＩＴ３-00381-000 2013.07.24 ADD SBO_WANGXM END
+}
+
+
+var _List = 0;
+function changeTag(no) {
+
+    if( _RowNum >= 0 ) {
+        getObj("Row_"+_List+"_"+_RowNum).style.backgroundColor = "transparent";
+        getObj("Row_"+_List+"_"+_RowNum).onmouseout = new Function("this.style.backgroundColor='transparent'");
+        getObj("Row_"+_List+"_"+_RowNum).onmouseover = new Function("this.style.backgroundColor='lightblue'");
+    }
+
+    if( no==0 ) {
+//        setDisplay("List_0",true);
+//        setDisplay("List_1",false);
+        getObj("Body").action = "${flowExecutionUrl}&_eventId=searchYours";
+    } else {
+//        setDisplay("List_1",true);
+//        setDisplay("List_0",false);
+        getObj("Body").action = "${flowExecutionUrl}&_eventId=searchSections";
+    }
+    _List = no;
+    _RowNum = -1;
+    
+    // お気に入り追加ボタンが表示されている場合のみ
+    if (parent.getDisplay("FolderArea")) {
+        parent.document.Body.Entry.disabled= true;
+        
+    }
+    parent.document.Body.Rename.disabled= true;
+    parent.document.Body.Delete.disabled= true;
+    
+    // 「フォルダを選択して下さい」のメッセージを初期化
+    #set( $listSelectMsg = "#customSpringMessage('UNDER_THE_LIST_SELECT')" )
+    var msg = "#jsEscape($!listSelectMsg)";
+    parent.setText("FavoriteName", msg);
+    parent.setText("FavoriteTime","");
+    parent.setText("FavoriteCategoly","");
+    getObj("Body").submit();
+}
+
+var _RowNum = -1;
+
+// フォルダ削除キー用変数
+var favSeqNo = -1;
+var lastUpdDate = -1;
+var displayflg = -1;
+function selectRow1(no, favoritesSeqNo,lastUpdDate,status,newflg) {
+    getObj("checkState").value = favoritesSeqNo;
+
+
+    favSeqNo = favoritesSeqNo;
+    lsDate = lastUpdDate;
+    _List = 0;
+    
+    if( _RowNum >= 0 ) {
+        getObj("Row_"+_List+"_"+_RowNum).style.backgroundColor = "transparent";
+        getObj("Row_"+_List+"_"+_RowNum).onmouseout = new Function("this.style.backgroundColor='transparent'");
+        getObj("Row_"+_List+"_"+_RowNum).onmouseover = new Function("this.style.backgroundColor='lightblue'");
+    }
+    getObj("Row_"+_List+"_"+no).onmouseout = "null";
+    getObj("Row_"+_List+"_"+no).onmouseover = "null";
+    getObj("Row_"+_List+"_"+no).style.backgroundColor = "gold";
+    _RowNum = no;
+    if(newflg!='false'){
+        // お気に入り追加ボタンが表示されている場合のみ
+        if (parent.getDisplay("FolderArea")) {
+            var txtArrs = parent.document.getElementsByTagName('input');
+            for(var i=0; i<txtArrs.length; i++){  
+                var txt =  txtArrs[i];
+                if(txt.id=='Entry'){
+                    txt.disabled = false; 
+                }
+            }
+        }
+        parent.document.Body.Rename.disabled= false;
+        parent.document.Body.Delete.disabled = false;
+    }else{
+        parent.setText("FavoriteTime","");
+        parent.setText("FavoriteCategoly","");
+    }
+    if(displayflg == 'false'){
+        // お気に入り追加ボタンが表示されている場合のみ
+        if (parent.getDisplay("FolderArea")) {
+            var txtArrs = parent.document.getElementsByTagName('input');
+            for(var i=0; i<txtArrs.length; i++){  
+                var txt =  txtArrs[i];
+                if(txt.id=='Entry'){
+                    txt.disabled = true; 
+                }
+            }
+        }
+        parent.document.Body.Rename.disabled= true;
+        parent.document.Body.Delete.disabled = true;
+        // 「フォルダを選択して下さい」のメッセージを初期化
+        #set( $listSelectMsg = "#customSpringMessage('UNDER_THE_LIST_SELECT')" )
+        var msg = "#jsEscape($!listSelectMsg)";
+        parent.setText("FavoriteName", msg);
+        parent.setText("FavoriteTime","");
+        parent.setText("FavoriteCategoly","");
+        _RowNum = -1;
+    }else{
+    parent.setText("FavoriteName",getText("Str_"+_List+"_"+no));
+    }
+    displayflg = newflg;
+    
+    
+    // 「あなたのお気に入りタブ」のメッセージを初期化
+    #set( $yourFavarite = "#customSpringMessage('YOUR_FAVORITE')" )
+    var yourFavarite = "#jsEscape($!yourFavarite)";
+    parent.setText("FavoriteCategoly",yourFavarite);
+    if (favoritesSeqNo == null) {
+        return;
+    } else {
+         if(status!="false"){
+             if(parent.document.Body.Rename.disabled != true){
+                 parent.iframeChange("${flowExecutionUrl}&_eventId=searchYourFavCat&&favoritesSeqNo=" + favoritesSeqNo , "ItemList");
+             }
+        
+        }
+    }
+    
+}
+
+var displayflg = -1;
+function selectRow2(no, favoritesSeqNo,lastUpdDate,status,newflg) {
+    getObj("checkState").value = favoritesSeqNo;
+
+    favSeqNo = favoritesSeqNo;
+    lsDate = lastUpdDate;
+    _List = 1;
+    
+    if( _RowNum >= 0 ) {
+        getObj("Row_"+_List+"_"+_RowNum).style.backgroundColor = "transparent";
+        getObj("Row_"+_List+"_"+_RowNum).onmouseout = new Function("this.style.backgroundColor='transparent'");
+        getObj("Row_"+_List+"_"+_RowNum).onmouseover = new Function("this.style.backgroundColor='lightblue'");
+    }
+    getObj("Row_"+_List+"_"+no).onmouseout = "null";
+    getObj("Row_"+_List+"_"+no).onmouseover = "null";
+    getObj("Row_"+_List+"_"+no).style.backgroundColor = "gold";
+    _RowNum = no;
+
+    if(newflg!='false'){
+        // お気に入り追加ボタンが表示されている場合のみ
+        if (parent.getDisplay("FolderArea")) {
+            var txtArrs = parent.document.getElementsByTagName('input');
+            for(var i=0; i<txtArrs.length; i++){  
+                var txt =  txtArrs[i];
+                if(txt.id=='Entry'){
+                    txt.disabled = false; 
+                }
+            }
+        }
+        parent.document.Body.Rename.disabled= false;
+        parent.document.Body.Delete.disabled = false;
+    }else{
+        parent.setText("FavoriteTime","");
+        parent.setText("FavoriteCategoly","");
+    }
+   if(displayflg == 'false'){
+        // お気に入り追加ボタンが表示されている場合のみ
+        if (parent.getDisplay("FolderArea")) {
+            var txtArrs = parent.document.getElementsByTagName('input');
+            for(var i=0; i<txtArrs.length; i++){  
+                var txt =  txtArrs[i];
+                if(txt.id=='Entry'){
+                    txt.disabled = true; 
+                }
+            }
+        }
+        parent.document.Body.Rename.disabled= true;
+        parent.document.Body.Delete.disabled = true;
+        // 「フォルダを選択して下さい」のメッセージを初期化
+        #set( $listSelectMsg = "#customSpringMessage('UNDER_THE_LIST_SELECT')" )
+        var msg = "#jsEscape($!listSelectMsg)";
+        parent.setText("FavoriteName", msg);
+        parent.setText("FavoriteTime","");
+        parent.setText("FavoriteCategoly","");
+        _RowNum = -1;
+       
+    }else{
+        parent.setText("FavoriteName",getText("Str_"+_List+"_"+no));
+    }
+    displayflg = newflg;
+    
+
+    // 「部門のお気に入りタブ」のメッセージを初期化
+    #set( $ofFavarite = "#customSpringMessage('OF_FAVARITE')" )
+    var ofFavarite = "#jsEscape($!ofFavarite)";
+    var sectionName = "#jsEscape($!sectionName)";
+    parent.setText("FavoriteCategoly",sectionName + ofFavarite);
+
+    if (favoritesSeqNo == null) {
+        return;
+    } else {
+        if(status!="false"){
+            if(parent.document.Body.Rename.disabled != true){
+                parent.iframeChange("${flowExecutionUrl}&_eventId=searchSecFavCat&&favoritesSeqNo=" + favoritesSeqNo , "ItemList");
+            }
+        }
+    }
+}
+
+
+function renameFolder() {
+
+    if( _RowNum < 0 ) {
+        return;
+    }
+    setDisplay("Str_"+_List+"_"+_RowNum,false);
+    getObj("Ipt_"+_List+"_"+_RowNum).value = getText("Str_"+_List+"_"+_RowNum);
+    getObj("Ipt_"+_List+"_"+_RowNum).size = '60';
+    getObj("Ipt_"+_List+"_"+_RowNum).maxLength = '30';
+    setDisplay("Ipt_"+_List+"_"+_RowNum,true);
+    
+    
+    var txtArrsF = document.getElementsByTagName('tr');
+    for(var i=0; i<txtArrsF.length; i++){  
+            var txtF =  txtArrsF[i];
+            if(("Row_"+_List+"_"+_RowNum)!=txtF.id){
+            txtF.disabled = true;
+        }
+    }
+        
+        
+    getObj("Ipt_"+_List+"_"+_RowNum).focus();
+    getObj("Ipt_"+_List+"_"+_RowNum).select();
+    
+}
+
+function renameFolderExec1(newFolderName, favoritesSeqNo) {
+        // お気に入り追加ボタンが表示されている場合のみ
+    if (parent.getDisplay("FolderArea")) {
+        var txtArrs = parent.document.getElementsByTagName('input');
+        for(var i=0; i<txtArrs.length; i++){  
+            var txt =  txtArrs[i];
+            if(txt.id=='Entry'){
+                txt.disabled = true; 
+            }
+        }
+    }
+    parent.document.Body.Rename.disabled= true;
+    parent.document.Body.Delete.disabled = true;
+
+    if( trim(newFolderName.value)=="" ) {
+        #set( $favFolderName = "#customSpringMessage('FAVORITE_FOLDER_NAME')" )
+        alert('#customMessageArgs("E002", [$favFolderName])');
+        // リロード
+        getObj("Body").action = "${flowExecutionUrl}&_eventId=searchYours"
+        getObj("Body").submit();
+        return;
+    } 
+        //setText("Str_"+_List+"_"+_RowNum,newFolderName.value);
+        // 「フォルダを選択して下さい」のメッセージを初期化
+        //#set( $listSelectMsg = "#springMessage('UNDER_THE_LIST_SELECT')" )
+        //var msg = "$!listSelectMsg";
+        //parent.setText("FavoriteName", msg);
+    //setDisplay("Ipt_"+_List+"_"+_RowNum,false);
+    //setDisplay("Str_"+_List+"_"+_RowNum,true);
+    var folerName = newFolderName.value;
+    getObj("filename").value=newFolderName.value;
+
+    if (favoritesSeqNo == null) {
+        var newFolderNameHidden = document.createElement("input");
+        newFolderNameHidden.type="hidden";
+        newFolderNameHidden.name="newFolderName";
+        newFolderNameHidden.value=folerName;
+        getObj("Body").appendChild(newFolderNameHidden);
+        getObj("Body").action = "${flowExecutionUrl}&_eventId=addYourFolder";
+    } else {
+        var newFolderNameHidden = document.createElement("input");
+        newFolderNameHidden.type="hidden";
+        newFolderNameHidden.name="newFolderName";
+        newFolderNameHidden.value=folerName;
+        getObj("Body").appendChild(newFolderNameHidden);
+        var favoritesSeqNoHidden = document.createElement("input");
+        favoritesSeqNoHidden.type="hidden";
+        favoritesSeqNoHidden.name="favoritesSeqNo";
+        favoritesSeqNoHidden.value=favoritesSeqNo;
+        getObj("Body").appendChild(favoritesSeqNoHidden);
+        var lastUpdDateHidden = document.createElement("input");
+        lastUpdDateHidden.type="hidden";
+        lastUpdDateHidden.name="lastUpdDate";
+        lastUpdDateHidden.value=lsDate;
+        getObj("Body").appendChild(lastUpdDateHidden);
+        getObj("Body").action = "${flowExecutionUrl}&_eventId=renameYour";
+     }
+    getObj("Body").submit();
+}
+
+function renameFolderExec2(newFolderName, favoritesSeqNo) {
+    if (parent.getDisplay("FolderArea")) {
+        var txtArrs = parent.document.getElementsByTagName('input');
+        for(var i=0; i<txtArrs.length; i++){  
+            var txt =  txtArrs[i];
+            if(txt.id=='Entry'){
+                txt.disabled = true; 
+            }
+        }
+    }
+    parent.document.Body.Rename.disabled= true;
+    parent.document.Body.Delete.disabled = true;
+    if( trim(newFolderName.value)=="" ) {
+        #set( $favFolderName = "#customSpringMessage('FAVORITE_FOLDER_NAME')" )
+        alert('#customMessageArgs("E002", [$favFolderName])');
+        // リロード
+        getObj("Body").action = "${flowExecutionUrl}&_eventId=searchSections"
+        getObj("Body").submit();
+        return;
+    } 
+    //setText("Str_"+_List+"_"+_RowNum,newFolderName.value);
+    // 「フォルダを選択して下さい」のメッセージを初期化
+    //#set( $listSelectMsg = "#springMessage('UNDER_THE_LIST_SELECT')" )
+    //var msg = "$!listSelectMsg";
+    //parent.setText("FavoriteName", msg);
+
+    //setDisplay("Ipt_"+_List+"_"+_RowNum,false);
+    //setDisplay("Str_"+_List+"_"+_RowNum,true);
+    var folerName = newFolderName.value;
+    getObj("filename").value=newFolderName.value;
+
+    if (favoritesSeqNo == null) {
+        var newFolderNameHidden = document.createElement("input");
+        newFolderNameHidden.type="hidden";
+        newFolderNameHidden.name="newFolderName";
+        newFolderNameHidden.value=folerName;
+        getObj("Body").appendChild(newFolderNameHidden);
+        getObj("Body").action = "${flowExecutionUrl}&_eventId=addSectionsFolder";
+    } else {
+        var newFolderNameHidden = document.createElement("input");
+        newFolderNameHidden.type="hidden";
+        newFolderNameHidden.name="newFolderName";
+        newFolderNameHidden.value=folerName;
+        getObj("Body").appendChild(newFolderNameHidden);
+        var favoritesSeqNoHidden = document.createElement("input");
+        favoritesSeqNoHidden.type="hidden";
+        favoritesSeqNoHidden.name="favoritesSeqNo";
+        favoritesSeqNoHidden.value=favoritesSeqNo;
+        getObj("Body").appendChild(favoritesSeqNoHidden);
+        var lastUpdDateHidden = document.createElement("input");
+        lastUpdDateHidden.type="hidden";
+        lastUpdDateHidden.name="lastUpdDate";
+        lastUpdDateHidden.value=lsDate;
+        getObj("Body").appendChild(lastUpdDateHidden);
+        getObj("Body").action = "${flowExecutionUrl}&_eventId=renameSec";
+    }
+    getObj("Body").submit();
+}
+
+function deleteFolder() {
+    getObj("List_"+_List).removeChild(getObj("Row_"+_List+"_"+_RowNum));
+    
+    // 「フォルダを選択して下さい」のメッセージを初期化
+    #set( $listSelectMsg = "#customSpringMessage('UNDER_THE_LIST_SELECT')" )
+    var msg = "#jsEscape($!listSelectMsg)";
+    parent.setText("FavoriteName", msg);
+    parent.setText("FavoriteTime","");
+    parent.setText("FavoriteCategoly","");
+    _RowNum = -1;
+
+    if (_List == 0) {
+        getObj("Body").action = "${flowExecutionUrl}&_eventId=delFolderYour&&favoritesSeqNo=" + favSeqNo + "&&lastUpdDate=" + lsDate;
+    } else {
+        getObj("Body").action = "${flowExecutionUrl}&_eventId=delFolderSec&&favoritesSeqNo=" + favSeqNo + "&&lastUpdDate=" + lsDate;
+    }
+        // お気に入り追加ボタンが表示されている場合のみ
+        if (parent.getDisplay("FolderArea")) {
+            var txtArrs = parent.document.getElementsByTagName('input');
+            for(var i=0; i<txtArrs.length; i++){  
+                var txt =  txtArrs[i];
+                if(txt.id=='Entry'){
+                    txt.disabled = true; 
+                }
+            }
+        }
+        parent.document.Body.Rename.disabled= true;
+        parent.document.Body.Delete.disabled = true;
+    getObj("Body").submit();
+}
+
+function entry(no,comanyCd,sectionCd,itemCd,supCd) {
+    var checkState = getObj("checkState").value;
+    #if($isAddFavAll!="true")
+        if (no == 0) {
+            parent.iframeChange("${flowExecutionUrl}&_eventId=addYourFav&&favoritesSeqNo=" + favSeqNo + "&&lastUpdDate=" + lsDate + "&&no=" + 'flg1' + "&&checkState=" + checkState , "FavoriteList");
+        } else {
+            parent.iframeChange("${flowExecutionUrl}&_eventId=addSecFav&&favoritesSeqNo=" + favSeqNo + "&&lastUpdDate=" + lsDate + "&&no=" + 'flg2' + "&&checkState=" + checkState , "FavoriteList");
+        }
+    #else
+    if (no == 0) {
+            parent.iframeChange("${flowExecutionUrl}&_eventId=addYourFavAll&&favoritesSeqNo=" + favSeqNo + "&&lastUpdDate=" + lsDate + "&&buyerCompanyCd=" + encodeURIComponent(comanyCd) + "&&buyerSectionCd=" + encodeURIComponent(sectionCd) + "&&supCd=" + encodeURIComponent(supCd) + "&&itemCd=" + encodeURIComponent(itemCd)  + "&&no=" + 'flg3' + "&&checkState=" + checkState, "FavoriteList");
+        } else {
+            parent.iframeChange("${flowExecutionUrl}&_eventId=addSecFavAll&&favoritesSeqNo=" + favSeqNo + "&&lastUpdDate=" + lsDate+ "&&buyerCompanyCd=" + encodeURIComponent(comanyCd) + "&&buyerSectionCd=" + encodeURIComponent(sectionCd) + "&&supCd=" + encodeURIComponent(supCd) + "&&itemCd=" + encodeURIComponent(itemCd) + "&&no=" + 'flg4' + "&&checkState=" + checkState, "FavoriteList");
+        }
+    #end
+
+}
+
+
+// フォルダを新規作成
+function createFolder1(_wStr) {
+
+    span = document.createElement("SPAN");
+    span.id = "Str_"+_List+"_"+items[_List];
+    span.className = "FontCategoly";
+    span.ondblclick = new Function("renameFolder()");
+    setText2(span,_wStr);
+
+    input = document.createElement("INPUT");
+    input.id = "Ipt_"+_List+"_"+items[_List];
+    input.type = "text";
+    input.style.display = "none";
+    input.onblur = new Function("renameFolderExec1(this)");
+    input.onkeydown = new Function("if( event.keyCode==113 ) {renameFolderExec1(this);}");
+
+    td = document.createElement("TD");
+    td.style.textAlign = "left";
+    td.style.padding = "4px";
+    td.style.whiteSpace = "nowrap";
+
+    tr = document.createElement("TR");
+    tr.id = "Row_"+_List+"_"+items[_List];
+    tr.style.backgroundColor = "transparent";
+    tr.onmouseout = new Function("this.style.backgroundColor='transparent'");
+    tr.onmouseover = new Function("this.style.backgroundColor='lightblue'");
+    tr.onclick = new Function("selectRow1("+items[_List]+",null,null,null,'false')");
+
+    td.insertBefore(span, null);
+    td.insertBefore(input, null);
+    tr.insertBefore(td, null);
+    getObj("List_"+_List).insertBefore(tr, null);
+    tr.onkeydown = new Function("if( event.keyCode==113 ) {renameFolder();}");
+    tr.click();
+
+    items[_List]++;
+    ## ＩＴ３-00381-000 2013.07.24 ADD SBO_WANGXM START
+    ## Enter key 制御
+    $('input').keypress(function(ev) {
+        if ((ev.which && ev.which === 13) || (ev.keyCode && ev.keyCode === 13)) {
+            return false;
+        } else {
+            return true;
+        }
+    });
+    ## ＩＴ３-00381-000 2013.07.24 ADD SBO_WANGXM END
+
+}
+
+// フォルダを新規作成
+function createFolder2(_wStr) {
+    _List=1;
+    span = document.createElement("SPAN");
+    span.id = "Str_"+_List+"_"+items[_List];
+    span.className = "FontCategoly";
+    span.ondblclick = new Function("renameFolder()");
+    setText2(span,_wStr);
+
+    input = document.createElement("INPUT");
+    input.id = "Ipt_"+_List+"_"+items[_List];
+    input.type = "text";
+    input.style.display = "none";
+    input.onblur = new Function("renameFolderExec2(this)");
+    input.onkeydown = new Function("if( event.keyCode==113 ) {renameFolderExec2(this);}");
+
+    td = document.createElement("TD");
+    td.style.textAlign = "left";
+    td.style.padding = "4px";
+    td.style.whiteSpace = "nowrap";
+
+    tr = document.createElement("TR");
+    tr.id = "Row_"+_List+"_"+items[_List];
+    tr.style.backgroundColor = "transparent";
+    tr.onmouseout = new Function("this.style.backgroundColor='transparent'");
+    tr.onmouseover = new Function("this.style.backgroundColor='lightblue'");
+    tr.onclick = new Function("selectRow2("+items[_List]+",null,null,null,'false')");
+
+    td.insertBefore(span, null);
+    td.insertBefore(input, null);
+    tr.insertBefore(td, null);
+    getObj("List_"+_List).insertBefore(tr, null);
+    tr.onkeydown = new Function("if( event.keyCode==113 ) {renameFolder();}");
+    tr.click();
+
+    items[_List]++;
+    ## ＩＴ３-00381-000 2013.07.24 ADD SBO_WANGXM START
+    ## Enter key 制御
+    $('input').keypress(function(ev) {
+        if ((ev.which && ev.which === 13) || (ev.keyCode && ev.keyCode === 13)) {
+            return false;
+        } else {
+            return true;
+        }
+    });
+    ## ＩＴ３-00381-000 2013.07.24 ADD SBO_WANGXM END
+
+}
+
+//-->
+</script>
+</HEAD>
+<BODY class="Body" onload="onLoad();">
+<form name="Body" id="Body" action="" method="post" enctype="multipart/form-data">
+    #customFormHiddenInput("filename" "")
+    #springFormHiddenInput("domain.checkState" "$!domain.checkState")
+
+    <table class="NoBorder" width="100%">
+        <tbody id="List_0">
+            #foreach($!favoritesCatalog in $!domain.yourFavorites.favoritesCatalogList)
+                <tr id="Row_0_$velocityCount" onmouseover="this.style.backgroundColor='lightblue';" onmouseout="this.style.backgroundColor='transparent';" onclick="selectRow1($velocityCount, #jsEscapeInHTML($!domain.yourFavorites.favoritesCatalogList[$velocityCount].favoritesSeqNo),'#jsEscapeInHTML($!domain.yourFavorites.favoritesCatalogList[$velocityCount].lastUpdDate)'); onkeydown='if( event.keyCode==113 ) {renameFolder();}'">
+                    <td nowrap align="left" style="padding:4px;">
+                        <span id="Str_0_$velocityCount" class="FontCategoly" ondblclick="renameFolder()">#out($!domain.yourFavorites.favoritesCatalogList[$velocityCount].favoriteFolderName)</span>
+                        <input id="Ipt_0_$velocityCount" type="text" style="display:none;" onblur="renameFolderExec1(this, #jsEscapeInHTML($!domain.yourFavorites.favoritesCatalogList[$velocityCount].favoritesSeqNo))">
+                </tr>
+            #end
+        </tbody>
+        <tbody id="List_1">
+            #foreach($!favoritesCatalog in $!domain.sectionFavorites.favoritesCatalogList)
+                <tr id="Row_1_$velocityCount" onmouseover="this.style.backgroundColor='lightblue';" onmouseout="this.style.backgroundColor='transparent';" onclick="selectRow2($velocityCount, #jsEscapeInHTML($!domain.sectionFavorites.favoritesCatalogList[$velocityCount].favoritesSeqNo),'#jsEscapeInHTML($!domain.sectionFavorites.favoritesCatalogList[$velocityCount].lastUpdDate)');">
+                    <td nowrap align="left" style="padding:4px;">
+                        <span id="Str_1_$velocityCount" class="FontCategoly" ondblclick="renameFolder()">#out($!domain.sectionFavorites.favoritesCatalogList[$velocityCount].favoriteFolderName)</span>
+                        <input id="Ipt_1_$velocityCount" type="text" style="display:none;" onblur="renameFolderExec2(this, #jsEscapeInHTML($!domain.sectionFavorites.favoritesCatalogList[$velocityCount].favoritesSeqNo))">
+                    </td>
+                </tr>
+            #end
+        </tbody>
+    </table>
+</FORM>
+</BODY>
+
+</html>

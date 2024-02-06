@@ -1,0 +1,274 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="ps.dataaccess.mst.message.MessageMapper">
+
+    <select id="listMessage"
+            parameterType="String"
+            resultType="fw.domain.mst.resource.message.MessageManagement">
+        SELECT MSG_LEVEL AS "msgLevel",
+               MSG_SEQNO AS "msgSeqno",
+               MESSAGE   AS "message"
+          FROM M_MESSAGE_LANG
+         WHERE LANGUAGE_IND = #{local}
+    </select>
+
+    <select id="listLocal"
+            resultType="String">
+        SELECT DISTINCT LANGUAGE_IND
+          FROM M_MESSAGE_LANG
+    </select>
+
+    <!-- SRC-00115-00 include化共通-->
+    <sql id="listKeyIdentityWhereCondition">
+        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(msgLevel)">
+            AND M_MESSAGE.MSG_LEVEL = #{msgLevel, jdbcType=VARCHAR}
+        </if>
+        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(message)">
+            AND (MESSAGE_LANG_COMPANY.MESSAGE ${@fw.common.util.SearchModeUtil@getSearchSQL("fw.domain.mst.resource.message.MessageSearchCondition","message")}
+             OR MESSAGE_LANG_SYSTEM.MESSAGE ${@fw.common.util.SearchModeUtil@getSearchSQL("fw.domain.mst.resource.message.MessageSearchCondition","message")})
+        </if>
+        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(msgSeqno)">
+            AND M_MESSAGE.MSG_SEQNO ${@fw.common.util.SearchModeUtil@getSearchSQL("fw.domain.mst.resource.message.MessageSearchCondition","msgSeqno")}
+        </if>
+    </sql>
+
+    <select id="listKeyIdentity"
+            parameterType ="fw.domain.mst.resource.message.MessageSearchCondition"
+            resultType="fw.domain.mst.resource.message.MessageIdentify">
+        SELECT M_MESSAGE.MSG_LEVEL     AS "msgLevel",
+               M_MESSAGE.MSG_SEQNO     AS "msgSeqno",
+               M_MESSAGE.LAST_UPD_DATE AS "lastUpdDate"
+          FROM M_MESSAGE
+     LEFT JOIN M_MESSAGE_LANG MESSAGE_LANG_COMPANY
+            ON M_MESSAGE.MSG_LEVEL = MESSAGE_LANG_COMPANY.MSG_LEVEL
+           AND M_MESSAGE.MSG_SEQNO = MESSAGE_LANG_COMPANY.MSG_SEQNO
+           AND MESSAGE_LANG_COMPANY.LANGUAGE_IND = '${@fw.security.SecurityUtil@getCompanyUseLanguageIndByEscapeSql()}'
+     LEFT JOIN M_MESSAGE_LANG MESSAGE_LANG_SYSTEM
+            ON M_MESSAGE.MSG_LEVEL = MESSAGE_LANG_SYSTEM.MSG_LEVEL
+           AND M_MESSAGE.MSG_SEQNO = MESSAGE_LANG_SYSTEM.MSG_SEQNO
+           AND MESSAGE_LANG_SYSTEM.LANGUAGE_IND = '${@fw.common.util.AppUtil@getSysLanguageByEscapeSql()}'
+        <where>
+            <include refid="listKeyIdentityWhereCondition"/>
+        </where>
+         ORDER BY ${searchCondition.columnOrder.columnOrder()}
+    </select>
+
+    <select id="listPageItem"
+            parameterType ="fw.domain.mst.searchcondition.SearchCondition"
+            resultType="fw.domain.mst.resource.message.MessageItem">
+        SELECT M_MESSAGE.MSG_LEVEL     AS "messageIdentify.msgLevel",
+               M_MESSAGE.MSG_SEQNO     AS "messageIdentify.msgSeqno",
+               CASE WHEN MESSAGE_LANG_COMPANY.MESSAGE IS NOT NULL
+                    THEN MESSAGE_LANG_COMPANY.MESSAGE
+                    ELSE MESSAGE_LANG_SYSTEM.MESSAGE
+                     END
+                      AS "message",
+               CASE WHEN MESSAGE_LANG_COMPANY.CAUSES IS NOT NULL
+                    THEN MESSAGE_LANG_COMPANY.CAUSES
+                    ELSE MESSAGE_LANG_SYSTEM.CAUSES
+                     END
+                      AS "causes",
+               CASE WHEN MESSAGE_LANG_COMPANY.SOLUTION IS NOT NULL
+                    THEN MESSAGE_LANG_COMPANY.SOLUTION
+                    ELSE MESSAGE_LANG_SYSTEM.SOLUTION
+                     END
+                      AS "solution",
+               M_MESSAGE.LAST_UPD_DATE AS "messageIdentify.lastUpdDate"
+          FROM M_MESSAGE
+     LEFT JOIN M_MESSAGE_LANG MESSAGE_LANG_COMPANY
+            ON M_MESSAGE.MSG_LEVEL = MESSAGE_LANG_COMPANY.MSG_LEVEL
+           AND M_MESSAGE.MSG_SEQNO = MESSAGE_LANG_COMPANY.MSG_SEQNO
+           AND MESSAGE_LANG_COMPANY.LANGUAGE_IND = '${@fw.security.SecurityUtil@getCompanyUseLanguageIndByEscapeSql()}'
+     LEFT JOIN M_MESSAGE_LANG MESSAGE_LANG_SYSTEM
+            ON M_MESSAGE.MSG_LEVEL = MESSAGE_LANG_SYSTEM.MSG_LEVEL
+           AND M_MESSAGE.MSG_SEQNO = MESSAGE_LANG_SYSTEM.MSG_SEQNO
+           AND MESSAGE_LANG_SYSTEM.LANGUAGE_IND = '${@fw.common.util.AppUtil@getSysLanguageByEscapeSql()}'
+        <where>
+            (M_MESSAGE.MSG_LEVEL||M_MESSAGE.MSG_SEQNO) IN
+            <foreach collection="searchCondition.page.keyDomainEntityList" item="keyList"  open="(" separator="," close=")">  
+                (#{keyList.msgLevel}||#{keyList.msgSeqno})
+            </foreach>
+            <include refid="listKeyIdentityWhereCondition"/>
+        </where>
+        ORDER BY ${searchCondition.columnOrder.columnOrder()}
+    </select>
+    
+    <!-- 強化-01784-000 2013/06/12 DEL SBO_SOKOU START -->
+    <!-- 
+    <select id="search" parameterType="fw.domain.mst.resource.message.MessageIdentify" resultType="fw.domain.mst.resource.message.MessageManagement">
+    SELECT M_MESSAGE.MSG_LEVEL AS "msgLevel",
+               M_MESSAGE.MSG_SEQNO AS "msgSeqno",
+               M_MESSAGE_LANG.LANGUAGE_IND AS "baseLanguageInd.languageInd",
+               M_MESSAGE_LANG.MESSAGE   AS "message",
+               M_MESSAGE_LANG.CAUSES    AS "causes",
+               M_MESSAGE_LANG.SOLUTION  AS "solution",
+               M_MESSAGE.LAST_UPD_DATE AS "lastUpdDate"
+        FROM M_MESSAGE
+        LEFT JOIN M_MESSAGE_LANG
+            ON M_MESSAGE.MSG_LEVEL=M_MESSAGE_LANG.MSG_LEVEL
+            AND M_MESSAGE.MSG_SEQNO=M_MESSAGE_LANG.MSG_SEQNO
+            AND M_MESSAGE_LANG.LANGUAGE_IND = '${@fw.security.SecurityUtil@getCompanyUseLanguageIndByEscapeSql()}'
+        WHERE 
+            M_MESSAGE.MSG_LEVEL = #{msgLevel, jdbcType=VARCHAR}
+            AND M_MESSAGE.MSG_SEQNO = #{msgSeqno, jdbcType=VARCHAR}
+    </select>
+    -->
+    <!-- 強化-01784-000 2013/06/12 DEL SBO_SOKOU -END- -->
+    <!-- 強化-01784-000 2013/06/12 ADD SBO_SOKOU START -->
+    <select id="search"
+            parameterType="fw.domain.mst.resource.message.MessageIdentify"
+            resultType="fw.domain.mst.resource.message.MessageManagement">
+        SELECT M_MESSAGE.MSG_LEVEL         AS "msgLevel"
+             , M_MESSAGE.MSG_SEQNO         AS "msgSeqno"
+             , M_MESSAGE.LAST_UPD_DATE     AS "lastUpdDate"
+             , M_MESSAGE_LANG.LANGUAGE_IND AS "baseLanguageInd.languageInd"
+             , M_MESSAGE_LANG.MESSAGE      AS "message"
+             , M_MESSAGE_LANG.CAUSES       AS "causes"
+             , M_MESSAGE_LANG.SOLUTION     AS "solution"
+          FROM M_MESSAGE
+         INNER JOIN M_MESSAGE_LANG
+                 ON M_MESSAGE.MSG_LEVEL = M_MESSAGE_LANG.MSG_LEVEL
+                AND M_MESSAGE.MSG_SEQNO = M_MESSAGE_LANG.MSG_SEQNO
+                AND M_MESSAGE_LANG.LANGUAGE_IND = '${@fw.common.util.AppUtil@getSysLanguageByEscapeSql()}'
+         WHERE M_MESSAGE.MSG_LEVEL = #{msgLevel, jdbcType=VARCHAR}
+           AND M_MESSAGE.MSG_SEQNO = #{msgSeqno, jdbcType=VARCHAR}
+    </select>
+    <!-- 強化-01784-000 2013/06/12 ADD SBO_SOKOU -END- -->
+
+    <!-- 強化-01784-000 2013/06/12 DEL SBO_SOKOU START -->
+    <!-- 
+    <select id="listMessageLanguage" parameterType="fw.domain.mst.resource.message.MessageIdentify" resultType="fw.domain.mst.resource.message.MessageLanguage">
+            SELECT M_MESSAGE.MSG_LEVEL AS "msgLevel",
+            M_MESSAGE.MSG_SEQNO AS "msgSeqno",
+            M_MESSAGE_LANG.LANGUAGE_IND AS "languageInd.languageInd",
+            M_MESSAGE_LANG.MESSAGE AS "message",
+            M_MESSAGE_LANG.CAUSES AS "causes",
+            M_MESSAGE_LANG.SOLUTION AS "solution",
+            M_MESSAGE.LAST_UPD_DATE AS "lastUpdDate"
+        FROM M_MESSAGE
+        LEFT JOIN M_MESSAGE_LANG
+            ON M_MESSAGE.MSG_LEVEL=M_MESSAGE_LANG.MSG_LEVEL
+            AND M_MESSAGE.MSG_SEQNO=M_MESSAGE_LANG.MSG_SEQNO
+       INNER JOIN M_CODE_NAME
+            ON M_MESSAGE_LANG.LANGUAGE_IND = M_CODE_NAME.CODE_VALUE
+            AND CODE_KEY = 'LANGUAGE_IND'
+        WHERE M_MESSAGE_LANG.LANGUAGE_IND != '${@fw.security.SecurityUtil@getCompanyUseLanguageIndByEscapeSql()}'
+            AND M_MESSAGE.MSG_LEVEL = #{msgLevel, jdbcType=VARCHAR}
+            AND M_MESSAGE.MSG_SEQNO = #{msgSeqno, jdbcType=VARCHAR}
+     ORDER BY 
+            M_CODE_NAME.DSP_ORDER
+    </select>
+    -->
+    <!-- 強化-01784-000 2013/06/12 DEL SBO_SOKOU -END- -->
+    <!-- 強化-01784-000 2013/06/12 ADD SBO_SOKOU START -->
+    <select id="listMessageLanguage"
+            parameterType="fw.domain.mst.resource.message.MessageIdentify"
+            resultType="fw.domain.mst.resource.message.MessageLanguage">
+        SELECT M_MESSAGE.MSG_LEVEL         AS "msgLevel"
+             , M_MESSAGE.MSG_SEQNO         AS "msgSeqno"
+             , M_MESSAGE.LAST_UPD_DATE     AS "lastUpdDate"
+             , M_MESSAGE_LANG.LANGUAGE_IND AS "languageInd.languageInd"
+             , M_MESSAGE_LANG.MESSAGE      AS "message"
+             , M_MESSAGE_LANG.CAUSES       AS "causes"
+             , M_MESSAGE_LANG.SOLUTION     AS "solution"
+          FROM M_MESSAGE
+         INNER JOIN M_MESSAGE_LANG
+                 ON M_MESSAGE.MSG_LEVEL = M_MESSAGE_LANG.MSG_LEVEL
+                AND M_MESSAGE.MSG_SEQNO = M_MESSAGE_LANG.MSG_SEQNO
+         INNER JOIN M_CODE_NAME
+                 ON M_MESSAGE_LANG.LANGUAGE_IND = M_CODE_NAME.CODE_VALUE
+                AND M_CODE_NAME.CODE_KEY = 'LANGUAGE_IND'
+         WHERE M_MESSAGE_LANG.LANGUAGE_IND != '${@fw.common.util.AppUtil@getSysLanguageByEscapeSql()}'
+           AND M_MESSAGE.MSG_LEVEL = #{msgLevel, jdbcType=VARCHAR}
+           AND M_MESSAGE.MSG_SEQNO = #{msgSeqno, jdbcType=VARCHAR}
+         ORDER BY M_CODE_NAME.DSP_ORDER
+    </select>
+    <!-- 強化-01784-000 2013/06/12 ADD SBO_SOKOU -END- -->
+    
+    <select id="searchExclusive" parameterType="fw.domain.mst.resource.message.MessageIdentify" resultType="fw.domain.mst.resource.message.MessageIdentify">
+        SELECT MSG_LEVEL AS "msgLevel",
+                 MSG_SEQNO AS "msgSeqno",
+                 LAST_UPD_DATE AS "lastUpdDate"
+        FROM M_MESSAGE
+        WHERE  
+             MSG_LEVEL = #{msgLevel, jdbcType=VARCHAR}
+            AND MSG_SEQNO = #{msgSeqno, jdbcType=VARCHAR}
+            AND LAST_UPD_DATE = #{lastUpdDate, jdbcType=VARCHAR}
+    </select>
+
+     <update id="updateMessage" parameterType="fw.domain.mst.resource.message.MessageManagement">
+        UPDATE M_MESSAGE
+        SET
+            LAST_UPD_DATE = #{registInfo.lastUpdDate, jdbcType=VARCHAR},
+            LAST_UPD_COMPANY_CD = #{registInfo.lastUpdCompanyCd, jdbcType=VARCHAR},
+            LAST_UPD_SECTION_CD = #{registInfo.lastUpdSectionCd, jdbcType=VARCHAR},
+            LAST_UPD_USER_ID =  #{registInfo.lastUpdUserId, jdbcType=VARCHAR}
+        WHERE  MSG_LEVEL = #{msgLevel, jdbcType=VARCHAR}
+            AND MSG_SEQNO = #{msgSeqno, jdbcType=VARCHAR}
+    </update>
+    
+    <update id="update" parameterType="fw.domain.mst.resource.message.MessageManagement">
+        UPDATE M_MESSAGE_LANG
+        SET
+            MESSAGE = #{message, jdbcType=VARCHAR},
+            CAUSES = #{causes, jdbcType=VARCHAR},
+            SOLUTION = #{solution, jdbcType=VARCHAR},
+            LAST_UPD_DATE = #{registInfo.lastUpdDate, jdbcType=VARCHAR},
+            LAST_UPD_COMPANY_CD = #{registInfo.lastUpdCompanyCd, jdbcType=VARCHAR},
+            LAST_UPD_SECTION_CD = #{registInfo.lastUpdSectionCd, jdbcType=VARCHAR},
+            LAST_UPD_USER_ID =  #{registInfo.lastUpdUserId, jdbcType=VARCHAR}
+        WHERE LANGUAGE_IND = '${@fw.security.SecurityUtil@getCompanyUseLanguageIndByEscapeSql()}'  
+            AND MSG_LEVEL = #{msgLevel, jdbcType=VARCHAR}
+            AND MSG_SEQNO = #{msgSeqno, jdbcType=VARCHAR}
+    </update>    
+    
+    <delete id="deleteMessageLanguage"
+            parameterType="fw.domain.mst.resource.message.MessageIdentify">
+        DELETE FROM M_MESSAGE_LANG
+         WHERE LANGUAGE_IND != '${@fw.common.util.AppUtil@getSysLanguageByEscapeSql()}'
+           AND MSG_LEVEL = #{msgLevel}
+           AND MSG_SEQNO = #{msgSeqno}
+    </delete>
+   <insert id="insertMessageLanguage" parameterType="fw.domain.mst.resource.message.MessageLanguage">
+        INSERT INTO M_MESSAGE_LANG
+        (
+            LANGUAGE_IND,
+            MSG_LEVEL,
+            MSG_SEQNO,
+            MESSAGE,
+            CAUSES,
+            SOLUTION,
+            LAST_UPD_DATE,
+            LAST_UPD_COMPANY_CD,
+            LAST_UPD_SECTION_CD,
+            LAST_UPD_USER_ID,
+            REG_DATE,
+            REG_COMPANY_CD,
+            REG_SECTION_CD,
+            REG_USER_ID
+        )VALUES(
+            #{languageInd.languageInd, jdbcType=VARCHAR},
+            #{messageIdentify.msgLevel, jdbcType=VARCHAR},
+            #{messageIdentify.msgSeqno, jdbcType=VARCHAR},
+            #{message, jdbcType=VARCHAR},
+            #{causes, jdbcType=VARCHAR},
+            #{solution, jdbcType=VARCHAR},
+            #{registInfo.lastUpdDate, jdbcType=VARCHAR},
+            #{registInfo.lastUpdCompanyCd, jdbcType=VARCHAR},
+            #{registInfo.lastUpdSectionCd, jdbcType=VARCHAR},
+            #{registInfo.lastUpdUserId, jdbcType=VARCHAR},
+            #{registInfo.regDate, jdbcType=VARCHAR},
+            #{registInfo.regCompanyCd, jdbcType=VARCHAR},
+            #{registInfo.regSectionCd, jdbcType=VARCHAR},
+            #{registInfo.regUserId, jdbcType=VARCHAR}
+
+        )
+    </insert>
+    <select id="listMsgLevel"  resultType="String">
+        SELECT CODE_VALUE AS "msgLevel"
+        FROM M_CODE_NAME
+        WHERE CODE_KEY = 'MSG_LEVEL'
+    </select>
+</mapper>

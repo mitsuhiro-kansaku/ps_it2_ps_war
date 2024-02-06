@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<flow xmlns="http://www.springframework.org/schema/webflow"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.springframework.org/schema/webflow
+        http://www.springframework.org/schema/webflow/spring-webflow-2.0.xsd"
+	parent="base">
+	<!-- 伝票識別情報 -->
+	<var name="identify" class="fw.domain.slip.businesscommon.slipsearch.SlipSearchIdentify" />
+    <!-- 詳細情報 -->
+    <var name="slipSearchByBuyerAllItem" class="fw.domain.slip.slipsearchbybuyer.SlipSearchByBuyerAllItem" />
+
+	<input name="searchCondition" />
+	<input name="isCurrentPageSearch" />
+
+	<decision-state id="isSearchByKey">
+		<if test="flowScope.isCurrentPageSearch" then="searchByKey" else="searchByCondition" />
+	</decision-state>
+
+	<action-state id="searchByCondition">
+		<evaluate expression="PSVIW110Service.init(searchCondition)"
+			result="flowScope.itemList" />
+		<transition to="PSVIW110" />
+	</action-state>
+
+	<action-state id="searchByKey">
+		<evaluate expression="PSVIW110Service.page(searchCondition)"
+			result="flowScope.itemList" />
+		<transition to="PSVIW110" />
+	</action-state>
+
+    <!-- 伝票照会（購買用）一覧の場合 -->
+	<view-state id="PSVIW110" model="slipSearchByBuyerAllItem"
+		view="viw/slip/PSVIW110">
+		<transition on="order" validate="false">
+			<evaluate expression="PSVIW110Service.order(searchCondition)"
+				result="flowScope.itemList" />
+		</transition>
+		<transition on="page" validate="false">
+			<evaluate expression="PSVIW110Service.page(searchCondition)"
+				result="flowScope.itemList" />
+		</transition>
+		
+		<!--詳細 -->
+        <transition on="detailValidate" validate="true">
+           <set name="flashScope.isShowDetail" value="true"/>
+           <set name="slipSearchByBuyerAllItem.purReqNo" value="requestParameters.purReqNo" />
+        </transition>
+        <transition on="detail" to="PSVIW120" validate="false" />
+		
+		<transition on="back" to="home" validate="false" />
+	</view-state>
+
+    <!--詳細 -->
+    <subflow-state id="PSVIW120" subflow="viw/slip/PSVIW120" >
+        <input name="slipSearchByBuyerAllItem" value="slipSearchByBuyerAllItem" />
+    </subflow-state>
+</flow>

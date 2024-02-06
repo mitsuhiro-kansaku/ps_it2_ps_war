@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="ps.dataaccess.ajax.SubjectOnblurMapper">
+    <!-- 強化-00180-000 2013/03/12 MODIFY SBO_SOKOU START -->
+    <select id="getSubjectInfoOnBlur"
+            resultType="fw.domain.mst.material.subject.SubjectPopupItem">
+        SELECT M_SUBJECT.SUBJECT_CD as "subjectIdentify.subjectCd",
+               M_SUBJECT_LANG.SUBJECT_NAME as "subjectName"
+          FROM M_SUBJECT
+          LEFT JOIN M_SUBJECT_LANG 
+                 ON M_SUBJECT.COMPANY_CD = M_SUBJECT_LANG.COMPANY_CD
+                AND M_SUBJECT.SUBJECT_CD = M_SUBJECT_LANG.SUBJECT_CD
+                AND M_SUBJECT_LANG.LANGUAGE_IND = '${@fw.security.SecurityUtil@getCompanyUseLanguageIndByEscapeSql()}'
+         WHERE '${@fw.common.util.AppUtil@getSysDate(@fw.common.util.AppUtil@DATE_SHORT)}' BETWEEN M_SUBJECT.VALID_START_DATE AND M_SUBJECT.VALID_END_DATE
+           AND M_SUBJECT.SUBJECT_CD = #{subject}
+           AND (M_SUBJECT.COMPANY_CD = #{companyCd, jdbcType=VARCHAR}
+            OR M_SUBJECT.COMPANY_CD = '${@fw.common.constant.ApplicationConstant@COMPANY_CD_ALL}')
+            <if test="@org.apache.commons.lang.StringUtils@isNotBlank(termFlag) and termFlag==0">
+                AND M_SUBJECT.TERM_FLG = #{termFlag, jdbcType=VARCHAR}
+            </if>
+    </select>
+    <!-- 強化-00180-000 2013/03/12 MODIFY SBO_SOKOU END -->
+</mapper>

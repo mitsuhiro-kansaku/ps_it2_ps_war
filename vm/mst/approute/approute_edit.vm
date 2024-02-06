@@ -1,0 +1,681 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<title>#customSpringMessage("M_APP_ROUTE")</title><!--承認ルートマスタ -->
+<meta http-equiv="Content-type" content="text/html; charset=UTF-8">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Content-script-type" content="text/javascript">
+<link id="CSS_FONT" rel="stylesheet" href="../../include/FontS.css" type="text/css">
+<link rel="stylesheet" href="../../include/Layout.css" type="text/css">
+<link rel="stylesheet" href="../../include/Color.css" type="text/css">
+<link rel="stylesheet" href="../../include/searchbox.css" type="text/css">
+<link rel="stylesheet" href="../../include/ime.css" type="text/css">
+
+<script language="javascript" type="text/javascript" src="../../include/common.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/searchbox.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/check.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/date.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/jquery-1.7.2.min.js"></script>
+<script language="javascript" type="text/javascript">
+<!--
+#parse("./common/common_js.vm")
+
+function onLoad() {
+    setFocus();
+    formateMessage();
+    var alertMessage = "$!alertMessage";
+    if (alertMessage != ""){
+        alert(alertMessage);
+    }
+    
+        for(var i=1;i<10;i++){
+        var obj1 = document.getElementsByName("approuteSortItemList.ApprouteSortItem"+i+".approuterInfo.userId")[0];
+        var obj2 = document.getElementsByName("Cancel"+i)[0];
+        if(obj1.value != ""){
+            obj2.style.display="inline";
+        }
+    }
+    var errorMsg = "$!errorMessage";
+    if (errorMsg != ""){
+        document.getElementById("TR_ERROR").style.display = "";
+        return;
+    }
+        var isSuccess = '#jsEscape($!isSuccess)';
+        if(isSuccess == 'true'){
+            #set( $mmApproute = "#customSpringMessage('M_APP_ROUTE')" )
+            
+            
+            #if($!type == "Update")
+                alert('#customMessageArgs("I002",[$mmApproute])');
+            #else
+                alert('#customMessageArgs("I005",[$mmApproute])');
+            #end
+            
+            buttonDisable();
+            top.iframeChange("${flowExecutionUrl}&_eventId=back");
+        }
+    
+}
+
+function changeCancel(userId,index){
+    var obj = document.getElementsByName("Cancel"+index)[0];
+    if(userId.value != ""){
+        obj.style.display="inline";
+    }
+    if(userId.value == ""){
+        obj.style.display="none"
+    }
+}
+
+function exec() {
+    #set( $mmApproute = "#customSpringMessage('M_APP_ROUTE')" )   
+    #if($!type == "Update")
+        #set( $register = "#customSpringMessage('UPDATE')" )
+        if( !confirm('#customMessageArgs("W001",[$mmApproute,$register])') ) {
+            return;
+        }
+    #else
+        #set( $register = "#customSpringMessage('ACTION_REGISTER')" )
+        if( !confirm('#customMessageArgs("W001",[$mmApproute,$register])') ) {
+            return;
+        }
+    #end
+    
+    buttonDisable();
+    getObj("Body").submit();
+}
+function getCalendar(num,objName){
+    var obj = document.getElementsByName(objName)[0];
+    initSearchBox(num,obj);
+}
+
+$(function () {
+    var companyCd= '#jsEscape($!domain.approuteIdentify.companyCd)';
+    var voucherInd='#jsEscape($!domain.approuteIdentify.approuteVoucherInd.approuteVoucherInd)';
+    var authNo;
+    if(voucherInd=='0'){
+        //カタログ購入依頼
+        authNo = '530';
+    }else if(voucherInd=='1'){
+        //都度購入依頼
+        authNo = '530,540';
+    }else if(voucherInd=='2'){
+        //注文
+        authNo = '570';
+    }else if(voucherInd=='3'){
+        //受入
+        authNo = '580';
+    }else if(voucherInd=='4'){
+        //検査
+        authNo = '590';
+    }else if(voucherInd=='5'){
+        //検収
+        authNo = '600';
+    }else if(voucherInd=='7'){
+        //支払請求
+        authNo = '550';
+    }else if(voucherInd=='8'){
+        //支払伝票
+        authNo = '670';
+    }else if(voucherInd=='A'){
+        //見積取得依頼
+        authNo = '520';
+    }else if(voucherInd=='B'){
+        //見積依頼
+        authNo = '560';
+    }else if(voucherInd=='C'){
+        //見積回答受付
+        authNo = '560';
+    }else if(voucherInd=='D'){
+        //購買価格
+        authNo = '620';
+    }else if(voucherInd=='E'){
+        //価格改定
+        authNo = '620';
+    }else if(voucherInd=='F'){
+        //回答価格改定
+        authNo = '620';
+    }else if(voucherInd=='G'){
+        //価格一括登録
+        authNo = '620';
+    }
+    for(var i = 1; i <= 9; i++) {
+        var imgButtonObj = getObj("UserSearch" + i);
+        userPopupFun(imgButtonObj,companyCd,authNo,i);
+    }
+});
+
+function userPopupFun(imgButtonObj,companyCd,authNo,index) {
+    imgButtonObj.onclick = function() {
+        getObj("usernum").value = index;
+        userPopup.setParam("0",companyCd,"","","1",authNo,"","1");
+        userPopup.setObject(
+            getObj("approuteSortItemList.ApprouteSortItem" + index + ".approuterInfo.userId"),
+            getObj("approuteSortItemList.ApprouteSortItem" + index + ".approuterInfo.userName"),
+            getObj("approuteSortItemList.ApprouteSortItem" + index + ".approuterInfo.sectionCd"),
+            getObj("approuteSortItemList.ApprouteSortItem" + index + ".approuterInfo.sectionName"),
+            getObj("approuteSortItemList.ApprouteSortItem" + index + ".approuterInfo.official.officialName"),
+            null,null,null,null,null,null,
+            getObj("sectionOfficialName" + index)
+        );
+        masterSearch("../../src/userPopup/search?pageid=userPopupSearch&popupPageid=PSMST182","userSearch","700","500");
+        getObj("approuteSortItemList.ApprouteSortItem" + index + ".approuterInfo.userId").focus();
+   };
+}
+
+function clearInfo(index) {
+    var inputs = getObj("Adjust" + index).getElementsByTagName("input");
+    for (var i = 0; i < inputs.length; i++) {
+       //各テキスト ボックスの空
+       if (inputs[i].type == "text") {
+           inputs[i].value ="";
+       }
+       if (inputs[i].type == "hidden") {
+           inputs[i].value ="";
+       }
+    }
+    getObj("sectionOfficialName" + index).innerText = "";
+    var obj = document.getElementsByName("Cancel"+index)[0];
+    obj.style.display="none"
+}
+
+function formateMessage() {
+    var alertStr= document.getElementById('textAlert').value;
+    document.getElementById('textAlert').value = alertStr.replace(/\r\n/g,"");
+    var errorStr= document.getElementById('textError').value;
+    document.getElementById('textError').value = errorStr.replace(/\r\n/g,"");
+}
+//-->
+</script>
+</head>
+<body class="Body" topmargin="10" leftmargin="10" marginwidth="10" marginheight="10" align="center" onload="onLoad();">
+<form id="Body" name="Body" action="${flowExecutionUrl}&_eventId=submit" method="post">
+    #customFormHiddenInput("pageid" "approute$!type")
+    #customFormHiddenInput("approuteIdentify.lastUpdDate" "$!domain.approuteIdentify.lastUpdDate")
+    #customFormHiddenInput("usernum" "-1")
+    #customFormHiddenInput("textAlert" "$!alertMessage")
+    #customFormHiddenInput("textError" "$!errorMessage")
+    <table width="75%" style="height:20px; margin-right:auto; margin-left:auto;">
+       <tr id ="TR_ERROR" style="display:none;">
+           <td class="error">
+               $!errorMessage
+           </td>
+       </tr>
+       <tr>
+            <td class="FontSmallBold DarkBlue">
+                #if($!{type} == "Insert")
+                    #customSpringMessage("PSMST182_ADD_HEADER_COMMENT") 
+                #else 
+                    #customSpringMessage("PSMST182_EDIT_HEADER_COMMENT") 
+                #end
+            </td>
+       </tr>
+    </table>
+    <table class="DTL_BOX" width="75%">
+        <tr>
+            
+            <!-- ＊＊＊＊＊　カレンダーボックス　＊＊＊＊＊ -->
+            <iframe iframe id="CALENDARBOX" class="CALENDARBOX" framespacing="0" scrolling="no" frameborder="0" src="../../sbxCalendar/body.vm"></iframe>
+            <!-- ＊＊＊＊＊　ユーザ検索　＊＊＊＊＊ -->
+            <!--iframe id="USERSEARCHBOX" class="USERSEARCHBOX" framespacing="0" scrolling="no" frameborder="0" src="../sbxUser/body.vm"></iframe>-->
+            <td class="DTL_TITLE_BOX">
+                <table class="NoBorder" width="100%">
+                    <tr>
+                        <td class="ScreenName" style="text-align:left;"><!--承認ルート編集-->
+                            #if($!{type} == "Insert")#customSpringMessage("SCREEN_M_APP_ROUTE_CREATE") 
+                            #else #customSpringMessage("SCREEN_M_APP_ROUTE_EDIT") 
+                            #end
+                        </td> 
+                        <td align="right"  class="FontSmall"><!--登　録-->
+                            <input type="button" class="MiddleButton" value="#customSpringMessage('ACTION_REGISTER')" onclick="exec();">
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+        <tr>
+            <td class="DTL_INTER_BOX">
+                <table class="NoBorder" width="100%">
+                    <tr>
+                        <td class="DTL_OUTHEAD">
+                            <div class="DTL_INHEAD">
+                                <span class="FontDetailHeader">#customSpringMessage('COMPANY_CD') </span><!--会社コード -->
+                            </div>
+                        </td>
+                        <td class="DTL_OUTHEAD">
+                            <div class="DTL_INBODY">
+                                <table class="NoBorder" width="100%"><tr>
+                                        <td class="FontDetailData">#out($!domain.approuteIdentify.companyCd)</td>
+                                          <td align="right">
+                                        #customFormSingCheckboxByType("TERMINATION" "domain.term.termFlg" "" $termFlagList "class='FontMiddle'")<!--廃止-->&nbsp;
+                                    </td>  
+                                   </tr>
+                                </table>
+                            </div>
+                        </td>
+                    </tr>
+                     <tr>
+                        <td class="DTL_OUTHEAD">
+                            <div class="DTL_INHEAD">
+                                <span class="FontDetailHeader">#customSpringMessage('COMPANY_USE_CURRENCY') </span><!--会社使用通貨 -->
+                            </div>
+                        </td>
+                        <td class="DTL_OUTHEAD">
+                            <div class="DTL_INBODY">
+                                <span class="FontDetailData">#out($!domain.companySummary.currencyCd)</span>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="DTL_OUTHEAD">
+                            <div class="DTL_INHEAD">
+                                <span class="FontDetailHeader">#customSpringMessage('COMPANY_NAME') </span><!--会社名 -->
+                            </div>
+                        </td>
+                        <td class="DTL_OUTHEAD">
+                            <div class="DTL_INBODY">
+                                <span class="FontDetailData">#out($!domain.companySummary.companyName)</span>
+                            </div>
+                        </td>
+                    </tr>
+                     <tr>
+                        <td class="DTL_OUTHEAD">
+                            <div class="DTL_INHEAD">
+                                <span class="FontDetailHeader">#customSpringMessage('APP_ROUTE_NO') </span><!--承認ルート番号  -->
+                            </div>
+                        </td>
+                        <td class="DTL_OUTHEAD">
+                            <div class="DTL_INBODY">
+                                <span class="FontDetailData">#out($!domain.approuteIdentify.appRouteNo)</span>
+                            </div>
+                        </td>
+                    </tr>
+                     <tr>
+                        <td class="DTL_OUTHEAD">
+                            <div class="DTL_INHEAD">
+                                <span class="FontDetailHeader">#customSpringMessage('APP_VOUCHER_IND') </span><!--承認伝票種別 -->
+                            </div>
+                        </td>
+                        <td class="DTL_OUTHEAD">
+                            <div class="DTL_INBODY">
+                                <span class="FontDetailData">#out($domain.approuteIdentify.approuteVoucherInd.approuteVoucherInd_PageValue)</span>
+                            </div>
+                        </td>
+                    </tr>
+                     <tr>
+                        <td class="DTL_OUTHEAD">
+                            <div class="DTL_INHEAD">
+                                <span class="FontDetailHeader">#customSpringMessage('SECTION_CD') </span><!--部門コード -->
+                            </div>
+                        </td>
+                        <td class="DTL_OUTHEAD">
+                            <div class="DTL_INBODY">
+                                <span class="FontDetailData">#out($!domain.approuteIdentify.sectionCd)</span>
+                            </div>
+                        </td>
+                    </tr>
+                     <tr>
+                        <td class="DTL_OUTHEAD">
+                            <div class="DTL_INHEAD">
+                                <span class="FontDetailHeader">#customSpringMessage('SECTION_NAME') </span><!--部門名 -->
+                            </div>
+                        </td>
+                        <td class="DTL_OUTHEAD">
+                            <div class="DTL_INBODY">
+                                <span class="FontDetailData">#out($!domain.sectionManagement.sectionName)</span>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="DTL_OUTHEAD">
+                            <div class="DTL_INHEAD">
+                                <span class="FontDetailHeader">#customSpringMessage("APP_ROUTE_NAME")</span><span class="FontWarn">&nbsp;※</span><!-- 承認ルート名 -->
+                            </div>     
+                       </td>
+                        <td class="DTL_OUTHEAD">
+                            <div class="DTL_INBODY">
+                                #customFormInputByType("domain.appRouteName" "class='Middle onIME' maxLength='30' size='80'" "true" "class='FontMiniAnkBold'" "class='FontDetailData'")
+                            </div>
+                        </td>
+                    </tr>
+                   <tr>
+                         <td class="DTL_OUTHEAD">
+                            <div class="DTL_INHEAD">
+                                <span class="FontDetailHeader">#customSpringMessage("APP_AMOUNT_NO")</span><!-- 適用金額-->
+                            </div>     
+                       </td>
+                        <td class="DTL_OUTHEAD">
+                            <div class="DTL_INBODY">
+                                <span class="FontDetailData">#customFormInputByType("domain.approuteTargetPrice.targetPriceFrom.amountFormat" "class='MiddleRight noIME' maxLength='16' size='16' onblur='editVal(this);' ONFOCUS='deleteComma(this);'" "true" "class='FontMiniAnkBold'" "class='FontDetailData'")</span>
+                                <span class="FontSmall">～</span>
+                                <span class="FontDetailData">#customFormInputByType("domain.approuteTargetPrice.targetPriceTo.amountFormat" "class='MiddleRight noIME' maxLength='16' size='16' onblur='editVal(this);' ONFOCUS='deleteComma(this);'" "true" "class='FontMiniAnkBold'" "class='FontDetailData'")</span>
+                            </div>
+                        </td>
+                     </tr>
+                      <tr>
+                        <td class="DTL_OUTHEAD">
+                            <div class="DTL_INHEAD">
+                                <span class="FontDetailHeader">#customSpringMessage("VALID_PERIOD")</span><!--有効期間 -->
+                            </div>
+                        </td>
+                          <td class="DTL_OUTHEAD">
+                           <div class="DTL_INBODY">
+                                 #springFormInput("domain.approuteeffective.per.period.startDate.dateOfymdFormat" "maxLength=8 size=12 class='MiddleAnk noIME' onblur='dateOnBlur(this);' onfocus='dateOnFocus(this);' ")
+                                 <img class="Icon" src="../../image/btnCalendar.gif" onclick="getCalendar(1,'approuteeffective.per.period.startDate.dateOfymdFormat');"><!--カレンダー-->
+                                 <span class="FontSmall">～</span>
+                                 #springFormInput("domain.approuteeffective.per.period.endDate.dateOfymdFormat" "maxLength=8 size=12 class='MiddleAnk noIME' onblur='dateOnBlur(this);' onfocus='dateOnFocus(this);' ")
+                                <img class="Icon" src="../../image/btnCalendar.gif" onclick="getCalendar(1,'approuteeffective.per.period.endDate.dateOfymdFormat');">
+                            </div>
+                        </td>
+                    </tr>
+                     <tr>
+                        <td class="DTL_OUTHEAD">
+                            <div class="DTL_INHEAD">
+                                <span class="FontDetailHeader">#customSpringMessage("DSP_ORDER")</span><span class="FontWarn">&nbsp;※</span><!--表示順  -->
+                            </div>
+                        </td>
+                        <td class="DTL_OUTHEAD">
+                            <div class="DTL_INBODY">
+                               #customFormInputByType("domain.dspOrder" "class='MiddleRight noIME' maxLength='3' size='5'" "true" "class='FontMiniAnkBold'" "class='FontDetailData'")
+                            </div>
+                        </td>
+                    </tr>
+                     <tr>
+                        <td class="DTL_OUTHEAD" width="30%">
+                            <div class="DTL_INHEAD">
+                                <span class="FontDetailHeader">#customSpringMessage("APP_USER_EXISTENCE")</span><span class="FontWarn">&nbsp;※</span><!--承認者有無 -->
+                            </div>
+                        </td>
+                        <td class="DTL_OUTHEAD">
+                            <div class="DTL_INBODY">
+                                <span class="FontSmall">#customFormRadioButtons("domain.approuterflg" $app_person_flg_list ""  "")</span>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr>
+                       <td class="DTL_OUTHEAD" rowspan="9">
+                           <div class="DTL_INHEAD" style="height:350px;">
+                                <span class="FontDetailHeader">#customSpringMessage("APP_SEQ")</span>
+                                <br><span class="FontDetailHeader">&nbsp;</span>
+                                <br><span class="FontDetailHeader">&nbsp;</span>
+                                <br><span class="FontDetailHeader">&nbsp;</span>
+                                <br><span class="FontDetailHeader">&nbsp;</span>
+                                <br><span class="FontDetailHeader">&nbsp;</span>
+                                <br><span class="FontDetailHeader">&nbsp;</span>
+                                <br><span class="FontDetailHeader">&nbsp;</span>
+                                <br><span class="FontDetailHeader">&nbsp;</span>
+                                <br><span class="FontDetailHeader">&nbsp;</span>
+                                <br><span class="FontDetailHeader">&nbsp;</span>
+                                <br><span class="FontDetailHeader">&nbsp;</span>
+                                <br><span class="FontDetailHeader">&nbsp;</span>
+                                <br><span class="FontDetailHeader">&nbsp;</span>
+                                <br><span class="FontDetailHeader">&nbsp;</span>
+                                <br><span class="FontDetailHeader">&nbsp;</span>
+                                <br><span class="FontDetailHeader">&nbsp;</span>
+                                <br><span class="FontDetailHeader">&nbsp;</span>
+                                <br><span class="FontDetailHeader">&nbsp;</span>
+                            </div>
+                        </td>
+                        <td class="DTL_OUTBODY">
+                            <div class="DTL_INBODY">
+                                <table class="NoBorder" width="100%">
+                                    <tr>
+                                        <td class="FontMiddleAnkBold" width="3%"><span class="FontNumber">1</span></td>
+                                        <td class="FontMiddle" id="Adjust1" nowrap width="87%">
+                                            <span id="sectionOfficialName1">
+                                            #out($domain.approuteSortItemList.ApprouteSortItem1.approuterInfo.sectionName)
+                                            #out($domain.approuteSortItemList.ApprouteSortItem1.approuterInfo.official.officialName)
+                                            </span>
+                                            <br>
+                                            #customFormInputByType("domain.approuteSortItemList.ApprouteSortItem1.approuterInfo.userId" "class='SmallDsp' readonly tabIndex='-1' maxLength='12' size='20' onfocus='changeCancel(this,1);'" "true" "class='FontMiniAnkBold'" "class='FontDetailData'")
+                                            #customFormInputByType("domain.approuteSortItemList.ApprouteSortItem1.approuterInfo.userName" "class='SmallDsp' readonly tabIndex='-1' size='45'" "true" "class='FontMiniAnkBold'" "class='FontDetailData'")
+                                            #customFormHiddenInput("approuteSortItemList.ApprouteSortItem1.approuterInfo.sectionCd" "$!domain.approuteSortItemList.ApprouteSortItem1.approuterInfo.sectionCd")
+                                            #customFormHiddenInput("approuteSortItemList.ApprouteSortItem1.approuterInfo.sectionName" "$!domain.approuteSortItemList.ApprouteSortItem1.approuterInfo.sectionName")
+                                            #customFormHiddenInput("approuteSortItemList.ApprouteSortItem1.approuterInfo.official.officialName" "$!domain.approuteSortItemList.ApprouteSortItem1.approuterInfo.official.officialName")
+                                            <img class="Icon" id="UserSearch1" name="UserSearch" src="../../image/btnLupe.gif" />
+                                        </td>
+                                        <td class="FontMiddle"  nowrap align="center" valign="middle" >
+                                          <a name="Cancel1" style="display:none" href="javascript:clearInfo('1');">#customSpringMessage("ACTION_CANCEL") </a>&nbsp; 
+                                        </td>
+                                    </tr>
+                                </table>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="DTL_OUTBODY">
+                            <div class="DTL_INBODY">
+                                <table class="NoBorder" width="100%">
+                                    <tr>
+                                        <td class="FontMiddleAnkBold" width="3%"><span class="FontNumber">2</span></td>
+                                         <td class="FontMiddle" id="Adjust2" nowrap width="87%">
+                                            <span id="sectionOfficialName2">
+                                            #out($domain.approuteSortItemList.ApprouteSortItem2.approuterInfo.sectionName)
+                                            #out($domain.approuteSortItemList.ApprouteSortItem2.approuterInfo.official.officialName)
+                                            </span>
+                                            <br>
+                                            #customFormInputByType("domain.approuteSortItemList.ApprouteSortItem2.approuterInfo.userId" "class='SmallDsp' readonly tabIndex='-1' maxLength='12' size='20' onfocus='changeCancel(this,2);'" "true" "class='FontMiniAnkBold'" "class='FontDetailData'")
+                                            #customFormInputByType("domain.approuteSortItemList.ApprouteSortItem2.approuterInfo.userName" "class='SmallDsp' readonly tabIndex='-1' size='45'" "true" "class='FontMiniAnkBold'" "class='FontDetailData'")
+                                            #customFormHiddenInput("approuteSortItemList.ApprouteSortItem2.approuterInfo.sectionCd" "$!domain.approuteSortItemList.ApprouteSortItem2.approuterInfo.sectionCd")
+                                            #customFormHiddenInput("approuteSortItemList.ApprouteSortItem2.approuterInfo.sectionName" "$!domain.approuteSortItemList.ApprouteSortItem2.approuterInfo.sectionName")
+                                            #customFormHiddenInput("approuteSortItemList.ApprouteSortItem2.approuterInfo.official.officialName" "$!domain.approuteSortItemList.ApprouteSortItem2.approuterInfo.official.officialName")
+                                            <img class="Icon" id="UserSearch2" name="UserSearch" src="../../image/btnLupe.gif" />
+                                        </td>
+                                        <td class="FontMiddle"  nowrap align="center" valign="middle">
+                                           <a name="Cancel2" style="display:none" href="javascript:clearInfo('2');" >#customSpringMessage("ACTION_CANCEL") </a>&nbsp; 
+                                        </td>
+                                    </tr>
+                                </table>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="DTL_OUTBODY">
+                            <div class="DTL_INBODY">
+                                <table class="NoBorder" width="100%">
+                                    <tr>
+                                        <td class="FontMiddleAnkBold" width="3%"><span class="FontNumber">3</span></td>
+                                        <td class="FontMiddle" id="Adjust3" nowrap width="87%">
+                                            <span id="sectionOfficialName3">
+                                            #out($domain.approuteSortItemList.ApprouteSortItem3.approuterInfo.sectionName)
+                                            #out($domain.approuteSortItemList.ApprouteSortItem3.approuterInfo.official.officialName)
+                                            </span>
+                                            <br>
+                                            #customFormInputByType("domain.approuteSortItemList.ApprouteSortItem3.approuterInfo.userId" "class='SmallDsp' readonly tabIndex='-1' maxLength='12' size='20' onfocus='changeCancel(this,3);'" "true" "class='FontMiniAnkBold'" "class='FontDetailData'")
+                                            #customFormInputByType("domain.approuteSortItemList.ApprouteSortItem3.approuterInfo.userName" "class='SmallDsp' readonly tabIndex='-1' size='45'" "true" "class='FontMiniAnkBold'" "class='FontDetailData'")
+                                            #customFormHiddenInput("approuteSortItemList.ApprouteSortItem3.approuterInfo.sectionCd" "$!domain.approuteSortItemList.ApprouteSortItem3.approuterInfo.sectionCd")
+                                            #customFormHiddenInput("approuteSortItemList.ApprouteSortItem3.approuterInfo.sectionName" "$!domain.approuteSortItemList.ApprouteSortItem3.approuterInfo.sectionName")
+                                            #customFormHiddenInput("approuteSortItemList.ApprouteSortItem3.approuterInfo.official.officialName" "$!domain.approuteSortItemList.ApprouteSortItem3.approuterInfo.official.officialName")
+                                            <img class="Icon"  id="UserSearch3" name="UserSearch" src="../../image/btnLupe.gif" />
+                                        </td>
+                                        <td class="FontMiddle"  nowrap align="center" valign="middle">
+                                            <a name="Cancel3" style="display:none" href="javascript:clearInfo('3');" >#customSpringMessage("ACTION_CANCEL") </a>&nbsp; 
+                                        </td>
+                                    </tr>
+                                </table>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="DTL_OUTBODY">
+                            <div class="DTL_INBODY">
+                                <table class="NoBorder" width="100%">
+                                    <tr>
+                                        <td class="FontMiddleAnkBold" width="3%"><span class="FontNumber">4</span></td>
+                                        <td class="FontMiddle" id="Adjust4" nowrap width="87%">
+                                            <span id="sectionOfficialName4">
+                                            #out($domain.approuteSortItemList.ApprouteSortItem4.approuterInfo.sectionName)
+                                            #out($domain.approuteSortItemList.ApprouteSortItem4.approuterInfo.official.officialName)
+                                            </span>
+                                            <br>
+                                            #customFormInputByType("domain.approuteSortItemList.ApprouteSortItem4.approuterInfo.userId" "class='SmallDsp' readonly tabIndex='-1' maxLength='12' size='20' onfocus='changeCancel(this,4);'" "true" "class='FontMiniAnkBold'" "class='FontDetailData'")
+                                            #customFormInputByType("domain.approuteSortItemList.ApprouteSortItem4.approuterInfo.userName" "class='SmallDsp' readonly tabIndex='-1' size='45'" "true" "class='FontMiniAnkBold'" "class='FontDetailData'")
+                                            #customFormHiddenInput("approuteSortItemList.ApprouteSortItem4.approuterInfo.sectionCd" "$!domain.approuteSortItemList.ApprouteSortItem4.approuterInfo.sectionCd")
+                                            #customFormHiddenInput("approuteSortItemList.ApprouteSortItem4.approuterInfo.sectionName" "$!domain.approuteSortItemList.ApprouteSortItem4.approuterInfo.sectionName")
+                                            #customFormHiddenInput("approuteSortItemList.ApprouteSortItem4.approuterInfo.official.officialName" "$!domain.approuteSortItemList.ApprouteSortItem4.approuterInfo.official.officialName")
+                                            <img class="Icon" id="UserSearch4" name="UserSearch" src="../../image/btnLupe.gif" />
+                                        </td>
+                                        <td class="FontMiddle"  nowrap align="center" valign="middle">
+                                           <a name="Cancel4" style="display:none" href="javascript:clearInfo('4');" >#customSpringMessage("ACTION_CANCEL") </a>&nbsp; 
+                                        </td>
+                                    </tr>
+                                </table>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="DTL_OUTBODY">
+                            <div class="DTL_INBODY">
+                                <table class="NoBorder" width="100%">
+                                    <tr>
+                                        <td class="FontMiddleAnkBold" width="3%"><span class="FontNumber">5</span></td>
+                                        <td class="FontMiddle" id="Adjust5" nowrap width="87%">
+                                            <span id="sectionOfficialName5">
+                                            #out($domain.approuteSortItemList.ApprouteSortItem5.approuterInfo.sectionName)
+                                            #out($domain.approuteSortItemList.ApprouteSortItem5.approuterInfo.official.officialName)
+                                            </span>
+                                            <br>
+                                            #customFormInputByType("domain.approuteSortItemList.ApprouteSortItem5.approuterInfo.userId" "class='SmallDsp' readonly tabIndex='-1' maxLength='12' size='20' onfocus='changeCancel(this,5);'" "true" "class='FontMiniAnkBold'" "class='FontDetailData'")
+                                            #customFormInputByType("domain.approuteSortItemList.ApprouteSortItem5.approuterInfo.userName" "class='SmallDsp' readonly tabIndex='-1' size='45'" "true" "class='FontMiniAnkBold'" "class='FontDetailData'")
+                                            #customFormHiddenInput("approuteSortItemList.ApprouteSortItem5.approuterInfo.sectionCd" "$!domain.approuteSortItemList.ApprouteSortItem5.approuterInfo.sectionCd")
+                                            #customFormHiddenInput("approuteSortItemList.ApprouteSortItem5.approuterInfo.sectionName" "$!domain.approuteSortItemList.ApprouteSortItem5.approuterInfo.sectionName")
+                                            #customFormHiddenInput("approuteSortItemList.ApprouteSortItem5.approuterInfo.official.officialName" "$!domain.approuteSortItemList.ApprouteSortItem5.approuterInfo.official.officialName")
+                                            <img class="Icon" id="UserSearch5" name="UserSearch" src="../../image/btnLupe.gif" />
+                                        </td>
+                                        <td class="FontMiddle" nowrap align="center" valign="middle">
+                                           <a name="Cancel5" style="display:none" href="javascript:clearInfo('5');" >#customSpringMessage("ACTION_CANCEL") </a>&nbsp; 
+                                        </td>
+                                    </tr>
+                                </table>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="DTL_OUTBODY">
+                            <div class="DTL_INBODY">
+                                <table class="NoBorder" width="100%">
+                                    <tr>
+                                        <td class="FontMiddleAnkBold" width="3%"><span class="FontNumber">6</span></td>
+                                        <td class="FontMiddle" id="Adjust6" nowrap width="87%">
+                                            <span id="sectionOfficialName6">
+                                            #out($domain.approuteSortItemList.ApprouteSortItem6.approuterInfo.sectionName)
+                                            #out($domain.approuteSortItemList.ApprouteSortItem6.approuterInfo.official.officialName)
+                                            </span>
+                                            <br>
+                                            #customFormInputByType("domain.approuteSortItemList.ApprouteSortItem6.approuterInfo.userId" "class='SmallDsp' readonly tabIndex='-1' maxLength='12' size='20' onfocus='changeCancel(this,6);'" "true" "class='FontMiniAnkBold'" "class='FontDetailData'")
+                                            #customFormInputByType("domain.approuteSortItemList.ApprouteSortItem6.approuterInfo.userName" "class='SmallDsp' readonly tabIndex='-1' size='45'" "true" "class='FontMiniAnkBold'" "class='FontDetailData'")
+                                            #customFormHiddenInput("approuteSortItemList.ApprouteSortItem6.approuterInfo.sectionCd" "$!domain.approuteSortItemList.ApprouteSortItem6.approuterInfo.sectionCd")
+                                            #customFormHiddenInput("approuteSortItemList.ApprouteSortItem6.approuterInfo.sectionName" "$!domain.approuteSortItemList.ApprouteSortItem6.approuterInfo.sectionName")
+                                            #customFormHiddenInput("approuteSortItemList.ApprouteSortItem6.approuterInfo.official.officialName" "$!domain.approuteSortItemList.ApprouteSortItem6.approuterInfo.official.officialName")
+                                            <img class="Icon" id="UserSearch6" name="UserSearch" src="../../image/btnLupe.gif" />
+                                        </td>
+                                        <td class="FontMiddle"  nowrap align="center" valign="middle">
+                                            <a name="Cancel6" style="display:none" href="javascript:clearInfo('6');" >#customSpringMessage("ACTION_CANCEL") </a>&nbsp; 
+                                        </td>
+                                    </tr>
+                                </table>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="DTL_OUTBODY">
+                            <div class="DTL_INBODY">
+                                <table class="NoBorder" width="100%">
+                                    <tr>
+                                        <td class="FontMiddleAnkBold" width="3%"><span class="FontNumber">7</span></td>
+                                        <td class="FontMiddle" id="Adjust7" nowrap width="87%">
+                                            <span id="sectionOfficialName7">
+                                            #out($domain.approuteSortItemList.ApprouteSortItem7.approuterInfo.sectionName)
+                                            #out($domain.approuteSortItemList.ApprouteSortItem7.approuterInfo.official.officialName)
+                                            </span>
+                                            <br>
+                                            #customFormInputByType("domain.approuteSortItemList.ApprouteSortItem7.approuterInfo.userId" "class='SmallDsp' readonly tabIndex='-1' maxLength='12' size='20' onfocus='changeCancel(this,7);'" "true" "class='FontMiniAnkBold'" "class='FontDetailData'")
+                                            #customFormInputByType("domain.approuteSortItemList.ApprouteSortItem7.approuterInfo.userName" "class='SmallDsp' readonly tabIndex='-1' size='45'" "true" "class='FontMiniAnkBold'" "class='FontDetailData'")
+                                            #customFormHiddenInput("approuteSortItemList.ApprouteSortItem7.approuterInfo.sectionCd" "$!domain.approuteSortItemList.ApprouteSortItem7.approuterInfo.sectionCd")
+                                            #customFormHiddenInput("approuteSortItemList.ApprouteSortItem7.approuterInfo.sectionName" "$!domain.approuteSortItemList.ApprouteSortItem7.approuterInfo.sectionName")
+                                            #customFormHiddenInput("approuteSortItemList.ApprouteSortItem7.approuterInfo.official.officialName" "$!domain.approuteSortItemList.ApprouteSortItem7.approuterInfo.official.officialName")
+                                            <img class="Icon" id="UserSearch7" name="UserSearch" src="../../image/btnLupe.gif" />
+                                        </td>
+                                        <td class="FontMiddle"  nowrap align="center" valign="middle">
+                                            <a name="Cancel7" style="display:none" href="javascript:clearInfo('7');" >#customSpringMessage("ACTION_CANCEL") </a>&nbsp; 
+                                        </td>
+                                    </tr>
+                                </table>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="DTL_OUTBODY">
+                            <div class="DTL_INBODY">
+                                <table class="NoBorder" width="100%">
+                                    <tr>
+                                        <td class="FontMiddleAnkBold" width="3%"><span class="FontNumber">8</span></td>
+                                        <td class="FontMiddle" id="Adjust8" nowrap width="87%">
+                                            <span id="sectionOfficialName8">
+                                            #out($domain.approuteSortItemList.ApprouteSortItem8.approuterInfo.sectionName)
+                                            #out($domain.approuteSortItemList.ApprouteSortItem8.approuterInfo.official.officialName)
+                                            </span>
+                                            <br>
+                                            #customFormInputByType("domain.approuteSortItemList.ApprouteSortItem8.approuterInfo.userId" "class='SmallDsp' readonly tabIndex='-1' maxLength='12' size='20'  onfocus='changeCancel(this,8);'" "true" "class='FontMiniAnkBold'" "class='FontDetailData'")
+                                            #customFormInputByType("domain.approuteSortItemList.ApprouteSortItem8.approuterInfo.userName" "class='SmallDsp'   readonly tabIndex='-1' size='45'" "true" "class='FontMiniAnkBold'" "class='FontDetailData'")
+                                            #customFormHiddenInput("approuteSortItemList.ApprouteSortItem8.approuterInfo.sectionCd" "$!domain.approuteSortItemList.ApprouteSortItem8.approuterInfo.sectionCd")
+                                            #customFormHiddenInput("approuteSortItemList.ApprouteSortItem8.approuterInfo.sectionName" "$!domain.approuteSortItemList.ApprouteSortItem8.approuterInfo.sectionName")
+                                            #customFormHiddenInput("approuteSortItemList.ApprouteSortItem8.approuterInfo.official.officialName" "$!domain.approuteSortItemList.ApprouteSortItem8.approuterInfo.official.officialName")
+                                            <img class="Icon" id="UserSearch8" name="UserSearch" src="../../image/btnLupe.gif" />
+                                        </td>
+                                        <td class="FontMiddle"  nowrap align="center" valign="middle">
+                                            <a name="Cancel8" style="display:none" href="javascript:clearInfo('8');" >#customSpringMessage("ACTION_CANCEL") </a>&nbsp; 
+                                        </td>
+                                    </tr>
+                                </table>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="DTL_OUTBODY">
+                            <div class="DTL_INBODY">
+                                <table class="NoBorder" width="100%">
+                                    <tr>
+                                        <td class="FontMiddleAnkBold" width="3%"><span class="FontNumber">9</span></td>
+                                        <td class="FontMiddle" id="Adjust9" nowrap width="87%">
+                                            <span id="sectionOfficialName9">
+                                            #out($domain.approuteSortItemList.ApprouteSortItem9.approuterInfo.sectionName)
+                                            #out($domain.approuteSortItemList.ApprouteSortItem9.approuterInfo.official.officialName)
+                                            </span>
+                                            <br>
+                                            #customFormInputByType("domain.approuteSortItemList.ApprouteSortItem9.approuterInfo.userId" "class='SmallDsp' readonly tabIndex='-1' maxLength='12' size='20' onfocus='changeCancel(this,9);'" "true" "class='FontMiniAnkBold'" "class='FontDetailData'")
+                                            #customFormInputByType("domain.approuteSortItemList.ApprouteSortItem9.approuterInfo.userName" "class='SmallDsp' readonly tabIndex='-1' size='45'" "true" "class='FontMiniAnkBold'" "class='FontDetailData'")
+                                            #customFormHiddenInput("approuteSortItemList.ApprouteSortItem9.approuterInfo.sectionCd" "$!domain.approuteSortItemList.ApprouteSortItem9.approuterInfo.sectionCd")
+                                            #customFormHiddenInput("approuteSortItemList.ApprouteSortItem9.approuterInfo.sectionName" "$!domain.approuteSortItemList.ApprouteSortItem9.approuterInfo.sectionName")
+                                            #customFormHiddenInput("approuteSortItemList.ApprouteSortItem9.approuterInfo.official.officialName" "$!domain.approuteSortItemList.ApprouteSortItem9.approuterInfo.official.officialName")
+                                            <img class="Icon" id="UserSearch9" name="UserSearch" src="../../image/btnLupe.gif" />
+                                        </td>
+                                        <td class="FontMiddle"  nowrap align="center" valign="middle">
+                                            <a name="Cancel9" style="display:none" href="javascript:clearInfo('9');" >#customSpringMessage("ACTION_CANCEL") </a>&nbsp; 
+                                        </td>
+                                    </tr>
+                                </table>
+                            </div>
+                        </td>
+                    </tr>
+                </table>
+                <table class="NoBorder" style="width:100%;">
+                    <tr>
+                        <td class="DTL_MSGBOX" nowrap>
+                            #if($!{type} == "Insert")
+                                #customSpringMessage("PSMST182_ADD_FOOTER_COMMENT") 
+                            #else 
+                                #customSpringMessage("PSMST182_EDIT_FOOTER_COMMENT") 
+                            #end
+                        </td>
+                        <td class="DTL_MSGBOX" align="right">
+                            <input type="button" class="MiddleButton" value="#customSpringMessage("ACTION_REGISTER")" onclick="exec();">
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+</form>
+</body>
+</html>

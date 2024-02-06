@@ -1,0 +1,243 @@
+<!doctype html>
+<html LANG="ja">
+<head>
+#if("ALL" == "$!searchCondition.status")
+    #set($commonTitle = "#customSpringMessage('CATALOG_PUR_REQ_LIST')")
+#else
+    #set($commonTitle = "#customSpringMessage('CATALOG_PUR_REQ_LIST')(#out($!searchCondition.status_PageValue))")
+#end
+<title>#out($commonTitle)</title> ## カタログ購入依頼一覧
+<meta http-equiv="Content-type" content="text/html; charset=UTF-8">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Content-script-type" content="text/javascript">
+<link id="CSS_FONT" rel="stylesheet" href="../../include/FontS.css" type="text/css">
+<link id="CSS_CORNERS" rel="stylesheet" href="../../include/Layout.css" type="text/css">
+<link id="CSS_CORNERS" rel="stylesheet" href="../../include/Color.css" type="text/css">
+<link id="CSS_FONT" rel="stylesheet" href="../../include/FontS.css" type="text/css">
+<link rel="stylesheet" href="../../include/Layout.css" type="text/css">
+<link rel="stylesheet" href="../../include/Color.css" type="text/css">
+<script language="javascript" type="text/javascript" src="../../include/jquery-1.7.2.min.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/jquery.tablefix.js"></script>
+<script language="javascript" TYPE="text/javascript" src="../../include/common.js"></script>
+<script language="javascript" TYPE="text/javascript" src="../../include/check.js"></script>
+<script language="javascript" TYPE="text/javascript" src="../../include/date.js"></script>
+<script language="javascript" TYPE="text/javascript" src="../../include/tablesort.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/searchbox.js"></script>
+<script language="javascript" TYPE="text/javascript">
+<!--
+
+#parse("./common/common_js.vm")
+
+function onLoad() {
+    dataLoadHasPage();
+    var isDelete = "#jsEscape($!isDelete)";
+    var isShowApplyAgain = "#jsEscape($isShowApplyAgain)";
+    if (isDelete == "true"){
+            #set( $purReq = "#customSpringMessage('PUR_REQ')" )
+           alert('#customMessageArgs("I003",[$purReq])'); 
+    }
+    var isApplyCancel = "#jsEscape($!isApplyCancel)";
+    if (isApplyCancel == "true"){
+            #set( $purReq = "#customSpringMessage('PUR_REQ')" )
+           alert('#customMessageArgs("I031",[$purReq])'); 
+    }    
+    
+    var alertMessage = "$!alertMessage";
+    var errorMsg = "$!errorMessage";
+    if (alertMessage != ""){
+        buttonUsableForList(alertMessage);
+        alert(alertMessage);
+    }
+    
+    if (errorMsg != ""){
+         return;
+    }
+    var isShowDetail = "#jsEscape($isShowDetail)";
+    if (isShowDetail == 'true'){
+        parent.poppage('${flowExecutionUrl}&_eventId=detail','DETAIL','800','700');
+    }
+    if(isShowApplyAgain == 'true'){
+        top.iframeChange("${flowExecutionUrl}&_eventId=applyAgain");
+    }
+    var isShowEdit = "#jsEscape($isShowEdit)";
+    if(isShowEdit == "true"){
+        top.iframeChange("${flowExecutionUrl}&_eventId=edit");
+    }
+}
+
+//詳細
+function openDetail(purAplSeqNo,appUnitNo,lastUpdDate) {
+    parent.iframeChange("${flowExecutionUrl}&_eventId=detailValidate","purAplSeqNo",purAplSeqNo,"appUnitNo",appUnitNo,"lastUpdDate",lastUpdDate,"HIDDENAREA");
+}
+
+//再申請
+function openDetailApplyAgain(purAplSeqNo,appUnitNo,lastUpdDate) {
+
+    buttonDisable();
+    parent.iframeChange("${flowExecutionUrl}&_eventId=applyAgainValidate","purAplSeqNo",purAplSeqNo,"appUnitNo",appUnitNo,"lastUpdDate",lastUpdDate,"pageid","PSCAT051Search","HIDDENAREA");
+}
+
+//申請中止
+function openDetailApplyCancel(purAplSeqNo,appUnitNo,lastUpdDate, slipNo, slipMnglastUpdDate) {
+    #set( $purReq = "#customSpringMessage('PUR_REQ')")
+    #set( $actionDelete = "#customSpringMessage('REQ_STOP')" )    
+    if( !confirm('#customMessageArgs("W001",[$purReq,$actionDelete])') ) {
+        return;
+    }
+     buttonDisable();
+    parent.iframeChange("${flowExecutionUrl}&_eventId=applyCancel","purAplSeqNo",purAplSeqNo,"appUnitNo",appUnitNo,"lastUpdDate",lastUpdDate, "exclusiveSlipId.slipNo", slipNo, "exclusiveSlipId.lastUpdDate", slipMnglastUpdDate);
+}
+
+//編集
+function openDetailEdit(purAplSeqNo,purAplNo,lastUpdDate) {
+     buttonDisable();
+    parent.iframeChange("${flowExecutionUrl}&_eventId=editValidate","purAplSeqNo",purAplSeqNo,"purAplNo.purAplNo",purAplNo,"lastUpdDate",lastUpdDate,"pageid","PSCAT051Search","HIDDENAREA");
+}
+
+//削除
+function openDetailDel(purAplSeqNo,purAplNo,lastUpdDate,slipNo, slipMnglastUpdDate) {
+    #set( $purReq = "#customSpringMessage('PUR_REQ')" )   
+    #set( $actionDelete = "#customSpringMessage('ACTION_DELETE')" )
+    if( !confirm('#customMessageArgs("W001",[$purReq,$actionDelete])') ) {
+        return;
+    }
+     buttonDisable();
+    parent.iframeChange("${flowExecutionUrl}&_eventId=delete","purAplSeqNo",purAplSeqNo,"purAplNo.purAplNo",purAplNo,"lastUpdDate",lastUpdDate, "exclusiveSlipId.slipNo", slipNo, "exclusiveSlipId.lastUpdDate", slipMnglastUpdDate);
+}
+
+//-->
+</script>
+
+</head>
+<body id="BODY" topmargin="0" leftmargin="0" marginwidth="0" marginheight="0" align="left" onload="onLoad();setTablefix('#TABLEFIX', 1, 3+$!PSCAT051PageCreaterForList.printLockColumn());">
+#if($!errorMessage && $!errorMessage!="")
+<div id="error" name="error" class="error">
+    $!errorMessage
+</div>
+#end
+#if($!itemList.catalogPurReqList && $!itemList.catalogPurReqList.size()>0)
+<table id="TABLEFIX" class="ListArea" width="100%">
+    <thead>
+        <tr id="Header">
+            <th class="BoxHeaderCenter FontSmall">No.<!--No.--></th>
+            <th class="BoxHeaderCenter FontSmall">#customSpringMessage("DETAIL")<!--詳細--></th>
+            <th class="BoxHeaderCenter FontSmall">#customSpringMessage('ACTION')<!--処理--></th>
+                #foreach($!item in $!PSCAT051PageCreaterForList.getItemListForBody())
+                #set($currentOneColumnFlag = $!PSCAT051PageCreaterForList.getOneColumnFlag($!item))
+                #if($velocityCount == 0)
+                    $!PSCAT051PageCreaterForList.printTHtag($!item,'class="BoxHeaderCenter FontSmall"')
+                #elseif($currentOneColumnFlag)
+                    $!PSCAT051PageCreaterForList.printBRtag($!item)
+                #else
+                    $!PSCAT051PageCreaterForList.printTHtagClose()
+                    $!PSCAT051PageCreaterForList.printTHtag($!item,'class="BoxHeaderCenter FontSmall"')
+                #end
+                
+                #if($!item.getColumnName()=="T_PUR_APL.PUR_APL_NO")
+                    $!PSCAT051PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName()=="T_PUR_REQUEST.APP_UNIT_NO")
+                    $!PSCAT051PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName()=="T_PUR_APL.URGENT_IND")
+                    $!PSCAT051PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName()=="T_PUR_APL.INPUT_USER_NAME")
+                    $!PSCAT051PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName()=="T_PUR_APL.PUR_APL_STATUS")
+                    $!PSCAT051PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName()=="T_PUR_APL.PUR_REQ_DATE")
+                    $!PSCAT051PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName()=="T_PUR_APL.TITLE_NAME")
+                    $!PSCAT051PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName()=="T_PUR_REQUEST.CURRENCY_CD")
+                    $!PSCAT051PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName()=="T_PUR_REQUEST.TOTAL_AMOUNT")
+                    $!PSCAT051PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName()=="T_PUR_REQUEST.REQ_DELIV_DATE")
+                    $!PSCAT051PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName()=="T_PUR_APL.REQ_SECTION_CD")
+                    $!PSCAT051PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName()=="T_PUR_APL.REQ_SECTION_NAME")
+                    $!PSCAT051PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName()=="T_PUR_APL.REQ_USER_ID")
+                    $!PSCAT051PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName()=="T_PUR_APL.REQ_USER_NAME")
+                    $!PSCAT051PageCreaterForList.printHead($!item)
+                #else
+                    $!PSCAT051PageCreaterForList.printHead($!item)
+                #end
+            #end
+            $!PSCAT051PageCreaterForList.printTHtagClose()
+        </tr>
+    </thead>
+    <tbody>
+        #set ($No=0)
+    #foreach($!CatalogPurReqListItem in $!itemList.catalogPurReqList)
+        #set ($No=$No+1)
+        <tr id="Row_$No" name="Row_$No" #if($No % 2 != 0) bgcolor="#dce4ef" #else bgcolor="#ffffff" #end>
+            <td class="BoxDetailCenter FontSmall">
+                $No
+            </td>
+            <td class="BoxDetailCenter"><img class="Icon" src="../../image/btnDetailDisp.gif" onclick="openDetail('#jsEscapeInHTML($!CatalogPurReqListItem.catalogIdentify.purAplSeqNo)','#jsEscapeInHTML($!CatalogPurReqListItem.catalogIdentify.appUnitNo)','#jsEscapeInHTML($!CatalogPurReqListItem.catalogIdentify.lastUpdDate)');"></td><!--詳細-->
+            <td class="BoxDetailCenter">
+                #if("$!CatalogPurReqListItem.status" == "01" || "$!CatalogPurReqListItem.status" == "03")
+                <input type="button" class="SmallButton" value="#customSpringMessage('RE_REQ')" onclick="openDetailApplyAgain('#jsEscapeInHTML($!CatalogPurReqListItem.catalogIdentify.purAplSeqNo)','#jsEscapeInHTML($!CatalogPurReqListItem.catalogIdentify.appUnitNo)','#jsEscapeInHTML($!CatalogPurReqListItem.catalogIdentify.lastUpdDate)');">&nbsp;<!--再申請-->
+                <input type="button" class="SmallButton Red" value="#customSpringMessage('REQ_STOP')" onclick="openDetailApplyCancel('#jsEscapeInHTML($!CatalogPurReqListItem.catalogIdentify.purAplSeqNo)','#jsEscapeInHTML($!CatalogPurReqListItem.catalogIdentify.appUnitNo)','#jsEscapeInHTML($!CatalogPurReqListItem.catalogIdentify.lastUpdDate)','#jsEscapeInHTML($!CatalogPurReqListItem.catalogIdentify.exclusiveSlipId.slipNo)','#jsEscapeInHTML($!CatalogPurReqListItem.catalogIdentify.exclusiveSlipId.lastUpdDate)');">&nbsp;<!--申請中止-->
+                #elseif("$!CatalogPurReqListItem.status" == "04")
+                <input type="button" class="SmallButton" value="#customSpringMessage('ACTION_EDIT')" onclick="openDetailEdit('#jsEscapeInHTML($!CatalogPurReqListItem.catalogIdentify.purAplSeqNo)','#jsEscapeInHTML($!CatalogPurReqListItem.catalogIdentify.purAplNo.purAplNo)','#jsEscapeInHTML($!CatalogPurReqListItem.catalogIdentify.lastUpdDate)');">&nbsp;<!--編集-->
+                <input type="button" class="SmallButton" value="#customSpringMessage('ACTION_DELETE')" onclick="openDetailDel('#jsEscapeInHTML($!CatalogPurReqListItem.catalogIdentify.purAplSeqNo)','#jsEscapeInHTML($!CatalogPurReqListItem.catalogIdentify.purAplNo.purAplNo)','#jsEscapeInHTML($!CatalogPurReqListItem.catalogIdentify.lastUpdDate)','#jsEscapeInHTML($!CatalogPurReqListItem.catalogIdentify.exclusiveSlipId.slipNo)','#jsEscapeInHTML($!CatalogPurReqListItem.catalogIdentify.exclusiveSlipId.lastUpdDate)');">&nbsp;<!--削除-->
+                #end
+            </td>
+            #foreach($!item in $!PSCAT051PageCreaterForList.getItemListForBody($velocityCount))
+                    #set($currentOneColumnFlag = $!PSCAT051PageCreaterForList.getOneColumnFlag($!item))
+                    #if($velocityCount == 0)
+                        $!PSCAT051PageCreaterForList.printTDtag('class="BoxDetailLeft"')
+                    #elseif(!$currentOneColumnFlag)
+                        $!PSCAT051PageCreaterForList.printTDtagClose()
+                        $!PSCAT051PageCreaterForList.printTDtag('class="BoxDetailLeft"')
+                    #end
+                    
+                    #if($!item.getColumnName()=="T_PUR_APL.PUR_APL_NO")
+                        $!PSCAT051PageCreaterForList.printDefault($!item,"_data_style",'class="FontSlipNo"')
+                    #elseif($!item.getColumnName()=="T_PUR_REQUEST.APP_UNIT_NO")
+                        $!PSCAT051PageCreaterForList.printDefault($!item,"_data_style",'class="FontSlipNo"')
+                    #elseif($!item.getColumnName()=="T_PUR_APL.URGENT_IND")
+                        #if("$!CatalogPurReqListItem.urgentInd" =="1")
+                            $!PSCAT051PageCreaterForList.printSpecial("s25_codeNameRed", $!item, 'URGENT_IND','','_redValue','1','_boldStyle','"FontSmall Red"',"_data_style",'align="center"')
+                        #end
+                    #elseif($!item.getColumnName()=="T_PUR_APL.INPUT_USER_NAME")
+                        $!PSCAT051PageCreaterForList.printDefault($!item,"_data_style",'class="FontList"')
+                    #elseif($!item.getColumnName()=="T_PUR_APL.PUR_APL_STATUS")
+                         $!PSCAT051PageCreaterForList.printSpecial("s25_codeNameRed", $!item, 'PUR_REQ_STATUS','','_redValue','03','_boldStyle','"Red"',"_data_style",'class="FontMiniAnkBold" align="center"')
+                    #elseif($!item.getColumnName()=="T_PUR_APL.PUR_REQ_DATE")
+                        $!PSCAT051PageCreaterForList.printDefault($!item,"_data_style",'class="FontList" align="center"')
+                    #elseif($!item.getColumnName()=="T_PUR_APL.TITLE_NAME")
+                        $!PSCAT051PageCreaterForList.printDefault($!item,"_data_style",'class="FontList"')
+                    #elseif($!item.getColumnName()=="T_PUR_REQUEST.CURRENCY_CD")
+                        $!PSCAT051PageCreaterForList.printDefault($!item,"_data_style",'class="FontList" align="center"')
+                    #elseif($!item.getColumnName()=="T_PUR_REQUEST.TOTAL_AMOUNT")
+                        $!PSCAT051PageCreaterForList.printSpecial('s27_list_data_currency', $!item, '_data_style', 'class="FontCurrSmall" align="right"')
+                    #elseif($!item.getColumnName()=="T_PUR_REQUEST.REQ_DELIV_DATE")
+                        $!PSCAT051PageCreaterForList.printDefault($!item,"_data_style",'class="FontList" align="center"')
+                    #elseif($!item.getColumnName()=="T_PUR_APL.REQ_SECTION_CD")
+                        $!PSCAT051PageCreaterForList.printDefault($!item,"_data_style",'class="FontList" align="center"')
+                    #elseif($!item.getColumnName()=="T_PUR_APL.REQ_SECTION_NAME")
+                        $!PSCAT051PageCreaterForList.printDefault($!item,"_data_style",'class="FontList"')
+                    #elseif($!item.getColumnName()=="T_PUR_APL.REQ_USER_ID")
+                        $!PSCAT051PageCreaterForList.printDefault($!item,"_data_style",'class="FontList"')
+                    #elseif($!item.getColumnName()=="T_PUR_APL.REQ_USER_NAME")
+                        $!PSCAT051PageCreaterForList.printDefault($!item,"_data_style",'class="FontList"')
+                    #else
+                        $!PSCAT051PageCreaterForList.printDefault($!item,"_data_style",'class="FontList"')
+                    #end
+                #end
+                $!PSCAT051PageCreaterForList.printTDtagClose()
+        </tr>
+    #end
+    </tbody>
+   #end
+</table>
+<table id="WAIT" class="NoBorder" style="display:none;width:100%;"><tr><td style="text-align:center;"><br><br>
+<img src="../../image/wait.gif"><br><span class="FontMini"><br>#customSpringMessage('SEARCH_MESSAGE')</span></td></tr></table><!--問い合わせ中...-->
+
+</body>
+
+</html>

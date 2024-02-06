@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<flow xmlns="http://www.springframework.org/schema/webflow"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.springframework.org/schema/webflow
+        http://www.springframework.org/schema/webflow/spring-webflow-2.0.xsd"
+    parent="base">
+
+    <var name="voucherConfigIdentify" class="fw.domain.mst.resource.customize.voucherconfig.mstmanagement.VoucherConfigIdentify" />
+
+    <input name="voucherConfigSearchCondition" />
+    <input name="enableSaveOrder" />
+
+    <decision-state id="isSearchByKey">
+       <if test="flowScope.isCurrentPageSearch" then="searchByKey" else="searchByCondition" />
+    </decision-state>
+    
+    <action-state id="searchByCondition">
+        <evaluate expression="PSMST351Service.init(voucherConfigSearchCondition)"
+            result="flowScope.voucherConfigList" />
+        <transition to="PSMST351" />
+    </action-state>
+
+    <action-state id="searchByKey">
+        <evaluate expression="PSMST351Service.page(voucherConfigSearchCondition.searchCondition)"
+            result="flowScope.voucherConfigList" />
+        <transition to="PSMST351" />
+    </action-state>
+
+    <view-state id="PSMST351" model="voucherConfigIdentify"
+        view="mst/vchconf/PSMST351">
+        <transition on="editValidate" validate="false">
+            <set name="flashScope.isShowUpdate" value="true"></set>
+        </transition>
+        <transition on="edit" to="PSMST352" validate="false" />
+        
+        <transition on="order" validate="false">
+            <evaluate expression="PSMST351Service.order(voucherConfigSearchCondition.searchCondition)"
+                result="flowScope.voucherConfigList" />
+        </transition>
+        <transition on="page" validate="false">
+            <evaluate expression="PSMST351Service.page(voucherConfigSearchCondition.searchCondition)"
+                result="flowScope.voucherConfigList" />
+        </transition>
+        <transition on="orderOption" validate="false">
+            <evaluate expression="PSMST351Service.orderOption(voucherConfigList, requestParameters.itemIndex ,requestParameters.orderIndex)" result="flowScope.voucherConfigList" />
+        </transition>
+        
+        <transition on="saveOrder" validate="false">
+            <evaluate expression="PSMST351Service.saveOrder(voucherConfigList)" />
+        </transition>
+        
+        <transition on="back" to="home" validate="false" />
+    </view-state>
+    
+    <subflow-state id="PSMST352" subflow="mst/vchconf/PSMST352">
+        <input name="voucherConfigIdentify" value="voucherConfigIdentify" />
+    </subflow-state>
+
+</flow>

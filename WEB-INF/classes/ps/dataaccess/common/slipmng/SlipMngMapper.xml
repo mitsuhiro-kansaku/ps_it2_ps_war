@@ -1,0 +1,499 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="ps.dataaccess.common.slipmng.SlipMngMapper">
+     
+    <resultMap type="fw.domain.slip.slipmng.SlipMng" id="SlipMng_Map">
+        <id column="SLIP_NO" property="slipMngIdentify.slipNo"/>
+        <id column="APL_NO" property="aplNo"/>  
+        <id column="PUR_REQ_SEQ" property="purReqSeqNo"/>
+        <id column="QUOT_ACQ_REQ_EXIST_FLG" property="quotAcqFlg"/>
+        <id column="SLIP_STATUS" property="slipStatus"/>
+        <id column="RECEIVE_STATUS_IND" property="statusInd.receiveStatus"/>  
+        <id column="INSPECT_STATUS_IND" property="statusInd.inspectStatus"/>
+        <id column="ACCEPTANCE_STATUS_IND" property="statusInd.acceptanceStatus"/>
+        <id column="RE_QUOT_FLG" property="reQuotFlg"/>
+        <id column="PRE_SLIP_STATUS" property="preSlipStatus"/>
+        <id column="REQ_TYPE_IND" property="reqTypeInd"/>
+    </resultMap>
+    
+    <!-- 伝票管理の登録処理SQL -->
+    <insert id="insertSlipMng">
+        INSERT INTO T_SLIP_MNG
+            (
+            SLIP_NO,
+            APL_NO,
+            QUOT_ACQ_REQ_EXIST_FLG,
+            SLIP_STATUS,
+            RE_QUOT_FLG,
+            PRE_SLIP_STATUS,
+            RECEIVE_STATUS_IND,
+            INSPECT_STATUS_IND,
+            ACCEPTANCE_STATUS_IND,
+            DELETE_FLG,
+            AUTO_DELETE_FLG,
+            AUTO_DELETE_DATE,
+            LAST_UPD_DATE,
+            LAST_UPD_COMPANY_CD,
+            LAST_UPD_SECTION_CD,
+            LAST_UPD_USER_ID,
+            REG_DATE,
+            REG_COMPANY_CD,
+            REG_SECTION_CD,
+            REG_USER_ID
+            )
+        VALUES
+            (
+            #{slipMngIdentify.slipNo}, 
+            #{aplNo},
+            #{quotAcqFlg}, 
+            #{slipStatus}, 
+            #{reQuotFlg}, 
+            #{preSlipStatus}, 
+            '0', 
+            '0', 
+            '0', 
+            '0', 
+            '0', 
+            '',
+            '${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}',
+            '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}',
+            '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}',
+            '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}',
+            '${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}',
+            '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}',
+            '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}',
+            '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}'  
+            )
+    </insert>
+
+    <!-- 伝票管理の更新処理SQL -->
+    <update id="updateSlipMng">
+        UPDATE T_SLIP_MNG
+            SET
+                SLIP_STATUS = #{slipStatus},
+                RE_QUOT_FLG = #{reQuotFlg},
+                PRE_SLIP_STATUS = #{preSlipStatus},
+                
+                <if test="reqTypeInd == &quot;9&quot;">               
+                        LAST_UPD_DATE = #{slipMngIdentify.lastUpdDate},
+                        LAST_UPD_COMPANY_CD = 'batch',
+                        LAST_UPD_SECTION_CD = 'batch',
+                        LAST_UPD_USER_ID = 'batch'
+                </if>
+                <if test="reqTypeInd != &quot;9&quot;">               
+                        LAST_UPD_DATE = '${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}',
+                        LAST_UPD_COMPANY_CD = '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}',
+                        LAST_UPD_SECTION_CD = '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}',
+                        LAST_UPD_USER_ID = '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}'
+                </if>
+        WHERE
+            SLIP_NO = #{slipMngIdentify.slipNo}
+    </update>
+    
+    <!-- 伝票管理の削除処理SQL -->
+    <delete id="deleteSlipMngForAplNo">
+        DELETE FROM T_SLIP_MNG
+        WHERE
+            APL_NO = #{aplNo}
+    </delete>
+    
+    <!-- 伝票管理の削除処理SQL -->
+    <delete id="deleteSlipMngForSlipNo">
+        DELETE FROM T_SLIP_MNG
+        WHERE APL_NO = #{aplNo} AND SLIP_NO NOT IN
+            <foreach collection="slipMngList" item="slipMng"  open="(" separator="," close=")">  
+                     #{slipMng.slipMngIdentify.slipNo, jdbcType=VARCHAR}
+             </foreach>
+    </delete>
+    
+    <!-- 伝票番号の取得処理SQL（見積取得依頼から） -->
+    <select id="selectSlipMngFromAcq" resultMap="SlipMng_Map" >
+        SELECT T_QUOT_ACQ_REQUEST.QUOT_ACQ_APL_DTL_NO AS SLIP_NO,
+               T_QUOT_ACQ_REQUEST.QUOT_ACQ_APL_NO AS APL_NO,
+               T_SLIP_MNG.QUOT_ACQ_REQ_EXIST_FLG,
+               T_SLIP_MNG.SLIP_STATUS,
+               T_SLIP_MNG.RECEIVE_STATUS_IND,
+               T_SLIP_MNG.INSPECT_STATUS_IND,
+               T_SLIP_MNG.ACCEPTANCE_STATUS_IND,
+               T_SLIP_MNG.RE_QUOT_FLG,
+               T_SLIP_MNG.PRE_SLIP_STATUS
+          FROM T_QUOT_ACQ_REQUEST 
+          LEFT JOIN T_SLIP_MNG
+          ON T_QUOT_ACQ_REQUEST.QUOT_ACQ_APL_DTL_NO = T_SLIP_MNG.SLIP_NO
+         WHERE QUOT_ACQ_APL_SEQ = #{seqNo}
+         ORDER BY T_QUOT_ACQ_REQUEST.QUOT_ACQ_APL_DTL_NO ASC
+    </select>
+    
+    <!-- 伝票番号の取得処理SQL（見積依頼から） -->
+    <select id="selectSlipMngFromReq" resultMap="SlipMng_Map" >
+        SELECT T_QUOT_REQ_DTL.QUOT_REQ_DTL_NO AS SLIP_NO,
+               T_QUOT_REQ_DTL.QUOT_REQ_NO AS APL_NO,
+               T_SLIP_MNG.QUOT_ACQ_REQ_EXIST_FLG,
+               T_SLIP_MNG.SLIP_STATUS,
+               T_SLIP_MNG.RECEIVE_STATUS_IND,
+               T_SLIP_MNG.INSPECT_STATUS_IND,
+               T_SLIP_MNG.ACCEPTANCE_STATUS_IND,
+               T_SLIP_MNG.RE_QUOT_FLG,
+               T_SLIP_MNG.PRE_SLIP_STATUS
+          FROM T_QUOT_REQ_DTL 
+          LEFT JOIN T_SLIP_MNG
+          ON T_QUOT_REQ_DTL.QUOT_REQ_DTL_NO = T_SLIP_MNG.SLIP_NO
+         WHERE QUOT_REQ_SEQ = #{seqNo}
+         ORDER BY T_QUOT_REQ_DTL.QUOT_REQ_DTL_NO ASC
+    </select>
+    
+    <!-- 伝票番号の取得処理SQL（購入依頼から） -->
+    <select id="selectSlipMngFromPur" resultMap="SlipMng_Map" >
+        SELECT T_PUR_REQUEST.PUR_REQ_NO AS SLIP_NO,
+               T_PUR_REQUEST.PUR_APL_NO AS APL_NO,
+               T_PUR_REQUEST.PUR_REQ_SEQ AS PUR_REQ_SEQ,
+               T_PUR_APL.REQ_TYPE_IND,
+               T_SLIP_MNG.QUOT_ACQ_REQ_EXIST_FLG,
+               T_SLIP_MNG.SLIP_STATUS,
+               T_SLIP_MNG.RECEIVE_STATUS_IND,
+               T_SLIP_MNG.INSPECT_STATUS_IND,
+               T_SLIP_MNG.ACCEPTANCE_STATUS_IND,
+               T_SLIP_MNG.RE_QUOT_FLG,
+               T_SLIP_MNG.PRE_SLIP_STATUS
+          FROM T_PUR_REQUEST 
+          INNER JOIN T_PUR_APL
+          ON T_PUR_REQUEST.PUR_APL_SEQ = T_PUR_APL.PUR_APL_SEQ
+          LEFT JOIN T_SLIP_MNG
+          ON T_PUR_REQUEST.PUR_REQ_NO = T_SLIP_MNG.SLIP_NO
+         WHERE T_PUR_APL.PUR_APL_SEQ = #{seqNo}
+               AND T_PUR_REQUEST.NEW_FLG = '1'
+         <if test="@org.apache.commons.lang.StringUtils@isNotBlank(slipNo)">
+               AND PUR_REQ_NO = #{slipNo}
+         </if>
+         ORDER BY T_PUR_REQUEST.PUR_REQ_NO ASC
+    </select>
+    
+    <!-- 伝票番号の取得処理SQL（購入依頼申請中止、削除） -->
+    <select id="selectSlipMngFromPurForCancelOrDel" resultMap="SlipMng_Map" >
+        SELECT T_PUR_REQUEST.PUR_REQ_NO AS SLIP_NO,
+               T_PUR_REQUEST.PUR_REQ_SEQ AS PUR_REQ_SEQ,
+               T_SLIP_MNG.QUOT_ACQ_REQ_EXIST_FLG,
+               T_SLIP_MNG.SLIP_STATUS
+          FROM T_PUR_REQUEST 
+          LEFT JOIN T_SLIP_MNG
+          ON T_PUR_REQUEST.PUR_REQ_NO = T_SLIP_MNG.SLIP_NO
+         WHERE T_PUR_REQUEST.PUR_REQ_SEQ = #{seqNo}
+               AND T_PUR_REQUEST.NEW_FLG = '1'
+    </select>
+    
+    <!-- 伝票番号の取得処理SQL（注文から） -->
+    <select id="selectSlipMngFromOrder" resultMap="SlipMng_Map" >
+        SELECT T_ORDER.ORDER_NO AS SLIP_NO,
+               T_ORDER.QUOT_REQ_NO AS APL_NO,
+               T_ORDER.ORDER_SEQ AS PUR_REQ_SEQ,
+               T_ORDER.REQ_TYPE_IND AS REQ_TYPE_IND,
+               T_SLIP_MNG.QUOT_ACQ_REQ_EXIST_FLG,
+               T_SLIP_MNG.SLIP_STATUS,
+               T_SLIP_MNG.RECEIVE_STATUS_IND,
+               T_SLIP_MNG.INSPECT_STATUS_IND,
+               T_SLIP_MNG.ACCEPTANCE_STATUS_IND,
+               T_SLIP_MNG.RE_QUOT_FLG,
+               T_SLIP_MNG.PRE_SLIP_STATUS
+          FROM T_ORDER 
+          LEFT JOIN T_SLIP_MNG
+          ON T_ORDER.ORDER_NO = T_SLIP_MNG.SLIP_NO
+         WHERE ORDER_SEQ = #{seqNo}
+         ORDER BY T_ORDER.ORDER_NO ASC
+    </select>
+    
+    <!-- 見積採否から見積採否シーケンス番号の取得SQL -->
+    <select id="selectAdoSeqFromAdo" resultType="String" >
+        SELECT QUOT_ADO_SEQ
+        FROM T_QUOT_ADO_REQUEST
+        WHERE QUOT_REQ_SEQ = #{seqNo} AND DELETE_FLG = '0'
+    </select>
+    
+    <!-- 伝票管理の取得処理SQL -->
+    <select id="selectSlipMng" resultType="String" >
+        SELECT SLIP_STATUS 
+        FROM T_SLIP_MNG
+        WHERE SLIP_NO = #{slipNo}
+    </select>
+        
+    <!-- 見積取得依頼購買担当者の取得SQL -->
+    <select id="selectQuotAcqReqBuyer" resultType="String" >
+        SELECT BUYER_USER_ID
+        FROM T_QUOT_ACQ_APL
+        WHERE QUOT_ACQ_APL_SEQ = #{seqNo} AND DELETE_FLG = '0'
+    </select>
+    
+    <!-- 購入依頼シーケンス番号より購入申請シーケンス番号の取得SQL -->
+    <select id="selectPurAplSeqNo" resultType="String" >
+        SELECT PUR_APL_SEQ 
+        FROM T_PUR_REQUEST 
+        WHERE PUR_REQ_SEQ = #{seqNo} AND DELETE_FLG = '0'
+    </select>
+    
+    <!-- 見積依頼購買担当者の取得SQL -->
+    <select id="selectQuotReqBuyer" resultType="String" >
+        SELECT BUYER_USER_ID
+        FROM T_QUOT_REQUEST
+        WHERE QUOT_REQ_SEQ = #{seqNo} AND DELETE_FLG = '0'
+    </select>
+    
+    <!-- 購入依頼の購買担当者の取得SQL -->
+    <select id="selectPurReqBuyer" resultType="String" >
+        SELECT BUYER_USER_ID
+        FROM T_PUR_REQUEST
+        WHERE PUR_REQ_SEQ = #{seqNo} AND DELETE_FLG = '0'
+    </select>
+    
+    <!-- 見積取得申請から承認ルート番号取得SQL -->
+    <select id="selectAppRouteNoFromAcq" resultType="String" >
+        SELECT APP_ROUTE_NO
+        FROM T_QUOT_ACQ_APL
+        WHERE QUOT_ACQ_APL_SEQ = #{seqNo} AND DELETE_FLG = '0'
+    </select>
+    
+    <!-- 見積依頼から承認ルート番号の取得SQL -->
+    <select id="selectAppRouteNoFromReq" resultType="String" >
+        SELECT APP_ROUTE_NO
+        FROM T_QUOT_REQUEST
+        WHERE QUOT_REQ_SEQ = #{seqNo} AND DELETE_FLG = '0'
+    </select>
+    
+    <!-- 見積採否承認から承認ルート番号の取得SQL -->
+    <select id="selectAppRouteNoFromAdo" resultType="String" >
+        SELECT APP_ROUTE_NO
+        FROM T_QUOT_ADO_REQUEST
+        WHERE QUOT_REQ_SEQ = #{seqNo} AND DELETE_FLG = '0'
+    </select>
+    
+    <!-- 購入申請から承認ルート番号の取得SQL -->
+    <select id="selectAppRouteNoFromPur" resultType="String" >
+        SELECT APP_ROUTE_NO
+        FROM T_PUR_REQUEST
+        WHERE PUR_REQ_SEQ = #{seqNo} AND DELETE_FLG = '0'
+    </select>
+    
+    <!-- シーケンス番号で、最終承認フラグを取得するSQL -->
+    <select id="selectAppStatusInd" resultType="String" >
+        SELECT T_APPROVAL.APP_STATUS_IND
+          FROM T_APPROVAL 
+         WHERE T_APPROVAL.APP_VOUCHER_KEY = #{seqNo}
+           AND T_APPROVAL.APP_VOUCHER_IND = #{appInd}
+           AND T_APPROVAL.DELETE_FLG = '0'
+    </select>
+
+    <!-- 見積取得申請シーケンス番号で、伝票管理情報を取得するSQL -->
+    <select id="selectSlipInfoFromAcq" resultType="fw.domain.slip.slipmng.SlipMng" >
+        SELECT 
+            SLIP_NO AS "slipMngIdentify.slipNo",
+            APL_NO AS "aplNo",
+            RE_QUOT_FLG AS "reQuotFlg", 
+            SLIP_STATUS AS "slipStatus",
+            PRE_SLIP_STATUS AS "preSlipStatus"
+        FROM T_SLIP_MNG
+            LEFT JOIN T_QUOT_ACQ_REQUEST ON 
+            T_QUOT_ACQ_REQUEST.QUOT_ACQ_APL_DTL_NO = T_SLIP_MNG.SLIP_NO
+        WHERE 
+            QUOT_ACQ_APL_SEQ = #{seqNo}
+    </select>
+    
+    <!-- 見積取得申請シーケンス番号で、伝票管理情報を取得するSQL -->
+    <select id="selectSlipInfoFromReq" resultType="fw.domain.slip.slipmng.SlipMng" >
+        SELECT 
+            SLIP_NO AS "slipMngIdentify.slipNo",
+            APL_NO AS "aplNo",
+            RE_QUOT_FLG AS "reQuotFlg", 
+            SLIP_STATUS AS "slipStatus",
+            PRE_SLIP_STATUS AS "preSlipStatus"
+        FROM T_SLIP_MNG
+            LEFT JOIN T_QUOT_REQ_DTL ON 
+            T_QUOT_REQ_DTL.QUOT_REQ_DTL_NO = T_SLIP_MNG.SLIP_NO
+        WHERE 
+            QUOT_REQ_SEQ = #{seqNo}
+    </select>
+    
+    <!-- 見積取得依頼があるかどうかように判断するSQL -->
+    <select id="selectQuotAcqCount" resultType="int" >
+        SELECT COUNT(1) FROM T_QUOT_ACQ_APL WHERE QUOT_ACQ_APL_NO = #{aplNo}
+    </select>
+    
+    <!-- 見積依頼シーケンス番号で、取引先回答情報を取得するSQL -->
+    <select id="selectSupplierRespFlg" resultType="String" >
+        SELECT COUNT(1)
+        FROM T_QUOT_REQ_SUP
+        WHERE QUOT_REQ_SEQ = #{seqNo}
+        AND QUOT_SUP_STATUS = '01'
+    </select>
+    
+    <!-- 見積依頼シーケンス番号で、取引先回答情報を取得するSQL -->
+    <select id="selectSupplierRespCancelFlg" resultType="String" >
+        SELECT COUNT(1)
+        FROM T_QUOT_REQ_SUP
+        WHERE QUOT_REQ_SEQ = #{seqNo}
+        AND QUOT_SUP_STATUS = '01'
+        AND CORRECT_CD != '3'
+    </select>
+    
+    <!-- 購入依頼シーケンス番号で、依頼区分を取得するSQL -->
+    <select id="selectPurReqInd" resultType="String" >
+        SELECT T_PUR_APL.REQ_TYPE_IND
+        FROM T_PUR_REQUEST
+           LEFT JOIN T_PUR_APL
+           ON T_PUR_APL.PUR_APL_SEQ = T_PUR_REQUEST.PUR_APL_SEQ
+        WHERE T_PUR_REQUEST.PUR_REQ_SEQ = #{seqNo}
+           AND T_PUR_REQUEST.DELETE_FLG = '0'
+    </select>
+    
+        <!-- 伝票番号の取得処理SQL（購入依頼から） -->
+    <select id="getSlipMngFromPur" resultType="hashmap">
+        SELECT T_PUR_REQUEST.PUR_REQ_NO AS "ORDER_NO",
+               T_SLIP_MNG.SLIP_STATUS AS "SLIP_STATUS"
+          FROM T_PUR_REQUEST 
+          LEFT JOIN T_SLIP_MNG
+          ON T_PUR_REQUEST.PUR_REQ_NO = T_SLIP_MNG.SLIP_NO
+         WHERE PUR_REQ_SEQ = #{seqNo}
+    </select>
+    
+    <!-- 伝票番号取得SQL -->
+    <select id="getSlipNoFromOrder" resultType="hashmap">
+        SELECT 
+            T_ORDER.ORDER_NO AS "ORDER_NO",
+            T_SLIP_MNG.SLIP_STATUS AS "SLIP_STATUS",
+            T_ORDER.CORRECT_CD AS "CORRECT_CD",
+            T_ORDER.APP_ROUTE_NO AS "APP_ROUTE_NO",
+            T_ORDER.INFO_CD AS "INFO_CD",
+            T_ORDER.PRICE_DEC_FLG AS "PRICE_DEC_FLG",
+            T_SLIP_MNG.RECEIVE_STATUS_IND AS "RECEIVE_STATUS_IND"
+        FROM T_ORDER 
+        LEFT JOIN T_SLIP_MNG
+            ON T_ORDER.ORDER_NO = T_SLIP_MNG.SLIP_NO
+            AND T_SLIP_MNG.DELETE_FLG = '0'
+        WHERE T_ORDER.ORDER_SEQ = #{seqNo} 
+    </select>
+
+    <!-- 伝票番号取得SQL -->
+    <select id="getSlipNoFromReceive" resultType="hashmap">
+        SELECT 
+            T_RECEIVE_MNG.ORDER_NO AS "ORDER_NO",
+            T_RECEIVE_MNG.DELIV_STATUS AS "DELIV_STATUS",
+            ${tableName}.CORRECT_CD AS "CORRECT_CD",
+            ${tableName}.APP_ROUTE_NO AS "APP_ROUTE_NO"
+        FROM T_RECEIVE_MNG 
+        LEFT JOIN ${tableName}
+            ON T_RECEIVE_MNG.DELIV_KEY_NO = ${tableName}.DELIV_KEY_NO
+        WHERE ${tableName}.${seqNoKey} = #{seqNo} 
+    </select>
+
+    <!-- 受入状態区分取得SQL -->
+    <select id="getReceiveStatus" resultType="string">
+        SELECT 
+            CASE WHEN T_RECEIVE_MNG_A.DELIV_VOL = 0 THEN '0'
+            WHEN T_RECEIVE_MNG_A.DELIV_VOL &lt; T_ORDER.ORDER_VOL THEN '1'
+            ELSE '2' END AS RECEIVE_STATUS_IND
+        FROM (SELECT T_RECEIVE_MNG.ORDER_NO,
+           SUM(T_RECEIVE_MNG.DELIV_VOL) AS DELIV_VOL
+            FROM T_RECEIVE_MNG 
+            WHERE T_RECEIVE_MNG.ORDER_NO = #{slipNo}
+            AND T_RECEIVE_MNG.DELETE_FLG = '0'
+            GROUP BY T_RECEIVE_MNG.ORDER_NO) T_RECEIVE_MNG_A
+        LEFT JOIN T_ORDER
+            ON T_RECEIVE_MNG_A.ORDER_NO = T_ORDER.ORDER_NO
+        WHERE 
+         T_ORDER.DELETE_FLG = '0'
+        AND T_ORDER.NEW_APP_FLG = '1'
+    </select>
+
+    <!-- 受入状態区分取得SQL -->
+    <select id="searchReceiveStatus" resultType="string">
+        SELECT 
+            T_SLIP_MNG.RECEIVE_STATUS_IND
+        FROM T_SLIP_MNG 
+        WHERE T_SLIP_MNG.SLIP_NO = #{slipNo}
+        AND T_SLIP_MNG.DELETE_FLG = '0'
+    </select>
+
+    <!-- 受入管理ステータス取得SQL -->
+    <select id="getDelivStatus" resultType="string">
+        SELECT 
+            T_RECEIVE_MNG.DELIV_STATUS
+        FROM T_RECEIVE_MNG 
+        WHERE T_RECEIVE_MNG.ORDER_NO = #{slipNo}
+        AND T_RECEIVE_MNG.DELETE_FLG = '0'
+        AND T_RECEIVE_MNG.DELIV_STATUS &lt;> '1105'
+    </select>
+
+    <!-- 伝票管理ステータス更新SQL -->
+    <update id="updateSlipMngStatus" parameterType="fw.domain.slip.slipmng.SlipMng">
+        UPDATE T_SLIP_MNG 
+        SET 
+        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(slipStatus)">
+             SLIP_STATUS = #{slipStatus},<!-- 伝票ステータス -->
+        </if>
+        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(preSlipStatus)">
+             PRE_SLIP_STATUS = #{preSlipStatus},<!-- 遷移前ステータス -->
+        </if>
+        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(statusInd.receiveStatus)">
+             RECEIVE_STATUS_IND = #{statusInd.receiveStatus},<!-- 受入状態区分 -->
+        </if>
+        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(statusInd.inspectStatus)">
+             INSPECT_STATUS_IND = #{statusInd.inspectStatus},<!-- 検査状態区分 -->
+        </if>
+        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(statusInd.acceptanceStatus)">
+             ACCEPTANCE_STATUS_IND = #{statusInd.acceptanceStatus},<!-- 検収状態区分 -->
+       </if>
+             LAST_UPD_DATE = '${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}',<!-- 最終更新日時 -->
+             LAST_UPD_COMPANY_CD = '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}',<!-- 最終更新会社コード -->
+             LAST_UPD_SECTION_CD = '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}',<!-- 最終更新部門コード -->
+             LAST_UPD_USER_ID = '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}'<!-- 最終更新ユーザーID -->
+         WHERE SLIP_NO = #{slipMngIdentify.slipNo}
+    </update>
+    
+    <!-- 注文.注文ステータス取得SQL -->
+    <select id="getOrderStatus" resultType="string">
+        SELECT 
+            T_ORDER.ORDER_STATUS
+        FROM T_ORDER 
+        WHERE T_ORDER.ORDER_NO = #{slipNo,jdbcType=VARCHAR}
+        AND T_ORDER.NEW_FLG = '1'
+        AND T_ORDER.DELETE_FLG = '0'
+    </select>
+    
+    <!-- 注文シーケンス番号から最新も見積依頼ステータスを取得 -->
+    <select id="getQuotReqStatusAndQuotAdoStatus" resultType="fw.domain.slip.quot.quotreq.QuotReq">
+        SELECT 
+            T_QUOT_REQUEST.QUOT_REQ_STATUS AS "quotReqStatus.status",
+            T_QUOT_REQUEST.QUOT_ADO_STATUS AS "quotAdoStatus.status"
+        FROM T_QUOT_REQUEST 
+        INNER JOIN T_QUOT_REQ_DTL
+            ON T_QUOT_REQUEST.QUOT_REQ_NO = T_QUOT_REQ_DTL.QUOT_REQ_NO
+        INNER JOIN T_ORDER
+            ON T_QUOT_REQ_DTL.QUOT_REQ_DTL_NO = T_ORDER.ORDER_NO
+        WHERE T_ORDER.ORDER_SEQ = #{orderSeqNo} 
+            AND T_QUOT_REQUEST.NEW_FLG = '1'
+            AND T_QUOT_REQUEST.DELETE_FLG = '0'
+            AND T_QUOT_REQUEST.QUOT_REQ_VERSION = T_QUOT_REQ_DTL.QUOT_REQ_VERSION
+            AND T_QUOT_REQUEST.QUOT_REQ_SEQ = T_QUOT_REQ_DTL.QUOT_REQ_SEQ
+    </select>
+    
+    <update id="updateLastUpdated">
+        UPDATE 
+            T_SLIP_MNG 
+        SET 
+             LAST_UPD_DATE = #{lastUpdatedDatetime},
+             LAST_UPD_COMPANY_CD = '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}',
+             LAST_UPD_SECTION_CD = '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}',
+             LAST_UPD_USER_ID = '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}'
+         WHERE SLIP_NO IN 
+        <foreach collection="exclusiveSlipIdList" item="exclusiveSlipId"  open="(" separator="," close=")">  
+            #{exclusiveSlipId.slipNo} 
+        </foreach>
+    </update>
+    
+    <select id="count" resultType="Integer">
+        SELECT COUNT(*) FROM T_SLIP_MNG WHERE SLIP_NO = #{slipNo}
+    </select>
+    
+    <select id="getLastUpdDate" resultType="String">
+        SELECT LAST_UPD_DATE FROM T_SLIP_MNG WHERE SLIP_NO = #{slipNo}
+    </select>
+</mapper>

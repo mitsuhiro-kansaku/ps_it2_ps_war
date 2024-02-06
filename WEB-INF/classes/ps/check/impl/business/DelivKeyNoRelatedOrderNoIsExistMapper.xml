@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="ps.check.impl.business.DelivKeyNoRelatedOrderNoIsExistMapper">
+    
+    <select id="searchCountByOrderNo" resultType="int">
+        SELECT 
+            COUNT(1)
+        FROM 
+            T_ORDER
+        WHERE 
+            T_ORDER.ORDER_NO = #{orderNo}
+        AND T_ORDER.DELETE_FLG = '0'
+        AND ((
+            T_ORDER.REQ_COMPANY_CD = '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}'
+            <if test="@fw.common.cache.ConstDataCacheHolder@getConstDataCache().getSystemSetting('ARRIVAL_SECTION_SCOPE').getCondValue()==1">
+                <if test="@org.apache.commons.lang.StringUtils@isNotBlank(@fw.common.util.AppUtil@getSectionViewRegion())">
+                    AND T_ORDER.REQ_SECTION_CD IN (${@fw.common.util.AppUtil@getSectionViewRegion()})
+                </if>
+            </if>
+            <if test="@fw.common.cache.ConstDataCacheHolder@getConstDataCache().getSystemSetting('ARRIVAL_SECTION_SCOPE').getCondValue()==3">
+                AND T_ORDER.REQ_SECTION_PLACE_CD = '${@fw.security.SecurityUtil@getSectionPlaceCdByEscapeSql()}'
+            </if>
+        ) OR (
+            T_ORDER.RECIVE_COMPANY_CD = '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}'
+            <if test="@fw.common.cache.ConstDataCacheHolder@getConstDataCache().getSystemSetting('ARRIVAL_SECTION_SCOPE').getCondValue()==1">
+                <if test="@org.apache.commons.lang.StringUtils@isNotBlank(@fw.common.util.AppUtil@getSectionViewRegion())" >
+                    AND T_ORDER.RECIVE_SECTION_CD IN (${@fw.common.util.AppUtil@getSectionViewRegion()})
+                </if>
+            </if>
+            <if test="@fw.common.cache.ConstDataCacheHolder@getConstDataCache().getSystemSetting('ARRIVAL_SECTION_SCOPE').getCondValue()==3">
+                AND T_ORDER.RECIVE_SECTION_PLACE_CD = '${@fw.security.SecurityUtil@getSectionPlaceCdByEscapeSql()}'
+            </if>
+        ))
+        AND T_ORDER.NEW_APP_FLG = '1'
+    </select>
+</mapper>

@@ -1,0 +1,230 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta http-equiv="Content-type" content="text/html; charset=UTF-8">
+<title>#customSpringMessage('STOCK_PLACE_SEARCH')</title><!--在庫場所検索-->
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Content-script-type" content="text/javascript">
+<link rel="stylesheet" href="../../include/searchbox.css" type="text/css">
+<link id="CSS_FONT" rel="stylesheet" href="../../include/FontS.css" type="text/css">
+<link rel="stylesheet" href="../../include/Layout.css" type="text/css">
+<link rel="stylesheet" href="../../include/Color.css" type="text/css">
+<link rel="stylesheet" href="../../include/ime.css" type="text/css">
+<script language="javascript" type="text/javascript" src="../../include/jquery-1.7.2.min.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/common.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/date.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/check.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/searchbox.js"></script>
+<script language="javascript" type="text/javascript">
+<!--
+var maxSearchHeight = 120;
+var minSearchHeight = 30;
+#parse("./common/common_js.vm")
+#parse("./common/popup_js.vm")
+function onLoad() {
+    setFocus();
+    bodyLoad();
+    var alertMessage = "$!alertMessage";
+    if (alertMessage != ""){
+        alert(alertMessage);
+    }
+    var errorMsg = "#out($!errorMessage)";
+    if (errorMsg != ""){
+        document.getElementById("TR_ERROR").style.display = "";
+        document.getElementById("DATAAREA").src="";
+    }else{
+        var isShowList = "#out($isShowList)";
+        if (isShowList == "true"){
+            iframeChange("../../src/stockPlacePopup/list","pageid","PSSTK205");
+        }
+    }
+    var isInitFlg = "#out($!isInitFlg)";
+    if (isInitFlg == "true") {
+        // 画面初期起動時の場合
+        setParam();
+    }
+    // 画面項目非活性制御処理
+    setColumnDisabled();
+    document.getElementById("SEARCH_AREA").style.height = maxSearchHeight;
+}
+
+function selectRow(sectionPlaceCd, sectionPlaceName, stockPlaceCd, stockPlaceName) {
+    window.opener.stockPlacePopup.setObjectValue(sectionPlaceCd, sectionPlaceName, stockPlaceCd, stockPlaceName);
+    window.parent.close();
+    try {
+        window.parent.afterProc();
+    } catch( e ) {}
+    try {
+        window.opener.stockPlaceSelectAfterProc();
+    } catch( e ) {}
+}
+
+function setParam(){
+    // 呼出パラメータ取得
+    var popupParam = window.opener.stockPlacePopup.getParam();
+    // 呼出パラメータ.廃止フラグ取得
+    var prmTermFlag = popupParam[0];
+    // 呼出パラメータ.会社コード取得
+    var prmCompanyCd = popupParam[1];
+    // 呼出パラメータ.事業所コード取得
+    var prmSectionPlaceCd = popupParam[2];
+    // 呼出パラメータ.参照範囲区分取得
+    var prmReferenceRangeInd = popupParam[3];
+
+    // V4.4.0-00001-075 -S
+    // 事業所名取得
+    var getSectionPlaceName = "";
+    $.ajax({
+        type: "POST",
+        async:false,
+        url:"../../getSectionPlaceInfoOnBlur",
+        data: {
+            termFlag:"0",
+            companyCd:prmCompanyCd,
+            sectionPlaceCd:prmSectionPlaceCd
+        },
+        success:function(data){  
+            //事業所名設定
+            getSectionPlaceName = data.sectionPlaceName;
+        }
+     });
+    // V4.4.0-00001-075 -E
+
+    // 廃止フラグ設定
+    getObj("searchCondition.termFlg").value = prmTermFlag;
+    // 会社コード設定
+    getObj("companyCd").value = prmCompanyCd;
+    // 参照範囲区分設定
+    getObj("referenceRangeInd").value = prmReferenceRangeInd;
+    
+    // V4.4.0-00001-075 -S
+    if(prmReferenceRangeInd == "1"){
+        // 事業所コード設定
+        getObj("sectionPlaceCd").value = prmSectionPlaceCd;
+        //事業所名設定
+        getObj("sectionPlaceName").value = getSectionPlaceName;
+    } else {
+        // 事業所コード(hidden)設定
+        getObj("sectionPlaceCdForHidden").value = prmSectionPlaceCd;
+        //事業所名(hidden)設定
+        getObj("sectionPlaceNameForHidden").value = getSectionPlaceName;
+    }
+    // V4.4.0-00001-075 -E
+}
+
+function setColumnDisabled(){
+    // 参照範囲区分取得
+    var referenceRangeInd = getObj("referenceRangeInd").value;
+
+    // 事業所非活性制御
+    if(referenceRangeInd != "1"){
+        // 参照範囲区分が"1:会社内"以外の場合
+        // 事業所コードを非活性
+        getObj("sectionPlaceCd").disabled = true;
+        // 事業所コードを設定
+        getObj("sectionPlaceCd").value = getObj("sectionPlaceCdForHidden").value;
+        // 事業所名を非活性
+        getObj("sectionPlaceName").disabled = true;
+        // 事業所名を設定
+        getObj("sectionPlaceName").value = getObj("sectionPlaceNameForHidden").value;
+    }
+}
+
+function execSearch(){
+    buttonDisable();
+    getObj("BodyForm").action = "../../src/stockPlacePopup/validate";
+    getObj('BodyForm').submit();
+}
+//-->
+</script>
+</head>
+<body topmargin="0" leftmargin="0" marginwidth="0" marginheight="0" align="center" width="100%" height="100%" onload="onLoad();" scroll="no">
+<form id="BodyForm" name="Body" method="post">
+    #customFormHiddenInput("pageid" "PSSTK205")
+    #customFormHiddenInput("searchCondition.termFlg" "$!searchCondition.searchCondition.termFlg")
+    #customFormHiddenInput("companyCd" "$!searchCondition.companyCd")
+    #customFormHiddenInput("referenceRangeInd" "$!searchCondition.referenceRangeInd")
+     <table class="NoBorder" width="100%" height="100%">
+        <tr>
+            <td id="SEARCH_AREA" class="SearchArea">
+                <span class="CornerTopGray">
+                    <span class="Corner1"></span><span class="Corner2"></span><span class="Corner3"></span><span class="Corner4"></span>
+                </span>
+                <table class="CornerMidGray" width="100%">
+                    <tr>
+                        <td nowrap width="30%" align="left" class="ScreenName">
+                            <script LANGUAGE="javascript" type="text/javascript">document.write(document.title);</script>
+                        </td>
+                        <td nowrap align="right">
+                            <input type="button" class="MiddleButton" value="#customSpringMessage('CLOSE')" onClick="window.close();">
+                        </td>
+                    </tr>
+                </table>
+                <span class="CornerBtmGray">
+                    <span class="Corner4"></span><span class="Corner3"></span><span class="Corner2"></span><span class="Corner1"></span></span>
+
+
+                <table width="100%">
+                    <tr id="SEARCH_AREA2">
+                        <td id="Adjust">
+                            <table class="NoBorder" width="100%">
+                                <tr>
+                                    <td>
+                                        <table class="NoBorder" width="100%">
+                                            <tr><td align="left" colspan="4" nowrap>#customSpringMessage('PSSTK205_HEADER_COMMENT')</td></tr>
+                                            <tr>
+                                                <td nowrap class="FontSmallBold" align="right">#customSpringMessage('STOCK_PLACE_CD')<span class="FontComment">＊</span></td>
+                                                <td nowrap class="FontSmallBold" align="left">
+                                                    #springFormInput("searchCondition.stockPlaceCd" "class='Small noIME' maxlength=12 type='text' size=20")
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td nowrap class="FontSmallBold" align="right">#customSpringMessage('STOCK_PLACE_NAME')<span class="FontComment">％</span></td>
+                                                <td nowrap class="FontSmallBold" align="left">
+                                                    #springFormInput("searchCondition.stockPlaceName" "class='Small' maxlength=30 type='text' size=40")
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td nowrap class="FontSmallBold" align="right">#customSpringMessage('SECTION_PLACE_CD')<span class="FontComment">＊</span></td>
+                                                <td nowrap class="FontSmallBold" align="left">
+                                                    #springFormInput("searchCondition.sectionPlaceCd" "class='Small noIME' maxlength=12 type='text' size=20")
+                                                    #customFormHiddenInput("sectionPlaceCdForHidden" "$!searchCondition.sectionPlaceCdForHidden")
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td nowrap class="FontSmallBold" align="right">#customSpringMessage('SECTION_PLACE_NAME')<span class="FontComment">％</span></td>
+                                                <td nowrap class="FontSmallBold" align="left">
+                                                    #springFormInput("searchCondition.sectionPlaceName" "class='Small' maxlength=30 type='text' size=40")
+                                                    #customFormHiddenInput("sectionPlaceNameForHidden" "$!searchCondition.sectionPlaceNameForHidden")
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td nowrap align="left" colspan="4" class="FontComment">
+                                                    #customSpringMessage('PSSTK205_FOOTER_COMMENT')
+                                                </td>
+                                            </tr>
+                                        </table>
+                                    </td>
+                                    <td nowrap class="FontSmallBold" align="right">
+                                        <br>
+                                        <input type="button" onclick="javascript:execSearch();" class="LargeButton" value="#customSpringMessage('ACTION_SEARCH')">
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+        <tr id ="TR_ERROR" style="display:none;"><td class="error" style="height:0px;">
+            $!errorMessage
+        </td></tr>
+        <tr><td class="NoBorder" style="height:auto;">
+            <iframe id="DATAAREA" name="DATAAREA" class="DataArea" framespacing="0" frameborder="0" src="../../layout/default.vm" scrolling="yes" frameborder="no"
+            style="position:static;width:100%;border:0px solid #999999;height:100%;z-index:0;"></iframe>
+        </td></tr>
+    </table>
+    
+</form>
+</body>
+</html>

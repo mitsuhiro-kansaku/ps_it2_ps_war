@@ -1,0 +1,339 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<title>#customSpringMessage("M_CUTOFF_DATE")</title>
+<meta http-equiv="Content-type" content="text/html; charset=UTF-8">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Content-script-type" content="text/javascript">
+<link id="CSS_FONT" rel="stylesheet" href="../../include/FontS.css" type="text/css">
+<link rel="stylesheet" href="../../include/Layout.css" type="text/css">
+<link rel="stylesheet" href="../../include/Color.css" type="text/css">
+<link rel="stylesheet" href="../../include/searchbox.css" type="text/css">
+<link rel="stylesheet" href="../../include/ime.css" type="text/css">
+
+<script language="javascript" type="text/javascript" src="../../include/common.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/check.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/date.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/searchbox.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/jquery-1.7.2.min.js"></script>
+<script language="javascript" type="text/javascript">
+<!--
+#parse("./common/common_js.vm")
+
+var upFocus;
+
+function onLoad() {
+    setFocus();
+    var alertMessage = "$!alertMessage";
+    if (alertMessage != ""){
+        alert(alertMessage);
+    }
+    var errorMsg = "$!errorMessage";
+    if (errorMsg != ""){
+        document.getElementById("TR_ERROR").style.display = "";
+        return;
+    }
+    var isSuccess = '#jsEscape($!isSuccess)';
+    if(isSuccess == 'true'){
+        #set( $mCutoffdate = "#customSpringMessage('M_CUTOFF_DATE')" )
+        
+        
+        #if($!type == "Update")
+            alert('#customMessageArgs("I002",[$mCutoffdate])');
+        #else
+            alert('#customMessageArgs("I005",[$mCutoffdate])');
+        #end
+        buttonDisable();
+        top.iframeChange("${flowExecutionUrl}&_eventId=back");
+    }
+    #if($!{type} == "Copy")
+        checkAllBox()
+    #end
+}
+
+function checkAllBox(){
+    #foreach($!cutoffdate in $!domain.cutoffdateItem.cutoffdatedetailList.cutoffDetailList)
+        var checkObj = getObj('_cutoffdateItem.cutoffdatedetailList.cutoffDetailList[$velocityCount].cutoffdateCutoffInd.cutoffInd');
+        var hiddenObj = getObj('cutoffdateItem.cutoffdatedetailList.cutoffDetailList[$velocityCount].cutoffdateCutoffInd.cutoffInd');
+        checkObj.checked = false;
+        hiddenObj.value=0;
+    #end
+    
+}
+
+function reWriteWeek(curDate,index) {
+    var obj = document.getElementsByName("cutoffdateItem.cutoffdatedetailList.cutoffDetailList[" + index + "].cutoffdateAccDate.accWeekDay.weekDay.weekDay")[0];
+    if( !chkDate(curDate,false ) ) {
+        obj.value = "";
+    } else {
+        // new Date()について、日付分割記号は必ず「/」でなければなりません
+        getDayOfWeek(curDate,obj);
+    }
+   
+}
+
+function exec() {
+    #set( $mmCutoffdate = "#customSpringMessage('M_CUTOFF_DATE')" )   
+    #if($!type == "Update")
+        #set( $register = "#customSpringMessage('UPDATE')" )
+        if( !confirm('#customMessageArgs("W001",[$mmCutoffdate,$register])') ) {
+            return;
+        }
+    #else
+        #set( $register = "#customSpringMessage('ACTION_REGISTER')" )
+        if( !confirm('#customMessageArgs("W001",[$mmCutoffdate,$register])') ) {
+            return;
+        }
+    #end
+    
+    buttonDisable();
+    getObj("Body").submit();
+}
+
+function getCalendar(num,objName){
+    var obj = document.getElementsByName(objName)[0];
+    initSearchBox(num,obj);
+}
+var langCount = 0;
+var isLangDefault;
+var  activeFlag=0;
+//Focus() 後ろ、、先ず曜日を設定します。
+function facade(thisObj){
+    if( activeFlag<=0){
+        activeFlag= activeFlag+1;
+        var tmpp=document.getElementById("cutoffdateItem.cutoffdatedetailList.cutoffDetailList[0].cutoffdateAccDate.accYearDate.yearDate.yearDate");
+        tmpp.value=tmpp.value.replace(/\//g,"");
+        tmpp.select();
+        var tmp1=getObj("cutoffDateOne");
+        var tmp2=document.getElementById("cutoffdateItem.cutoffdatedetailList.cutoffDetailList[0].cutoffdateAccDate.accWeekDay.weekDay.weekDay");
+        // new Date()について、日付分割記号は必ず「/」でなければなりません
+        getDayOfWeek(tmp1.value,tmp2);
+    } else {
+        dateOnFocus(thisObj);
+    }
+}
+function facadeA(a,b){
+    if( activeFlag>=1) {
+        reWriteWeek(a,b);
+    }
+}
+
+function facadeB(index){
+    if(index==0) {
+        activeFlag=2;
+        var tmp2=document.getElementById("cutoffdateItem.cutoffdatedetailList.cutoffDetailList[0].cutoffdateAccDate.accWeekDay.weekDay.weekDay");
+        tmp2.value="";
+    }
+}
+
+function cutoffIndWarn(obj){
+    if(obj.checked){
+        if ( !confirm("#customMessageArgs('W030','')") ) {
+            obj.checked = false;
+        }
+    }else{
+        if ( !confirm("#customMessageArgs('W031','')") ) {
+            obj.checked = true;
+        }
+    }
+}
+
+function getDayOfWeek(cutoffDate,obj) {
+    $.ajax({
+        type: "POST", 
+        async:false,
+        url:"../../getCutoffDateOnBlur",
+        data: {
+            cutoffDate:cutoffDate
+        },
+        success:function(data){  
+            obj.value = data.cutoffDate;
+        }
+     });
+}
+//-->
+</script>
+</head>
+<body class="Body"  topmargin="10" leftmargin="10" marginwidth="10" marginheight="10" align="left" onload="onLoad();" tabIndex="1">
+<form name="Body" id="Body" action="${flowExecutionUrl}&_eventId=submit" method="post">
+    #customFormHiddenInput("pageid" "cutoffdate$!type")
+    #customFormHiddenInput("cutoffDateOne" "$!domain.cutoffdateItem.cutoffdatedetailList.cutoffDetailList[0].cutoffdateAccDate.accYearDate.yearDate.yearDate")<!--onload曜日-->
+    <table width="100%" style="height:20px;">
+       <tr id ="TR_ERROR" style="display:none;">
+           <td class="error">
+               $!errorMessage
+           </td>
+       </tr>
+       <tr>
+            <td class="FontSmallBold DarkBlue">
+                #if($!{type} == "Update")
+                    #customSpringMessage("PSMST282_EDIT_HEADER_COMMENT") 
+                #else 
+                    #customSpringMessage("PSMST282_ADD_HEADER_COMMENT") 
+                #end
+            </td>
+        </tr>
+    </table>
+    <table class="DTL_BOX">
+        <br>
+        <tr>
+            <!-- ＊＊＊＊＊　カレンダーボックス　＊＊＊＊＊ -->
+            <iframe id="CALENDARBOX" class="CALENDARBOX" framespacing="0" scrolling="no" frameborder="0" src="../../sbxCalendar/body.vm"></iframe>
+            <td class="DTL_TITLE_BOX" colspan="2">
+                <table class="NoBorder" width="100%">
+                    <tr>
+                        <td class="ScreenName" style="text-align:left;">
+                            #if($isUseAll)
+                                #customFormHiddenInput("companyCd" "ALL")
+                            #else
+                                #out($domain.companySummary.companyName)
+                                #customFormHiddenInput("companyCd" "$cutoffdateItem.cutoffdateIdentify.companyCd")
+                            #end
+                            &nbsp;#out($domain.cutoffdateItem.cutoffdateIdentify.businessYear.year.year)
+                            #customSpringMessage('FISCAL_YEAR_CUTOFF_CALENDAR')
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+        <tr>
+            <td class="DTL_INTER_BOX">
+                <table class="NoBorder" width="100%" id="DATA_AREA">
+                    <tr>
+                        <td class="DTL_INTER_BOX">
+                            <table class="NoBorder" width="100%">
+                                <tr>
+                                    <td class="DTL_OUTHEAD" align="center">
+                                        <div class="DTL_INHEAD">
+                                            <span class="FontMonth">&nbsp;</span> 
+                                            <span class="FontBigBold DarkBlue">#customSpringMessage("DISP_FISCAL_MONTH")&nbsp;</span><br>
+                                        </div>
+                                    </td>
+                                    #foreach($!weeks in $!monthArray)
+                                    <td class="DTL_OUTHEAD" align="center">
+                                        <div class="DTL_INHEAD">
+                                            <span class="FontMonth">
+                                            #if($weeks.monthName == '4')
+                                                #customSpringMessage('APRIL')
+                                            #elseif($weeks.monthName == '5')
+                                                #customSpringMessage('MAY')
+                                            #elseif($weeks.monthName == '6')
+                                                #customSpringMessage('JUNE')
+                                            #elseif($weeks.monthName == '7')
+                                                #customSpringMessage('JULY')
+                                            #elseif($weeks.monthName == '8')
+                                                #customSpringMessage('AUGUST')
+                                            #elseif($weeks.monthName == '9')
+                                                #customSpringMessage('SEPTEMBER')
+                                            #elseif($weeks.monthName == '10')
+                                                #customSpringMessage('OCTOBER')
+                                            #elseif($weeks.monthName == '11')
+                                                #customSpringMessage('NOVEMBER')
+                                            #elseif($weeks.monthName == '12')
+                                                #customSpringMessage('DECEMBER')
+                                            #elseif($weeks.monthName == '1')
+                                                #customSpringMessage('JANUARY')
+                                            #elseif($weeks.monthName == '2')
+                                                #customSpringMessage('FEBRUARY')
+                                            #elseif($weeks.monthName == '3')
+                                                #customSpringMessage('MARCH')
+                                            #end
+                                            </span><br><!--月 -->
+                                        </div>
+                                    </td>
+                                    #end
+                                </tr>
+
+                                <tr>
+                                    <td class="DTL_OUTHEAD" align="center">
+                                        <div class="DTL_INHEAD">
+                                            <span class="FontMonth">&nbsp;</span> 
+                                            <span class="FontMiddleAnkBold DarkBlue">#customSpringMessage("CUTOFF_DATE")</span><span class="FontWarn">&nbsp;</span>
+                                            <span class="FontMiniAnkBold">&nbsp;</span>
+                                        </div>
+                            
+                                    </td>
+                                    <!--2011/00/00 -->
+                                    #foreach($!cutoffdate in $!domain.cutoffdateItem.cutoffdatedetailList.cutoffDetailList)
+                                    #set($index = $velocityCount +1)
+                                    <td class="DTL_OUTBODY">
+                                        <div class="DTL_INBODY">
+                                            <label class="FontSmall">#out($!cutoffdate.cutoffdateDate.yearDate.yearDate)</label>
+                                            #customFormHiddenInput("cutoffdateItem.cutoffdatedetailList.cutoffDetailList[$velocityCount].cutoffdateDate.yearDate.yearDate" "$!cutoffdate.cutoffdateDate.yearDate.yearDate")
+                                            #customFormHiddenInput("cutoffdateItem.cutoffdatedetailList.cutoffDetailList[$velocityCount].cutoffMonth.yearMonth.yearMonth" "$!cutoffdate.cutoffMonth.yearMonth.yearMonth")
+                                        </div>
+                                     </td>
+                                    #end
+                                    
+                                    <!--締日カマスタ排他チェック -->
+                                    #customFormHiddenInput("cutoffdateItem.cutoffdateIdentify.businessYear.year.year" "$!domain.cutoffdateItem.cutoffdateIdentify.businessYear.year.year")
+                                    #customFormHiddenInput("cutoffdateItem.cutoffdateIdentify.lastUpdDate" "$!domain.cutoffdateItem.cutoffdateIdentify.lastUpdDate")
+                                </tr>
+
+                                <tr>
+                                    <td class="DTL_OUTHEAD" align="center">
+                                        <div class="DTL_INHEAD">
+                                            <span class="FontMonth">&nbsp;</span> 
+                                            <span class="FontMiddleAnkBold DarkBlue"><br>#customSpringMessage("VOUCHER_CUTOFF_DATE_HOUR")</span><span class="FontWarn">&nbsp;※</span><br>
+                                            <span class="FontMiniAnkBold">&nbsp;</span>
+                                        </div>
+                                    </td>
+                                    <!--会計締日時-->
+                                    #foreach($!weeks in $!monthArray)
+                                     <td class="DTL_OUTBODY" nowrap>
+                                        <div class="DTL_INBODY">
+                                            #springFormInput("domain.cutoffdateItem.cutoffdatedetailList.cutoffDetailList[$velocityCount].cutoffdateAccDate.accYearDate.yearDate.yearDate" "class='Middle noIME' maxlength='8' size='12' TabIndex = '$index' onblur='facadeA(this.value,$velocityCount);dateOnBlur(this);' onfocus='facade(this);' onclick='facadeB($velocityCount);'")
+                                            <img class="Icon" src="../../image/btnCalendar.gif" onclick="getCalendar(1,'cutoffdateItem.cutoffdatedetailList.cutoffDetailList[$velocityCount].cutoffdateAccDate.accYearDate.yearDate.yearDate');">
+                                            <br>#springFormInput("domain.cutoffdateItem.cutoffdatedetailList.cutoffDetailList[$velocityCount].cutoffdateAccDate.accHour.hour.hour" "class='Middle noIME' value='' maxlength='5' size='5'  TabIndex = '$index' ")
+                                            <br>#springFormInput("domain.cutoffdateItem.cutoffdatedetailList.cutoffDetailList[$velocityCount].cutoffdateAccDate.accWeekDay.weekDay.weekDay" "class='MiddleDsp' readonly value='' maxlength='2' size='4'  onfocus='this.blur()'" )
+                                        </div>
+                                    </td>
+                                    #end
+                                    <!--会計締日時-->
+                                </tr>
+
+                                <tr>
+                                    <td class="DTL_OUTHEAD" align="center">
+                                        <div class="DTL_INHEAD">
+                                            <span class="FontMonth">&nbsp;</span> 
+                                            <span class="FontMiddleAnkBold DarkBlue">#customSpringMessage("VOUCHER_CUTOFF")</span>
+                                            <span class="FontMiniAnkBold">&nbsp;</span>
+                                        </div>
+                                    </td>
+                                    #foreach($!weeks in $!monthArray)
+                                    <td class="DTL_OUTBODY" align="center">
+                                        <div class="DTL_INBODY">
+                                            #customFormCheckboxOnClick("domain.cutoffdateItem.cutoffdatedetailList.cutoffDetailList[$velocityCount].cutoffdateCutoffInd.cutoffInd" "TabIndex = '$index'" "cutoffIndWarn(this);" "1" "0")
+                                        </div>
+                                    </td>
+                                    #end
+                                    <!--huijidi-->
+                                    
+                                </tr>
+                        </table>
+                        
+                        <table class="NoBorder" width="100%">
+                            <tr>
+                                <td class="DTL_MSGBOX" nowrap>
+                                    #if($!{type} == "Update")
+                                        #customSpringMessage("PSMST282_EDIT_FOOTER_COMMENT") 
+                                    #else 
+                                        #customSpringMessage("PSMST282_ADD_FOOTER_COMMENT") 
+                                    #end
+                                </td>
+                                <td   class="DTL_MSGBOX" align="right">
+                                    <input type="button" class="MiddleButton" tabIndex="12" value="#customSpringMessage('ACTION_REGISTER')" onClick="javascript:exec();">
+                                </td>
+                            </tr>
+                        </table>
+                    </td>
+                </tr>
+            </table>
+      <iframe id="HIDDENAREA" name="HIDDENAREA" framespacing="0" frameborder="0" src="" scrolling="no" frameborder="no" style="display:none"></iframe>
+            </td>
+        </tr>
+    </table>
+</form>
+</body>
+
+</html>

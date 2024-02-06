@@ -1,0 +1,203 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<flow xmlns="http://www.springframework.org/schema/webflow"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.springframework.org/schema/webflow
+        http://www.springframework.org/schema/webflow/spring-webflow-2.0.xsd"
+    parent="base">
+    
+	<var name="domain" class="fw.domain.slip.quot.quotstatus.purreqstatuslist.PurReqStatus" />
+    <var name="identify" class="fw.domain.slip.quot.quotreq.QuotReqIdentify" />
+    <input name="quotStatusIdentify" />
+    <input name="patternName" />
+    <input name="SessionKey" />
+
+    <on-start>
+        <evaluate expression="PSQOT100Service.init(quotStatusIdentify)"
+            result="flowScope.domain" />
+    </on-start>
+
+    <view-state id="PSQOT100" view="qot/ref/PSQOT100" model="domain">
+        <!-- 再見積 -->
+        <transition on="quotReqInputValidate" validate="false">
+            <set name="flashScope.isShowQuoteAgain" value="true"/>
+        </transition>
+        <transition on="quoteAgain" to="PSQOT040ReQuot" validate="false"/>
+        <!-- 取引先追加 -->
+        <transition on="applyAgainValidate" validate="false">
+            <set name="flashScope.isShowAddSupDetail" value="true"/>
+        </transition>
+        <transition on="addSupDetail" to="PSQOT040SuppAdd" validate="false"/>
+        <!-- 回答詳細 -->
+        <transition on="answerDetailValidate" validate="false">
+            <set name="flashScope.isShowAnswerDetail" value="true"/>
+        </transition>
+        <transition on="answerDetail" to="PSQOT080AnsDetail" validate="false" />
+
+        <transition on="PSQOT100_left" to="PSQOT100_left" validate="false">
+            <set name="flashScope.isCompletionSuccess" value="requestParameters.isCompletionSuccess"></set>
+        </transition>
+    </view-state> 
+    
+    <view-state id="PSQOT100_left" view="qot/ref/PSQOT100_left">
+        <transition on="PSQOT100_right" to="PSQOT100_right">
+            <set name="flashScope.isCompletionSuccess" value="requestParameters.isCompletionSuccess"></set>
+        </transition>
+        <transition on="download" validate="false">
+            <evaluate expression="PSQOT100Service.downloadFromAttachMng(requestParameters.seqNo)" />
+        </transition>
+        <transition on="downloadext" validate="false">
+            <evaluate expression="PSQOT100Service.downloadFileExt(domain)"/>
+        </transition>
+    </view-state>
+    
+    <view-state id="PSQOT100_right" view="qot/ref/PSQOT100_right" model="domain">
+        <transition on="finish" validate="false">
+            <evaluate expression="PSQOT100Service.updateCompletion(domain,quotStatusIdentify)"/>
+            <set name="flashScope.isCompletionSuccess" value="true"></set>
+        </transition>
+        <transition on="download" validate="false">
+            <evaluate expression="PSQOT100Service.downloadFromQuotRespAttach(requestParameters.seqNo)" />
+        </transition>
+        <transition on="newConfirm" validate="false">
+            <evaluate expression="PSQOT100Service.updateConfirmation(domain,quotStatusIdentify)"/>
+            <set name="flashScope.isConfirmationSuccess" value="true"></set>
+        </transition>
+        <transition on="apply" validate="false">
+            <evaluate expression="PSQOT100Service.updateAdoption(domain,quotStatusIdentify)"/>
+            <set name="flashScope.isAdoptionSuccess" value="true"></set>
+        </transition>
+        <transition on="cancel" validate="false">
+            <evaluate expression="PSQOT100Service.updateCancel(domain,quotStatusIdentify)"/>
+            <set name="flashScope.isCancelSuccess" value="true"></set>
+        </transition>
+        <transition on="PSQOT100Reflash" validate="false" to="PSQOT100">
+            <evaluate expression="PSQOT100Service.init(quotStatusIdentify)" result="flowScope.domain"/>
+        </transition>
+        <!-- 回答入力 -->
+        <transition on="answerInputEachValidate" validate="false">
+            <set name="flowScope.quotSupplierLineNo" value="requestParameters.quotSupplierLineNo" />
+            <set name="flashScope.isShowAnswerInputEach" value="true"/>
+        </transition>
+        <transition on="PSQOT071" to="PSQOT071" validate="false"/>
+        <!-- 注文入力 -->
+        <transition on="orderEditValidate" validate="false">
+            <set name="flowScope.quotReqSeq" value="requestParameters.quotReqSeq" />
+            <set name="flowScope.quotSupLineNo" value="requestParameters.quotSupLineNo" />
+            <set name="flowScope.quotRespSeq" value="requestParameters.quotRespSeq" />
+            <set name="flowScope.eventType" value="requestParameters.eventType" />
+            <set name="flashScope.isShowOrderEdit" value="true"/>
+        </transition>
+        <transition on="PSORD040" to="PSORD040" validate="false"/>
+        <!-- 価格マスタ登録 -->
+        <transition on="editValidate" validate="false">
+            <set name="flowScope.quotReqSeq" value="requestParameters.quotReqSeq" />
+            <set name="flowScope.quotSupplierLineNo" value="requestParameters.quotSupplierLineNo" />
+            <set name="flowScope.quotRespSeq" value="requestParameters.quotRespSeq" />
+            <set name="flowScope.quotReqDtlNo" value="requestParameters.quotReqDtlNo" />
+            <set name="flashScope.isShowPrcEdit" value="true"/>
+        </transition>
+        <transition on="PSPRC020" to="PSPRC020" validate="false"/>
+        <!-- 注文変更 -->
+        <transition on="orderModifyValidate" validate="false">
+            <set name="flowScope.orderSeq" value="requestParameters.orderSeq" />
+            <set name="flowScope.eventType" value="requestParameters.eventType" />
+            <set name="flowScope.PSQOT100" value="requestParameters.PSQOT100" />
+            <set name="flowScope.quotReqSeq" value="requestParameters.quotReqSeq" />
+            <set name="flowScope.quotSupLineNo" value="requestParameters.quotSupLineNo" />
+            <set name="flashScope.isShowOrderModify" value="true"/>
+        </transition>
+        <transition on="orderModify" to="orderModify" validate="false"/>
+        <!-- 回答詳細 -->
+        <transition on="answerDetailValidate" validate="false">
+            <set name="flashScope.isShowAnswerDetail" value="true"/>
+        </transition>
+        <transition on="answerDetail" to="PSQOT080AnsDetail" validate="false" />
+        <!-- 添付ファイル取得 -->
+        <transition on="searchFileFromAttach" validate="false">
+            <evaluate expression="PSQOT100Service.downloadFromAttachMng(requestParameters.seqNo,domain)" />
+        </transition>
+    </view-state>
+
+    <subflow-state id="PSQOT071" subflow="qot/ans/PSQOT071">
+        <input name="quotReqSeq" value="quotStatusIdentify.quotReqSeq" />
+        <input name="quotStatusIdentify" value="quotStatusIdentify" />
+        <input name="quotSupplierLineNo" value="flowScope.quotSupplierLineNo" />
+        <input name="SessionKey" value="SessionKey" />
+        <transition on="back" to="PSQOT100">
+            <evaluate expression="PSQOT100Service.init(quotStatusIdentify)"
+                result="flowScope.domain" />
+        </transition>
+    </subflow-state>
+    
+    <subflow-state id="PSORD040" subflow="ord/order/PSORD040">
+        <input name="quotReqSeq" value="flowScope.quotReqSeq" />
+        <input name="quotSupLineNo" value="flowScope.quotSupLineNo" />
+        <input name="quotRespSeq" value="flowScope.quotRespSeq" />
+        <input name="eventType" value="flowScope.eventType" />
+        <transition on="back" to="PSQOT100" >
+            <evaluate expression="PSQOT100Service.init(quotStatusIdentify)"
+                result="flowScope.domain" />
+        </transition>
+    </subflow-state>
+    
+    <subflow-state id="orderModify" subflow="ord/order/PSORD040">
+        <input name="orderSeq" value="flowScope.orderSeq" />
+        <input name="eventType" value="flowScope.eventType" />
+        <input name="PSQOT100" value="flowScope.PSQOT100" />
+        <input name="quotReqSeq" value="flowScope.quotReqSeq" />
+        <input name="quotSupLineNo" value="flowScope.quotSupLineNo" />
+        <transition on="back" to="PSQOT100" >
+            <evaluate expression="PSQOT100Service.init(quotStatusIdentify)"
+                result="flowScope.domain" />
+        </transition>                
+    </subflow-state>
+    
+    <subflow-state id="PSPRC020" subflow="prc/price/PSPRC020">
+        <input name="quotReqSeq" value="flowScope.quotReqSeq" />
+        <input name="quotSupplierLineNo" value="flowScope.quotSupplierLineNo" />
+        <input name="quotRespSeq" value="flowScope.quotRespSeq" />
+        <input name="quotReqDtlNo" value="flowScope.quotReqDtlNo" />
+        <input name="patternName" value="'Create'" />
+        <transition on="back" to="PSQOT100" >
+            <evaluate expression="PSQOT100Service.init(quotStatusIdentify)"
+                result="flowScope.domain" />
+        </transition>
+    </subflow-state>
+    
+    <subflow-state id="PSQOT040ReQuot" subflow="qot/est/PSQOT040" >
+        <on-entry>
+            <set name="identify.quotReqSeqNo.seqNumber" value="domain.purReqStatusSummary.quotReqSeqNo"></set>
+        </on-entry>
+        <input name="identify" value="identify" />
+        <input name="isInitIndividualApr" value="true" />
+        <input name="patternName" value="5" />
+        <input name="SessionKey" value="SessionKey" />
+        <input name="quotStatusIdentify" value="quotStatusIdentify" />
+        <transition on="back" to="PSQOT100">
+            <evaluate expression="PSQOT100Service.init(quotStatusIdentify)"
+                result="flowScope.domain" />
+        </transition>
+        <transition on="backlist" to="back"></transition>
+    </subflow-state>
+    
+    <subflow-state id="PSQOT040SuppAdd" subflow="qot/est/PSQOT040" >
+        <on-entry>
+            <set name="identify.quotReqSeqNo.seqNumber" value="domain.purReqStatusSummary.quotReqSeqNo"></set>
+        </on-entry>
+        <input name="identify" value="identify" />
+        <input name="isInitIndividualApr" value="true" />
+        <input name="patternName" value="6" />
+        <input name="SessionKey" value="SessionKey" />
+        <input name="quotStatusIdentify" value="quotStatusIdentify" />
+        <transition on="back" to="PSQOT100">
+            <evaluate expression="PSQOT100Service.init(quotStatusIdentify)"
+                result="flowScope.domain" />
+        </transition>
+        <transition on="backlist" to="back"></transition>
+    </subflow-state>
+    
+    <subflow-state id="PSQOT080AnsDetail" subflow="qot/ans/PSQOT080" >
+        <input name="quotReqNo" value="requestParameters.quotReqNo" />
+        <input name="isSearchByAll" value="true"/>
+    </subflow-state>
+</flow>

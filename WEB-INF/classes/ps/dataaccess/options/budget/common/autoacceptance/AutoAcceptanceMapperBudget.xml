@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="ps.dataaccess.options.budget.common.autoacceptance.AutoAcceptanceMapperBudget">
+
+    <!-- 納品キー番号取得用SQL -->
+    <select id="searchAutoAcceptParam"
+            resultMap="autoAcceptParamMap">
+        SELECT T_ORDER.ORDER_SEQ,
+               T_ORDER.UNIT_PRICE,
+               T_ORDER.CURRENCY_CD,
+               T_RECEIVE_MNG.DELIV_KEY_NO,
+               T_ARRIVAL.DELIV_VOL,
+               T_ARRIVAL.TOTAL_AMOUNT,
+               CASE WHEN T_ARRIVAL.INSPECT_IND = '0'
+                    THEN T_ARRIVAL.ARRIV_EXP_DATE
+                    ELSE T_INSPECT.INSPECT_DATE
+                     END
+                      AS "ACCEPT_DATE"
+          FROM T_ORDER
+         INNER JOIN T_RECEIVE_MNG
+                 ON T_RECEIVE_MNG.ORDER_NO = T_ORDER.ORDER_NO
+                AND T_RECEIVE_MNG.DELETE_FLG = '0'
+          LEFT JOIN T_ARRIVAL
+                 ON T_RECEIVE_MNG.APP_ARRIVAL_SEQ = T_ARRIVAL.ARRIVAL_SEQ
+                AND T_ARRIVAL.DELETE_FLG = '0'
+          LEFT JOIN T_INSPECT
+                 ON T_RECEIVE_MNG.APP_INSPECT_SEQ = T_INSPECT.INSPECT_SEQ
+                AND T_INSPECT.DELETE_FLG = '0'
+         WHERE T_ORDER.ORDER_SEQ = #{orderSeq}
+           AND T_RECEIVE_MNG.DELIV_STATUS = '4104'
+           AND T_ORDER.DELETE_FLG = '0'
+    </select>
+    <resultMap id="autoAcceptParamMap"
+               type="fw.domain.options.budget.slip.receive.acceptance.autoacceptance.AutoAcceptBudget">
+        <id column="ORDER_SEQ" property="orderIdentify.orderSeq" />
+        <id column="UNIT_PRICE" property="order.accounting.orderAmount.unitPrice.amount.amount" />
+        <id column="CURRENCY_CD" property="order.accounting.orderAmount.amountMng.currency.currencyCd" />
+        <id column="DELIV_KEY_NO" property="delivKeyNo.delivKeyNo" />
+        <id column="DELIV_VOL" property="acceptVol.acceptVol.vol" />
+        <id column="TOTAL_AMOUNT" property="acceptAmount.acceptAmount.amount" />
+        <id column="ACCEPT_DATE" property="acceptDate.acceptDate.dateOfymd" />
+    </resultMap>
+
+    <!-- 自動検収用情報取得用SQL文 -->
+    <select id="searchAutoAcceptInfo"
+            parameterType="fw.domain.options.budget.slip.receive.acceptance.autoacceptance.AutoAcceptBudget"
+            resultMap="autoAcceptInfoResultMap">
+        SELECT T_ORDER.LOAD_COMPANY_CD,
+               T_ORDER.LOAD_SECTION_PLACE_CD,
+               T_ORDER.LOAD_SECTION_CD,
+               T_ORDER.BUDGET_NO,
+               T_ORDER.SUBJECT_CD,
+               T_ORDER.CURRENCY_CD
+          FROM T_ORDER
+         WHERE T_ORDER.ORDER_SEQ = #{orderIdentify.orderSeq}
+           AND T_ORDER.DELETE_FLG = '0'
+    </select>
+    <resultMap id="autoAcceptInfoResultMap"
+               type="fw.domain.options.budget.slip.receive.acceptance.autoacceptance.AutoAcceptBudget">
+        <id column="LOAD_COMPANY_CD" property="order.user.loadSection.loadSection.company.companyCd" />
+        <id column="LOAD_SECTION_PLACE_CD" property="order.user.loadSection.loadSection.sectionPlace.sectionPlaceCd" />
+        <id column="LOAD_SECTION_CD" property="order.user.loadSection.loadSection.sectionCd" />
+        <id column="SUBJECT_CD" property="order.accounting.subject.subjectCd" />
+        <id column="BUDGET_NO" property="order.complement.budgetNumber.budgetNumber" />
+        <id column="CURRENCY_CD" property="order.accounting.orderAmount.amountMng.currency.currencyCd" />
+    </resultMap>
+
+</mapper>

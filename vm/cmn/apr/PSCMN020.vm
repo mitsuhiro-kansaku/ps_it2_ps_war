@@ -1,0 +1,253 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta http-equiv="Content-type" content="text/html; charset=UTF-8">
+<title>#customSpringMessage('RETURN_REASON')</title><!--差戻し理由-->
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Content-script-type" content="text/javascript">
+<link id="CSS_FONT" rel="stylesheet" href="../../include/FontS.css" type="text/css">
+<link rel="stylesheet" href="../../include/Layout.css" type="text/css">
+<link rel="stylesheet" href="../../include/Color.css" type="text/css">
+<link rel="stylesheet" href="../../include/ime.css" type="text/css">
+<script language="javascript" type="text/javascript" src="../../include/common.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/date.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/check.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/searchbox.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/jquery-1.7.2.min.js"></script>
+<script language="javascript" type="text/javascript">
+<!--
+var maxSearchHeight = 120;
+var minSearchHeight = 30;
+var targetReason;
+var targetPerson;
+#parse("./common/common_js.vm")
+function onLoad()
+{
+    top.document.title = document.title;
+    changeFontSize();
+    var aprDisplayModel = "#jsEscape($!remand.aprDisplayModel)";
+    ## +++++  強化-00907-000 2013/04/24 ADD SBO_wangzf START +++++
+    var aprRemandComment = "#jsEscape($!remand.backReason.backReason.comment)";
+    ## +++++  強化-00907-000 2013/04/24 ADD SBO_wangzf END +++++
+    ## -----  強化-00907-000 2013/04/24 DEL SBO_wangzf START -----
+    ## var aprRemandComment = "#out($!remand.backReason.backReason.comment)";
+    ## -----  強化-00907-000 2013/04/24 DEL SBO_wangzf END -----
+    getObj("backReason.backReason.comment").value = aprRemandComment;
+    getObj("backReason.backReason.comment").focus();
+    if(aprDisplayModel == "2"){
+        getObj("backReason.backReason.comment").disabled = true;
+        getObj("remandUser.remandUser.userName").disabled = true;
+    }
+    var user = "#jsEscape($!user)";
+    ## +++++ ＩＴ３-00116-000　2013/06/19 ADD SBO_KANGJW STRATR +++++
+    if (aprDisplayModel == "1" && (user == "" || "#jsEscape($!backUserShowFlg)" == "0")){
+        var selobj=getObj("remandUser.remandUser.userName");
+        var varItem = new Option('','');
+        var index = '-1';
+        selobj.options.add(varItem);
+        #foreach($!users in $!userList)
+        var varItem = new Option('#jsEscape($!users.userName)','#jsEscape($!users.userID)');
+        selobj.options.add(varItem);
+        #if($!users.userID == $!userSelected.userID)
+            index = $!velocityCount;
+        #end
+        getObj("remandUser.remandUser.userName").disabled = false;
+        #end
+        #if("$!userSelectedFlg" != "selected"){
+            getObj("remandUser.remandUser.userName").options[index+1].selected = true;
+        }
+        #end
+     ## +++++ ＩＴ３-00116-000　2013/06/19 ADD SBO_KANGJW END +++++
+
+        ## ----- ＩＴ３-00116-000　2013/06/19 DEL SBO_KANGJW START -----
+        ##if (user == ""){
+        ##var selobj=getObj("remandUser.remandUser.userName");
+        ##var varItem = new Option('','');
+        ##selobj.options.add(varItem);
+        ###foreach($!user in $!userList)
+        ##var varItem = new Option('#out($!user.userName)','#out($!user.userID)');
+        ##selobj.options.add(varItem);
+        ##getObj("remandUser.remandUser.userName").disabled = false;
+        ###end
+        ## ----- ＩＴ３-00116-000　2013/06/19 DEL SBO_KANGJW END -----
+
+        getObj("message").innerHTML='#customSpringMessage('APL_USER_COMMENT')';
+
+    }else{
+        var selobj=getObj("remandUser.remandUser.userName");
+        var varItem = new Option('#jsEscape($!user.userName)','#jsEscape($!user.userID)');
+        selobj.options.add(varItem);
+        getObj("remandUser.remandUser.userName").disabled = true;
+    }
+}
+
+function changeFontSize() {
+    changeFontSize0();
+}
+
+function save() {
+    var aprDisplayModel = "#jsEscape($!remand.aprDisplayModel)";
+    if(aprDisplayModel == "2"){
+        window.close();
+        return;
+    }
+    var errorMsg = "";
+    var obj = document.getElementById("remandUser.remandUser.userName");
+    var index = obj.selectedIndex;
+    var userID = obj.options[index].value; ;
+    var userName=obj.options[index].text;
+    var reason = trim(getObj("backReason.backReason.comment").value);
+    
+    if(reason=="" || reason==null ){
+            #set( $backAppComments = ["#customSpringMessage('BACK_APP_COMMENTS')"])
+            errorMsg = "#customMessageArgs("E002",$backAppComments)";
+   }
+   
+    //  桁数チェック用に改行コードに「\r\n」が存在しない場合、「\n」を「\r\n」に変換した値を利用する
+    //  （EdgeのJavaScript上での改行コードが「\n」で、Form送信された際の改行コードが「\r\n」となり、桁数チェックの挙動が変わるので、
+    //  JavaScriptとJavaのチェック対象文字の改行コードを揃える）
+    var reason_chk = reason; 
+    
+    if(reason_chk.indexOf("\r\n") == -1){
+        reason_chk = reason_chk.replace(/\n/g, '\r\n');
+    }
+    
+   if(reason_chk.length>200){
+         errorMsg =
+         '#customMessageArgs("E208",[$"#customSpringMessage('BACK_APP_COMMENTS')","200","200"])';
+    }
+   if(userName==""){
+        #set( $returnDestination = ["#customSpringMessage('RETURN_DESTINATION')"])
+        errorMsg = errorMsg +"<br />"+"#customMessageArgs("E003",$returnDestination)";
+    }
+    ## +++++ ＩＴ３-00117-000　2013/06/19 ADD SBO_KANGJW START +++++
+    if(!disableWordCheck(reason)){
+         #set( $backAppComments = ["#customSpringMessage('BACK_APP_COMMENTS')"])
+         errorMsg = "#customMessageArgs("E009",$backAppComments)";
+    }
+    ## +++++ ＩＴ３-00117-000　2013/06/19 ADD SBO_KANGJW END +++++
+    if (errorMsg != ""){
+        document.getElementById("TR_ERROR").style.display = "";
+        document.getElementById("ERRORAREA").innerHTML=errorMsg;
+        return;
+    }
+    window.opener.setApr(reason,userID,userName);
+    window.parent.close();
+    try {
+        window.parent.afterProc();
+    } catch( e ) {}
+}
+## +++++ ＩＴ３-00117-000　2013/06/19 ADD SBO_KANGJW START +++++
+function disableWordCheck(str){
+    var leftSharp = false;
+    var rightSharp = false;
+    #foreach($disableWord in $!disableWords)
+        for (i=0;i<str.length;i++) {
+            if(str.charAt(i).charCodeAt() == "60"){
+                leftSharp = true;
+            }else if(str.charAt(i).charCodeAt() == "62"){
+                rightSharp = true;
+            }else if(str.charAt(i).charCodeAt() == "#jsEscape($disableWord)"){
+               return false
+            }
+        }
+    #end
+    return !(leftSharp&&rightSharp);
+}
+## +++++ ＩＴ３-00117-000　2013/06/19 ADD SBO_KANGJW END +++++
+//-->
+</script>
+
+<style>
+html
+{
+  scrollbar-3dlight-color:#000000;
+}
+div
+{
+  height:100%;
+  width:100%;
+  overflow:scroll;
+}
+</style>
+
+</head>
+<body topmargin="0" leftmargin="0" marginwidth="0" marginheight="0" align="center" width="100%" height="100%"  onload="onLoad();" bgcolor="#EAEAEA" scroll="no" >
+<div>
+<form name="Body">
+<table class="NoBorder" width="100%">
+        <tr>
+            <td id="SEARCH_AREA"><!-- onLoadで変更 -->
+                    <span class="CornerTopGray">
+                        <span class="Corner1"></span> <span class="Corner2"></span> <span class="Corner3"></span><span class="Corner4"></span>
+                    </span>
+                    <table class="CornerMidGray" width="100%">
+                        <tr>
+                            <td class="ScreenName" align="left">#customSpringMessage('RETURN_REASON')</td><!--差戻し理由 -->
+                            <td class="DTL_MSGBOX" align="right">
+                                <input type="button" class="MiniButton" value="#customSpringMessage('CLOSE')" onClick="window.close();"><!--閉じる -->
+                            </td>
+                        </tr>
+                    </table>
+                    <span class="CornerBtmGray">
+                        <span class="Corner4"></span> <span class="Corner3"></span> <span class="Corner2"></span><span class="Corner1"></span>
+                    </span>
+            </td>
+        </tr>
+        <tr>
+            <td>
+                <table class="NoBorder" width="100%">
+                    <tr><td colspan="2" nowrap>#customSpringMessage("PSCMN020_HEADER_COMMENT") </td></tr>
+                    <tr>
+                        <td nowrap class="FontSmallBold" align="right" width="20%">#customSpringMessage('BACK_APP_COMMENTS')<span class="FontWarn">＊</span></td><!-- 差戻しコメント-->
+                        <td nowrap align="left" colspan="2">
+                            ## 2013.02.18 DEL DAIKO_WANG
+                            ## <textarea class="Small" id="backReason.backReason.comment" name="backReason.backReason.comment" rows="10" cols="50" style="width:100%;"></textarea>
+                            ## 2013.02.18 ADD DAIKO_WANG
+                            ## +++++  強化-00907-000 2013/04/24 ADD SBO_wangzf START +++++
+                            <textarea class="Small onIME" id="backReason.backReason.comment" name="backReason.backReason.comment" rows="10" cols="58" maxlength="200"></textarea>
+                            ## +++++  強化-00907-000 2013/04/24 ADD SBO_wangzf END +++++
+                            ## -----  強化-00907-000 2013/04/24 DEL SBO_wangzf START -----
+                            ##<textarea class="Small onIME" id="backReason.backReason.comment" name="backReason.backReason.comment" rows="10" cols="50" style="width:100%;"></textarea>
+                            ## -----  強化-00907-000 2013/04/24 DEL SBO_wangzf END -----
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="FontSmallBold" align="right">#customSpringMessage('RETURN_DESTINATION')<span class="FontWarn">＊</span></td><!-- 差戻し先名-->
+                        <td nowrap align="left" id="userNameSelect">
+                            <select id ="remandUser.remandUser.userName" name="remandUser.remandUser.userName" class="Small">
+                            </select>
+                        </td>
+                        <td id="message" name="message" class="FontWarn" nowrap align="left">
+                            <!-- ※申請者がユーザーマスタから削除された為、別のユーザーへ差戻してください。-->
+                        </td>
+
+                </tr>
+                <tr>
+                    <table class="NoBorder" width="100%">
+                        <tr>
+                            <td class="DTL_MSGBOX" style="text-align:left;">
+                                #customSpringMessage('PSCMN020_FOOTER_COMMENT') ## ※印の項目は、必須入力です。
+                            </td>
+                            #if($!remand.aprDisplayModel != 2)
+                            <td class="DTL_MSGBOX" align="right">
+                                <input type="button" class="MiniButton" value=" #customSpringMessage('ACTION_REGISTER') " onclick="javascript:save();"> <!--登録 -->
+                            </td>
+                            #end
+                        </tr>
+                    </table>
+                </tr>
+                <tr id ="TR_ERROR" style="display:none;">
+                    <td id="ERRORAREA" class="error" colspan="3" style="background-color: #EAEAEA;">
+                        $!errorMessage
+                    </td>
+                </tr>
+            </table>
+        </td>
+    </tr>
+
+</table>
+</form>
+</div>
+</body>
+</html>

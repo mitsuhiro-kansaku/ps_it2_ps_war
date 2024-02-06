@@ -1,0 +1,536 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="ps.dataaccess.fav.favorite.FavoriteMapper">
+
+    <!-- あなたのお気に入りのデータを取得SQL -->
+    <select id="searchYourFavorites" resultMap="YourFavorites_Map">
+        SELECT
+            FAVORITE_FOLDER_NAME,
+            FAVORITE_SEQ,
+            LAST_UPD_DATE
+        FROM
+            T_FAVORITE_CAT
+        WHERE
+            USER_SECTION_IND = '1'
+            AND REG_COMPANY_CD = '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}'
+            AND REG_SECTION_CD = '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}'
+            AND REG_USER_ID = '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}'
+        ORDER BY DSP_ORDER ASC
+    </select>
+    <select id="searchYourFavoritesName" resultType="int">
+        SELECT
+            COUNT(*)
+        FROM
+            T_FAVORITE_CAT
+        WHERE
+            USER_SECTION_IND = '1'
+        AND FAVORITE_FOLDER_NAME = #{yourFavoritesName}
+        AND REG_COMPANY_CD = '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}'
+        AND REG_SECTION_CD = '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}'
+        AND REG_USER_ID = '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}'
+    </select>
+    <resultMap type="fw.domain.slip.purreq.purreqcatalog.FavoritesCatalog" id="YourFavorites_Map">
+        <id column="FAVORITE_FOLDER_NAME" property="favoriteFolderName"/>
+        <id column="FAVORITE_SEQ" property="favoritesSeqNo"/>
+        <id column="LAST_UPD_DATE" property="lastUpdDate"/>
+    </resultMap>
+
+    <!-- 部門のお気に入りのデータを取得SQL -->
+    <select id="searchSectionFavorites" resultMap="SectionFavorites_Map">
+        SELECT
+            FAVORITE_FOLDER_NAME,
+            FAVORITE_SEQ,
+            LAST_UPD_DATE
+        FROM
+            T_FAVORITE_CAT
+        WHERE
+            USER_SECTION_IND = '2'
+            AND REG_COMPANY_CD = '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}'
+            AND REG_SECTION_CD = '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}'
+        ORDER BY DSP_ORDER ASC
+    </select>
+    <select id="searchSectionFavoritesName" resultType="int">
+        SELECT
+            COUNT(*)
+        FROM
+            T_FAVORITE_CAT
+        WHERE
+            USER_SECTION_IND = '2'
+        AND FAVORITE_FOLDER_NAME = #{sectionFavoritesName}
+        AND REG_COMPANY_CD = '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}'
+        AND REG_SECTION_CD = '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}'
+    </select>
+    <resultMap type="fw.domain.slip.purreq.purreqcatalog.FavoritesCatalog" id="SectionFavorites_Map">
+        <id column="FAVORITE_FOLDER_NAME" property="favoriteFolderName"/>
+        <id column="FAVORITE_SEQ" property="favoritesSeqNo"/>
+        <id column="LAST_UPD_DATE" property="lastUpdDate"/>
+    </resultMap>
+
+    <!-- あなたのお気に入りのフォルダの商品件数取得SQL -->
+    <select id="searchItemCountYour" resultType="int">
+        SELECT
+            COUNT(T_FAV_CAT_DTL.ITEM_CD) as "count"
+        FROM
+            T_FAVORITE_CAT,
+            T_FAV_CAT_DTL
+        WHERE
+            T_FAVORITE_CAT.USER_SECTION_IND = '1'
+            AND T_FAVORITE_CAT.FAVORITE_SEQ = T_FAV_CAT_DTL.FAVORITE_SEQ 
+            AND T_FAVORITE_CAT.FAVORITE_SEQ = #{favoriteSeq}
+    </select>
+
+    <!-- 部門のお気に入りのフォルダの商品件数取得SQL -->
+    <select id="searchItemCountSec" resultType="int">
+        SELECT
+            COUNT(T_FAV_CAT_DTL.ITEM_CD) as "count"
+        FROM
+            T_FAVORITE_CAT,
+            T_FAV_CAT_DTL
+        WHERE
+            T_FAVORITE_CAT.USER_SECTION_IND = '2'
+            AND T_FAVORITE_CAT.FAVORITE_SEQ = T_FAV_CAT_DTL.FAVORITE_SEQ 
+            AND T_FAVORITE_CAT.FAVORITE_SEQ = #{favoriteSeq}
+    </select>
+
+    <!-- フォルダ名クリック時のカタログ品情報（ヘッダ部）取得SQL -->
+    <select id="searchCatHeader" resultMap="CatHeader_Map">
+        SELECT
+            T_FAVORITE_CAT.FAVORITE_SEQ,
+            T_FAVORITE_CAT.FAVORITE_FOLDER_NAME,
+            T_FAVORITE_CAT.REG_DATE,
+            T_FAVORITE_CAT.LAST_UPD_DATE
+        FROM
+            T_FAVORITE_CAT
+        WHERE
+            USER_SECTION_IND = #{userSectionInd}
+            AND REG_SECTION_CD = '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}'
+            AND REG_COMPANY_CD = '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}'
+            <if test="userSectionInd == 1">
+            AND REG_USER_ID = '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}'
+            </if>
+        ORDER BY DSP_ORDER ASC
+    </select>
+    <resultMap type="fw.domain.slip.purreq.purreqcatalog.FavoritesCatalog" id="CatHeader_Map">
+        <id column="FAVORITE_SEQ" property="favoritesSeqNo"/>
+        <id column="FAVORITE_FOLDER_NAME" property="favoriteFolderName"/>
+        <id column="FAVORITE_FOLDER_NAME" property="oldFavoriteFolderName"/>
+        <id column="REG_DATE" property="createFolderDate"/>
+        <id column="LAST_UPD_DATE" property="lastUpdDate"/>
+    </resultMap>
+
+    <!-- 強化-00180-000 2013/03/13 MODIFY SBO_SOKOU START -->
+    <!-- あなたのお気に入りフォルダ名クリック時のお気に入りのカタログ品情報取得SQL -->
+    <select id="searchYourFavCatDtl" resultMap="FavCatYourDtl_Map">
+        SELECT
+            T_FAV_CAT_DTL.FAVORITE_SEQ,
+            T_FAV_CAT_DTL.DETAIL_NO,
+            T_FAV_CAT_DTL.ITEM_CD,
+            T_FAV_CAT_DTL.BUYER_COMPANY_CD,
+            T_FAV_CAT_DTL.SUP_CD,
+            T_FAV_CAT_DTL.SUP_COMPANY_CD,
+            T_FAV_CAT_DTL.BUYER_SECTION_CD,
+            T_FAV_CAT_DTL.LAST_UPD_DATE,
+            M_ITEM.KATASHIKI,
+            M_ITEM.MANUFACT_CD,
+            M_ITEM.UNIT_CD,
+            M_ITEM.ITEM_CLASS_L, 
+            M_ITEM.ITEM_CLASS_M, 
+            M_ITEM.ITEM_CLASS_S,
+            M_PUR_PRICE.IMG_FILE,
+            M_PUR_PRICE.IMG_FILE_NAME,
+            M_PUR_PRICE.BUY_PRICE,
+            M_PUR_PRICE.CURRENCY_CD,
+            M_PUR_PRICE.CONSUMPT_IND,
+            M_PUR_PRICE.PRICE_REMARKS, 
+            M_PUR_PRICE.VALID_START_DATE,
+            M_PUR_PRICE.VALID_END_DATE,
+            <!-- 強化-00651-000 2013.06.22 ADD SBO_WANGXM -->
+            M_PUR_PRICE.REF_URL,
+            T_FAV_CAT_DTL.REG_DATE
+        FROM
+            T_FAVORITE_CAT
+        INNER JOIN T_FAV_CAT_DTL ON
+            T_FAVORITE_CAT.FAVORITE_SEQ = T_FAV_CAT_DTL.FAVORITE_SEQ
+        INNER JOIN M_PUR_PRICE ON
+            T_FAV_CAT_DTL.BUYER_COMPANY_CD = M_PUR_PRICE.BUYER_COMPANY_CD
+            AND T_FAV_CAT_DTL.BUYER_SECTION_CD = M_PUR_PRICE.BUYER_SECTION_CD
+            AND T_FAV_CAT_DTL.ITEM_CD = M_PUR_PRICE.ITEM_CD 
+            AND T_FAV_CAT_DTL.SUP_CD = M_PUR_PRICE.SUP_CD 
+            AND M_PUR_PRICE.VALID_START_DATE &lt;= ${@fw.common.util.AppUtil@getSysDate()}
+            AND M_PUR_PRICE.VALID_END_DATE &gt;= ${@fw.common.util.AppUtil@getSysDate()} 
+            AND M_PUR_PRICE.TERM_FLG = '0' 
+        INNER JOIN M_SUPPLIER ON T_FAV_CAT_DTL.SUP_CD = M_SUPPLIER.SUP_CD
+            AND (T_FAV_CAT_DTL.BUYER_COMPANY_CD = M_SUPPLIER.COMPANY_CD
+                OR M_SUPPLIER.COMPANY_CD = '${@fw.common.constant.ApplicationConstant@COMPANY_CD_ALL}')
+            AND M_SUPPLIER.TERM_FLG = '0'
+            AND M_SUPPLIER.VALID_START_DATE &lt;= '${@fw.common.util.AppUtil@getSysDate()}'
+            AND M_SUPPLIER.VALID_END_DATE >= '${@fw.common.util.AppUtil@getSysDate()}'
+        INNER JOIN M_ITEM ON
+                (T_FAV_CAT_DTL.ITEM_COMPANY_CD = M_ITEM.COMPANY_CD
+             OR M_ITEM.COMPANY_CD = '${@fw.common.constant.ApplicationConstant@COMPANY_CD_ALL}')
+            AND T_FAV_CAT_DTL.ITEM_CD = M_ITEM.ITEM_CD
+            AND M_ITEM.TERM_FLG = '0'
+        WHERE T_FAVORITE_CAT.USER_SECTION_IND = '1' 
+            AND T_FAVORITE_CAT.FAVORITE_SEQ = #{favoriteSeq}
+        ORDER BY T_FAV_CAT_DTL.DETAIL_NO ASC
+    </select>
+    <resultMap type="fw.domain.slip.purreq.purreqcatalog.FavoritesCatalogItem" id="FavCatYourDtl_Map">
+        <id column="FAVORITE_SEQ" property="favoriteSeqNo"/>
+        <id column="DETAIL_NO" property="itemNo"/>
+        <id column="ITEM_CD" property="priceArticle.item.itemCd"/>
+        <id column="BUYER_COMPANY_CD" property="priceArticle.buySection.buySection.company.companyCd"/>
+        <id column="SUP_CD" property="priceArticle.supplierFrom.supCd"/>
+        <id column="SUP_COMPANY_CD" property="priceArticle.supplierFrom.supCompanyCd"/>
+        <id column="BUYER_SECTION_CD" property="priceArticle.buySection.buySection.sectionCd"/>
+        <id column="KATASHIKI" property="priceArticle.item.katashiki"/>
+        <id column="MANUFACT_CD" property="priceArticle.item.manufact.manufactCd"/>
+        <id column="UNIT_CD" property="priceArticle.item.unit.unitCd"/>
+        <id column="ITEM_CLASS_L" property="priceArticle.item.itemClass.itemClassL"/>
+        <id column="ITEM_CLASS_M" property="priceArticle.item.itemClass.itemClassM"/>
+        <id column="ITEM_CLASS_S" property="priceArticle.item.itemClass.itemClassS"/>
+        <id column="IMG_FILE" property="priceArticle.goodsImage.imgFileData"/>
+        <id column="IMG_FILE_NAME" property="priceArticle.goodsImage.imgFileName"/>
+        <id column="BUY_PRICE" property="priceArticle.buyPrice.amount.amount"/>
+        <id column="CURRENCY_CD" property="priceArticle.supplierFrom.currency.currencyCd"/>
+        <id column="CONSUMPT_IND" property="priceArticle.taxCalculationInd.consumptInd.consumptInd"/>
+        <id column="REG_DATE" property="regDate.dateOfymd"/>
+        <id column="PRICE_REMARKS" property="priceArticle.priceRemarks"/>
+        <id column="LAST_UPD_DATE" property="lastDate"/>
+        <id column="VALID_START_DATE" property="priceArticle.priceArticleIdentify.validStartDate"/>
+        <id column="VALID_END_DATE" property="priceArticle.priceArticleIdentify.validEndDate"/>
+        <!-- 強化-00651-000 2013.06.22 ADD SBO_WANGXM -->
+        <id column="REF_URL" property="priceArticle.refUrl"/>
+    </resultMap>
+
+    <!-- 部門のお気に入りフォルダ名クリック時のお気に入りのカタログ品情報取得SQL -->
+    <select id="searchSecFavCatDtl" resultMap="FavCatSecDtl_Map">
+        SELECT
+            T_FAV_CAT_DTL.FAVORITE_SEQ,
+            T_FAV_CAT_DTL.DETAIL_NO,
+            T_FAV_CAT_DTL.ITEM_CD,
+            T_FAV_CAT_DTL.BUYER_COMPANY_CD,
+            T_FAV_CAT_DTL.SUP_CD,
+            T_FAV_CAT_DTL.SUP_COMPANY_CD,
+            T_FAV_CAT_DTL.BUYER_SECTION_CD,
+            T_FAV_CAT_DTL.LAST_UPD_DATE,
+            M_ITEM.KATASHIKI,
+            M_ITEM.MANUFACT_CD,
+            M_ITEM.UNIT_CD,
+            M_ITEM.ITEM_CLASS_L, 
+            M_ITEM.ITEM_CLASS_M, 
+            M_ITEM.ITEM_CLASS_S,
+            M_PUR_PRICE.IMG_FILE_NAME,
+            M_PUR_PRICE.BUY_PRICE,
+            M_PUR_PRICE.CURRENCY_CD,
+            M_PUR_PRICE.CONSUMPT_IND,
+            M_PUR_PRICE.PRICE_REMARKS, 
+            M_PUR_PRICE.VALID_START_DATE,
+            M_PUR_PRICE.VALID_END_DATE,
+            T_FAV_CAT_DTL.REG_DATE
+        FROM
+            T_FAVORITE_CAT
+        INNER JOIN T_FAV_CAT_DTL ON
+            T_FAVORITE_CAT.FAVORITE_SEQ = T_FAV_CAT_DTL.FAVORITE_SEQ
+        INNER JOIN M_PUR_PRICE ON
+            T_FAV_CAT_DTL.BUYER_COMPANY_CD = M_PUR_PRICE.BUYER_COMPANY_CD
+            AND T_FAV_CAT_DTL.BUYER_SECTION_CD = M_PUR_PRICE.BUYER_SECTION_CD
+            AND T_FAV_CAT_DTL.ITEM_CD = M_PUR_PRICE.ITEM_CD 
+            AND T_FAV_CAT_DTL.SUP_CD = M_PUR_PRICE.SUP_CD 
+            AND M_PUR_PRICE.VALID_START_DATE &lt;= ${@fw.common.util.AppUtil@getSysDate()}
+            AND M_PUR_PRICE.VALID_END_DATE &gt;= ${@fw.common.util.AppUtil@getSysDate()} 
+            AND M_PUR_PRICE.TERM_FLG = '0' 
+        INNER JOIN M_SUPPLIER ON T_FAV_CAT_DTL.SUP_CD = M_SUPPLIER.SUP_CD
+            AND (T_FAV_CAT_DTL.BUYER_COMPANY_CD = M_SUPPLIER.COMPANY_CD
+                OR M_SUPPLIER.COMPANY_CD = '${@fw.common.constant.ApplicationConstant@COMPANY_CD_ALL}')
+            AND M_SUPPLIER.TERM_FLG = '0'
+            AND M_SUPPLIER.VALID_START_DATE &lt;= '${@fw.common.util.AppUtil@getSysDate()}'
+            AND M_SUPPLIER.VALID_END_DATE >= '${@fw.common.util.AppUtil@getSysDate()}'
+        INNER JOIN M_ITEM ON
+                (T_FAV_CAT_DTL.ITEM_COMPANY_CD = M_ITEM.COMPANY_CD
+             OR M_ITEM.COMPANY_CD = '${@fw.common.constant.ApplicationConstant@COMPANY_CD_ALL}')
+            AND T_FAV_CAT_DTL.ITEM_CD = M_ITEM.ITEM_CD
+            AND M_ITEM.TERM_FLG = '0'
+        WHERE T_FAVORITE_CAT.USER_SECTION_IND = '2' 
+            AND T_FAVORITE_CAT.FAVORITE_SEQ = #{favoriteSeq}
+        ORDER BY T_FAV_CAT_DTL.DETAIL_NO ASC
+    </select>
+    <!-- 強化-00180-000 2013/03/13 MODIFY SBO_SOKOU END -->
+    <resultMap type="fw.domain.slip.purreq.purreqcatalog.FavoritesCatalogItem" id="FavCatSecDtl_Map">
+        <id column="FAVORITE_SEQ" property="favoriteSeqNo"/>
+        <id column="DETAIL_NO" property="itemNo"/>
+        <id column="ITEM_CD" property="priceArticle.item.itemCd"/>
+        <id column="BUYER_COMPANY_CD" property="priceArticle.buySection.buySection.company.companyCd"/>
+        <id column="SUP_CD" property="priceArticle.supplierFrom.supCd"/>
+        <id column="SUP_COMPANY_CD" property="priceArticle.supplierFrom.supCompanyCd"/>
+        <id column="BUYER_SECTION_CD" property="priceArticle.buySection.buySection.sectionCd"/>
+        <id column="KATASHIKI" property="priceArticle.item.katashiki"/>
+        <id column="MANUFACT_CD" property="priceArticle.item.manufact.manufactCd"/>
+        <id column="UNIT_CD" property="priceArticle.item.unit.unitCd"/>
+        <id column="ITEM_CLASS_L" property="priceArticle.item.itemClass.itemClassL"/>
+        <id column="ITEM_CLASS_M" property="priceArticle.item.itemClass.itemClassM"/>
+        <id column="ITEM_CLASS_S" property="priceArticle.item.itemClass.itemClassS"/>
+        <id column="IMG_FILE_NAME" property="priceArticle.goodsImage.imgFileName"/>
+        <id column="BUY_PRICE" property="priceArticle.buyPrice.amount.amount"/>
+        <id column="CURRENCY_CD" property="priceArticle.supplierFrom.currency.currencyCd"/>
+        <id column="CONSUMPT_IND" property="priceArticle.taxCalculationInd.consumptInd.consumptInd"/>
+        <id column="REG_DATE" property="regDate.dateOfymd"/>
+        <id column="PRICE_REMARKS" property="priceArticle.priceRemarks"/>
+        <id column="LAST_UPD_DATE" property="lastDate"/>
+        <id column="VALID_START_DATE" property="priceArticle.priceArticleIdentify.validStartDate"/>
+        <id column="VALID_END_DATE" property="priceArticle.priceArticleIdentify.validEndDate"/>
+    </resultMap>
+
+    <!-- あなたのお気に入りのフォルダ名を新規登録SQL -->
+    <insert id="insertFavoriteCatForYour">
+        INSERT INTO T_FAVORITE_CAT (
+            FAVORITE_SEQ, 
+            USER_SECTION_IND,
+            FAVORITE_FOLDER_NAME,
+            DSP_ORDER,
+            LAST_UPD_DATE,
+            LAST_UPD_COMPANY_CD,
+            LAST_UPD_SECTION_CD,
+            LAST_UPD_USER_ID, REG_DATE,
+            REG_COMPANY_CD,
+            REG_SECTION_CD,
+            REG_USER_ID
+        ) VALUES (
+            #{favoriteSeq},
+            '1',
+            #{folderName},
+            (
+            SELECT CASE WHEN MAX(DSP_ORDER) + 1  IS NOT NULL
+             THEN MAX(DSP_ORDER) + 1
+                ELSE 1
+                END
+                FROM   T_FAVORITE_CAT
+                WHERE
+                USER_SECTION_IND = '1'
+                AND REG_SECTION_CD = '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}'
+                AND REG_USER_ID = '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}'
+            ),
+            '${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}',
+            '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}',
+            '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}',
+            '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}',
+            '${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}',
+            '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}',
+            '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}',
+            '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}'
+        )
+    </insert>
+
+    <!-- 部門のお気に入りのフォルダ名を新規登録SQL -->
+    <insert id="insertFavroiteCatForSection">
+        INSERT INTO T_FAVORITE_CAT (
+            FAVORITE_SEQ, 
+            USER_SECTION_IND,
+            FAVORITE_FOLDER_NAME,
+            DSP_ORDER,
+            LAST_UPD_DATE,
+            LAST_UPD_COMPANY_CD,
+            LAST_UPD_SECTION_CD,
+            LAST_UPD_USER_ID, REG_DATE,
+            REG_COMPANY_CD,
+            REG_SECTION_CD,
+            REG_USER_ID
+        ) VALUES (
+            #{favoriteSeq},
+            '2',
+            #{folderName},
+            (
+            SELECT CASE WHEN MAX(DSP_ORDER) + 1  IS NOT NULL
+             THEN MAX(DSP_ORDER) + 1
+                ELSE 1
+                END
+                FROM   T_FAVORITE_CAT
+                WHERE
+                USER_SECTION_IND = '2'
+                AND REG_SECTION_CD = '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}'
+            ),
+            '${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}',
+            '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}',
+            '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}',
+            '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}',
+            '${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}',
+            '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}',
+            '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}',
+            '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}'
+        )
+    </insert>
+
+    <!-- フォルダ名変更SQL -->
+    <update id="updateFavoriteCat">
+        UPDATE
+            T_FAVORITE_CAT
+        SET
+            FAVORITE_FOLDER_NAME = #{folderName},
+            LAST_UPD_DATE = '${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}',
+            LAST_UPD_COMPANY_CD = '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}',
+            LAST_UPD_SECTION_CD = '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}',
+            LAST_UPD_USER_ID = '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}'
+        WHERE
+           FAVORITE_SEQ = #{favoriteSeq}
+    </update>
+
+    <!-- お気に入りフォルダ削除時のお気に入りカタログテーブル削除SQL -->
+    <delete id="deleteFavoriteCat">
+        DELETE FROM
+            T_FAVORITE_CAT
+        WHERE
+            FAVORITE_SEQ = #{favoriteSeq}
+    </delete>
+
+    <!-- お気に入りフォルダ削除時のお気に入りカタログ明細テーブル削除SQL -->
+    <delete id="deleteFavCatDtl">
+        DELETE FROM
+            T_FAV_CAT_DTL
+        WHERE
+            FAVORITE_SEQ = #{favoriteSeq}
+    </delete>
+
+    <!-- お気に入りに登録ボタンをクリック時にお気に入りカタログ明細テーブル登録SQL -->
+    <insert id="insertFavCatDtl">
+        INSERT INTO T_FAV_CAT_DTL(
+            FAVORITE_SEQ,
+            DETAIL_NO,
+            DSP_ORDER,
+            BUYER_COMPANY_CD,
+            BUYER_SECTION_CD,
+            ITEM_COMPANY_CD,
+            ITEM_CD,
+            SUP_COMPANY_CD,
+            SUP_CD,
+            LAST_UPD_DATE,
+            LAST_UPD_COMPANY_CD,
+            LAST_UPD_SECTION_CD,
+            LAST_UPD_USER_ID,
+            REG_DATE,
+            REG_COMPANY_CD,
+            REG_SECTION_CD,
+            REG_USER_ID
+        ) VALUES (
+            #{favoritesSeqNo},
+            (
+            SELECT CASE WHEN MAX(DETAIL_NO) + 1  IS NOT NULL
+                THEN MAX(DETAIL_NO) + 1
+                ELSE 1
+                END
+                FROM T_FAV_CAT_DTL
+            WHERE FAVORITE_SEQ = #{favoritesSeqNo}
+            ),
+            (
+            SELECT CASE WHEN MAX(DSP_ORDER) + 1 IS NOT NULL 
+                THEN MAX(DSP_ORDER) + 1
+                ELSE 1
+                END
+                FROM T_FAV_CAT_DTL
+            WHERE FAVORITE_SEQ = #{favoritesSeqNo}
+            ),
+            #{buyerCompanyCd},
+            #{buyerSectionCd},
+            #{buyerCompanyCd},
+            #{itemCd},
+            #{buyerCompanyCd},
+            #{supCd},
+            '${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}',
+            '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}',
+            '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}',
+            '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}',
+            '${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}',
+            '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}',
+            '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}',
+            '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}'
+         )
+    </insert>
+
+    <!-- お気に入りから削除ボタンをクリック時にお気に入りカタログ明細テーブル削除SQL -->
+    <delete id="deleteCatalogFromFolder">
+        DELETE FROM
+            T_FAV_CAT_DTL
+        WHERE
+            FAVORITE_SEQ = #{favoriteSeq}
+            AND DETAIL_NO = #{detailNo}
+    </delete>
+    <resultMap type="fw.domain.mst.material.material.PriceArticleIdentify" id="priceTime_Map">
+        <id column="VALID_START_DATE" property="validStartDate"/>
+        <id column="VALID_END_DATE" property="validEndDate"/>
+    </resultMap>
+    <select id="priceTime" resultMap="priceTime_Map">
+            SELECT
+                VALID_START_DATE,
+                VALID_END_DATE
+             FROM
+                M_PUR_PRICE
+             WHERE
+                 BUYER_COMPANY_CD = #{buyerCompanyCd}
+             AND BUYER_SECTION_CD = #{buyerSectionCd}
+             AND ITEM_CD = #{itemCd}
+             AND SUP_CD = #{supCd}
+             AND VALID_START_DATE &lt;= '${@fw.common.util.AppUtil@getSysDate()}'
+             AND VALID_END_DATE >= '${@fw.common.util.AppUtil@getSysDate()}'
+             AND TERM_FLG = '0'
+    </select>
+    <!-- 強化-00180-000 2013/03/13 MODIFY SBO_SOKOU START -->
+    <select id="searchPriceArticleToAddFav" resultMap="PriceArticle_Map">
+        SELECT
+            M_ITEM.KATASHIKI,
+            M_ITEM.MANUFACT_CD,
+            M_ITEM.UNIT_CD,
+            M_ITEM.ITEM_CLASS_L, 
+            M_ITEM.ITEM_CLASS_M, 
+            M_ITEM.ITEM_CLASS_S,
+            M_PUR_PRICE.IMG_FILE,
+            M_PUR_PRICE.BUY_PRICE,
+            M_PUR_PRICE.CURRENCY_CD,
+            M_PUR_PRICE.CONSUMPT_IND,
+            M_PUR_PRICE.REF_URL,
+            M_PUR_PRICE.BUYER_COMPANY_CD,
+            M_PUR_PRICE.BUYER_SECTION_CD,
+            M_PUR_PRICE.SUP_CD,
+            M_PUR_PRICE.ITEM_CD,
+            M_PUR_PRICE.VALID_START_DATE,
+            M_PUR_PRICE.VALID_END_DATE,
+            M_PUR_PRICE.IMG_FILE_NAME
+        FROM
+            M_PUR_PRICE
+        INNER JOIN M_ITEM ON
+                (M_PUR_PRICE.BUYER_COMPANY_CD = M_ITEM.COMPANY_CD
+             OR M_ITEM.COMPANY_CD = '${@fw.common.constant.ApplicationConstant@COMPANY_CD_ALL}')
+            AND M_PUR_PRICE.ITEM_CD = M_ITEM.ITEM_CD
+            AND M_ITEM.TERM_FLG = '0'
+        WHERE
+            M_PUR_PRICE.BUYER_COMPANY_CD = #{buyerCompanyCd}
+            AND M_PUR_PRICE.BUYER_SECTION_CD = #{buyerSectionCd}
+            AND M_PUR_PRICE.ITEM_CD = #{itemCd}
+            AND M_PUR_PRICE.SUP_CD = #{supCd}
+            AND M_PUR_PRICE.VALID_START_DATE = #{validStartDate}
+            AND M_PUR_PRICE.VALID_END_DATE = #{validEndDate}
+            AND M_PUR_PRICE.TERM_FLG = '0' 
+            AND M_PUR_PRICE.APP_STATUS_IND = '2' 
+    </select>
+    <!-- 強化-00180-000 2013/03/13 MODIFY SBO_SOKOU END -->
+    <resultMap type="fw.domain.mst.material.material.PriceArticle" id="PriceArticle_Map">
+        <id column="KATASHIKI" property="item.katashiki"/>
+        <id column="MANUFACT_CD" property="item.manufact.manufactCd"/>
+        <id column="UNIT_CD" property="item.unit.unitCd"/>
+        <id column="ITEM_CLASS_L" property="item.itemClass.itemClassL"/>
+        <id column="ITEM_CLASS_M" property="item.itemClass.itemClassM"/>
+        <id column="ITEM_CLASS_S" property="item.itemClass.itemClassS"/>
+        <id column="IMG_FILE" property="goodsImage.imgFile"/>
+        <id column="BUY_PRICE" property="buyPrice.amount.amount"/>
+        <id column="CURRENCY_CD" property="supplierFrom.currency.currencyCd"/>
+        <id column="CONSUMPT_IND" property="taxCalculationInd.consumptInd.consumptInd"/>
+        <id column="REF_URL" property="refUrl"/>
+        <id column="BUYER_COMPANY_CD" property="buySection.buySection.company.companyCd"/>
+        <id column="BUYER_SECTION_CD" property="buySection.buySection.sectionCd"/>
+        <id column="SUP_CD" property="supplierFrom.supCd"/>
+        <id column="ITEM_CD" property="item.itemCd"/>
+        <id column="VALID_START_DATE" property="priceArticleIdentify.validStartDate"/>
+        <id column="VALID_END_DATE" property="priceArticleIdentify.validEndDate"/>
+        <id column="IMG_FILE_NAME" property="goodsImage.imgFileName"/>
+        
+    </resultMap>
+</mapper>

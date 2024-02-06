@@ -1,0 +1,786 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="ps.dataaccess.mst.supplier.SupplierMapper">
+
+    <sql id="listKeyIdentityWhereCondition">
+        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(companyCd)">
+            AND M_SUPPLIER.COMPANY_CD = #{companyCd, jdbcType=VARCHAR}
+        </if>
+        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(supCd)">
+            AND M_SUPPLIER.SUP_CD
+            ${@fw.common.util.SearchModeUtil@getSearchSQL("fw.domain.mst.supplier.supplier.SupplierSearchCondition","supCd")}
+        </if>
+        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(supName)">
+                AND (supplier_lang_company.SUP_NAME
+                ${@fw.common.util.SearchModeUtil@getSearchSQL("fw.domain.mst.supplier.supplier.SupplierSearchCondition","supName")}
+                OR supplier_lang_system.SUP_NAME
+                ${@fw.common.util.SearchModeUtil@getSearchSQL("fw.domain.mst.supplier.supplier.SupplierSearchCondition","supName")})
+        </if>
+        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(valStartDateFrom.dateOfymd)">
+            AND M_SUPPLIER.VALID_START_DATE >= #{valStartDateFrom.dateOfymd}
+        </if>
+        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(valStartDateTo.dateOfymd)">
+            AND M_SUPPLIER.VALID_START_DATE &lt; = #{valStartDateTo.dateOfymd}
+        </if>
+        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(valEndDateFrom.dateOfymd)">
+            AND M_SUPPLIER.VALID_END_DATE >= #{valEndDateFrom.dateOfymd}
+        </if>
+        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(valEndDateTo.dateOfymd)">
+            AND M_SUPPLIER.VALID_END_DATE &lt;= #{valEndDateTo.dateOfymd}
+        </if>
+        <if
+            test="@fw.domain.mst.searchcondition.SearchCondition@termFlgIsNotEmpty(searchCondition.termFlg)">
+            AND M_SUPPLIER.TERM_FLG = #{searchCondition.termFlg, jdbcType=VARCHAR}
+        </if>
+    </sql>
+    <select id="listKeyIdentity"
+            parameterType="fw.domain.mst.supplier.supplier.SupplierSearchCondition"
+            resultType="fw.domain.mst.supplier.supplier.SupplierIdentify">
+        SELECT M_SUPPLIER.COMPANY_CD AS "companyCd",
+               M_SUPPLIER.SUP_CD AS "supCd",
+               (
+               SELECT COUNT(1)
+                 FROM M_S_USER
+                WHERE M_S_USER.VENDOR_CD = M_SUPPLIER.VENDOR_CD
+               ) AS userCount,
+               CASE WHEN supplier_lang_company.SUP_NAME IS NOT NULL
+                    THEN supplier_lang_company.SUP_NAME
+                    ELSE supplier_lang_system.SUP_NAME
+                     END
+                 AS supName,
+               CASE WHEN supplier_lang_company.SUP_ABBR_NAME IS NOT NULL
+                    THEN supplier_lang_company.SUP_ABBR_NAME
+                    ELSE supplier_lang_system.SUP_ABBR_NAME
+                     END
+                 AS supAbbrName
+          FROM M_SUPPLIER
+          <if test="companyCd != 'ALL'">
+          LEFT JOIN M_COMPANY
+                 ON M_SUPPLIER.COMPANY_CD=M_COMPANY.COMPANY_CD
+          </if>
+          LEFT JOIN M_SUPPLIER_LANG supplier_lang_company
+                 ON M_SUPPLIER.COMPANY_CD = supplier_lang_company.COMPANY_CD
+                AND M_SUPPLIER.SUP_CD = supplier_lang_company.SUP_CD
+                <if test="companyCd != 'ALL'">
+                AND supplier_lang_company.LANGUAGE_IND = M_COMPANY.COMPANY_USE_LANGUAGE_IND
+                </if>
+                <if test="companyCd == 'ALL'">
+                AND supplier_lang_company.LANGUAGE_IND = '${@fw.security.SecurityUtil@getCompanyUseLanguageIndByEscapeSql()}'
+                </if>
+          LEFT JOIN M_SUPPLIER_LANG supplier_lang_system
+                 ON M_SUPPLIER.COMPANY_CD = supplier_lang_system.COMPANY_CD
+                AND M_SUPPLIER.SUP_CD = supplier_lang_system.SUP_CD
+                AND supplier_lang_system.LANGUAGE_IND = '${@fw.common.util.AppUtil@getSysLanguageByEscapeSql()}'
+          LEFT JOIN M_VENDOR
+                 ON M_SUPPLIER.VENDOR_CD = M_VENDOR.VENDOR_CD
+          <where>
+              <include refid="listKeyIdentityWhereCondition"/>
+          </where>
+         ORDER BY ${searchCondition.columnOrder.columnOrder()}
+    </select>
+    <select id="listPageItem"
+            parameterType="fw.domain.mst.searchcondition.SearchCondition"
+            resultType="fw.domain.mst.supplier.supplier.SupplierItem">
+        SELECT M_SUPPLIER.COMPANY_CD AS "supplierIdentify.companyCd",
+               M_SUPPLIER.SUP_CD AS "supplierIdentify.supCd",
+               M_SUPPLIER.LAST_UPD_DATE AS "supplierIdentify.lastUpdDate",
+               CASE WHEN supplier_lang_company.SUP_NAME IS NOT NULL
+                    THEN supplier_lang_company.SUP_NAME
+                    ELSE supplier_lang_system.SUP_NAME
+                     END
+                 AS supName,
+               CASE WHEN supplier_lang_company.SUP_ABBR_NAME IS NOT NULL
+                    THEN supplier_lang_company.SUP_ABBR_NAME
+                    ELSE supplier_lang_system.SUP_ABBR_NAME
+                     END
+                 AS supAbbrName,
+               M_SUPPLIER.VENDOR_CD AS "vendorCd",
+               M_VENDOR.VENDOR_NAME AS "vendorName",
+               M_SUPPLIER.EDI_IND As "ediInd",
+               (
+               SELECT COUNT(1)
+                 FROM M_S_USER
+                WHERE M_S_USER.VENDOR_CD = M_SUPPLIER.VENDOR_CD
+               ) AS userCount,
+               M_SUPPLIER.VALID_START_DATE As "validStartDate.dateOfymd",
+               M_SUPPLIER.VALID_END_DATE AS "validEndDate.dateOfymd",
+               M_SUPPLIER.TERM_FLG AS "termFlg"
+          FROM M_SUPPLIER
+          <if test="companyCd != 'ALL'">
+          LEFT JOIN M_COMPANY
+                 ON M_SUPPLIER.COMPANY_CD=M_COMPANY.COMPANY_CD
+          </if>
+          LEFT JOIN M_SUPPLIER_LANG supplier_lang_company
+                 ON M_SUPPLIER.COMPANY_CD = supplier_lang_company.COMPANY_CD
+                AND M_SUPPLIER.SUP_CD = supplier_lang_company.SUP_CD
+                <if test="companyCd != 'ALL'">
+                AND supplier_lang_company.LANGUAGE_IND = M_COMPANY.COMPANY_USE_LANGUAGE_IND
+                </if>
+                <if test="companyCd == 'ALL'">
+                AND supplier_lang_company.LANGUAGE_IND = '${@fw.security.SecurityUtil@getCompanyUseLanguageIndByEscapeSql()}'
+                </if>
+          LEFT JOIN M_SUPPLIER_LANG supplier_lang_system
+                 ON M_SUPPLIER.COMPANY_CD = supplier_lang_system.COMPANY_CD
+                AND M_SUPPLIER.SUP_CD = supplier_lang_system.SUP_CD
+                AND supplier_lang_system.LANGUAGE_IND = '${@fw.common.util.AppUtil@getSysLanguageByEscapeSql()}'
+          LEFT JOIN M_VENDOR
+                 ON M_VENDOR.VENDOR_CD = M_SUPPLIER.VENDOR_CD
+        <where>
+            (M_SUPPLIER.COMPANY_CD,M_SUPPLIER.SUP_CD) IN
+            <foreach collection="searchCondition.page.keyDomainEntityList" item="keyList" open="(" separator="," close=")">
+                (#{keyList.companyCd},#{keyList.supCd})
+            </foreach>
+            <include refid="listKeyIdentityWhereCondition"/>
+        </where>
+        ORDER BY ${searchCondition.columnOrder.columnOrder()}
+    </select>
+    <select id="listSupplierLanguage" parameterType="fw.domain.mst.supplier.supplier.SupplierIdentify" resultType="fw.domain.mst.supplier.supplier.SupplierLanguage">
+        SELECT
+            SUP_NAME as "supName",
+            SUP_ABBR_NAME as "supAbbrName",
+            M_SUPPLIER_LANG.COMPANY_CD as "supplierIdentify.companyCd",
+            M_SUPPLIER_LANG.SUP_CD as "supplierIdentify.supCd",
+            LANGUAGE_IND as "languageInd.languageInd",
+            ADDRESS1 as "address1.address",
+            ADDRESS2 as "address2.address",
+            SUP_SECTION_NAME as "supPersonName.supSectionName",
+            SUP_PERSON_NAME as "supPersonName.supPersonName",
+            DEST_NAME as "destName.destName"
+        FROM M_SUPPLIER
+            LEFT JOIN M_SUPPLIER_LANG
+        ON
+            M_SUPPLIER.COMPANY_CD = M_SUPPLIER_LANG.COMPANY_CD
+            AND M_SUPPLIER.SUP_CD = M_SUPPLIER_LANG.SUP_CD
+        <if test="companyCd=='ALL'">
+            AND M_SUPPLIER_LANG.LANGUAGE_IND != '${@fw.common.util.AppUtil@getSysLanguageByEscapeSql()}'
+        </if>
+        <if test="companyCd!='ALL'">
+          LEFT JOIN M_COMPANY
+      ON
+            M_SUPPLIER.COMPANY_CD=M_COMPANY.COMPANY_CD
+        </if>
+         INNER JOIN M_CODE_NAME
+         ON M_SUPPLIER_LANG.LANGUAGE_IND = M_CODE_NAME.CODE_VALUE
+         AND M_CODE_NAME.CODE_KEY = 'LANGUAGE_IND'
+        WHERE
+            M_SUPPLIER.COMPANY_CD = #{companyCd}
+            AND M_SUPPLIER.SUP_CD = #{supCd}
+            <if test="companyCd=='ALL'">
+            AND M_SUPPLIER_LANG.LANGUAGE_IND != '${@fw.common.util.AppUtil@getSysLanguageByEscapeSql()}'
+            </if>
+            <if test="companyCd!='ALL'">
+            AND M_SUPPLIER_LANG.LANGUAGE_IND !=
+                         M_COMPANY.COMPANY_USE_LANGUAGE_IND
+            </if>
+         ORDER BY M_CODE_NAME.DSP_ORDER
+    </select>
+    <resultMap type="fw.domain.mst.supplier.supplier.SupplierManagement" id="SupplierManagement_Map">
+        <id column="ADDRESS1" property="ctc.supCtc.ctc.address1.address"/>
+        <id column="ADDRESS2" property="ctc.supCtc.ctc.address2.address"/>
+        <id column="PAY_CONDITION_CD" property="sup.pay.payCondMgmt.payConditionIdentify.payConditionCd"/>
+        <id column="payConditionName" property="sup.pay.payCondMgmt.payConditionName"/>
+        <id column="BASE_LANGUAGE_IND" property="useLanguageInd.languageInd.languageInd"/>
+        <id column="VALID_START_DATE" property="valt.valPd.period.startDate.dateOfymd"/>
+        <id column="VALID_END_DATE" property="valt.valPd.period.endDate.dateOfymd"/>
+        <id column="ELIGIBLE_INVOICE_ISSUE_IND" property="sup.eligibleInvoiceIssueInd.eligibleInvoiceIssueInd"/>
+    </resultMap>
+    <select id="search" parameterType="fw.domain.mst.supplier.supplier.SupplierIdentify" resultMap="SupplierManagement_Map" >
+        SELECT
+            M_SUPPLIER.COMPANY_CD as "supplierIdentify.companyCd",
+            M_SUPPLIER.SUP_CD as "supplierIdentify.supCd",
+            M_SUPPLIER.LAST_UPD_DATE as "supplierIdentify.lastUpdDate",
+            M_SUPPLIER.COMPANY_CD as "companySummary.companyCd",
+            M_COMPANY_LANG.COMPANY_NAME as "companySummary.companyName",
+            <if test="companyCd=='ALL'">
+             '${@fw.common.util.AppUtil@getSysLanguageByEscapeSql()}' as "companySummary.languageInd",
+            </if>
+            <if test="companyCd!='ALL'">
+             M_COMPANY.COMPANY_USE_LANGUAGE_IND as "companySummary.languageInd",
+            </if>
+            case
+             when supplier_lang_company.SUP_NAME is not null then
+              supplier_lang_company.SUP_NAME
+             else
+              supplier_lang_system.SUP_NAME
+            end as supName,
+            case
+             when supplier_lang_company.SUP_ABBR_NAME is not null then
+              supplier_lang_company.SUP_ABBR_NAME
+             else
+              supplier_lang_system.SUP_ABBR_NAME
+            end as supAbbrName,
+            M_SUPPLIER.VENDOR_CD as "vendorCd",
+            M_VENDOR.VENDOR_NAME as "vendorName",
+            M_SUPPLIER.BASE_CURRENCY_CD as "baseCurrencyCd",
+            M_SUPPLIER.BASE_LANGUAGE_IND,
+            case
+             when supplier_lang_company.DEST_NAME is not null then
+              supplier_lang_company.DEST_NAME
+             else
+              supplier_lang_system.DEST_NAME
+            end as "ctc.supCtc.dest.destName",
+            M_SUPPLIER.COUNTRY_CD as "ctc.supCtc.ctc.country.cyCd",
+            M_SUPPLIER.ZIP_CD as "ctc.supCtc.ctc.zipCd.zipCd",
+            M_SUPPLIER.TEL_NO as "ctc.supCtc.ctc.telNo.telNo",
+            M_SUPPLIER.FAX_NO as "ctc.supCtc.ctc.faxNo.faxNo",
+            case
+             when supplier_lang_company.ADDRESS1 is not null then
+              supplier_lang_company.ADDRESS1
+             else
+              supplier_lang_system.ADDRESS1
+            end as ADDRESS1,
+            case
+             when supplier_lang_company.ADDRESS2 is not null then
+              supplier_lang_company.ADDRESS2
+             else
+              supplier_lang_system.ADDRESS2
+            end as ADDRESS2,
+            M_SUPPLIER.EDI_IND as "ctc.ediInd.ediInd",
+            M_SUPPLIER.FORCAST_FAX_IND as "ctc.fax.forcastFaxInd.faxInd",
+            M_SUPPLIER.QUOT_FAX_IND as "ctc.fax.quotFaxInd.faxInd",
+            M_SUPPLIER.ORDER_FAX_IND as "ctc.fax.orderFaxInd.faxInd",
+            M_SUPPLIER.DELIV_FAX_IND as "ctc.fax.delivFaxInd.faxInd",
+            M_SUPPLIER.ARRIVAL_FAX_IND as "ctc.fax.arrivalFaxInd.faxInd",
+            M_SUPPLIER.ACCEPT_FAX_IND as "ctc.fax.acceptFaxInd.faxInd",
+            M_SUPPLIER.ACCPAY_FAX_IND as "ctc.fax.accpayFaxInd.faxInd",
+            M_SUPPLIER.TERM_FLG as "valt.term.termFlg",
+            M_SUPPLIER.VALID_START_DATE,
+            M_SUPPLIER.VALID_END_DATE,
+            case
+             when supplier_lang_company.SUP_SECTION_NAME is not null then
+              supplier_lang_company.SUP_SECTION_NAME
+             else
+              supplier_lang_system.SUP_SECTION_NAME
+            end as "sup.supPerName.supSectionName",
+            case
+             when supplier_lang_company.SUP_PERSON_NAME is not null then
+              supplier_lang_company.SUP_PERSON_NAME
+             else
+              supplier_lang_system.SUP_PERSON_NAME
+            end as "sup.supPerName.supPersonName",
+            M_SUPPLIER.BANK_CD as "sup.pay.ac.bankCd",
+            M_SUPPLIER.BANK_NAME as "sup.pay.ac.bankName",
+            M_SUPPLIER.BRANCH_CD as "sup.pay.ac.branchCd",
+            M_SUPPLIER.BRANCH_NAME as "sup.pay.ac.branchName",
+            M_SUPPLIER.ACCOUNT_NO as "sup.pay.ac.accountNo",
+            M_SUPPLIER.ACCOUNT_NAME as "sup.pay.ac.accountName",
+            M_SUPPLIER.ACCOUNT_TYPE as "sup.pay.ac.acType.acType",
+            M_SUPPLIER.PAY_CONDITION_CD,
+            CASE WHEN PAY_CONDITION_LANG_COMPANY.PAY_CONDITION_NAME IS NOT NULL
+                 THEN PAY_CONDITION_LANG_COMPANY.PAY_CONDITION_NAME
+                 ELSE PAY_CONDITION_LANG_SYSTEM.PAY_CONDITION_NAME
+                 END as "payConditionName",
+            M_SUPPLIER.SUBCON_IND as "sup.subcon.subconInd",
+            M_SUPPLIER.ELIGIBLE_INVOICE_ISSUE_IND,
+            M_SUPPLIER.BUSINESS_REGIST_NO as "sup.businessRegistNo",
+            M_SUPPLIER.LAST_UPD_DATE as "registInfo.lastUpdDate",
+            M_SUPPLIER.LAST_UPD_COMPANY_CD as "registInfo.lastUpdCompanyCd",
+            M_SUPPLIER.LAST_UPD_SECTION_CD as "registInfo.lastUpdSectionCd",
+            M_SUPPLIER.LAST_UPD_USER_ID as "registInfo.lastUpdUserId",
+            M_SUPPLIER.REG_DATE as "registInfo.regDate",
+            M_SUPPLIER.REG_COMPANY_CD as "registInfo.regCompanyCd",
+            M_SUPPLIER.REG_SECTION_CD as "registInfo.regSectionCd",
+            M_SUPPLIER.REG_USER_ID as "registInfo.regUserId"
+        FROM M_SUPPLIER
+            LEFT JOIN M_COMPANY
+        ON M_SUPPLIER.COMPANY_CD=M_COMPANY.COMPANY_CD
+            LEFT JOIN M_SUPPLIER_LANG supplier_lang_company
+        ON M_SUPPLIER.COMPANY_CD = supplier_lang_company.COMPANY_CD
+            AND M_SUPPLIER.SUP_CD = supplier_lang_company.SUP_CD
+            AND supplier_lang_company.LANGUAGE_IND = M_COMPANY.COMPANY_USE_LANGUAGE_IND
+            LEFT JOIN M_SUPPLIER_LANG supplier_lang_system
+        ON M_SUPPLIER.COMPANY_CD = supplier_lang_system.COMPANY_CD
+            AND M_SUPPLIER.SUP_CD = supplier_lang_system.SUP_CD
+            AND supplier_lang_system.LANGUAGE_IND = '${@fw.common.util.AppUtil@getSysLanguageByEscapeSql()}'
+            INNER JOIN M_VENDOR
+        ON M_SUPPLIER.VENDOR_CD = M_VENDOR.VENDOR_CD
+            LEFT JOIN M_COMPANY_LANG
+        ON M_COMPANY.COMPANY_CD = M_COMPANY_LANG.COMPANY_CD
+           AND M_COMPANY.COMPANY_USE_LANGUAGE_IND = M_COMPANY_LANG.LANGUAGE_IND
+           LEFT JOIN M_PAY_CONDITION
+        ON M_SUPPLIER.COMPANY_CD = M_PAY_CONDITION.COMPANY_CD
+           AND M_SUPPLIER.PAY_CONDITION_CD = M_PAY_CONDITION.PAY_CONDITION_CD
+           LEFT JOIN M_PAY_CONDITION_LANG PAY_CONDITION_LANG_COMPANY
+        ON M_PAY_CONDITION.COMPANY_CD = PAY_CONDITION_LANG_COMPANY.COMPANY_CD
+           AND  M_PAY_CONDITION.PAY_CONDITION_CD = PAY_CONDITION_LANG_COMPANY.PAY_CONDITION_CD
+           AND  PAY_CONDITION_LANG_COMPANY.LANGUAGE_IND = '${@fw.security.SecurityUtil@getCompanyUseLanguageIndByEscapeSql()}'
+           LEFT JOIN M_PAY_CONDITION_LANG PAY_CONDITION_LANG_SYSTEM
+        ON M_PAY_CONDITION.COMPANY_CD = PAY_CONDITION_LANG_SYSTEM.COMPANY_CD
+           AND M_PAY_CONDITION.PAY_CONDITION_CD = PAY_CONDITION_LANG_SYSTEM.PAY_CONDITION_CD
+           AND PAY_CONDITION_LANG_SYSTEM.LANGUAGE_IND = '${@fw.common.util.AppUtil@getSysLanguageByEscapeSql()}'
+        WHERE M_SUPPLIER.COMPANY_CD = #{companyCd}
+            AND M_SUPPLIER.SUP_CD = #{supCd}
+    </select>
+
+    <sql id="downloadWhereCondition">
+        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(companyCd)">
+         AND M_SUPPLIER.COMPANY_CD = #{companyCd, jdbcType=VARCHAR}
+        </if>
+        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(supCd)">
+         AND M_SUPPLIER.SUP_CD ${@fw.common.util.SearchModeUtil@getSearchSQL("fw.domain.mst.supplier.supplier.SupplierSearchCondition","supCd")}
+        </if>
+        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(supName)">
+         AND M_SUPPLIER_LANG.SUP_NAME ${@fw.common.util.SearchModeUtil@getSearchSQL("fw.domain.mst.supplier.supplier.SupplierSearchCondition","supName")}
+        </if>
+         <if test="@org.apache.commons.lang.StringUtils@isNotBlank(valStartDateFrom.dateOfymd)">
+         AND M_SUPPLIER.VALID_START_DATE >= #{valStartDateFrom.dateOfymd}
+        </if>
+        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(valStartDateTo.dateOfymd)">
+         AND M_SUPPLIER.VALID_START_DATE &lt; = #{valStartDateTo.dateOfymd}
+        </if>
+        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(valEndDateFrom.dateOfymd)">
+         AND M_SUPPLIER.VALID_END_DATE >= #{valEndDateFrom.dateOfymd}
+        </if>
+        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(valEndDateTo.dateOfymd)">
+         AND M_SUPPLIER.VALID_END_DATE &lt;= #{valEndDateTo.dateOfymd}
+        </if>
+        <if test="@fw.domain.mst.searchcondition.SearchCondition@termFlgIsNotEmpty(searchCondition.termFlg)">
+         AND M_SUPPLIER.TERM_FLG = #{searchCondition.termFlg, jdbcType=VARCHAR}
+        </if>
+    </sql>
+
+    <select id="listSupplierManagement" parameterType="fw.domain.mst.supplier.supplier.SupplierSearchCondition" resultMap="SupplierManagement_Map">
+        <include refid="pageHeader"/>
+      SELECT M_SUPPLIER.COMPANY_CD as "supplierIdentify.companyCd"
+           , M_SUPPLIER.SUP_CD as "supplierIdentify.supCd"
+           , M_SUPPLIER.LAST_UPD_DATE as "supplierIdentify.lastUpdDate"
+           , M_SUPPLIER.VENDOR_CD as "vendorCd"
+           , M_SUPPLIER.BASE_CURRENCY_CD as "baseCurrencyCd"
+           , M_SUPPLIER.BASE_LANGUAGE_IND
+           , M_SUPPLIER_LANG.LANGUAGE_IND as "companySummary.languageInd"
+           , M_SUPPLIER_LANG.Sup_Name as "supName"
+           , M_SUPPLIER_LANG.Sup_Abbr_Name as "supAbbrName"
+           , M_SUPPLIER_LANG.Address1
+           , M_SUPPLIER_LANG.Address2
+           , M_SUPPLIER_LANG.Dest_Name as "ctc.supCtc.dest.destName"
+           , M_SUPPLIER_LANG.Sup_Section_Name as "sup.supPerName.supSectionName"
+           , M_SUPPLIER_LANG.Sup_Person_Name as "sup.supPerName.supPersonName"
+           , M_SUPPLIER.COUNTRY_CD as "ctc.supCtc.ctc.country.cyCd"
+           , M_SUPPLIER.ZIP_CD as "ctc.supCtc.ctc.zipCd.zipCd"
+           , M_SUPPLIER.TEL_NO as "ctc.supCtc.ctc.telNo.telNo"
+           , M_SUPPLIER.FAX_NO as "ctc.supCtc.ctc.faxNo.faxNo"
+           , M_SUPPLIER.EDI_IND as "ctc.ediInd.ediInd"
+           , M_SUPPLIER.FORCAST_FAX_IND as "ctc.fax.forcastFaxInd.faxInd"
+           , M_SUPPLIER.QUOT_FAX_IND as "ctc.fax.quotFaxInd.faxInd"
+           , M_SUPPLIER.ORDER_FAX_IND as "ctc.fax.orderFaxInd.faxInd"
+           , M_SUPPLIER.DELIV_FAX_IND as "ctc.fax.delivFaxInd.faxInd"
+           , M_SUPPLIER.ARRIVAL_FAX_IND as "ctc.fax.arrivalFaxInd.faxInd"
+           , M_SUPPLIER.ACCEPT_FAX_IND as "ctc.fax.acceptFaxInd.faxInd"
+           , M_SUPPLIER.ACCPAY_FAX_IND as "ctc.fax.accpayFaxInd.faxInd"
+           , M_SUPPLIER.TERM_FLG as "valt.term.termFlg"
+           , M_SUPPLIER.VALID_START_DATE
+           , M_SUPPLIER.VALID_END_DATE
+           , M_SUPPLIER.BANK_CD as "sup.pay.ac.bankCd"
+           , M_SUPPLIER.BANK_NAME as "sup.pay.ac.bankName"
+           , M_SUPPLIER.BRANCH_CD as "sup.pay.ac.branchCd"
+           , M_SUPPLIER.BRANCH_NAME as "sup.pay.ac.branchName"
+           , M_SUPPLIER.ACCOUNT_NO as "sup.pay.ac.accountNo"
+           , M_SUPPLIER.ACCOUNT_NAME as "sup.pay.ac.accountName"
+           , M_SUPPLIER.ACCOUNT_TYPE as "sup.pay.ac.acType.acType"
+           , M_SUPPLIER.PAY_CONDITION_CD
+           , CASE WHEN PAY_CONDITION_LANG_COMPANY.PAY_CONDITION_NAME IS NOT NULL
+                  THEN PAY_CONDITION_LANG_COMPANY.PAY_CONDITION_NAME
+                  ELSE PAY_CONDITION_LANG_SYSTEM.PAY_CONDITION_NAME
+             END as "payConditionName"
+           , M_SUPPLIER.SUBCON_IND as "sup.subcon.subconInd"
+           , M_SUPPLIER.ELIGIBLE_INVOICE_ISSUE_IND
+           , M_SUPPLIER.BUSINESS_REGIST_NO as "sup.businessRegistNo"
+        FROM M_SUPPLIER
+        LEFT JOIN M_SUPPLIER_LANG
+          ON M_SUPPLIER.COMPANY_CD = M_SUPPLIER_LANG.COMPANY_CD
+         AND M_SUPPLIER.SUP_CD = M_SUPPLIER_LANG.SUP_CD
+        LEFT JOIN M_PAY_CONDITION
+          ON M_SUPPLIER.COMPANY_CD = M_PAY_CONDITION.COMPANY_CD
+         AND M_SUPPLIER.PAY_CONDITION_CD = M_PAY_CONDITION.PAY_CONDITION_CD
+        LEFT JOIN M_PAY_CONDITION_LANG PAY_CONDITION_LANG_COMPANY
+          ON M_PAY_CONDITION.COMPANY_CD = PAY_CONDITION_LANG_COMPANY.COMPANY_CD
+         AND M_PAY_CONDITION.PAY_CONDITION_CD = PAY_CONDITION_LANG_COMPANY.PAY_CONDITION_CD
+         AND PAY_CONDITION_LANG_COMPANY.LANGUAGE_IND = '${@fw.security.SecurityUtil@getCompanyUseLanguageIndByEscapeSql()}'
+        LEFT JOIN M_PAY_CONDITION_LANG PAY_CONDITION_LANG_SYSTEM
+          ON M_PAY_CONDITION.COMPANY_CD = PAY_CONDITION_LANG_SYSTEM.COMPANY_CD
+         AND M_PAY_CONDITION.PAY_CONDITION_CD = PAY_CONDITION_LANG_SYSTEM.PAY_CONDITION_CD
+         AND PAY_CONDITION_LANG_SYSTEM.LANGUAGE_IND = '${@fw.common.util.AppUtil@getSysLanguageByEscapeSql()}'
+        <where>
+            <include refid="downloadWhereCondition"/>
+        </where>
+        ORDER BY M_SUPPLIER.SUP_CD,M_SUPPLIER.VALID_START_DATE DESC,M_SUPPLIER_LANG.LANGUAGE_IND
+        <include refid="pageRoot"/>
+    </select>
+
+    <select id="downloadCount" parameterType="fw.domain.mst.supplier.supplier.SupplierSearchCondition" resultType="java.lang.Long">
+      SELECT COUNT(*)
+        FROM M_SUPPLIER
+        LEFT JOIN M_SUPPLIER_LANG
+          ON M_SUPPLIER.COMPANY_CD = M_SUPPLIER_LANG.COMPANY_CD
+         AND M_SUPPLIER.SUP_CD = M_SUPPLIER_LANG.SUP_CD
+        <where>
+            <include refid="downloadWhereCondition"/>
+        </where>
+    </select>
+
+    <resultMap id="SupplierUserDownload_Map" type="fw.domain.mst.supplier.supplieruser.SupplierUserManagement">
+        <id column="VENDOR_CD"   property="vendorCd" />
+        <id column="VENDOR_NAME"   property="vendorName" />
+        <id column="LANGUAGE_IND"   property="useLanguageInd.languageInd.languageInd" />
+        <id column="S_USER_ID"   property="supplierUserIdentify.sUserId" />
+        <id column="S_USER_NAME"   property="supUserName" />
+        <id column="MAIL_ADDR"   property="mailAddr.mail" />
+        <id column="SUP_USER_MNG_FLG"   property="managerAuth.supUserMngFlg" />
+        <id column="VALID_START_DATE"   property="valt.valPd.period.startDate.dateOfymd" />
+        <id column="VALID_END_DATE"   property="valt.valPd.period.endDate.dateOfymd" />
+        <id column="SUP_USER_REMARK"   property="supUserRemark" />
+        <id column="UTL_NEW_MAIL_FLG"   property="fucUtl.newMailFlg" />
+        <id column="UTL_NEW_INFO_FLG"   property="fucUtl.newInfoFlg" />
+        <id column="UTL_NEW_DOWNLOAD_FLG"   property="fucUtl.newDownloadFlg" />
+        <id column="UTL_NEW_ALL_CHK_FLG"   property="fucUtl.newAllChkFlg" />
+        <id column="UTL_ORDER_MNG_FLG"   property="fucUtl.orderMngFlg" />
+        <id column="UTL_ORDER_DOWNLOAD_FLG"   property="fucUtl.orderDownloadFlg" />
+        <id column="UTL_DELIV_MNG_FLG"   property="fucUtl.delivMngFlg" />
+        <id column="UTL_SHIP_MNG_FLG"   property="fucUtl.shipMngFlg" />
+        <id column="UTL_MONEY_DSP_FLG"   property="fucUtl.moneyDspFlg" />
+        <id column="TERM_FLG"   property="valt.term.termFlg" />
+    </resultMap>
+
+    <select id="supplierUserDownload" parameterType="fw.domain.mst.supplier.supplier.SupplierSearchCondition" resultMap="SupplierUserDownload_Map">
+        <include refid="pageHeader"/>
+      SELECT M_VENDOR.VENDOR_CD
+           , M_VENDOR.VENDOR_NAME
+           , M_S_USER_LANG.LANGUAGE_IND
+           , M_S_USER.S_USER_ID
+           , M_S_USER_LANG.S_USER_NAME
+           , M_S_USER.MAIL_ADDR
+           , M_S_USER.SUP_USER_MNG_FLG
+           , M_S_USER.VALID_START_DATE
+           , M_S_USER.VALID_END_DATE
+           , M_S_USER_LANG.SUP_USER_REMARK
+           , M_S_USER.UTL_NEW_MAIL_FLG
+           , M_S_USER.UTL_NEW_INFO_FLG
+           , M_S_USER.UTL_NEW_DOWNLOAD_FLG
+           , M_S_USER.UTL_NEW_ALL_CHK_FLG
+           , M_S_USER.UTL_ORDER_MNG_FLG
+           , M_S_USER.UTL_ORDER_DOWNLOAD_FLG
+           , M_S_USER.UTL_DELIV_MNG_FLG
+           , M_S_USER.UTL_SHIP_MNG_FLG
+           , M_S_USER.UTL_MONEY_DSP_FLG
+           , M_S_USER.TERM_FLG
+        FROM M_VENDOR
+        LEFT JOIN M_S_USER
+          ON M_VENDOR.VENDOR_CD = M_S_USER.VENDOR_CD
+        LEFT JOIN M_S_USER_LANG
+          ON M_S_USER.S_USER_ID = M_S_USER_LANG.S_USER_ID
+       WHERE EXISTS
+            (SELECT 1
+               FROM M_SUPPLIER
+               LEFT JOIN M_SUPPLIER_LANG
+                 ON M_SUPPLIER.COMPANY_CD = M_SUPPLIER_LANG.COMPANY_CD
+                AND M_SUPPLIER.SUP_CD = M_SUPPLIER_LANG.SUP_CD
+            <where>
+                <include refid="downloadWhereCondition"/>
+                AND M_VENDOR.VENDOR_CD = M_SUPPLIER.VENDOR_CD
+            </where>)
+    ORDER BY M_VENDOR.VENDOR_CD, M_S_USER.S_USER_ID, M_S_USER.VALID_START_DATE DESC, M_S_USER_LANG.LANGUAGE_IND
+        <include refid="pageRoot"/>
+    </select>
+
+    <select id="supplierUserDownloadCount" parameterType="fw.domain.mst.supplier.supplier.SupplierSearchCondition" resultType="java.lang.Long">
+      SELECT COUNT(*)
+        FROM M_VENDOR
+        LEFT JOIN M_S_USER
+          ON M_VENDOR.VENDOR_CD = M_S_USER.VENDOR_CD
+        LEFT JOIN M_S_USER_LANG
+          ON M_S_USER.S_USER_ID = M_S_USER_LANG.S_USER_ID
+       WHERE EXISTS
+            (SELECT 1
+               FROM M_SUPPLIER
+               LEFT JOIN M_SUPPLIER_LANG
+                 ON M_SUPPLIER.COMPANY_CD = M_SUPPLIER_LANG.COMPANY_CD
+                AND M_SUPPLIER.SUP_CD = M_SUPPLIER_LANG.SUP_CD
+            <where>
+                <include refid="downloadWhereCondition"/>
+                AND M_VENDOR.VENDOR_CD = M_SUPPLIER.VENDOR_CD
+            </where>)
+    </select>
+
+    <select id="searchExclusive" parameterType="fw.domain.mst.supplier.supplier.SupplierIdentify" resultType="fw.domain.mst.supplier.supplier.SupplierIdentify">
+        SELECT
+        COMPANY_CD as "companyCd",
+        SUP_CD as "supCd",
+        LAST_UPD_DATE as "lastUpdDate"
+        FROM M_SUPPLIER
+        WHERE
+        COMPANY_CD = #{companyCd}
+        AND SUP_CD = #{supCd}
+        AND LAST_UPD_DATE = #{lastUpdDate}
+    </select>
+
+    <insert id="insert" parameterType="fw.domain.mst.supplier.supplier.SupplierManagement">
+        INSERT INTO M_SUPPLIER
+        (
+        COMPANY_CD,
+        SUP_CD,
+        VALID_START_DATE,
+        VALID_END_DATE,
+        VENDOR_CD,
+        BASE_LANGUAGE_IND,
+        BASE_CURRENCY_CD,
+        COUNTRY_CD,
+        ZIP_CD,
+        TEL_NO,
+        FAX_NO,
+        BANK_CD,
+        BANK_NAME,
+        BRANCH_CD,
+        BRANCH_NAME,
+        ACCOUNT_TYPE,
+        ACCOUNT_NO,
+        ACCOUNT_NAME,
+        SUBCON_IND,
+        EDI_IND,
+        PAY_CONDITION_CD,
+        ELIGIBLE_INVOICE_ISSUE_IND,
+        BUSINESS_REGIST_NO,
+        FORCAST_FAX_IND,
+        QUOT_FAX_IND,
+        ORDER_FAX_IND,
+        DELIV_FAX_IND,
+        ARRIVAL_FAX_IND,
+        ACCEPT_FAX_IND,
+        ACCPAY_FAX_IND,
+        TERM_FLG,
+        LAST_UPD_DATE,
+        LAST_UPD_COMPANY_CD,
+        LAST_UPD_SECTION_CD,
+        LAST_UPD_USER_ID,
+        REG_DATE,
+        REG_COMPANY_CD,
+        REG_SECTION_CD,
+        REG_USER_ID
+        ) VALUES (
+        #{supplierIdentify.companyCd, jdbcType=VARCHAR},
+        #{supplierIdentify.supCd, jdbcType=VARCHAR},
+        <if test="@org.apache.commons.lang.StringUtils@isBlank(valt.valPd.period.startDate.dateOfymd)">
+        '${@fw.common.util.AppUtil@VALID_START_DATE}',
+        </if>
+        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(valt.valPd.period.startDate.dateOfymd)">
+        #{valt.valPd.period.startDate.dateOfymd},
+        </if>
+        <if test="@org.apache.commons.lang.StringUtils@isBlank(valt.valPd.period.endDate.dateOfymd)">
+        '${@fw.common.util.AppUtil@VALID_END_DATE}',
+        </if>
+        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(valt.valPd.period.endDate.dateOfymd)">
+        #{valt.valPd.period.endDate.dateOfymd},
+        </if>
+        #{vendorCd, jdbcType=VARCHAR},
+        #{useLanguageInd.languageInd.languageInd, jdbcType=VARCHAR},
+        #{baseCurrencyCd, jdbcType=VARCHAR},
+        #{ctc.supCtc.ctc.country.cyCd},
+        #{ctc.supCtc.ctc.zipCd.zipCd, jdbcType=VARCHAR},
+        #{ctc.supCtc.ctc.telNo.telNo, jdbcType=VARCHAR},
+        #{ctc.supCtc.ctc.faxNo.faxNo, jdbcType=VARCHAR},
+        #{sup.pay.ac.bankCd, jdbcType=VARCHAR},
+        #{sup.pay.ac.bankName, jdbcType=VARCHAR},
+        #{sup.pay.ac.branchCd, jdbcType=VARCHAR},
+        #{sup.pay.ac.branchName, jdbcType=VARCHAR},
+        #{sup.pay.ac.acType.acType, jdbcType=VARCHAR},
+        #{sup.pay.ac.accountNo, jdbcType=VARCHAR},
+        #{sup.pay.ac.accountName, jdbcType=VARCHAR},
+        #{sup.subcon.subconInd, jdbcType=VARCHAR},
+        #{ctc.ediInd.ediInd, jdbcType=VARCHAR},
+        #{sup.pay.payCondMgmt.payConditionIdentify.payConditionCd},
+        #{sup.eligibleInvoiceIssueInd.eligibleInvoiceIssueInd, jdbcType=VARCHAR},
+        #{sup.businessRegistNo, jdbcType=VARCHAR},
+        #{ctc.fax.forcastFaxInd.faxInd, jdbcType=VARCHAR},
+        #{ctc.fax.quotFaxInd.faxInd, jdbcType=VARCHAR},
+        #{ctc.fax.orderFaxInd.faxInd, jdbcType=VARCHAR},
+        #{ctc.fax.delivFaxInd.faxInd, jdbcType=VARCHAR},
+        #{ctc.fax.arrivalFaxInd.faxInd, jdbcType=VARCHAR},
+        #{ctc.fax.acceptFaxInd.faxInd, jdbcType=VARCHAR},
+        '0',
+        #{valt.term.termFlg, jdbcType=VARCHAR},
+        #{registInfo.lastUpdDate, jdbcType=VARCHAR},
+        #{registInfo.lastUpdCompanyCd, jdbcType=VARCHAR},
+        #{registInfo.lastUpdSectionCd, jdbcType=VARCHAR},
+        #{registInfo.lastUpdUserId, jdbcType=VARCHAR},
+        #{registInfo.regDate, jdbcType=VARCHAR},
+        #{registInfo.regCompanyCd, jdbcType=VARCHAR},
+        #{registInfo.regSectionCd, jdbcType=VARCHAR},
+        #{registInfo.regUserId, jdbcType=VARCHAR}
+        )
+    </insert>
+    <update id="update" parameterType="fw.domain.mst.supplier.supplier.SupplierManagement">
+        UPDATE M_SUPPLIER
+        SET
+            <if test="@org.apache.commons.lang.StringUtils@isBlank(valt.valPd.period.startDate.dateOfymd)">
+             VALID_START_DATE = '${@fw.common.util.AppUtil@VALID_START_DATE}',
+            </if>
+            <if test="@org.apache.commons.lang.StringUtils@isNotBlank(valt.valPd.period.startDate.dateOfymd)">
+             VALID_START_DATE = #{valt.valPd.period.startDate.dateOfymd},
+            </if>
+            <if test="@org.apache.commons.lang.StringUtils@isBlank(valt.valPd.period.endDate.dateOfymd)">
+            VALID_END_DATE = '${@fw.common.util.AppUtil@VALID_END_DATE}',
+            </if>
+            <if test="@org.apache.commons.lang.StringUtils@isNotBlank(valt.valPd.period.endDate.dateOfymd)">
+            VALID_END_DATE = #{valt.valPd.period.endDate.dateOfymd},
+            </if>
+            VENDOR_CD = #{vendorCd},
+            BASE_LANGUAGE_IND = #{useLanguageInd.languageInd.languageInd},
+            BASE_CURRENCY_CD = #{baseCurrencyCd},
+            COUNTRY_CD = #{ctc.supCtc.ctc.country.cyCd},
+            ZIP_CD = #{ctc.supCtc.ctc.zipCd.zipCd},
+            TEL_NO = #{ctc.supCtc.ctc.telNo.telNo},
+            FAX_NO = #{ctc.supCtc.ctc.faxNo.faxNo},
+            BANK_CD = #{sup.pay.ac.bankCd},
+            BANK_NAME = #{sup.pay.ac.bankName},
+            BRANCH_CD = #{sup.pay.ac.branchCd},
+            BRANCH_NAME = #{sup.pay.ac.branchName},
+            ACCOUNT_TYPE = #{sup.pay.ac.acType.acType},
+            ACCOUNT_NO = #{sup.pay.ac.accountNo},
+            ACCOUNT_NAME = #{sup.pay.ac.accountName},
+            SUBCON_IND = #{sup.subcon.subconInd},
+            EDI_IND = #{ctc.ediInd.ediInd},
+            PAY_CONDITION_CD = #{sup.pay.payCondMgmt.payConditionIdentify.payConditionCd},
+            ELIGIBLE_INVOICE_ISSUE_IND = #{sup.eligibleInvoiceIssueInd.eligibleInvoiceIssueInd},
+            BUSINESS_REGIST_NO = #{sup.businessRegistNo},
+            FORCAST_FAX_IND = #{ctc.fax.forcastFaxInd.faxInd},
+            QUOT_FAX_IND = #{ctc.fax.quotFaxInd.faxInd},
+            ORDER_FAX_IND = #{ctc.fax.orderFaxInd.faxInd},
+            DELIV_FAX_IND = #{ctc.fax.delivFaxInd.faxInd},
+            ARRIVAL_FAX_IND = #{ctc.fax.arrivalFaxInd.faxInd},
+            ACCEPT_FAX_IND = #{ctc.fax.acceptFaxInd.faxInd},
+            ACCPAY_FAX_IND = '0',
+            TERM_FLG = #{valt.term.termFlg},
+            LAST_UPD_DATE = #{registInfo.lastUpdDate},
+            LAST_UPD_COMPANY_CD = #{registInfo.lastUpdCompanyCd},
+            LAST_UPD_SECTION_CD = #{registInfo.lastUpdSectionCd},
+            LAST_UPD_USER_ID = #{registInfo.lastUpdUserId}
+        WHERE
+            COMPANY_CD = #{supplierIdentify.companyCd}
+            AND SUP_CD = #{supplierIdentify.supCd}
+    </update>
+     <delete id="delete" parameterType="fw.domain.mst.supplier.supplier.SupplierIdentify">
+        DELETE FROM M_SUPPLIER
+          <where>
+            COMPANY_CD = #{companyCd, jdbcType=VARCHAR}
+            AND SUP_CD = #{supCd, jdbcType=VARCHAR}
+        </where>
+    </delete>
+    <insert id="insertSupplierLanguage" parameterType="fw.domain.mst.supplier.supplier.SupplierLanguage">
+        INSERT INTO M_SUPPLIER_LANG
+        (
+        COMPANY_CD,
+        SUP_CD,
+        LANGUAGE_IND,
+        SUP_NAME,
+        SUP_ABBR_NAME,
+        ADDRESS1,
+        ADDRESS2,
+        DEST_NAME,
+        SUP_SECTION_NAME,
+        SUP_PERSON_NAME,
+        LAST_UPD_DATE,
+        LAST_UPD_COMPANY_CD,
+        LAST_UPD_SECTION_CD,
+        LAST_UPD_USER_ID,
+        REG_DATE,
+        REG_COMPANY_CD,
+        REG_SECTION_CD,
+        REG_USER_ID
+        ) VALUES (
+        #{supplierIdentify.companyCd, jdbcType=VARCHAR},
+        #{supplierIdentify.supCd, jdbcType=VARCHAR},
+        #{languageInd.languageInd, jdbcType=VARCHAR},
+        #{supName, jdbcType=VARCHAR},
+        #{supAbbrName, jdbcType=VARCHAR},
+        #{address1.address, jdbcType=VARCHAR},
+        #{address2.address, jdbcType=VARCHAR},
+        #{destName.destName, jdbcType=VARCHAR},
+        #{supPersonName.supSectionName, jdbcType=VARCHAR},
+        #{supPersonName.supPersonName, jdbcType=VARCHAR},
+        #{registInfo.lastUpdDate},
+        #{registInfo.lastUpdCompanyCd},
+        #{registInfo.lastUpdSectionCd},
+        #{registInfo.lastUpdUserId},
+        #{registInfo.regDate},
+        #{registInfo.regCompanyCd},
+        #{registInfo.regSectionCd},
+        #{registInfo.regUserId}
+        )
+    </insert>
+    <delete id="deleteSupplierLanguage" parameterType="fw.domain.mst.supplier.supplier.SupplierIdentify">
+        DELETE FROM M_SUPPLIER_LANG
+          <where>
+            COMPANY_CD = #{companyCd, jdbcType=VARCHAR}
+            AND SUP_CD = #{supCd, jdbcType=VARCHAR}
+        </where>
+    </delete>
+    <delete id="deleteSupplierLanguageForUpload">
+        DELETE FROM M_SUPPLIER_LANG
+          <where>
+            COMPANY_CD = #{supplierIdentify.companyCd, jdbcType=VARCHAR}
+            AND SUP_CD = #{supplierIdentify.supCd, jdbcType=VARCHAR}
+            AND LANGUAGE_IND = #{languageInd, jdbcType=VARCHAR}
+        </where>
+    </delete>
+    <!-- 変更前の統一取引先コードに紐付く取引先ユーザを対象に更新する -->
+    <!-- 但し、変更前の統一取引先コードに紐付く取引先が存在しない場合に限る。 -->
+    <update id="updateSupplierUser" parameterType="fw.domain.mst.supplier.supplier.SupplierManagement">
+  UPDATE M_S_USER
+     SET VENDOR_CD = #{vendorCd}
+       , LAST_UPD_DATE = #{registInfo.lastUpdDate}
+       , LAST_UPD_COMPANY_CD = #{registInfo.lastUpdCompanyCd}
+       , LAST_UPD_SECTION_CD = #{registInfo.lastUpdSectionCd}
+       , LAST_UPD_USER_ID = #{registInfo.lastUpdUserId}
+   WHERE EXISTS
+        (SELECT 1 FROM M_SUPPLIER
+          WHERE M_SUPPLIER.COMPANY_CD = #{supplierIdentify.companyCd}
+            AND M_SUPPLIER.SUP_CD = #{supplierIdentify.supCd}
+            AND M_SUPPLIER.VENDOR_CD = M_S_USER.VENDOR_CD)
+     AND NOT EXISTS
+        (SELECT 1 FROM M_SUPPLIER
+          INNER JOIN M_VENDOR
+             ON M_SUPPLIER.VENDOR_CD = M_VENDOR.VENDOR_CD
+          WHERE M_SUPPLIER.VENDOR_CD = M_S_USER.VENDOR_CD
+            AND NOT (M_SUPPLIER.COMPANY_CD = #{supplierIdentify.companyCd} AND M_SUPPLIER.SUP_CD = #{supplierIdentify.supCd}))
+     AND M_S_USER.VENDOR_CD != #{vendorCd}
+    </update>
+    <select id="searchCountSupplierByVendor" parameterType="fw.domain.mst.supplier.vendor.VendorIdentify" resultType="int">
+        SELECT
+        count(1)
+        FROM M_SUPPLIER
+        WHERE M_SUPPLIER.VENDOR_CD = #{vendorCd}
+    </select>
+      <select id="searchCountTquotReqSup" parameterType="fw.domain.mst.supplier.supplier.SupplierIdentify" resultType="int">
+        SELECT
+        count(1)
+        FROM T_QUOT_REQ_SUP
+        WHERE T_QUOT_REQ_SUP.SUP_CD = #{supCd}
+        AND T_QUOT_REQ_SUP.DELETE_FLG = '0'
+        AND (T_QUOT_REQ_SUP.SUP_COMPANY_CD = #{companyCd} or 'ALL'=#{companyCd})
+    </select>
+     <select id="searchCountTpurRequest" parameterType="fw.domain.mst.supplier.supplier.SupplierIdentify" resultType="int">
+        SELECT
+        count(1)
+        FROM T_PUR_REQUEST
+        WHERE T_PUR_REQUEST.SUP_CD = #{supCd}
+        AND T_PUR_REQUEST.DELETE_FLG = '0'
+        AND (T_PUR_REQUEST.BUYER_COMPANY_CD = #{companyCd} or 'ALL'=#{companyCd})
+    </select>
+    <sql id="pageHeader">
+         select * from (
+    </sql>
+    <sql id="pageRoot">
+        ) where  rownum &lt;=${@fw.common.util.PropertiesUtil@getLong("DOWNLOAD_MAXCNT")}
+    </sql>
+
+    <select id="getPayConditionCd" resultType="java.lang.String">
+        SELECT
+            M_SUPPLIER.PAY_CONDITION_CD
+        FROM M_SUPPLIER
+        WHERE (M_SUPPLIER.COMPANY_CD = #{companyCd}
+                OR M_SUPPLIER.COMPANY_CD = '${@fw.common.constant.ApplicationConstant@COMPANY_CD_ALL}')
+        AND M_SUPPLIER.SUP_CD = #{supCd}
+    </select>
+
+</mapper>

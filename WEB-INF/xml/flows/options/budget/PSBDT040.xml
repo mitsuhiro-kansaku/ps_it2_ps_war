@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<flow xmlns="http://www.springframework.org/schema/webflow"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.springframework.org/schema/webflow
+        http://www.springframework.org/schema/webflow/spring-webflow-2.0.xsd"
+    parent="base">
+    <!-- options/budget/PSBDT040.xml -->
+    <!-- 稟議予算入力 -->
+
+    <var name="ringiBudget" class="fw.domain.options.budget.ringibudget.RingiBudget" />
+
+    <input name="pattern" />
+    <input name="from" />
+    <input name="identify" />
+    <input name="isInitIndividualApr"/>
+    <input name="SessionKey"/>
+    <input name="searchCondition"/>
+
+    <decision-state id="isInitIndividualApr">
+        <if test="flowScope.isInitIndividualApr == null or flowScope.isInitIndividualApr" then="initDetail" else="back" />
+    </decision-state>
+
+    <action-state id="initDetail">
+        <evaluate expression="PSBDT040Service.init(identify)" result="flowScope.ringiBudget" />
+        <transition to="PSBDT040"/> 
+    </action-state>
+
+    <!-- 稟議予算入力画面 -->
+    <view-state id="PSBDT040" view="options/budget/PSBDT040" model="ringiBudget">
+         <transition on="apply" validate="true">
+             <evaluate expression="PSBDT040Service.apply(ringiBudget)"/>
+             <set name="flashScope.isSuccess" value="true"></set>
+        </transition>
+         <transition on="edit" validate="true">
+             <evaluate expression="PSBDT040Service.update(ringiBudget)"/>
+             <set name="flashScope.isSuccess" value="true"></set>
+        </transition>
+        <!-- 明細の追加  -->
+        <transition on="addDetail" validate="false">
+            <evaluate expression="PSBDT040Service.addDetail(ringiBudget)"/>
+        </transition>
+        <!-- 明細の削除  -->
+        <transition on="deleteDetail" validate="false">
+            <evaluate expression="PSBDT040Service.delDetail(ringiBudget, requestParameters.detailIndex)"/>
+        </transition>
+        <transition on="showdetail" validate="false" to="isInitIndividualApr">
+             <set name="flowScope.from" value="requestParameters.from"></set>
+             <set name="flowScope.pattern" value="requestParameters.pattern"></set>
+             <set name="flowScope.isInitIndividualApr" value="true"></set>
+        </transition>
+        <transition on="backlist" validate="false" to="backlist"/>
+    </view-state>
+    <end-state id="backlist"/>
+</flow>

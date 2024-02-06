@@ -1,0 +1,253 @@
+<!doctype html>
+<html LANG="ja">
+<head>
+<title>
+   #customSpringMessage('QUOT_ACQ_REQ_APP_LIST')
+</title><!-- 見積取得依頼承認一覧-->
+<meta http-equiv="Content-type" content="text/html; charset=UTF-8">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Content-script-type" content="text/javascript">
+<link id="CSS_FONT" rel="stylesheet" href="../../include/FontS.css" type="text/css">
+<link rel="stylesheet" href="../../include/Layout.css" type="text/css">
+<link rel="stylesheet" href="../../include/Color.css" type="text/css">
+<link rel="stylesheet" href="../../include/searchbox.css" type="text/css">
+<script language="javascript" type="text/javascript" src="../../include/jquery-1.7.2.min.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/jquery.tablefix.js"></script>
+<script language="javascript" TYPE="text/javascript" src="../../include/common.js"></script>
+<script language="javascript" TYPE="text/javascript" src="../../include/check.js"></script>
+<script language="javascript" TYPE="text/javascript" src="../../include/date.js"></script>
+<script language="javascript" TYPE="text/javascript" src="../../include/tablesort.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/searchbox.js"></script>
+<script language="javascript" TYPE="text/javascript">
+<!--
+#set($searchCondition = $quotAcqReqAppSearchCondition)
+
+#parse("./common/common_js.vm")
+
+function onLoad() {
+    parentButtonEnable();
+    var listSize = "#jsEscape($!itemList.quotAcqReqAppList.size())";
+    if(listSize && listSize > 0){
+        function  block(){
+            parent.document.getElementById('approveArea').style.display = '';
+        }
+        block();
+    }
+    dataLoadHasPage();
+    
+    var isSuccess = '#jsEscape($!isSuccess)';
+    if(isSuccess == 'true'){
+        #set( $purReqMsg = "#customSpringMessage('QUOT_ACQ_REQ')" )
+        alert('#customMessageArgs("I028", [$purReqMsg])');
+    }
+
+    var alertMessage = "$!alertMessage";
+    if (alertMessage != ""){
+        buttonUsableForList(alertMessage);
+        alert(alertMessage);
+    }
+
+    var errorMsg = "$!errorMessage";
+    if (errorMsg != ""){
+        return;
+    }
+
+	var isShowApproval = "#jsEscape($isShowApproval)";
+    if (isShowApproval == 'true'){
+        top.iframeChange("${flowExecutionUrl}&_eventId=individualApproval");
+    }
+
+    var isShowDetail = "#jsEscape($isShowDetail)";
+    if (isShowDetail == 'true'){
+        poppage("${flowExecutionUrl}&_eventId=detail", 'DETAIL', '800', '700');
+    }
+}
+
+/* 一括選択 */
+//check /uncheck all
+$(function(){
+    $(document).delegate('#ParentCheck','change',function() {
+        var chk = $(this).prop("checked");
+        var status = "0";
+        $("input:[type=checkbox][name^=check_status_]").prop("checked",chk)
+
+        if(chk){
+            $("tr:[id^=Row_]").css("background-color","#ffff99");
+            status = "1";
+        }else{
+            $("tr:[id^=Row_]").each(function(){
+                var count = $(this).attr("id").substring(4);
+                if (Number(count) % 2 != 0) {
+                    $(this).css("background-color","#ffffff");
+                } else {
+                    $(this).css("background-color","#dce4ef");
+                }
+            });
+        }
+        $("input:[type=hidden][id^=quotAcqReqAppList][id$=checkStatus]").val(status);
+    });
+});
+
+// 行チェックボックス選択
+function selectRow(no, obj) {
+    var status = "0";
+    if(no % 2 == 0) {
+        var backgroundColor = "#dce4ef";
+    } else {
+        backgroundColor = "#ffffff";
+    }
+    if( obj.checked ) {
+        backgroundColor = "#ffff99";
+        status = "1";
+    }
+    $("[id=" + 'Row_' + no + "]").css({"backgroundColor":backgroundColor});
+    document.getElementById("quotAcqReqAppList[" + no + "].quotAcqReqIdentify.checkStatus").value = status;
+}
+
+/* 一括承認 */
+function exec() {
+ //   parent.getObj("ERRORAREA").src="../../layout/error.vm";
+    var count=0;
+    $("input:[type=checkbox][name^=check_status_]").each(function(){
+        if($(this).prop("checked"))
+            count ++;
+    });
+
+    if (count==0) {
+         alert("#nothingSelectedMessage()");
+    } else {
+        // 確認メッセージ
+        #set( $purReqMsg = "#customSpringMessage('QUOT_ACQ_REQ')" )
+        #set( $approvalMsg = "#customSpringMessage('PACKAGE_APP')" )
+        if( !confirm('#customMessageArgs("W001",[$purReqMsg, $approvalMsg])') ) {
+            return;
+        } 
+        buttonDisable();
+        parentButtonDisable();
+        // 承認の場合
+        getObj("BodyForm").action = "${flowExecutionUrl}&_eventId=packageApproval";
+        getObj('BodyForm').submit();
+    }
+}
+/* 個別承認 */
+function execIndividualApproval(quotAcqAplSeqNo, lastUpdDate) {
+    buttonDisable();
+    parent.iframeChange('${flowExecutionUrl}&_eventId=individualApprovalValidate&&quotAcqAplSeqNo=' + quotAcqAplSeqNo + '&&lastUpdDate=' + lastUpdDate, "HIDDENAREA");
+}
+/* 詳細 */
+function openDetail(quotAcqAplSeqNo, quotAcqAplNo, lastUpdDate) {
+    parent.iframeChange('${flowExecutionUrl}&_eventId=detailValidate&&quotAcqAplSeqNo=' + quotAcqAplSeqNo + '&&quotAcqAplNo=' + quotAcqAplNo + '&&lastUpdDate=' + lastUpdDate, "HIDDENAREA");
+}
+//-->
+</script>
+
+$!PSAPR041PageCreaterForList.build('_th_style_lbl', 'class="BoxDetailLeft FontList"')
+</head>
+<body id="BODY" topmargin="0" leftmargin="0" marginwidth="0" marginheight="0" align="left" onload="onLoad();setTablefix('#TABLE', 1, 4+$!PSAPR041PageCreaterForList.printLockColumn());">
+#if($!errorMessage && $!errorMessage !="")
+<div class="error">
+    $!errorMessage
+</div>
+#end
+<form id="BodyForm" name="Body" method="post">
+#foreach($!quotAcqReqAppItem in $!{itemList.quotAcqReqAppList})
+    #customFormHiddenInput("quotAcqReqAppList[$velocityCount].quotAcqReqIdentify.checkStatus" "$!{quotAcqReqAppItem.quotAcqReqIdentify.checkStatus}")
+    #customFormHiddenInput("quotAcqReqAppList[$velocityCount].quotAcqReqIdentify.quotAcqAplSeqNo" "$!{quotAcqReqAppItem.quotAcqReqIdentify.quotAcqAplSeqNo}")
+    #customFormHiddenInput("quotAcqReqAppList[$velocityCount].quotAcqReqIdentify.quotAcqAplNo.quotAcqAplNo" "$!{quotAcqReqAppItem.quotAcqReqIdentify.quotAcqAplNo.quotAcqAplNo}")
+    #customFormHiddenInput("quotAcqReqAppList[$velocityCount].quotAcqReqIdentify.preSeq" "$!{quotAcqReqAppItem.quotAcqReqIdentify.preSeq}")
+    #customFormHiddenInput("quotAcqReqAppList[$velocityCount].quotAcqReqIdentify.lastUpdDate" "$!{quotAcqReqAppItem.quotAcqReqIdentify.lastUpdDate}")
+    #customFormHiddenInput("quotAcqReqAppList[$velocityCount].buyerUser.section.company.companyCd" "$!{quotAcqReqAppItem.buyerUser.section.company.companyCd}")
+    #customFormHiddenInput("quotAcqReqAppList[$velocityCount].buyerUser.section.sectionCd" "$!{quotAcqReqAppItem.buyerUser.section.sectionCd}")
+    #customFormHiddenInput("quotAcqReqAppList[$velocityCount].buyerUser.userID" "$!{quotAcqReqAppItem.buyerUser.userID}")
+    #customFormHiddenInput("quotAcqReqAppList[$velocityCount].quotAcqReqIdentify.exclusiveSlipId.slipNo" "$!{quotAcqReqAppItem.quotAcqReqIdentify.exclusiveSlipId.slipNo}")
+    #customFormHiddenInput("quotAcqReqAppList[$velocityCount].quotAcqReqIdentify.exclusiveSlipId.lastUpdDate" "$!{quotAcqReqAppItem.quotAcqReqIdentify.exclusiveSlipId.lastUpdDate}")
+#end
+<table id="TABLE" class="ListArea" width="100%">
+    #if($!itemList.quotAcqReqAppList.size() > 0)
+    <thead>
+        <tr id="Header">
+            <th class="BoxHeaderCenter FontSmall">No.</th>
+            <th class="BoxHeaderCenter FontSmall"><input id="ParentCheck" name="ParentCheck" type="checkbox" ></th>
+            <th class="BoxHeaderCenter FontSmall">#customSpringMessage("DETAIL")<!--詳細--></th>
+            <th class="BoxHeaderCenter FontSmall">#customSpringMessage("INDIVIDUAL_APP")<!--個別承認--></th>
+            #foreach($!item in $!PSAPR041PageCreaterForList.getItemListForBody())
+                #set($currentOneColumnFlag = $!PSAPR041PageCreaterForList.getOneColumnFlag($!item))
+                #if($velocityCount == 0)
+                    $!PSAPR041PageCreaterForList.printTHtag($!item, 'class="BoxHeaderCenter FontSmall"')
+                #elseif($currentOneColumnFlag)
+                    $!PSAPR041PageCreaterForList.printBRtag($!item)
+                #else
+                    $!PSAPR041PageCreaterForList.printTHtagClose()
+                    $!PSAPR041PageCreaterForList.printTHtag($!item, 'class="BoxHeaderCenter FontSmall"')
+                #end
+
+                $!PSAPR041PageCreaterForList.printHead($!item)
+            #end
+            $!PSAPR041PageCreaterForList.printTHtagClose()
+        </tr>
+    </thead>
+    <tbody id="Tbody">
+        #foreach($!quotAcqReqAppItem in $!{itemList.quotAcqReqAppList})
+            <tr id="Row_$velocityCount" #if($velocityCount % 2 == 0) bgcolor="#dce4ef" #else bgcolor="#ffffff" #end>
+                    <td class="BoxDetailCenter FontList">#set( $no = $velocityCount + 1 )$no</td>
+                    <td class="BoxDetailCenter">
+                        <input type="checkbox" onclick="selectRow($velocityCount, this)" class="Icon" id="check_status_$velocityCount" name="check_status_$velocityCount">
+                    </td>
+                    <td class="BoxDetailCenter">
+                        <img id="DetailButton_0" class="Icon" src="../../image/btnDetailDisp.gif" onclick="openDetail('#jsEscapeInHTML($!quotAcqReqAppItem.quotAcqReqIdentify.quotAcqAplSeqNo)', '#jsEscapeInHTML($!{quotAcqReqAppItem.quotAcqReqIdentify.quotAcqAplNo.quotAcqAplNo})', '#jsEscapeInHTML($!quotAcqReqAppItem.quotAcqReqIdentify.lastUpdDate)');"><!--詳細-->
+                    </td>
+                    <td class="BoxDetailCenter"><!--個別承認-->
+                        <input type="button" class="SmallButton" value="#customSpringMessage('INDIVIDUAL_APP')" onclick="execIndividualApproval('#jsEscapeInHTML($!quotAcqReqAppItem.quotAcqReqIdentify.quotAcqAplSeqNo)' ,'#jsEscapeInHTML($!quotAcqReqAppItem.quotAcqReqIdentify.lastUpdDate)');">
+                    </td>
+                    #foreach($!item in $!PSAPR041PageCreaterForList.getItemListForBody($velocityCount))
+                        #set($currentOneColumnFlag = $!PSAPR041PageCreaterForList.getOneColumnFlag($!item))
+                        #if($velocityCount == 0)
+                            $!PSAPR041PageCreaterForList.printTDtag('class="BoxDetailLeft FontList"')
+                        #elseif(!$currentOneColumnFlag)
+                            $!PSAPR041PageCreaterForList.printTDtagClose()
+                            $!PSAPR041PageCreaterForList.printTDtag('class="BoxDetailLeft FontList"')
+                        #end
+
+                        #if($!item.getColumnName()=="T_QUOT_ACQ_APL.URGENT_IND")
+                            #if($!{quotAcqReqAppItem.urgentInd} == "1")
+                                $!PSAPR041PageCreaterForList.printDefault($!item, '_data_style', 'class="FontSmall Red" align="center"')
+                            #end
+                        #elseif($!item.getColumnName()=="T_APPROVAL.NOW_APP_USER_NAME")
+                            $!PSAPR041PageCreaterForList.printDefault($!item)
+                        #elseif($!item.getColumnName()=="T_APPROVAL.NEXT_APP_USER_NAME")
+                            $!PSAPR041PageCreaterForList.printDefault($!item)
+                        #elseif($!item.getColumnName()=="T_QUOT_ACQ_APL.REQ_DATE")
+                            $!PSAPR041PageCreaterForList.printDefault($!item, '_data_style', 'class="FontList" align="center"')
+                        #elseif($!item.getColumnName()=="T_QUOT_ACQ_APL.QUOT_ACQ_APL_NO")
+                            $!PSAPR041PageCreaterForList.printDefault($!item, '_data_style', 'class="FontSlipNo"')
+                        #elseif($!item.getColumnName()=="T_QUOT_ACQ_APL.TITLE_NAME")
+                            $!PSAPR041PageCreaterForList.printDefault($!item)
+                        #elseif($!item.getColumnName()=="T_QUOT_ACQ_APL.QUOT_REQ_RESP_LIMIT_DATE")
+                            $!PSAPR041PageCreaterForList.printDefault($!item, '_data_style', 'class="FontList" align="center"')
+                        #elseif($!item.getColumnName()=="T_QUOT_ACQ_APL.DELIV_PLACE_CD")
+                            $!PSAPR041PageCreaterForList.printDefault($!item, '_data_style', 'class="FontList" align="center"')
+                        #elseif($!item.getColumnName()=="T_QUOT_ACQ_APL.DELIV_PLACE_NAME")
+                            $!PSAPR041PageCreaterForList.printDefault($!item)
+                        #elseif($!item.getColumnName()=="T_QUOT_ACQ_APL.REQ_SECTION_CD")
+                            $!PSAPR041PageCreaterForList.printDefault($!item, '_data_style', 'class="FontList" align="center"')
+                        #elseif($!item.getColumnName()=="T_QUOT_ACQ_APL.REQ_SECTION_NAME")
+                            $!PSAPR041PageCreaterForList.printDefault($!item)
+                        #elseif($!item.getColumnName()=="T_QUOT_ACQ_APL.REQ_USER_ID")
+                            $!PSAPR041PageCreaterForList.printDefault($!item, '_data_style', 'class="FontList" align="center"')
+                        #elseif($!item.getColumnName()=="T_QUOT_ACQ_APL.REQ_USER_NAME")
+                            $!PSAPR041PageCreaterForList.printDefault($!item)
+                        #else
+                            $!PSAPR041PageCreaterForList.printDefault($!item)
+                        #end
+                    #end
+            </tr>
+        #end
+    </tbody>
+    #end
+</table>
+</form>
+<br>
+<table id="WAIT" class="NoBorder" style="display:none;width:100%;"><tr><td style="text-align:center;"><br><br>
+<img src="../../image/wait.gif"><br><span class="FontMini"><br>#customSpringMessage('SEARCH_MESSAGE')</span></td></tr></table><!--問い合わせ中...-->
+</body>
+</html>

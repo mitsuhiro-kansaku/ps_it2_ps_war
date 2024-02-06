@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="ps.dataaccess.ajax.SectionPlaceOnblurMapper">
+    <select id="getSectionPlaceInfoOnBlur"  resultType="fw.domain.mst.organization.sectionplace.SectionPlacePopupItem">
+        SELECT 
+            M_SECTION_PLACE.SECTION_PLACE_CD AS "sectionPlaceCd",
+            M_SECTION_PLACE_LANG.SECTION_PLACE_NAME as "sectionPlaceName"
+        FROM M_SECTION_PLACE
+        INNER JOIN M_COMPANY
+            ON M_SECTION_PLACE.COMPANY_CD=M_COMPANY.COMPANY_CD
+            <!-- 強化-01784-000  2013.06.14 DEL SBO_WANGXM     
+           AND M_COMPANY.COMPANY_USE_LANGUAGE_IND = '${@fw.security.SecurityUtil@getCompanyUseLanguageIndByEscapeSql()}'-->
+        LEFT JOIN M_SECTION_PLACE_LANG
+            ON M_SECTION_PLACE.COMPANY_CD=M_SECTION_PLACE_LANG.COMPANY_CD
+            AND M_SECTION_PLACE.SECTION_PLACE_CD=M_SECTION_PLACE_LANG.SECTION_PLACE_CD
+            AND M_SECTION_PLACE_LANG.LANGUAGE_IND =  M_COMPANY.COMPANY_USE_LANGUAGE_IND
+        WHERE
+            '${@fw.common.util.AppUtil@getSysDate(@fw.common.util.AppUtil@DATE_SHORT)}' BETWEEN M_SECTION_PLACE.VALID_START_DATE AND M_SECTION_PLACE.VALID_END_DATE
+             AND M_SECTION_PLACE.COMPANY_CD = #{companyCd}
+             AND M_SECTION_PLACE.SECTION_PLACE_CD = #{sectionPlaceCd}
+	        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(termFlag) and termFlag==0">
+	              AND M_SECTION_PLACE.TERM_FLG = #{termFlag, jdbcType=VARCHAR}
+	        </if>
+    </select>
+</mapper>

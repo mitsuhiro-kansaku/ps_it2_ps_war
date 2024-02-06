@@ -1,0 +1,314 @@
+<!doctype html>
+<html lang="ja">
+<head>
+#if("$!searchCondition.status" == "")
+    #set($commonTitle = "#customSpringMessage('RECIVE_UNAPP_LIST')")
+#else
+    #set($commonTitle = "#customSpringMessage('RECIVE_UNAPP_LIST')(#out($!searchCondition.status_PageValue))")
+#end
+<title>#out($commonTitle)</title> ## 受入未承認一覧
+<meta http-equiv="Content-type" content="text/html; charset=UTF-8">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Content-script-type" content="text/javascript">
+<link id="CSS_FONT" rel="stylesheet" href="../../include/FontS.css" type="text/css">
+<link rel="stylesheet" href="../../include/Layout.css" type="text/css">
+<link rel="stylesheet" href="../../include/Color.css" type="text/css">
+<script language="javascript" type="text/javascript" src="../../include/common.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/check.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/date.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/tablesort.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/searchbox.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/jquery-1.7.2.min.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/jquery.tablefix.js"></script>
+<script language="javascript" type="text/javascript"> 
+<!--
+#set($isActiveProfileStock = "#isActiveProfile('stock')")
+#parse("./common/common_js.vm")
+function onLoad() {
+    dataLoadHasPage();
+    var isSuccess = '#jsEscape($!isSuccess)';
+    if(isSuccess == 'true'){
+        #set( $param = ["#customSpringMessage('RECEIVE')"])
+        alert('#customMessageArgs("I031",$param)');
+    } 
+    
+    var alertMessage = "$!alertMessage";
+    if (alertMessage != ""){
+        buttonUsableForList(alertMessage);
+        alert(alertMessage);
+    }
+
+    var errorMsg = "$!errorMessage";
+    var count = #jsEscape($!itemList.receiveUnAppList.size());
+    if(count == 0 && errorMsg == ""){
+        var errorMsg = '#customMessageArgs("I004","")';
+    }else if(count != 0 && errorMsg.indexOf("I004") != -1){
+        var errorMsg = "";
+    }
+
+    if (errorMsg != ""){
+        return;
+    }
+
+    var isShowApplyAgain = "#jsEscape($isShowApplyAgain)";
+    var varPattern = "#jsEscape($pattern)";
+    if(isShowApplyAgain == 'true'){
+        top.iframeChange("${flowExecutionUrl}&_eventId=applyAgain",'pattern',varPattern,'from', 'PSRCV070');
+    }
+
+    var isShowDetail = "#jsEscape($isShowDetail)";
+    if(isShowDetail == 'true'){
+        poppage('${flowExecutionUrl}&_eventId=detail','DETAIL','800','700');
+    }
+}
+// 申請中止
+function applyCancel(correctInd, delivKeyNo, arrivalSeq, preSeq, prevDelivVol, lastUpdDate,orderNo,exclusiveSlipNo,exclusiveLastUpdDate){
+    #set( $param1 = "#customSpringMessage('RECEIVE')")
+    #set( $param2 = "#customSpringMessage('REQ_STOP')")
+    if(!confirm("#customMessageArgs("W001",[$param1,$param2])")) {
+        return;
+    }
+    buttonDisable();
+    iframeChange("${flowExecutionUrl}&_eventId=applyCancel","correctInd",correctInd,"receiveUnAppIdentify.receiveUnAppIdentify.delivKeyNo.delivKeyNo",delivKeyNo,"delivKeyNo",delivKeyNo,"arrivalSeq",arrivalSeq,"preSeq", preSeq, "prevDelivVol.vol", prevDelivVol,"receiveUnAppIdentify.receiveUnAppIdentify.lastUpdDate",lastUpdDate,"orderNo",orderNo,'receiveUnAppIdentify.receiveUnAppIdentify.exclusiveSlipId.slipNo', exclusiveSlipNo,'receiveUnAppIdentify.receiveUnAppIdentify.exclusiveSlipId.lastUpdDate', exclusiveLastUpdDate);
+}
+// 詳細
+function openDetail(orderNo, orderSeq, delivKeyNo,lastUpdDate,exclusiveSlipNo,exclusiveLastUpdDate) {
+    parent.iframeChange("${flowExecutionUrl}&_eventId=detailValidate","orderNo",orderNo,"orderSeq",orderSeq,'receiveUnAppIdentify.receiveUnAppIdentify.delivKeyNo.delivKeyNo',delivKeyNo,'receiveUnAppIdentify.receiveUnAppIdentify.lastUpdDate',lastUpdDate,'receiveUnAppIdentify.receiveUnAppIdentify.exclusiveSlipId.slipNo', exclusiveSlipNo,'receiveUnAppIdentify.receiveUnAppIdentify.exclusiveSlipId.lastUpdDate', exclusiveLastUpdDate,"HIDDENAREA");
+}
+// 再申請
+function applyAgain(orderSeq, delivKeyNo,lastUpdDate,exclusiveSlipNo,exclusiveLastUpdDate) {
+    buttonDisable();
+    parent.iframeChange("${flowExecutionUrl}&_eventId=applyAgainValidate",'orderSeq',orderSeq,'delivKeyNo',delivKeyNo,'receiveUnAppIdentify.receiveUnAppIdentify.delivKeyNo.delivKeyNo',delivKeyNo,'receiveUnAppIdentify.receiveUnAppIdentify.lastUpdDate',lastUpdDate,'pattern','applyAgain','receiveUnAppIdentify.receiveUnAppIdentify.exclusiveSlipId.slipNo', exclusiveSlipNo,'receiveUnAppIdentify.receiveUnAppIdentify.exclusiveSlipId.lastUpdDate', exclusiveLastUpdDate,"HIDDENAREA");
+}
+//-->
+</script>
+</head>
+<body id="BODY" topmargin="0" leftmargin="0" marginwidth="0" marginheight="0" align="left" onload="onLoad();setTablefix('#TABLE', 1, 3+$!PSRCV070PageCreaterForList.printLockColumn());">
+#if($!errorMessage && $!errorMessage!="")
+<div class="error">
+    $!errorMessage
+</div>
+#end
+<table id="TABLE" class="ListArea" WIDTH="100%">
+    #if($!itemList.receiveUnAppList.size() > 0)
+    <thead>
+        <tr id="Header">
+            <th class="BoxHeaderCenter FontSmall">No.<!--No.--></th>
+            <th class="BoxHeaderCenter FontSmall">#customSpringMessage("DETAIL")<!--詳細--></th>
+            <th class="BoxHeaderCenter FontSmall">#customSpringMessage("ACTION")<!--処理--></th>
+            #foreach($!item in $!PSRCV070PageCreaterForList.getItemListForBody())
+              #if($isActiveProfileStock == "false"
+                  &&($!item.getColumnName()=="T_ARRIVAL.HAVE_IN_STOCK_FLG"
+                  || $!item.getColumnName()=="T_ARRIVAL.STOCK_PLACE_CD"
+                  || $!item.getColumnName()=="T_ARRIVAL.STOCK_PLACE_NAME"
+                 ))## 在庫オプション
+              #else
+                #set($currentOneColumnFlag = $!PSRCV070PageCreaterForList.getOneColumnFlag($!item))
+                #if($velocityCount == 0)
+                    $!PSRCV070PageCreaterForList.printTHtag($!item,'class="BoxHeaderCenter FontSmall"')
+                #elseif($currentOneColumnFlag)
+                    $!PSRCV070PageCreaterForList.printBRtag($!item)
+                #else
+                    $!PSRCV070PageCreaterForList.printTHtagClose()
+                    $!PSRCV070PageCreaterForList.printTHtag($!item,'class="BoxHeaderCenter FontSmall"')
+                #end
+              #end
+                #if($!item.getColumnName()=="T_RECEIVE_MNG.DELIV_KEY_NO")
+                    $!PSRCV070PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName()=="T_ARRIVAL.CORRECT_CD")
+                    $!PSRCV070PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName()=="T_ARRIVAL.ARRIVAL_VERSION")
+                    $!PSRCV070PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName()=="T_ARRIVAL.ARRIVAL_STATUS")
+                    $!PSRCV070PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName()=="T_ORDER.REQ_TYPE_IND")
+                    $!PSRCV070PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName()=="T_ORDER.ITEM_CD")
+                    $!PSRCV070PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName()=="T_ORDER.ITEM_NAME")
+                    $!PSRCV070PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName()=="T_ORDER.DELIV_PLACE_CD")
+                    $!PSRCV070PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName()=="T_ORDER.DELIV_PLACE_NAME")
+                    $!PSRCV070PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName()=="T_ORDER.ORDER_VOL")
+                    $!PSRCV070PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName()=="T_RECEIVE_MNG.DELIV_VOL")
+                    $!PSRCV070PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName()=="DUMMY.RCV_REMAIN_AMOUNT")
+                    $!PSRCV070PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName()=="T_ARRIVAL.DELIV_VOL")
+                    $!PSRCV070PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName()=="T_ORDER.UNIT_NAME")
+                    $!PSRCV070PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName()=="T_ORDER.ORDER_DELIV_DATE")
+                    $!PSRCV070PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName()=="T_ARRIVAL.ARRIV_EXP_DATE")
+                    $!PSRCV070PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName()=="T_ARRIVAL.HAVE_IN_STOCK_FLG" && $isActiveProfileStock == "true")## 在庫オプション
+                    $!PSRCV070PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName()=="T_ARRIVAL.STOCK_PLACE_CD" && $isActiveProfileStock == "true")## 在庫オプション
+                    $!PSRCV070PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName()=="T_ARRIVAL.STOCK_PLACE_NAME" && $isActiveProfileStock == "true")## 在庫オプション
+                    $!PSRCV070PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName()=="T_ARRIVAL.ARRIV_SECTION_CD")
+                    $!PSRCV070PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName()=="T_ARRIVAL.ARRIV_SECTION_NAME")
+                    $!PSRCV070PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName()=="T_ARRIVAL.ARRIV_USER_ID")
+                    $!PSRCV070PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName()=="T_ARRIVAL.ARRIV_USER_NAME")
+                    $!PSRCV070PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName()=="T_ORDER.SUP_CD")
+                    $!PSRCV070PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName()=="T_ORDER.SUP_ABBR_NAME")
+                    $!PSRCV070PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName()=="T_ORDER.SUBCON_IND")
+                    $!PSRCV070PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName()=="T_ORDER.EDI_IND")
+                    $!PSRCV070PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName()=="T_ORDER.ORDER_FIRST_DATE")
+                    $!PSRCV070PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName()=="T_ORDER.REQ_SECTION_CD")
+                    $!PSRCV070PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName()=="T_ORDER.REQ_SECTION_NAME")
+                    $!PSRCV070PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName()=="T_ORDER.REQ_USER_ID")
+                    $!PSRCV070PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName()=="T_ORDER.REQ_USER_NAME")
+                    $!PSRCV070PageCreaterForList.printHead($!item)
+                #else
+                  #if($isActiveProfileStock == "false"
+                     &&($!item.getColumnName()=="T_ARRIVAL.HAVE_IN_STOCK_FLG"
+                     || $!item.getColumnName()=="T_ARRIVAL.STOCK_PLACE_CD"
+                     || $!item.getColumnName()=="T_ARRIVAL.STOCK_PLACE_NAME"
+                    ))## 在庫オプション
+                  #else
+                    $!PSRCV070PageCreaterForList.printHead($!item)
+                  #end
+                #end
+            #end
+            $!PSRCV070PageCreaterForList.printTHtagClose()
+        </tr>
+    </thead>
+    #end
+    <tbody>
+    #foreach($!receiveUnAppListItem in $!itemList.receiveUnAppList)
+        <tr id="Row_$velocityCount" #if($velocityCount % 2 == 0) bgcolor="#dce4ef" #else bgcolor="#ffffff" #end>
+            <td class="BoxDetailCenter FontList">#set( $index = $velocityCount + 1 )$index</td>
+            <td class="BoxDetailCenter">
+                ## 詳細
+                <img id="DetailButton_0" class="Icon" src="../../image/btnDetailDisp.gif" onclick="openDetail('#jsEscapeInHTML($!receiveUnAppListItem.receiveUnAppIdentify.orderNo)', '#jsEscapeInHTML($!receiveUnAppListItem.receiveUnAppIdentify.receiveUnAppIdentify.orderSeq)','#jsEscapeInHTML($!receiveUnAppListItem.receiveUnAppIdentify.receiveUnAppIdentify.delivKeyNo.delivKeyNo)','#jsEscapeInHTML($!receiveUnAppListItem.receiveUnAppIdentify.receiveUnAppIdentify.lastUpdDate)','#jsEscapeInHTML($!receiveUnAppListItem.receiveUnAppIdentify.receiveUnAppIdentify.exclusiveSlipId.slipNo)','#jsEscapeInHTML($!receiveUnAppListItem.receiveUnAppIdentify.receiveUnAppIdentify.exclusiveSlipId.lastUpdDate)')">
+            </td>
+            <td class="BoxDetailCenter">
+            #if($!receiveUnAppListItem.status == "01" || $!receiveUnAppListItem.status == "03")
+                #if($!receiveUnAppListItem.correctInd != "3")
+                    ## 再申請
+                    <input type="button" class="SmallButton" value="#customSpringMessage('RE_REQ')" onclick="applyAgain('#jsEscapeInHTML($!receiveUnAppListItem.receiveUnAppIdentify.receiveUnAppIdentify.orderSeq)','#jsEscapeInHTML($!receiveUnAppListItem.receiveUnAppIdentify.receiveUnAppIdentify.delivKeyNo.delivKeyNo)','#jsEscapeInHTML($!receiveUnAppListItem.receiveUnAppIdentify.receiveUnAppIdentify.lastUpdDate)','#jsEscapeInHTML($!receiveUnAppListItem.receiveUnAppIdentify.receiveUnAppIdentify.exclusiveSlipId.slipNo)','#jsEscapeInHTML($!receiveUnAppListItem.receiveUnAppIdentify.receiveUnAppIdentify.exclusiveSlipId.lastUpdDate)')">
+                #end
+                ## 申請中止
+                <input type="button" class="SmallButton Red" value="#customSpringMessage('REQ_STOP')" onclick="applyCancel('#jsEscapeInHTML($receiveUnAppListItem.correctInd)','#jsEscapeInHTML($receiveUnAppListItem.receiveUnAppIdentify.receiveUnAppIdentify.delivKeyNo.delivKeyNo)','#jsEscapeInHTML($receiveUnAppListItem.arrivalSeq)','#jsEscapeInHTML($receiveUnAppListItem.preSeq)','#jsEscapeInHTML($receiveUnAppListItem.prevDelivVol.vol)','#jsEscapeInHTML($!receiveUnAppListItem.receiveUnAppIdentify.receiveUnAppIdentify.lastUpdDate)','#jsEscapeInHTML($receiveUnAppListItem.receiveUnAppIdentify.orderNo)','#jsEscapeInHTML($!receiveUnAppListItem.receiveUnAppIdentify.receiveUnAppIdentify.exclusiveSlipId.slipNo)','#jsEscapeInHTML($!receiveUnAppListItem.receiveUnAppIdentify.receiveUnAppIdentify.exclusiveSlipId.lastUpdDate)')">
+            #end  
+            </td>
+            #foreach($!item in $!PSRCV070PageCreaterForList.getItemListForBody($velocityCount))
+              #if($isActiveProfileStock == "false"
+                  &&($!item.getColumnName()=="T_ARRIVAL.HAVE_IN_STOCK_FLG"
+                  || $!item.getColumnName()=="T_ARRIVAL.STOCK_PLACE_CD"
+                  || $!item.getColumnName()=="T_ARRIVAL.STOCK_PLACE_NAME"
+                 ))## 在庫オプション
+              #else
+                #set($currentOneColumnFlag = $!PSRCV070PageCreaterForList.getOneColumnFlag($!item))
+                #if($velocityCount == 0)
+                    $!PSRCV070PageCreaterForList.printTDtag('class="BoxDetailLeft FontList"')
+                #elseif(!$currentOneColumnFlag)
+                    $!PSRCV070PageCreaterForList.printTDtagClose()
+                    $!PSRCV070PageCreaterForList.printTDtag('class="BoxDetailLeft FontList"')
+                #end
+              #end
+                #if($!item.getColumnName()=="T_RECEIVE_MNG.DELIV_KEY_NO")
+                    $!PSRCV070PageCreaterForList.printDefault($!item,"_data_style",'class="FontSlipNo" align="center"')
+                #elseif($!item.getColumnName()=="T_ARRIVAL.CORRECT_CD")
+                    $!PSRCV070PageCreaterForList.printSpecial("s25_codeNameRed",$!item,'CORRECT_CD','',"_data_style",'align="center"','_redValue','3','_boldStyle','"FontStatus Red"','_needBold','1')
+                #elseif($!item.getColumnName()=="T_ARRIVAL.ARRIVAL_VERSION")
+                    $!PSRCV070PageCreaterForList.printDefault($!item,"_data_style",'align="center"')
+                #elseif($!item.getColumnName()=="T_ARRIVAL.ARRIVAL_STATUS")
+                    $!PSRCV070PageCreaterForList.printSpecial("s25_codeNameRed",$!item,'ARRIVAL_STATUS','',"_data_style",'align="center"','_redValue','03','_boldStyle','"FontStatus Red"','_needBold','1')
+                #elseif($!item.getColumnName()=="T_ORDER.REQ_TYPE_IND")
+                    $!PSRCV070PageCreaterForList.printSpecial("s25_codeName", $!item, 'REQ_TYPE_IND','',"_data_style",'class="FontStatus" align="center"')
+                #elseif($!item.getColumnName()=="T_ORDER.ITEM_CD")
+                    $!PSRCV070PageCreaterForList.printDefault($!item,"_data_style",'align="center"')
+                #elseif($!item.getColumnName()=="T_ORDER.ITEM_NAME")
+                    $!PSRCV070PageCreaterForList.printDefault($!item)
+                #elseif($!item.getColumnName()=="T_ORDER.DELIV_PLACE_CD")
+                    $!PSRCV070PageCreaterForList.printDefault($!item,"_data_style",'align="center"')
+                #elseif($!item.getColumnName()=="T_ORDER.DELIV_PLACE_NAME")
+                    $!PSRCV070PageCreaterForList.printDefault($!item)
+                #elseif($!item.getColumnName()=="T_ORDER.ORDER_VOL")
+                    $!PSRCV070PageCreaterForList.printDefault($!item,"_data_style",'align="right"')
+                #elseif($!item.getColumnName()=="T_RECEIVE_MNG.DELIV_VOL")
+                    $!PSRCV070PageCreaterForList.printDefault($!item,"_data_style",'align="right"')
+                #elseif($!item.getColumnName()=="DUMMY.RCV_REMAIN_AMOUNT")
+                    $!PSRCV070PageCreaterForList.printDefault($!item,"_data_style",'align="right"')
+                #elseif($!item.getColumnName()=="T_ARRIVAL.DELIV_VOL")
+                    $!PSRCV070PageCreaterForList.printDefault($!item,"_data_style",'align="right"')
+                #elseif($!item.getColumnName()=="T_ORDER.UNIT_NAME")
+                    $!PSRCV070PageCreaterForList.printDefault($!item,"_data_style",'align="center"')
+                #elseif($!item.getColumnName()=="T_ORDER.ORDER_DELIV_DATE")
+                    $!PSRCV070PageCreaterForList.printDefault($!item,"_data_style",'align="center"')
+                #elseif($!item.getColumnName()=="T_ARRIVAL.ARRIV_EXP_DATE")
+                    $!PSRCV070PageCreaterForList.printDefault($!item,"_data_style",'align="center"')
+                #elseif($!item.getColumnName()=="T_ARRIVAL.HAVE_IN_STOCK_FLG" && $isActiveProfileStock == "true")## 在庫オプション
+                    $!PSRCV070PageCreaterForList.printSpecial("s25_codeName", $!item, 'HAVE_IN_STOCK_FLG', '', "_data_style", 'align="center"')
+                #elseif($!item.getColumnName()=="T_ARRIVAL.STOCK_PLACE_CD" && $isActiveProfileStock == "true")## 在庫オプション
+                    $!PSRCV070PageCreaterForList.printDefault($!item,"_data_style",'align="center"')
+                #elseif($!item.getColumnName()=="T_ARRIVAL.STOCK_PLACE_NAME" && $isActiveProfileStock == "true")## 在庫オプション
+                    $!PSRCV070PageCreaterForList.printDefault($!item)
+                #elseif($!item.getColumnName()=="T_ARRIVAL.ARRIV_SECTION_CD")
+                    $!PSRCV070PageCreaterForList.printDefault($!item)
+                #elseif($!item.getColumnName()=="T_ARRIVAL.ARRIV_SECTION_NAME")
+                    $!PSRCV070PageCreaterForList.printDefault($!item)
+                #elseif($!item.getColumnName()=="T_ARRIVAL.ARRIV_USER_ID")
+                    $!PSRCV070PageCreaterForList.printDefault($!item)
+                #elseif($!item.getColumnName()=="T_ARRIVAL.ARRIV_USER_NAME")
+                    $!PSRCV070PageCreaterForList.printDefault($!item)
+                #elseif($!item.getColumnName()=="T_ORDER.SUP_CD")
+                    $!PSRCV070PageCreaterForList.printDefault($!item,"_data_style",'align="center"')
+                #elseif($!item.getColumnName()=="T_ORDER.SUP_ABBR_NAME")
+                    $!PSRCV070PageCreaterForList.printDefault($!item)
+                #elseif($!item.getColumnName()=="T_ORDER.SUBCON_IND")
+                    #if("$receiveUnAppListItem.subcontract"=="1")
+                        <div>$!receiveUnAppListItem.subcontract_PageValue</div>
+                    #end
+                #elseif($!item.getColumnName()=="T_ORDER.EDI_IND")
+                    $!PSRCV070PageCreaterForList.printDefault($!item)
+                #elseif($!item.getColumnName()=="T_ORDER.ORDER_FIRST_DATE")
+                    $!PSRCV070PageCreaterForList.printDefault($!item,"_data_style",'align="center"')
+                #elseif($!item.getColumnName()=="T_ORDER.REQ_SECTION_CD")
+                    $!PSRCV070PageCreaterForList.printDefault($!item,"_data_style",'align="center"')
+                #elseif($!item.getColumnName()=="T_ORDER.REQ_SECTION_NAME")
+                    $!PSRCV070PageCreaterForList.printDefault($!item)
+                #elseif($!item.getColumnName()=="T_ORDER.REQ_USER_ID")
+                    $!PSRCV070PageCreaterForList.printDefault($!item,"_data_style",'align="center"')
+                #elseif($!item.getColumnName()=="T_ORDER.REQ_USER_NAME")
+                    $!PSRCV070PageCreaterForList.printDefault($!item)
+                #else
+                  #if($isActiveProfileStock == "false"
+                      &&($!item.getColumnName()=="T_ARRIVAL.HAVE_IN_STOCK_FLG"
+                      || $!item.getColumnName()=="T_ARRIVAL.STOCK_PLACE_CD"
+                      || $!item.getColumnName()=="T_ARRIVAL.STOCK_PLACE_NAME"
+                     ))## 在庫オプション
+                  #else
+                    $!PSRCV070PageCreaterForList.printDefault($!item)
+                  #end
+                #end
+            #end
+            $!PSRCV070PageCreaterForList.printTDtagClose()
+        </tr>
+    #end
+    </tbody>
+</table>
+<br>
+<table id="WAIT" class="NoBorder" style="display:none;width:100%;"><tr><td style="text-align:center;"><br><br>
+<img src="../../image/wait.gif"><br><span class="FontMini"><br>#customSpringMessage('SEARCH_MESSAGE')</span></td></tr></table><!--問い合わせ中...-->
+</body>
+</html>

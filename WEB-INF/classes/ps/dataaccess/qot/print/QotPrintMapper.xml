@@ -1,0 +1,152 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="ps.dataaccess.qot.print.QotPrintMapper">
+    <!-- ====================== PSQOT170 見積依頼書発行  Start =================== -->
+    <!-- SRC-00115-00 include化共通-->
+    <sql id="listKeyIdentityWhereCondition">
+            ${@ps.common.util.ItemSettingUtil@getItemSettingWhereSQL()} 
+            AND T_QUOT_REQUEST.QUOT_TYPE_IND IN ('1','4')
+            AND T_QUOT_REQUEST.DELETE_FLG = '0'
+            AND T_QUOT_REQUEST.NEW_FLG = '1' 
+            AND T_QUOT_REQUEST.BUYER_COMPANY_CD = '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}'
+            AND T_QUOT_REQUEST.BUYER_SECTION_CD = '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}'
+            <!--  強化-00194-000 2013/04/08 ADD SBO_wangzf START -->
+             <if test="@org.apache.commons.lang.StringUtils@isNotBlank(buyerUserId)">
+             AND T_QUOT_REQUEST.BUYER_USER_ID = #{buyerUserId}
+            </if>
+            <!--  強化-00194-000 2013/04/08 ADD SBO_wangzf END -->
+            <!--  強化-00194-000 2013/04/08 DEL SBO_wangzf START -->
+            <!-- <if test="@org.apache.commons.lang.StringUtils@isNotBlank(buyerUserId)">
+             AND T_QUOT_REQUEST.BUYER_USER_ID = '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}'
+            </if>-->
+            <!--  強化-00194-000 2013/04/08 DEL SBO_wangzf END -->
+            <choose>
+                <when test="printInd == 3">
+                    AND T_QUOT_REQ_SUP.PRINT_IND IN ('0','1')
+                </when>
+                <otherwise>
+                    AND T_QUOT_REQ_SUP.PRINT_IND = #{printInd}
+                </otherwise>
+            </choose>
+            <choose>
+                <when test="@org.apache.commons.lang.StringUtils@isBlank(ediInd)">
+                    AND T_QUOT_REQ_SUP.EDI_IND IN ('0','1')
+                </when>
+                <otherwise>
+                    AND T_QUOT_REQ_SUP.EDI_IND = #{ediInd}
+                </otherwise>
+            </choose>
+    </sql>
+     <select id="listKeyIdentity" 
+        parameterType="fw.domain.slip.quot.quotreq.QuotReqIssueSearchCondition"
+        resultType="fw.domain.slip.quot.quotreq.QuotReqIdentify">
+        SELECT 
+            T_QUOT_REQUEST.QUOT_REQ_SEQ as "quotReqSeqNo.seqNumber",
+            T_QUOT_REQ_SUP.QUOT_SUP_LINE_NO as "quotSupLineNo"
+        FROM T_QUOT_REQUEST
+        LEFT JOIN T_QUOT_REQ_SUP
+            ON T_QUOT_REQUEST.QUOT_REQ_SEQ = T_QUOT_REQ_SUP.QUOT_REQ_SEQ
+            AND T_QUOT_REQ_SUP.DELETE_FLG = '0'
+        <where> 
+            <include refid="listKeyIdentityWhereCondition"/>
+        </where>
+        ORDER BY ${searchCondition.columnOrder.columnOrder()}
+    </select>
+
+    <resultMap type="fw.domain.slip.quot.quotreq.QuotReqIssueListItem" id="Print_Map">
+        <id column="QUOT_REQ_SEQ" property="quotReqIdentify.quotReqSeqNo.seqNumber" />
+        <id column="ediInd" property="quotReqIdentify.ediInd" />
+        <id column="EXCLUSIVE_SLIP_NO" property="quotReqIdentify.exclusiveSlipId.slipNo"/>
+        <id column="EXCLUSIVE_LAST_UPD_DATE" property="quotReqIdentify.exclusiveSlipId.lastUpdDate"/>
+    </resultMap>
+
+    <select id="listPageItem" parameterType="fw.domain.mst.searchcondition.SearchCondition" 
+        resultMap="Print_Map">
+        SELECT 
+			T_QUOT_REQUEST.QUOT_REQ_SEQ ,
+            T_QUOT_REQUEST.LAST_UPD_DATE as "quotReqIdentify.lastUpdDate",
+            T_QUOT_REQ_SUP.LAST_UPD_DATE as "quotReqIdentify.supLastUpdDate",
+			T_QUOT_REQ_SUP.QUOT_SUP_LINE_NO as "quotReqIdentify.quotSupLineNo",
+			T_QUOT_REQUEST.QUOT_REQ_NO as "quotReqNo",
+			T_QUOT_REQUEST.QUOT_RESP_LIMIT_DATE as "quotRespLimitDate.dateOfymd",
+			T_QUOT_REQUEST.TITLE_NAME as "titleName",
+			T_QUOT_REQUEST.REQ_SECTION_CD as "reqSectionCd",
+			T_QUOT_REQUEST.REQ_SECTION_NAME as "reqSectionName",
+			T_QUOT_REQUEST.REQ_USER_ID as "reqUserId",
+			T_QUOT_REQUEST.REQ_USER_NAME as "reqUserName",
+			T_QUOT_REQUEST.BUYER_SECTION_CD as "buyerSectionCd",
+			T_QUOT_REQUEST.BUYER_SECTION_NAME as "buyerSectionName",
+			T_QUOT_REQUEST.BUYER_USER_ID as "buyerUserId",
+			T_QUOT_REQUEST.BUYER_USER_NAME as "buyerUserName",
+			T_QUOT_REQUEST.DELIV_PLACE_CD as "delivPlaceCd",
+			T_QUOT_REQUEST.DELIV_PLACE_NAME as "delivPlaceName",
+			T_QUOT_REQ_SUP.PRINT_IND as "printInd",
+			T_QUOT_REQ_SUP.QUOT_REQ_DATE as "quotReqDate.dateOfymd",
+			T_QUOT_REQ_SUP.SUP_CD as "supCd",
+            T_QUOT_REQ_SUP.SUP_ABBR_NAME as "supAbbrName",
+			T_QUOT_REQ_SUP.SUP_COMPANY_CD as "supCompanyCd",
+			T_QUOT_REQ_SUP.SUBCON_IND as "subconInd",
+			T_QUOT_REQ_SUP.EDI_IND as "ediInd",
+			T_SLIP_MNG.SLIP_NO AS EXCLUSIVE_SLIP_NO,
+            T_SLIP_MNG.LAST_UPD_DATE AS EXCLUSIVE_LAST_UPD_DATE,
+			${@ps.common.util.ItemSettingUtil@getItemSettingSelectSQLDomainAliasNonBinary("T_QUOT_REQUEST","quotReqExtItem")}
+		FROM T_QUOT_REQUEST
+		INNER JOIN (SELECT
+                        T_QUOT_REQ_DTL.QUOT_REQ_SEQ,
+                        MIN(T_QUOT_REQ_DTL.QUOT_REQ_DTL_NO) as QUOT_REQ_DTL_NO
+                    FROM T_QUOT_REQ_DTL, T_QUOT_REQUEST
+                        WHERE T_QUOT_REQ_DTL.QUOT_REQ_SEQ = T_QUOT_REQUEST.QUOT_REQ_SEQ
+                        AND T_QUOT_REQ_DTL.DELETE_FLG = '0'
+                        GROUP BY T_QUOT_REQ_DTL.QUOT_REQ_SEQ
+                    )T_QUOT_REQ_DTL
+            ON T_QUOT_REQ_DTL.QUOT_REQ_SEQ = T_QUOT_REQUEST.QUOT_REQ_SEQ
+        INNER JOIN T_SLIP_MNG
+            ON T_QUOT_REQ_DTL.QUOT_REQ_DTL_NO = T_SLIP_MNG.SLIP_NO
+		LEFT JOIN T_QUOT_REQ_SUP
+		    ON T_QUOT_REQUEST.QUOT_REQ_SEQ = T_QUOT_REQ_SUP.QUOT_REQ_SEQ
+		    AND T_QUOT_REQ_SUP.DELETE_FLG = '0'
+		<where> 
+            <include refid="listKeyIdentityWhereCondition"/> 
+            AND (T_QUOT_REQ_SUP.QUOT_REQ_SEQ,T_QUOT_REQ_SUP.QUOT_SUP_LINE_NO) IN
+            <foreach collection="searchCondition.page.keyDomainEntityList" item="keyList"  open="(" separator="," close=")">  
+                (#{keyList.quotReqSeqNo.seqNumber},#{keyList.quotSupLineNo})
+            </foreach>
+        </where>
+        ORDER BY ${searchCondition.columnOrder.columnOrder()}
+    </select>
+
+    <select id="listPageItemDtl" parameterType="fw.domain.slip.quot.quotreq.QuotReqIdentify"
+        resultType="fw.domain.mst.material.item.Item">
+        SELECT T_QUOT_REQ_DTL.ITEM_CD as "itemCd",
+		    T_QUOT_REQ_DTL.ITEM_NAME as "itemName"
+		FROM T_QUOT_REQUEST
+		LEFT JOIN T_QUOT_REQ_DTL
+		    ON T_QUOT_REQ_DTL.QUOT_REQ_SEQ = T_QUOT_REQUEST.QUOT_REQ_SEQ
+		WHERE T_QUOT_REQUEST.QUOT_REQ_SEQ = #{quotReqSeqNo.seqNumber}
+		    AND T_QUOT_REQ_DTL.DELETE_FLG = '0'
+		ORDER BY T_QUOT_REQ_DTL.QUOT_REQ_SEQ,
+		    T_QUOT_REQ_DTL.QUOT_REQ_DTL_NO
+    </select>
+    
+    <update id="print">
+      UPDATE T_QUOT_REQ_SUP 
+         SET
+             PRINT_IND='1',
+             LAST_UPD_DATE='${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}',
+             LAST_UPD_COMPANY_CD = '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}',
+             LAST_UPD_SECTION_CD = '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}',
+             LAST_UPD_USER_ID='${@fw.security.SecurityUtil@getUserIdByEscapeSql()}'
+        WHERE QUOT_REQ_SEQ IN 
+        <foreach item="seq" collection="seqList"
+          open="(" separator="," close=")">
+            #{seq}
+        </foreach>
+        <!-- ＩＴ３-00172-000 2013.07.02 DEL SBO_WANGXM 
+        AND (SUP_CD || SUP_COMPANY_CD || SUP_NAME) = #{sup}-->
+        <!-- 2013/07/19 ADD DAIKO_NAKAI -->
+        AND (SUP_CD || SUP_COMPANY_CD || SUP_ABBR_NAME) = #{sup}
+    </update>
+    <!-- ====================== PSQOT170 見積依頼書発行  End =================== -->
+</mapper>

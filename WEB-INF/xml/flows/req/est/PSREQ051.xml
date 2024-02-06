@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<flow xmlns="http://www.springframework.org/schema/webflow"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.springframework.org/schema/webflow
+        http://www.springframework.org/schema/webflow/spring-webflow-2.0.xsd"
+    parent="base">
+   
+    <var name="identify" class="fw.domain.slip.quot.quotacqreq.QuotAcqReqIdentify" />
+
+    <input name="searchCondition" />
+    <input name="isCurrentPageSearch" />
+    
+    <decision-state id="isSearchByKey">
+       <if test="flowScope.isCurrentPageSearch" then="searchByKey" else="searchByCondition" />
+    </decision-state>
+    
+    <action-state id="searchByCondition">
+        <evaluate expression="PSREQ051Service.init(searchCondition)" result="flowScope.itemList"/>
+        <transition to="PSREQ051"/> 
+    </action-state>
+
+    <action-state  id="searchByKey" >
+        <evaluate expression="PSREQ051Service.page(searchCondition)" result="flowScope.itemList"/>
+        <transition to="PSREQ051"/>
+    </action-state>
+
+    <view-state id="PSREQ051" model="identify" view="req/est/PSREQ051">
+       <transition on="order" validate="false">
+            <evaluate expression="PSREQ051Service.order(searchCondition)" result="flowScope.itemList" />
+        </transition>
+        <transition on="page" validate="false">
+             <evaluate expression="PSREQ051Service.page(searchCondition)" result="flowScope.itemList" /> 
+        </transition>
+        <transition on="applyCancel" validate="true" to="searchByKey">
+             <evaluate expression="PSREQ051Service.applyCancel(identify)" /> 
+        </transition>
+        <transition on="historyValidate" validate="false">
+            <set name="flashScope.isShowHistory" value="true"></set>
+        </transition>
+        <transition on="history" to="PSREQ010" validate="false"/>
+        <transition on="detailValidate" validate="false">
+            <set name="flashScope.isShowDetail" value="true"></set>
+        </transition>
+        <transition on="detail" to="PSREQ040TOP" validate="false" />
+        <transition on="back" to="home" validate="false" />
+    </view-state>
+
+    <subflow-state id="PSREQ010" subflow="req/est/PSREQ010" >
+        <input name="identify" value="identify" />
+        <input name="isInitIndividualApr" value="true" />
+        <input name="SessionKey" value="SessionKey" />
+    </subflow-state>
+
+    <subflow-state id="PSREQ040TOP" subflow="req/est/PSREQ040TOP" >
+        <input name="quotAcqReqIdentify" value="identify" />
+    </subflow-state>
+</flow>

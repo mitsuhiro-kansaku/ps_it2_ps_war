@@ -1,0 +1,289 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta http-equiv="Content-type" content="text/html; charset=UTF-8">
+<title></title>
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Content-script-type" content="text/javascript">
+<link rel="stylesheet" href="../../include/searchbox.css" type="text/css">
+<link id="CSS_FONT" rel="stylesheet" href="../../include/FontS.css" type="text/css">
+<link rel="stylesheet" href="../../include/Layout.css" type="text/css">
+<link rel="stylesheet" href="../../include/Color.css" type="text/css">
+<link rel="stylesheet" href="../../include/ime.css" type="text/css">
+<script language="javascript" type="text/javascript" src="../../include/common.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/date.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/check.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/searchbox.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/jquery-1.7.2.min.js"></script>
+<script language="javascript" type="text/javascript">
+<!--
+var maxSearchHeight = 120;
+var minSearchHeight = 30;
+
+if(window.opener.document.getElementById("isClassify").value == "true"){
+    window.document.title="#customSpringMessage('ITEM_NAME_SEARCH')";
+}else{
+    window.document.title="#customSpringMessage('M_ITEM')";
+}
+#parse("./common/common_js.vm")
+#parse("./common/popup_js.vm")
+function onLoad() {
+    setFocusForInput();
+    #if($searchCondition.searchType=="0")
+        setDisplay("Sup_search",false);
+    #else
+        setDisplay("Sup_search",true);
+    #end
+    if(window.opener.document.getElementById("isClassify").value == "false"){
+        setDisplay("Select",false);
+        setDisplay("SpaceRow",false);
+    }else{
+        setDisplay("Select",true);
+        setDisplay("SpaceRow",true);
+    }
+    var alertMessage = "$!alertMessage";
+    if (alertMessage != ""){
+        alert(alertMessage);
+    }
+    var errorMsg = "$!errorMessage";
+    if (errorMsg == ""){
+        var isShowList = "#jsEscape($isShowList)";
+        if (isShowList == 'true'){
+            iframeChange("../../src/itemPopup/list","pageid","itemList");
+        }
+    } else {
+        document.getElementById("TR_ERROR").style.display = "";
+        document.getElementById("DATAAREA").contentWindow.document.body.innerText = "";
+    }
+    setParam();
+    document.getElementById("SEARCH_AREA").style.height = maxSearchHeight;
+}
+
+function selectRow(buyerCompanyCd,buyerSectionCd,itemClassL,itemClassNameL,itemClassM,itemClassNameM,itemClassS,itemClassNameS,itemCd,itemName,katashiki,manufactCd,manufactName,supCd,supName,supAbbrName,unitCd,unitName,currencyCd,currencyMark,inspectInd,priceFlg,autoOrderFlg,taxInd, subjectCd, subjectName ) {
+    var price = '';
+    var vol = 0;
+    if (getObj("reqVol").value != '') {
+        vol = getObj("reqVol").value;
+    }
+    //価格品の場合   0:品名マスタ  1:価格マスタ (標準) 2:価格マスタ (ロット)
+    if(priceFlg != '0') {
+        $.post(
+            "../../buyPriceController/loadByVol",
+            {
+                buyerCompanyCd:buyerCompanyCd,
+                buyerSectionCd:buyerSectionCd,
+                itemCd:itemCd,
+                supCd:supCd,
+                "date.dateOfymdFormat":getObj("reqDate").value,
+                "vol.volFormat":vol
+            },
+            function(data){
+                price = data.price.amount;
+                window.opener.itemPopup.setObjectValue(itemCd,itemName,itemClassL,itemClassNameL,itemClassM,itemClassNameM,itemClassS,itemClassNameS,manufactCd,manufactName,katashiki,unitCd,unitName,supCd,supName,supAbbrName,currencyCd,'',currencyMark,price,inspectInd,priceFlg,autoOrderFlg,taxInd);
+                window.parent.close();
+                try {
+                    window.parent.afterProc();
+                } catch( e ) {}
+                try {
+                    window.opener.itemSelectAfterProc();
+                } catch( e ) {}
+            }
+        );
+     //価格品ではない、単価設定しない
+     } else {
+        if(window.opener.itemPopup.priceFlgObject != null) {
+        var orgPriceFlg = window.opener.itemPopup.priceFlgObject.value;
+        var orgPrice = window.opener.itemPopup.priceObject.value;
+        ## 価格品でない場合は元の値をセットしなおす/元々価格品だった場合のみ、値は初期値''でクリアされる
+        if(orgPriceFlg != '1') {
+            price = orgPrice;
+        }
+        }
+
+        window.opener.itemPopup.taxIndObject = null;
+        window.opener.itemPopup.setObjectValue(itemCd,itemName,itemClassL,itemClassNameL,itemClassM,itemClassNameM,itemClassS,itemClassNameS,manufactCd,manufactName,katashiki,unitCd,unitName,supCd,supName,supAbbrName,currencyCd,'',currencyMark,price,inspectInd,priceFlg,autoOrderFlg,taxInd, subjectCd, subjectName);
+        window.parent.close();
+        try {
+            window.parent.afterProc();
+        } catch( e ) {}
+        try {
+            window.opener.itemSelectAfterProc();
+        } catch( e ) {}
+
+     }
+}
+function setParam(){
+ var isExistMst = "#jsEscape($!isExistMst)";
+    if ("true" == isExistMst) {
+     //マスタから
+        var itemPopupParam = window.opener.itemPopup.getParam();
+        var termFlag = itemPopupParam[0];
+        var company = itemPopupParam[1];
+        var reqVol = itemPopupParam[2];
+        var sysDate = itemPopupParam[3];
+        var reqDate = itemPopupParam[4];
+        getObj("searchCondition.termFlg").value = termFlag;
+        if(termFlag == "1"){
+            getObj("searchCondition.termFlg").value = "9";
+        }
+        getObj("reqDate").value = reqDate;
+        getObj("reqVol").value = reqVol;
+
+        //値クリア
+        window.opener.itemPopup.setParam(
+            itemPopupParam[0],
+            itemPopupParam[1],
+            itemPopupParam[2],
+            itemPopupParam[3],
+            itemPopupParam[4],
+            null
+        )
+   }else{
+        var itemPopupParam = window.opener.itemPopup.getParam();
+        var termFlag = "#jsEscape($!searchCondition.searchCondition.termFlg)";
+        var company = "#jsEscape($!searchCondition.companyCd)";
+        var reqVol = itemPopupParam[2];
+        var sysDate = itemPopupParam[3];
+        var reqDate = itemPopupParam[4];
+        getObj("searchCondition.termFlg").value = termFlag;
+        if(termFlag == "1"){
+            getObj("searchCondition.termFlg").value = "9";
+        }
+        getObj("reqDate").value = reqDate;
+        getObj("reqVol").value = reqVol;
+         //値クリア
+        window.opener.itemPopup.setParam(
+            termFlag,
+            company,
+            itemPopupParam[2],
+            itemPopupParam[3],
+            itemPopupParam[4],
+            null
+        )
+   }
+}
+
+function selectSearchType(flag){
+    if(flag == "1"){
+        setDisplay("Sup_search",true);
+    }else{
+        setDisplay("Sup_search",false);
+    }
+}
+
+function execSearch(){
+    getObj("itemClassM").disabled = false;
+    getObj("itemClassS").disabled = false;
+    buttonDisable();
+    getObj('BodyForm').action = "../../src/itemPopup/validate";
+    getObj('BodyForm').submit();
+}
+
+//-->
+</script>
+</head>
+<body topmargin="0" leftmargin="0" marginwidth="0" marginheight="0" align="center" width="100%" height="100%" onload="onLoad();" scroll="no">
+<form id="BodyForm" name="Body" method="post">
+     #customFormHiddenInput("searchCondition.termFlg" "")
+     #customFormHiddenInput("reqVol" "")
+     #customFormHiddenInput("reqDate" "")
+    <table class="NoBorder" width="100%" height="100%">
+        <tr>
+            <td id="SEARCH_AREA" class="SearchArea"><!-- onLoadで変更 -->
+                <span class="CornerTopGray">
+                    <span class="Corner1"></span><span class="Corner2"></span><span class="Corner3"></span><span class="Corner4"></span>
+                </span>
+                <table class="CornerMidGray" width="100%">
+                    <tr>
+                        <td nowrap width="30%" align="left" class="ScreenName">
+                            &nbsp;<script LANGUAGE="javascript" type="text/javascript">document.write(document.title);</script>
+                        </td>
+                        <td nowrap align="right">
+                            <input type="button" class="MiddleButton" value="#customSpringMessage('CLOSE')" onClick="window.close();"><!--閉じる-->
+                        </td>
+                    </tr>
+                </table>
+                <span class="CornerBtmGray">
+                    <span class="Corner4"></span><span class="Corner3"></span><span class="Corner2"></span><span class="Corner1"></span>
+                </span>
+                <table width="100%">
+                    <tr id="SEARCH_AREA2">
+                        <td id="Adjust">
+                            <!-- 検索条件入力部 -->
+                            <table class="NoBorder" width="100%">
+                                <tr>
+                                    <td>
+
+                                        <table class="NoBorder" width="100%">
+                                            <tr><td align="left" colspan="4" nowrap>#customSpringMessage('PSSRC090_HEADER_COMMENT')</td></tr>
+                                            <tr id="Select" name="Select" style="display:none">
+                                                <td nowrap class="FontSmallBold" align="right">#customSpringMessage('M_SELECTION')</td><!--マスタ選択-->
+                                                <td nowrap class="FontSmallBold" align="left">
+                                                    #customFormRadioButtons("searchCondition.searchType" $searchTypeList "" "onclick='selectSearchType(this.value);'")
+                                                </td>
+                                            </tr>
+                                            <tr id="SpaceRow" name="SpaceRow" style="display:none"><td><br></td></tr>
+                                            <tr>
+                                                <td nowrap class="FontSmallBold" align="right">#customSpringMessage('PRODUCT_CLASS')</td><!--品名分類-->
+                                                <td nowrap class="FontSmallBold" align="left" colspan="3">
+                                                    #customProductClassSelect("searchCondition.itemClassL","searchCondition.itemClassM","searchCondition.itemClassS")
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td nowrap class="FontSmallBold" align="right">#customSpringMessage('ITEM_CD')<span class="FontComment">＊</span></td><!--品名コード-->
+                                                <td nowrap class="FontSmallBold" align="left">
+                                                    #springFormInput("searchCondition.itemCd" "class='Small noIME' maxLength=25 size=39")
+                                                </td>
+                                                <td nowrap class="FontSmallBold" align="right">#customSpringMessage('ITEM_NAME')<span class="FontComment">％</span></td><!--品名-->
+                                                <td nowrap class="FontSmallBold" align="left">
+                                                #springFormInput("searchCondition.itemName" "class='Small onIME' maxLength=60 size=54")
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td nowrap class="FontSmallBold" align="right">#customSpringMessage('KATASHIKI')<span class="FontComment">％</span></td><!--型式-->
+                                                <td nowrap class="FontSmallBold" align="left">
+                                                    #springFormInput("searchCondition.katashiki" "class='Small inIME' maxLength=60 size=39")
+                                                </td>
+                                                <td nowrap class="FontSmallBold" align="right">#customSpringMessage('MANUFACT_NAME')<span class="FontComment">％</span></td><!--メーカー名-->
+                                                <td nowrap class="FontSmallBold" align="left">
+                                                    #springFormInput("searchCondition.manufactName" "class='Small onIME' maxLength=30 size=41")
+                                                </td>
+                                            </tr>
+                                            <tr id="Sup_search" name="Sup_search" style="display:none">
+                                                <td nowrap class="FontSmallBold" align="right">#customSpringMessage('SUP_CD')<span class="FontComment">＊</span></td><!--取引先コード-->
+                                                <td nowrap class="FontSmallBold" align="left">
+                                                    #springFormInput("searchCondition.supCd" "class='Small noIME' maxLength=12 size=50")
+                                                </td>
+                                                <td nowrap class="FontSmallBold" align="right">#customSpringMessage('SUP_NAME')<span class="FontComment">％</span></td><!--取引先名-->
+                                                <td nowrap class="FontSmallBold" align="left">
+                                                    #springFormInput("searchCondition.supName" "class='Small onIME' maxLength=30 size=55")
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td nowrap align="left" colspan="4" class="FontComment">
+                                                    #customSpringMessage('PSSRC090_FOOTER_COMMENT') ## ＊:前方一致 / ％:中間一致 / なし:完全一致
+                                                </td>
+                                            </tr>
+                                        </table>
+                                    </td>
+                                    <td nowrap class="FontSmallBold" align="right">
+                                        <br>
+                                        <input type="button" class="LargeButton" onclick="javascript:execSearch();" value="#customSpringMessage('ACTION_SEARCH')"><!-- 検索 -->
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+        <tr id ="TR_ERROR" style="display:none;"><td class="error" style="height:0px;">
+            $!errorMessage
+        </td></tr>
+        <tr><td class="NoBorder" style="height:auto;">
+            <iframe id="DATAAREA" name="DATAAREA" class="DataArea" framespacing="0" frameborder="0" src="../../layout/default.vm" scrolling="yes" frameborder="no" style="position:static;width:100%;border:0px solid #999999;height:100%;z-index:0;"></iframe>
+        </td></tr>
+    </table>
+</form>
+</body>
+</html>

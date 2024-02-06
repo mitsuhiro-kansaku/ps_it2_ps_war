@@ -1,0 +1,207 @@
+<!doctype html>
+<html LANG="ja">
+<head>
+<META http-equiv="Content-type" content="text/html; charset=UTF-8">
+#set($commonTitle = "#customSpringMessage('SECTION_BUDGET_LIST')")
+<title>$commonTitle</title><!--部門予算一覧-->
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Content-script-type" CONTENT="text/javascript">
+<link id="CSS_FONT" rel="stylesheet" href="../../include/FontS.css" type="text/css">
+<link rel="stylesheet" href="../../include/Layout.css" type="text/css">
+<link rel="stylesheet" href="../../include/Color.css" type="text/css">
+<link rel="stylesheet" href="../../include/searchbox.css" type="text/css">
+<link rel="stylesheet" href="../../include/ime.css" type="text/css">
+<script language="javascript" type="text/javascript" src="../../include/common.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/date.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/check.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/searchbox.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/jquery-1.7.2.min.js"></script>
+<script language="javascript" type="text/javascript">
+<!--
+
+#set($searchViewStateID='PSBDT020')
+#set($listViewStateID='PSBDT021')
+var pinName="PSBDT020_Pin";
+#parse("./common/common_js.vm")
+
+function onLoad(){
+    bodyLoad();
+    setFocusForInput();
+    var alertMessage = "$!alertMessage";
+    if (alertMessage != ""){
+        alert(alertMessage);
+    }
+    var errorMsg = "$!errorMessage";
+    if (errorMsg != ""){
+       setErrorMessage("ERRORDIV", errorMsg, "DATAAREA");
+       return;
+    }
+
+    var isDownload = "#jsEscape($!isDownLoadValidate)";
+    if (isDownload == 'true') {
+        iframeChange("${flowExecutionUrl}&_eventId=download","pageid","$searchViewStateID","HIDDENAREA");
+    } else {
+        var isShowList = "#jsEscape($isShowList)";
+        if (isShowList == 'true'){
+            iframeChange("${flowExecutionUrl}&_eventId=search", "pageid", "$searchViewStateID");
+            return;
+        }
+    }
+
+}
+
+ function openSectionPop() {
+    // 部門POPUP
+    var termFlag = '0';
+    var companyCd = "#jsEscape($!loginUserCompanyCd)";
+    var companyChangeFlag = '0';
+    var loadSectionFlag = '';
+
+    sectionPopup.setParam(termFlag,companyCd,companyChangeFlag,loadSectionFlag);
+
+    sectionPopup.setObject(
+        getObj('sectionCd')
+        ,getObj('sectionName')
+    );
+    masterSearch('../../src/sectionPopup/search?pageid=sectionPopupSearch&popupPageid='+"$searchViewStateID",'sectionSearch', '750', '500');
+ }
+
+ function clearSection() {
+    getObj("sectionName").value = "";
+ }
+
+
+ function openSubjectPop() {
+    // 科目POPUP
+    var termFlag = '0';
+    var companyCd = "#jsEscape($!loginUserCompanyCd)";
+    var onLoadFlag = '';
+
+    subjectPopup.setParam(termFlag,companyCd,onLoadFlag);
+
+    subjectPopup.setObject(
+        getObj('subjectCd')
+        ,getObj('subjectName')
+    );
+    masterSearch('../../src/subjectPopup/search?pageid=subjectPopupSearch&popupPageid='+"$searchViewStateID",'subjectSearch', '750', '500');
+ }
+
+ function clearSubject() {
+    getObj("subjectName").value = "";
+ }
+
+function execSearch(){
+    buttonDisable();
+    getObj("Body").target="_self";
+    getObj('Body').action = "${flowExecutionUrl}&_eventId=validate";
+    getObj('Body').submit();
+}
+function doDownload(){
+    //メッセージは空設定
+    getObj("TR_ERROR").style.display = "none";
+    getObj("ERRORDIV").innerHTML="";
+    getObj("Body").target = "HIDDENAREA";
+    buttonDisable();
+    setTimeout(buttonUsable,1000);
+    getObj("Body").action = "${flowExecutionUrl}&_eventId=downloadValidate";
+
+    getObj("Body").submit();
+}
+function checkBoxClear() {
+    searchConditionCheckBoxClear("budgetOverOnly");
+}
+//-->
+</script>
+</head>
+<body topmargin="0" leftmargin="0" marginwidth="0" marginheight="0" align="center" onload="onLoad();" width="100%" style="height:100%;overflow-y:hidden;">
+<form id="Body" name="Body" action="${flowExecutionUrl}&_eventId=validate" method="post" enctype="multipart/form-data"><!-- target="DATAAREA" -->
+    <iframe id="CALENDARBOX" class="CALENDARBOX" framespacing="0"scrolling="no" frameborder="0" src="../../sbxCalendar/body.vm"></iframe>
+
+    <table class="NoBorder" width="100%" height="100%">
+        <tr>
+            <td id="SEARCH_AREA" class="SearchArea"><!-- onLoadで変更 -->
+                #parse("./common/common_title.vm")
+                <table width="100%">
+                    <tr id="SEARCH_AREA2">
+                        <td id="Adjust" align="right" valign="top">
+                            <!-- 検索条件入力部 -->
+                            <table class="NoBorder" width="100%">
+                                <tr><td align="left" colspan="4" nowrap>#customSpringMessage('PSBDT020_HEADER_COMMENT')</td></tr>
+                  #if($!initValidate)
+                                <tr>
+                                    <td nowrap class="FontSmallBold" align="right">#customSpringMessage('SECTION')<span class="FontComment">＊</span></td><!--部門-->
+                                    <td nowrap class="FontSmall" align="left">
+                                        #springFormInput("searchCondition.sectionCd" 'class="Small noIME" maxlength="12" size="20" onchange="clearSection();"')
+                                        #springFormInput("searchCondition.sectionName" 'class="SmallDsp" readonly tabIndex="-1" size="32"')
+                                        <img class="Icon" src="../../image/btnLupe.gif" onclick="openSectionPop();">
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td nowrap class="FontSmallBold" align="right">#customSpringMessage('SUBJECT')</td><!--科目-->
+                                    <td nowrap class="FontSmallBold" align="left" colspan="3">
+                                        #springFormInput("searchCondition.subjectCd" 'class="Small noIME subject_cd" maxlength="12" size="20" onblur="clearSubject();"')
+                                        #springFormInput("searchCondition.subjectName" 'class="SmallDsp subject_name" readonly tabIndex="-1" size="71"')
+                                        <img class="Icon subject_search" src="../../image/btnLupe.gif" onclick="openSubjectPop();">
+                                     </td>
+                                </tr>
+                                <tr>
+                                    <td nowrap class="FontSmallBold" align="right">#customSpringMessage('FISCAL_YEAR')<span class="FontWarn">&nbsp;※</span></td><!-- 年度-->
+                                    <td nowrap class="FontSmall" align="left">
+                                        #springFormInput("searchCondition.fiscalYear" "class='Small noIME' maxlength=4 type='text' size=6 onfocus='this.select();if(nowWarning==this) { closeWarningBox();}' onmouseover='reDrowWbx(this);' value='$!searchCondition.fiscalYear'")
+                                        #customSpringMessage('YEAR')<!--年-->
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td nowrap class="FontSmallBold" align="right">#customSpringMessage('BUDGET_NAME')<span class="FontComment">％</span></td><!--予算名-->
+                                    <td nowrap class="FontSmallBold" align="left">
+                                        #springFormInput("searchCondition.budgetName" "class='Small onIME' maxlength=30 type='text' size=40 ")
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td nowrap class="FontSmallBold" align="right"></td>
+                                    <td nowrap class="FontSmallBold" align="left">
+                                        #customFormCheckbox("searchCondition.budgetOverOnly" "" "1" "")#customSpringMessage('BUDGET_OVER_ONLY')<!--予算オーバーのみ表示する-->
+                                    </td>
+                                </tr>
+                                <tr>
+                  #end
+                                    <td align="left" colspan="4" nowrap class="FontComment">
+                                        #customSpringMessage("PSBDT020_FOOTER_COMMENT")<!--＊:前方一致 / ％:中間一致 / なし:完全一致-->
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                        <td nowrap class="FontSmallBold" align="right" valign="top">
+                            <br>
+                  #if($!initValidate)
+                            <input type="button" onclick="javascript:execSearch();" class="LargeButton" value="#customSpringMessage('ACTION_SEARCH')"><!--検索-->
+                            <br>
+                            <br><a href="javascript:clear();checkBoxClear();">#customSpringMessage("ACTION_CLEAR_SEARCH_CRITERIA")<!--検索条件をクリアする--></a>&nbsp;
+                  #end
+                        </td>
+                    </tr>
+                 </table>
+            </td>
+        </tr>
+        <tr>
+            <td id="UPLOAD_AREA" class="NoBorder" style="background-color:#eaeaea;height:35px;border-bottom:1px solid #999999;text-align:left;vertical-align:top;">
+              #if($!initValidate)
+                    #parse("./common/common_upload_download.vm")
+              #end
+            </td>
+        </tr>
+        <tr id ="TR_ERROR" style="display:none;"><td class="error" style="height:0px;">
+                <div id="ERRORDIV">$!errorMessage </div>
+            </td>
+        </tr>
+        <tr>
+            <td class="NoBorder" style="height:auto;">
+                <iframe id="DATAAREA" name="DATAAREA" framespacing="0" frameborder="0" src="../../layout/default.vm" scrolling="no" frameborder="no" style="position:static;width:100%;border:0px solid #999999;height:100%;z-index:0;"></iframe>
+            </td>
+       </tr>
+</table>
+<iframe id="HIDDENAREA" name="HIDDENAREA" framespacing="0" frameborder="0" src="" scrolling="no" frameborder="no" style="display:none"></iframe>
+</form>
+</body>
+</html>
+

@@ -1,0 +1,730 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="ps.dataaccess.ord.unord.UnordMapper">
+
+    <sql id="pageHeader">
+       SELECT * FROM (
+    </sql>
+
+    <sql id="pageRoot">
+        ) WHERE  ROWNUM &lt;=${@fw.common.util.PropertiesUtil@getLong("DOWNLOAD_MAXCNT")}
+    </sql>
+
+    <sql id="listKeyIdentityWhereCondition">
+        ${@ps.common.util.ItemSettingUtil@getItemSettingWhereSQL()}
+        AND T_PUR_REQUEST.BUYER_COMPANY_CD = '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}'
+        AND T_PUR_REQUEST.BUYER_SECTION_CD = '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}'
+        AND T_PUR_REQUEST.BUYER_USER_ID = '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}'
+        AND T_PUR_REQUEST.NEW_FLG = '1'
+        AND T_PUR_REQUEST.CORRECT_CD &lt;> '3'
+        AND T_PUR_REQUEST.DELETE_FLG = '0'
+        AND T_SLIP_MNG.SLIP_STATUS IN
+        <foreach collection="slipStatusList" item="slipStatus" open="(" separator="," close=")">
+            #{slipStatus}
+        </foreach>
+        AND T_SLIP_MNG.DELETE_FLG = '0'
+        <if test="@org.apache.commons.lang.StringUtils@isBlank(urgentInd.urgentInd)">
+            AND T_PUR_APL.PUR_APL_STATUS = '11'
+        </if>
+        AND T_PUR_APL.NEW_APP_FLG = '1'
+        AND T_PUR_APL.NEW_FLG = '1'
+        AND T_PUR_APL.CORRECT_CD &lt;> '3'
+        AND T_PUR_APL.DELETE_FLG = '0'
+        <if test="!@org.apache.commons.lang.StringUtils@isBlank(urgentInd.urgentInd)">
+            AND T_PUR_APL.URGENT_IND = '1'
+        </if>
+        <if test="@fw.domain.slip.order.order.unactionpurreq.NotActionPurReqSearchCondition@isSubconChecked(subcon.subconInd)">
+            AND M_SUPPLIER.SUBCON_IND = '1'
+        </if>
+    </sql>
+        
+    <select id="listKeyIdentity"
+        parameterType="fw.domain.slip.order.order.unactionpurreq.NotActionPurReqSearchCondition"
+        resultType="fw.domain.slip.order.order.unactionpurreq.NotActionPurReqIdentify">
+        SELECT 
+            T_PUR_REQUEST.PUR_REQ_SEQ as purReqSeq,
+            T_PUR_REQUEST.LAST_UPD_DATE as lastUpdDate,
+            T_SLIP_MNG.SLIP_NO as "slipMngIdentify.slipNo",
+            T_SLIP_MNG.LAST_UPD_DATE as "slipMngIdentify.lastUpdDate",
+            CASE WHEN QUOT_ADO_FLG IS NULL THEN '0' ELSE QUOT_ADO_FLG END AS QUOT_ADO_FLG_SORT
+        FROM T_PUR_REQUEST
+        INNER JOIN T_SLIP_MNG
+        ON 
+            T_PUR_REQUEST.PUR_REQ_NO = T_SLIP_MNG.SLIP_NO
+        INNER JOIN T_PUR_APL
+        ON 
+            T_PUR_REQUEST.PUR_APL_SEQ = T_PUR_APL.PUR_APL_SEQ
+        LEFT JOIN M_SUPPLIER
+            ON (T_PUR_REQUEST.SUP_COMPANY_CD = M_SUPPLIER.COMPANY_CD
+            OR M_SUPPLIER.COMPANY_CD = '${@fw.common.constant.ApplicationConstant@COMPANY_CD_ALL}')
+           AND T_PUR_REQUEST.SUP_CD = M_SUPPLIER.SUP_CD
+           AND M_SUPPLIER.VALID_START_DATE &lt;= '${@fw.common.util.AppUtil@getSysDate(@fw.common.util.AppUtil@DATE_SHORT)}'
+           AND M_SUPPLIER.VALID_END_DATE >= '${@fw.common.util.AppUtil@getSysDate(@fw.common.util.AppUtil@DATE_SHORT)}'
+           AND M_SUPPLIER.TERM_FLG = '0'
+        LEFT JOIN T_ATTACH_MNG
+             T_ATTACH_MNG_1
+        ON 
+            T_PUR_APL.ATTACH_FILE_SEQ1 =
+            T_ATTACH_MNG_1.ATTACH_FILE_SEQ
+            AND T_ATTACH_MNG_1.DELETE_FLG = '0'
+        LEFT JOIN T_ATTACH_MNG T_ATTACH_MNG_2
+        ON
+            T_PUR_APL.ATTACH_FILE_SEQ2 =
+            T_ATTACH_MNG_2.ATTACH_FILE_SEQ
+            AND T_ATTACH_MNG_2.DELETE_FLG = '0'
+        LEFT JOIN (
+            SELECT
+                QUOT_REQ_SEQ
+                , LAST_UPD_DATE
+                , QUOT_REQ_NO
+                , QUOT_ADO_STATUS
+                , CASE WHEN QUOT_ADO_STATUS = '21' THEN '1' ELSE '0' END AS QUOT_ADO_FLG
+            FROM
+                T_QUOT_REQUEST
+            WHERE NEW_FLG = '1') T_QUOT_REQUEST
+        ON
+            T_PUR_APL.PUR_APL_NO = T_QUOT_REQUEST.QUOT_REQ_NO
+        <where>
+            <include refid="listKeyIdentityWhereCondition"/>
+        </where>
+        ORDER BY ${searchCondition.columnOrder.columnOrder()}
+    </select>
+  
+  <select id="quickLinkCount"
+        parameterType="fw.domain.slip.order.order.unactionpurreq.NotActionPurReqSearchCondition"
+        resultType="java.lang.Integer">
+        SELECT 
+            COUNT(*)
+        FROM T_PUR_REQUEST
+        INNER JOIN T_SLIP_MNG
+        ON 
+            T_PUR_REQUEST.PUR_REQ_NO = T_SLIP_MNG.SLIP_NO
+        INNER JOIN T_PUR_APL
+        ON 
+            T_PUR_REQUEST.PUR_APL_SEQ = T_PUR_APL.PUR_APL_SEQ
+        <where>
+            <include refid="listKeyIdentityWhereCondition"/>
+        </where>
+  </select>
+
+  <resultMap type="fw.domain.slip.order.order.unactionpurreq.NotActionPurReqItem" id="NotActionPurReqItem_Map">
+      <id column="PUR_REQ_SEQ" property="notActionPurReqIdentify.purReqSeq"/>
+      <id column="PUR_APL_SEQ" property="notActionPurReqIdentify.purAplSeq"/>
+      <id column="QUOT_ADO_STATUS" property="notActionPurReqIdentify.quotAdoStatus"/>
+      <id column="LAST_UPD_DATE" property="notActionPurReqIdentify.lastUpdDate"/>
+      <id column="SLIP_NO" property="notActionPurReqIdentify.slipMngIdentify.slipNo"/>
+      <id column="SLIP_MNG_LAST_UPD_DATE" property="notActionPurReqIdentify.slipMngIdentify.lastUpdDate"/>
+      <id column="QUOT_LAST_UPD_DATE" property="quotStatusIdentify.lastUpdDate"/>
+  </resultMap>
+
+  <select id="listPageItem"
+    parameterType="fw.domain.slip.order.order.unactionpurreq.NotActionPurReqSearchCondition"
+    resultMap="NotActionPurReqItem_Map">
+        SELECT  T_PUR_REQUEST.PUR_REQ_SEQ as "PUR_REQ_SEQ",
+                T_PUR_REQUEST.LAST_UPD_DATE as "LAST_UPD_DATE",
+                T_PUR_APL.PUR_APL_SEQ as "PUR_APL_SEQ",
+                T_QUOT_REQUEST.QUOT_ADO_STATUS as "QUOT_ADO_STATUS",
+                T_PUR_REQUEST.PUR_REQ_NO as purReqNo,
+                T_PUR_REQUEST.PUR_REQ_VERSION as purReqVersion,
+                T_SLIP_MNG.QUOT_ACQ_REQ_EXIST_FLG as quotAcqReqExistFlg,
+                T_SLIP_MNG.SLIP_STATUS as slipStatus,
+                T_SLIP_MNG.SLIP_NO,
+                T_SLIP_MNG.LAST_UPD_DATE as SLIP_MNG_LAST_UPD_DATE,
+                T_SLIP_MNG.SLIP_NO as "slipMngIdentify.slipNo",
+                T_SLIP_MNG.LAST_UPD_DATE as "slipMngIdentify.lastUpdDate",
+                T_PUR_APL.PUR_APL_NO as purAplNo,
+                T_PUR_APL.QUOT_REQ_NO as quotReqNo,
+                T_PUR_APL.URGENT_IND as emergency,
+                T_PUR_APL.REQ_TYPE_IND as voucherType,
+                T_PUR_APL.QUOT_RESP_SEQ as quotRespSeq,
+                T_PUR_APL.TITLE_NAME as titleName,
+                T_PUR_APL.FOR_BOSS_COMMENT as forBossComment,
+                T_PUR_APL.FOR_BUYER_COMMENT as forBuyerComment,
+                T_PUR_APL.FOR_SUPPRIER_COMMENT as forSupprierComment,
+                T_ATTACH_MNG_1.ATTACH_FILE_SEQ as attachFileSeq1,
+                T_ATTACH_MNG_2.ATTACH_FILE_SEQ as attachFileSeq2,
+                T_ATTACH_MNG_3.ATTACH_FILE_SEQ as attachFileSeq3,
+                T_PUR_REQUEST.ITEM_CLASS_L_NAME as itemClassLarge,
+                T_PUR_REQUEST.ITEM_CLASS_M_NAME as itemClassMedium,
+                T_PUR_REQUEST.ITEM_CLASS_S_NAME as itemClassSmall,
+                T_PUR_REQUEST.ITEM_CD as itemCd,
+                T_PUR_REQUEST.ITEM_NAME as itemName,
+                T_PUR_REQUEST.SUP_COMPANY_CD as supCompanyCd,
+                T_PUR_REQUEST.SUP_CD as hopeSupplierCd,
+                T_PUR_REQUEST.SUP_ABBR_NAME as hopeSupplierName,
+                M_SUPPLIER.SUBCON_IND as subcontractor,
+                T_PUR_REQUEST.REQ_DELIV_DATE as "reqDelivDate.dateOfymd",
+                T_PUR_REQUEST.CURRENCY_CD as currencyCd,
+                (CASE WHEN T_PUR_REQUEST.REQ_VOL IS NULL
+                 THEN 0
+                 ELSE T_PUR_REQUEST.REQ_VOL END) as "hopeVol.vol",
+                T_PUR_REQUEST.UNIT_NAME as unit,
+                T_PUR_REQUEST.UNIT_PRICE as "unitPrice.amount",
+                (CASE WHEN T_PUR_REQUEST.REQ_AMOUNT IS NULL
+                 THEN 0
+                 ELSE T_PUR_REQUEST.REQ_AMOUNT END) as "hopePriceTotal.amount",
+                T_PUR_APL.DELIV_PLACE_CD as delivPlaceCd,
+                T_PUR_APL.DELIV_PLACE_NAME as delivPlaceName,
+                T_PUR_APL.PUR_REQ_DATE as "reqDate.dateOfymd",
+                T_PUR_APL.REQ_SECTION_CD as reqSectionCd,
+                T_PUR_APL.REQ_SECTION_NAME as reqSectionName,
+                T_PUR_APL.REQ_USER_ID as reqUserId,
+                T_PUR_APL.REQ_USER_NAME as reqUserName,
+                T_QUOT_REQUEST.QUOT_REQ_SEQ as quotReqSeq,
+                T_QUOT_REQUEST.LAST_UPD_DATE  as QUOT_LAST_UPD_DATE,
+                T_PUR_REQUEST.APP_UNIT_NO as appUnitNo,
+                ${@ps.common.util.ItemSettingUtil@getItemSettingSelectSQLDomainAliasNonBinary("T_PUR_APL", "searchResExtItemApl")},
+                ${@ps.common.util.ItemSettingUtil@getItemSettingSelectSQLDomainAliasNonBinary("T_PUR_REQUEST", "searchResExtItemReq")},
+                CASE WHEN T_QUOT_REQUEST.QUOT_ADO_FLG IS NULL THEN '0' ELSE T_QUOT_REQUEST.QUOT_ADO_FLG END AS QUOT_ADO_FLG_SORT
+        FROM T_PUR_REQUEST
+        INNER JOIN T_SLIP_MNG
+        ON 
+            T_PUR_REQUEST.PUR_REQ_NO = T_SLIP_MNG.SLIP_NO
+        AND T_PUR_REQUEST.BUYER_COMPANY_CD = '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}'
+        INNER JOIN T_PUR_APL
+        ON 
+            T_PUR_REQUEST.PUR_APL_SEQ = T_PUR_APL.PUR_APL_SEQ
+        LEFT JOIN M_SUPPLIER
+        ON 
+            (T_PUR_REQUEST.SUP_COMPANY_CD = M_SUPPLIER.COMPANY_CD
+             OR M_SUPPLIER.COMPANY_CD = '${@fw.common.constant.ApplicationConstant@COMPANY_CD_ALL}')
+            AND T_PUR_REQUEST.SUP_CD = M_SUPPLIER.SUP_CD
+        LEFT JOIN T_ATTACH_MNG
+             T_ATTACH_MNG_1
+        ON 
+            T_PUR_APL.ATTACH_FILE_SEQ1 =
+            T_ATTACH_MNG_1.ATTACH_FILE_SEQ
+            AND T_ATTACH_MNG_1.DELETE_FLG = '0'
+        LEFT JOIN T_ATTACH_MNG T_ATTACH_MNG_2
+        ON
+            T_PUR_APL.ATTACH_FILE_SEQ2 =
+            T_ATTACH_MNG_2.ATTACH_FILE_SEQ
+            AND T_ATTACH_MNG_2.DELETE_FLG = '0'
+        LEFT JOIN T_ATTACH_MNG T_ATTACH_MNG_3
+            ON T_PUR_REQUEST.ATTACH_FILE_SEQ = T_ATTACH_MNG_3.ATTACH_FILE_SEQ
+           AND T_ATTACH_MNG_3.DELETE_FLG = '0'
+        LEFT JOIN (
+                    SELECT      QUOT_REQ_SEQ
+                    ,           LAST_UPD_DATE
+                    ,           QUOT_REQ_NO
+                    ,           QUOT_ADO_STATUS
+                    ,           CASE WHEN QUOT_ADO_STATUS = '21' THEN '1' ELSE '0' END AS QUOT_ADO_FLG
+                    FROM        T_QUOT_REQUEST
+                    WHERE       NEW_FLG = '1'
+                ) T_QUOT_REQUEST
+        ON      (T_PUR_APL.PUR_APL_NO = T_QUOT_REQUEST.QUOT_REQ_NO
+        OR      T_PUR_REQUEST.PUR_REQ_NO = T_QUOT_REQUEST.QUOT_REQ_NO)
+        <where>
+            <include refid="listKeyIdentityWhereCondition"/>
+            AND T_PUR_REQUEST.PUR_REQ_SEQ IN
+            <foreach collection="searchCondition.page.keyDomainEntityList" item="keyList" open="(" separator="," close=")">
+                #{keyList.purReqSeq}
+            </foreach>
+        </where>
+        ORDER BY ${searchCondition.columnOrder.columnOrder()}
+  </select>
+  
+  <select id="listSectionCode" resultType="String">
+      SELECT SECTION_CD
+        FROM M_SECTION
+       WHERE COMPANY_CD = '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}'
+         AND TERM_FLG = '0'
+         AND BUYER_SECTION_FLG = '1'
+         AND VALID_START_DATE &lt;= '${@fw.common.util.AppUtil@getSysDate()}'
+         AND VALID_END_DATE >= '${@fw.common.util.AppUtil@getSysDate()}'
+       ORDER BY SECTION_CD
+  </select>
+  
+    <sql id="listKeyIdentityAcceptWhereCondition">
+         ${@ps.common.util.ItemSettingUtil@getItemSettingWhereSQL()}
+         AND T_SLIP_MNG.DELETE_FLG = '0'
+         AND T_PUR_REQUEST.DELETE_FLG = '0'
+         AND T_PUR_REQUEST.BUYER_COMPANY_CD = '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}'
+         AND T_PUR_REQUEST.BUYER_SECTION_CD = '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}'
+         AND T_PUR_REQUEST.BUYER_USER_ID IS NULL
+         AND T_PUR_APL.DELETE_FLG = '0'
+         <if test="@org.apache.commons.lang.StringUtils@isBlank(slipStatus)">
+             AND T_SLIP_MNG.SLIP_STATUS IN ('0611', '0613')
+         </if>
+         <if test="!@org.apache.commons.lang.StringUtils@isBlank(slipStatus)">
+             AND T_SLIP_MNG.SLIP_STATUS = #{slipStatus}
+         </if>
+         <if test="@org.apache.commons.lang.StringUtils@isNotBlank(urgentInd.urgentInd)">
+             AND T_PUR_APL.URGENT_IND = '1'
+         </if>
+         <if test="@fw.domain.slip.order.order.purreqaccept.PurReqAcceptSearchCondition@isSubconChecked(subcon.subconInd)">
+             AND M_SUPPLIER.SUBCON_IND = '1'
+         </if>
+    </sql>
+        
+  <select id="listKeyIdentityAccept"
+      parameterType="fw.domain.slip.order.order.purreqaccept.PurReqAcceptSearchCondition"
+      resultType="fw.domain.slip.order.order.purreqaccept.PurReqAcceptIdentify">
+      SELECT T_PUR_REQUEST.PUR_REQ_SEQ as purReqSeq
+        FROM T_SLIP_MNG
+       INNER JOIN T_PUR_REQUEST
+          ON T_PUR_REQUEST.PUR_REQ_NO = T_SLIP_MNG.SLIP_NO
+       INNER JOIN T_PUR_APL
+          ON T_PUR_APL.PUR_APL_SEQ = T_PUR_REQUEST.PUR_APL_SEQ
+       LEFT JOIN M_SUPPLIER
+          ON (M_SUPPLIER.COMPANY_CD = T_PUR_REQUEST.SUP_COMPANY_CD
+          OR M_SUPPLIER.COMPANY_CD = '${@fw.common.constant.ApplicationConstant@COMPANY_CD_ALL}')
+         AND M_SUPPLIER.SUP_CD = T_PUR_REQUEST.SUP_CD
+         AND M_SUPPLIER.VALID_START_DATE &lt;= '${@fw.common.util.AppUtil@getSysDate()}' 
+         AND M_SUPPLIER.VALID_END_DATE >= '${@fw.common.util.AppUtil@getSysDate()}' 
+         AND M_SUPPLIER.TERM_FLG = '0'
+      <where>
+        <include refid="listKeyIdentityAcceptWhereCondition"/>
+     </where>
+     ORDER BY ${searchCondition.columnOrder.columnOrder()}
+  </select>
+  
+    <select id="quickLinkCountAccept"
+      parameterType="fw.domain.slip.order.order.purreqaccept.PurReqAcceptSearchCondition"
+      resultType="java.lang.Integer">
+      SELECT COUNT(*)
+        FROM T_SLIP_MNG
+       INNER JOIN T_PUR_REQUEST
+          ON T_PUR_REQUEST.PUR_REQ_NO = T_SLIP_MNG.SLIP_NO
+       INNER JOIN T_PUR_APL
+          ON T_PUR_APL.PUR_APL_SEQ = T_PUR_REQUEST.PUR_APL_SEQ
+      <where>
+        <include refid="listKeyIdentityAcceptWhereCondition"/>
+     </where>
+  </select>
+
+  <resultMap type="fw.domain.slip.order.order.purreqaccept.PurReqAcceptItem" id="PurReqAcceptItem_Map">
+      <id column="LAST_UPD_DATE" property="purReqAcceptIdentify.lastUpdDate"/>
+      <id column="PUR_REQ_SEQ" property="purReqAcceptIdentify.purReqSeq"/>
+      <id column="PUR_APL_SEQ" property="purReqAcceptIdentify.purAplSeq"/>
+      <id column="APP_UNIT_NO" property="purReqAcceptIdentify.appUnitNo"/>
+      <id column="REQ_TYPE_IND" property="purReqAcceptIdentify.reqTypeInd"/>
+      <id column="COMMENT" property="receipt.remand.backReason.backReason.comment"/>
+      <id column="INPUT_COMPANY_CD" property="user.section.company.companyCd"/>
+      <id column="INPUT_COMPANY_NAME" property="user.section.company.companyName"/>
+      <id column="INPUT_SECTION_PLACE_CD" property="user.section.sectionPlace.sectionPlaceCd"/>
+      <id column="INPUT_SECTION_PLACE_NAME" property="user.section.sectionPlace.sectionPlaceName"/>
+      <id column="INPUT_SECTION_CD" property="user.section.sectionCd"/>
+      <id column="INPUT_SECTION_NAME" property="user.section.sectionName"/>
+      <id column="EXCLUSIVE_SLIP_NO" property="purReqAcceptIdentify.exclusiveSlipId.slipNo"/>
+      <id column="EXCLUSIVE_LAST_UPD_DATE" property="purReqAcceptIdentify.exclusiveSlipId.lastUpdDate"/>
+  </resultMap>
+
+  <select id="listPageItemAccept"
+    parameterType="fw.domain.slip.order.order.purreqaccept.PurReqAcceptSearchCondition"
+    resultMap="PurReqAcceptItem_Map">
+        SELECT  T_PUR_REQUEST.PUR_REQ_NO as "purReqNo",
+                T_PUR_REQUEST.LAST_UPD_DATE as "LAST_UPD_DATE",
+                T_PUR_REQUEST.PUR_REQ_SEQ as "PUR_REQ_SEQ",
+                T_PUR_APL.PUR_APL_SEQ as "PUR_APL_SEQ",
+                T_PUR_APL.REQ_TYPE_IND as "REQ_TYPE_IND",
+                T_PUR_REQUEST.APP_UNIT_NO as "APP_UNIT_NO",
+                T_PUR_APL.URGENT_IND as "emergency",
+                T_SLIP_MNG.SLIP_STATUS as "status",
+                T_PUR_APL.TITLE_NAME as "titleName",
+                T_PUR_APL.FOR_BUYER_COMMENT as "forBuyerComment",
+                T_PUR_APL.FOR_SUPPRIER_COMMENT as "forSupprierComment",
+                T_ATTACH_MNG_1.ATTACH_FILE_SEQ as "attachFileSeq1",
+                T_ATTACH_MNG_2.ATTACH_FILE_SEQ as "attachFileSeq2",
+                T_ATTACH_MNG_3.ATTACH_FILE_SEQ as "attachFileSeq3",
+                T_PUR_REQUEST.ITEM_CLASS_L_NAME as "itemClassLarge",
+                T_PUR_REQUEST.ITEM_CLASS_M_NAME as "itemClassMedium",
+                T_PUR_REQUEST.ITEM_CLASS_S_NAME as "itemClassSmall",
+                T_PUR_REQUEST.ITEM_CD as "itemCd",
+                T_PUR_REQUEST.ITEM_NAME as "itemName",
+                T_PUR_APL.HOPE_SUPPLIER_CD as "hopeSupplierCd",
+                T_PUR_APL.HOPE_SUPPLIER_ABBR_NAME as "hopeSupplierName",
+                T_PUR_REQUEST.REQ_DELIV_DATE as "reqDelivDate.dateOfymd",
+                (CASE WHEN T_PUR_REQUEST.REQ_VOL IS NULL
+                 THEN 0
+                 ELSE T_PUR_REQUEST.REQ_VOL END) as "hopeVol.vol",
+                T_PUR_REQUEST.UNIT_NAME as "unit",
+                T_PUR_REQUEST.CURRENCY_CD as "currencyCd",
+                T_PUR_REQUEST.UNIT_PRICE as "unitPrice.amount",
+                (CASE WHEN T_PUR_REQUEST.REQ_AMOUNT IS NULL
+                 THEN 0
+                 ELSE T_PUR_REQUEST.REQ_AMOUNT END) as "hopePrice.amount",
+                T_PUR_APL.PUR_REQ_DATE as "reqDate.dateOfymd",
+                T_PUR_APL.REQ_SECTION_CD as "reqSectionCd",
+                T_PUR_APL.REQ_SECTION_NAME as "reqSectionName",
+                T_PUR_APL.REQ_USER_ID as "reqUserId",
+                T_PUR_APL.REQ_USER_NAME as "reqUserName",
+                T_PUR_APL.REQ_COMPANY_CD as "INPUT_COMPANY_CD", 
+                T_PUR_APL.REQ_COMPANY_NAME as "INPUT_COMPANY_NAME",
+                T_PUR_APL.REQ_SECTION_PLACE_CD as "INPUT_SECTION_PLACE_CD",
+                T_PUR_APL.REQ_SECTION_PLACE_NAME as "INPUT_SECTION_PLACE_NAME",
+                T_PUR_APL.REQ_SECTION_CD as  "INPUT_SECTION_CD",
+                T_PUR_APL.REQ_SECTION_NAME as "INPUT_SECTION_NAME",
+                T_PUR_APL.REQ_USER_ID as "user.userID", 
+                T_PUR_APL.REQ_USER_NAME as "user.userName", 
+                T_PUR_REQUEST.BUYER_BACK_USER_COMMENTS as "COMMENT",
+                T_PUR_APL.QUOT_REQ_NO as "quotReqNo",
+                ${@ps.common.util.ItemSettingUtil@getItemSettingSelectSQLDomainAliasNonBinary("T_PUR_APL", "searchResExtItemApl")},
+                ${@ps.common.util.ItemSettingUtil@getItemSettingSelectSQLDomainAliasNonBinary("T_PUR_REQUEST", "searchResExtItemReq")},
+                T_SLIP_MNG.SLIP_NO AS "EXCLUSIVE_SLIP_NO",
+                T_SLIP_MNG.LAST_UPD_DATE AS "EXCLUSIVE_LAST_UPD_DATE"
+                
+        FROM T_SLIP_MNG
+       INNER JOIN T_PUR_REQUEST
+          ON T_PUR_REQUEST.PUR_REQ_NO = T_SLIP_MNG.SLIP_NO
+       INNER JOIN T_PUR_APL
+            ON T_PUR_REQUEST.PUR_APL_SEQ = T_PUR_APL.PUR_APL_SEQ
+        LEFT JOIN T_ATTACH_MNG T_ATTACH_MNG_1
+            ON T_PUR_APL.ATTACH_FILE_SEQ1 = T_ATTACH_MNG_1.ATTACH_FILE_SEQ
+           AND T_ATTACH_MNG_1.DELETE_FLG = '0'
+        LEFT JOIN T_ATTACH_MNG T_ATTACH_MNG_2
+            ON T_PUR_APL.ATTACH_FILE_SEQ2 = T_ATTACH_MNG_2.ATTACH_FILE_SEQ
+           AND T_ATTACH_MNG_2.DELETE_FLG = '0'
+        LEFT JOIN T_ATTACH_MNG T_ATTACH_MNG_3
+            ON T_PUR_REQUEST.ATTACH_FILE_SEQ = T_ATTACH_MNG_3.ATTACH_FILE_SEQ
+           AND T_ATTACH_MNG_3.DELETE_FLG = '0'
+       LEFT JOIN M_SUPPLIER
+          ON (M_SUPPLIER.COMPANY_CD = T_PUR_REQUEST.SUP_COMPANY_CD
+          OR M_SUPPLIER.COMPANY_CD = '${@fw.common.constant.ApplicationConstant@COMPANY_CD_ALL}')
+         AND M_SUPPLIER.SUP_CD = T_PUR_REQUEST.SUP_CD
+         AND M_SUPPLIER.VALID_START_DATE &lt;= '${@fw.common.util.AppUtil@getSysDate()}' 
+         AND M_SUPPLIER.VALID_END_DATE >= '${@fw.common.util.AppUtil@getSysDate()}' 
+         AND M_SUPPLIER.TERM_FLG = '0'
+        <where>
+         <include refid="listKeyIdentityAcceptWhereCondition"/>
+         AND T_PUR_REQUEST.PUR_REQ_SEQ IN
+         <foreach collection="searchCondition.page.keyDomainEntityList" item="keyList" open="(" separator="," close=")">
+             #{keyList.purReqSeq}
+         </foreach>
+     </where>
+     ORDER BY ${searchCondition.columnOrder.columnOrder()}
+  </select>
+  
+  <update id="updateReqSelfSection" parameterType="fw.domain.slip.order.order.purreqaccept.PurReqAcceptItem">
+      UPDATE T_PUR_REQUEST
+         SET BUYER_USER_ID       = #{user.userID},
+             BUYER_USER_NAME     = #{user.userName},
+             LAST_UPD_DATE       = '${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}',
+             LAST_UPD_COMPANY_CD = '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}',
+             LAST_UPD_SECTION_CD = '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}',
+             LAST_UPD_USER_ID    = '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}'
+        WHERE PUR_REQ_SEQ = #{purReqAcceptIdentify.purReqSeq}
+  </update>
+  
+  <update id="updateReqNotSelfSection" parameterType="fw.domain.slip.order.order.purreqaccept.PurReqAcceptItem">
+      UPDATE T_PUR_REQUEST
+         SET BUYER_COMPANY_CD = '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}',
+             BUYER_COMPANY_NAME = '${@fw.security.SecurityUtil@getCompanyNameByEscapeSql()}',
+             BUYER_SECTION_PLACE_CD = #{user.section.sectionPlace.sectionPlaceCd},
+             BUYER_SECTION_PLACE_NAME = #{user.section.sectionPlace.sectionPlaceName},
+             BUYER_SECTION_CD = #{user.section.sectionCd},
+             BUYER_SECTION_NAME = #{user.section.sectionName},
+             BUYER_USER_ID       = '',
+             BUYER_USER_NAME     = '',
+             LAST_UPD_DATE       = '${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}',
+             LAST_UPD_COMPANY_CD = '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}',
+             LAST_UPD_SECTION_CD = '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}',
+             LAST_UPD_USER_ID    = '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}'
+        WHERE PUR_REQ_SEQ = #{purReqAcceptIdentify.purReqSeq}
+  </update>
+  
+  <update id="updateReqRemand" parameterType="fw.domain.slip.order.order.purreqaccept.PurReqAcceptItem">
+      UPDATE T_PUR_REQUEST
+         SET PUR_REQ_STATUS = '03',
+             APP_UNIT_NO = #{purReqNo},
+             BUYER_BACK_COMPANY_CD = '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}',
+             BUYER_BACK_COMPANY_NAME = '${@fw.security.SecurityUtil@getCompanyNameByEscapeSql()}',
+             BUYER_BACK_SECTION_PLACE_CD = '${@fw.security.SecurityUtil@getSectionPlaceCdByEscapeSql()}',
+             BUYER_BACK_SECTION_PLACE_NAME = '${@fw.security.SecurityUtil@getSectionPlaceNameByEscapeSql()}',
+             BUYER_BACK_SECTION_CD = '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}',
+             BUYER_BACK_SECTION_NAME = '${@fw.security.SecurityUtil@getDefaultSectionNameByEscapeSql()}',
+             BUYER_BACK_USER_ID       = '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}',
+             BUYER_BACK_USER_NAME     = '${@fw.security.SecurityUtil@getUserNameByEscapeSql()}',
+             BUYER_BACK_USER_COMMENTS = #{receipt.remand.backReason.backReason.comment},
+             LAST_UPD_DATE       = '${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}',
+             LAST_UPD_COMPANY_CD = '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}',
+             LAST_UPD_SECTION_CD = '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}',
+             LAST_UPD_USER_ID    = '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}'
+        WHERE PUR_REQ_SEQ = #{purReqAcceptIdentify.purReqSeq}
+  </update>
+  
+  <select id="existsNotFinishQuotData"  
+        parameterType="fw.domain.slip.order.order.purreqaccept.PurReqAcceptItem" resultType="int">
+           SELECT COUNT(1)
+              FROM T_QUOT_REQUEST
+             WHERE QUOT_REQ_NO = #{quotReqNo}
+               AND DELETE_FLG = '0'
+               AND QUOT_REQ_STATUS != '21'
+  </select>
+  
+  <sql id="listKeyIdentityBuyerChangeWhereCondition">
+         ${@ps.common.util.ItemSettingUtil@getItemSettingWhereSQL()}
+         AND T_PUR_APL.REQ_TYPE_IND IN ('2', '3', '9')
+         AND T_PUR_REQUEST.BUYER_COMPANY_CD = '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}'
+         AND T_PUR_REQUEST.BUYER_SECTION_CD = '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}'
+         <if test="@org.apache.commons.lang.StringUtils@isNotBlank(urgentInd.urgentInd)">
+         AND T_PUR_APL.URGENT_IND = '1'
+         </if>
+  </sql>
+  <select id="listKeyIdentityBuyerChange"
+      parameterType="fw.domain.slip.order.order.buyerchange.BuyerChangeSearchCondition"
+      resultType="fw.domain.slip.order.order.buyerchange.BuyerChangeIdentify">
+      SELECT T_PUR_REQUEST.PUR_REQ_SEQ as purReqSeq
+        FROM T_PUR_APL
+       INNER JOIN T_PUR_REQUEST
+          ON T_PUR_APL.PUR_APL_SEQ = T_PUR_REQUEST.PUR_APL_SEQ
+         AND T_PUR_REQUEST.DELETE_FLG = '0'
+       INNER JOIN T_SLIP_MNG
+          ON T_PUR_REQUEST.PUR_REQ_NO = T_SLIP_MNG.SLIP_NO
+         AND T_SLIP_MNG.SLIP_STATUS = '0612'
+         AND T_SLIP_MNG.DELETE_FLG = '0'
+      <where>
+        <include refid="listKeyIdentityBuyerChangeWhereCondition"/>
+     </where>
+     ORDER BY ${searchCondition.columnOrder.columnOrder()}
+  </select>
+  
+  <resultMap type="fw.domain.slip.order.order.buyerchange.BuyerChangeItem" id="BuyerChangeItem_Map">
+      <id column="LAST_UPD_DATE" property="buyerChangeIdentify.lastUpdDate"/>
+      <id column="LAST_UPD_DATE_REQ" property="buyerChangeIdentify.lastUpdDateReq"/>
+      <id column="PUR_REQ_SEQ" property="buyerChangeIdentify.purReqSeq"/>
+      <id column="PUR_APL_SEQ" property="buyerChangeIdentify.purAplSeq"/>
+      <id column="REQ_TYPE_IND" property="buyerChangeIdentify.reqTypeInd"/>
+      <id column="APP_UNIT_NO" property="buyerChangeIdentify.appUnitNo"/>
+      <id column="COMMENT" property="receipt.remand.backReason.backReason.comment"/>
+      <id column="EXCLUSIVE_SLIP_NO" property="buyerChangeIdentify.exclusiveSlipId.slipNo"/>
+      <id column="EXCLUSIVE_LAST_UPD_DATE" property="buyerChangeIdentify.exclusiveSlipId.lastUpdDate"/>
+  </resultMap>
+  
+  <select id="listPageItemBuyerChange"
+    parameterType="fw.domain.slip.order.order.buyerchange.BuyerChangeSearchCondition"
+    resultMap="BuyerChangeItem_Map">
+        SELECT  T_PUR_APL.PUR_APL_SEQ as "PUR_APL_SEQ",
+                T_PUR_APL.REQ_TYPE_IND as "REQ_TYPE_IND",
+                T_PUR_REQUEST.APP_UNIT_NO as "APP_UNIT_NO",
+                T_PUR_REQUEST.PUR_REQ_NO as "purReqNo",
+                T_PUR_APL.URGENT_IND as "emergency",
+                T_PUR_APL.TITLE_NAME as "titleName",
+                T_PUR_APL.FOR_BUYER_COMMENT as "forBuyerComment",
+                T_PUR_APL.FOR_SUPPRIER_COMMENT as "forSupprierComment",
+                T_ATTACH_MNG_1.ATTACH_FILE_SEQ as "attachFileSeq1",
+                T_ATTACH_MNG_2.ATTACH_FILE_SEQ as "attachFileSeq2",
+                T_ATTACH_MNG_3.ATTACH_FILE_SEQ as "attachFileSeq3",
+                T_PUR_REQUEST.ITEM_CLASS_L_NAME as "itemClassLarge",
+                T_PUR_REQUEST.ITEM_CLASS_M_NAME as "itemClassMedium",
+                T_PUR_REQUEST.ITEM_CLASS_S_NAME as "itemClassSmall",
+                T_PUR_REQUEST.ITEM_CD as "itemCd",
+                T_PUR_REQUEST.ITEM_NAME as "itemName",
+                T_PUR_APL.HOPE_SUPPLIER_CD as "hopeSupplierCd",
+                T_PUR_APL.HOPE_SUPPLIER_ABBR_NAME as "hopeSupplierName",
+                T_PUR_REQUEST.CURRENCY_CD as "currencyCd",
+                (CASE WHEN T_PUR_REQUEST.REQ_VOL IS NULL
+                 THEN 0
+                 ELSE T_PUR_REQUEST.REQ_VOL END) as "hopeVol.vol",
+                T_PUR_REQUEST.UNIT_NAME as "unit",
+                T_PUR_REQUEST.UNIT_PRICE as "unitPrice.amount",
+                (CASE WHEN T_PUR_REQUEST.REQ_AMOUNT IS NULL
+                 THEN 0
+                 ELSE T_PUR_REQUEST.REQ_AMOUNT END) as "hopePriceTotal.amount",
+                T_PUR_APL.PUR_REQ_DATE as "reqDate.dateOfymd",
+                T_PUR_APL.REQ_SECTION_CD as "reqSectionCd",
+                T_PUR_APL.REQ_SECTION_NAME as "reqSectionName",
+                T_PUR_APL.REQ_USER_ID as "reqUserId",
+                T_PUR_APL.REQ_USER_NAME as "reqUserName",
+                T_PUR_REQUEST.PUR_REQ_SEQ as "PUR_REQ_SEQ",
+                T_PUR_APL.LAST_UPD_DATE as "LAST_UPD_DATE",
+                T_PUR_REQUEST.LAST_UPD_DATE as "LAST_UPD_DATE_REQ",
+                T_PUR_APL.REQ_COMPANY_CD as "user.section.company.companyCd",
+                T_PUR_APL.REQ_SECTION_CD as "user.section.sectionCd",
+                T_PUR_APL.REQ_USER_ID as "user.userID", 
+                T_PUR_REQUEST.BUYER_BACK_USER_COMMENTS as "COMMENT",
+                T_PUR_REQUEST.BUYER_SECTION_CD as buyerSectionCd, <!-- 購買部門コード -->
+                T_PUR_REQUEST.BUYER_SECTION_NAME as buyerSectionName, <!-- 購買部門名 -->
+                T_PUR_REQUEST.BUYER_USER_ID as buyerUserId, <!-- 購買担当者コード -->
+                T_PUR_REQUEST.BUYER_USER_NAME as buyerUserName,<!-- 購買担当者名 -->
+                ${@ps.common.util.ItemSettingUtil@getItemSettingSelectSQLDomainAliasNonBinary("T_PUR_APL", "searchResExtItemApl")},
+                ${@ps.common.util.ItemSettingUtil@getItemSettingSelectSQLDomainAliasNonBinary("T_PUR_REQUEST", "searchResExtItemReq")},
+                T_SLIP_MNG.SLIP_NO AS "EXCLUSIVE_SLIP_NO",
+                T_SLIP_MNG.LAST_UPD_DATE AS "EXCLUSIVE_LAST_UPD_DATE"
+        FROM T_PUR_APL
+       INNER JOIN T_PUR_REQUEST
+          ON T_PUR_APL.PUR_APL_SEQ = T_PUR_REQUEST.PUR_APL_SEQ
+         AND T_PUR_REQUEST.DELETE_FLG = '0'
+       INNER JOIN T_SLIP_MNG
+          ON T_PUR_REQUEST.PUR_REQ_NO = T_SLIP_MNG.SLIP_NO
+         AND T_SLIP_MNG.SLIP_STATUS = '0612'
+         AND T_SLIP_MNG.DELETE_FLG = '0'
+        LEFT JOIN T_ATTACH_MNG T_ATTACH_MNG_1
+            ON T_PUR_APL.ATTACH_FILE_SEQ1 = T_ATTACH_MNG_1.ATTACH_FILE_SEQ
+           AND T_ATTACH_MNG_1.DELETE_FLG = '0'
+        LEFT JOIN T_ATTACH_MNG T_ATTACH_MNG_2
+            ON T_PUR_APL.ATTACH_FILE_SEQ2 = T_ATTACH_MNG_2.ATTACH_FILE_SEQ
+           AND T_ATTACH_MNG_2.DELETE_FLG = '0'
+        LEFT JOIN T_ATTACH_MNG T_ATTACH_MNG_3
+            ON T_PUR_REQUEST.ATTACH_FILE_SEQ = T_ATTACH_MNG_3.ATTACH_FILE_SEQ
+           AND T_ATTACH_MNG_3.DELETE_FLG = '0'
+         <where>
+             <include refid="listKeyIdentityBuyerChangeWhereCondition"/>
+             AND T_PUR_REQUEST.PUR_REQ_SEQ IN
+             <foreach collection="searchCondition.page.keyDomainEntityList" item="keyList" open="(" separator="," close=")">
+                 #{keyList.purReqSeq}
+             </foreach>
+         </where>
+        ORDER BY ${searchCondition.columnOrder.columnOrder()}
+  </select>
+  
+  <update id="updateReqSelfSectionBuyer" parameterType="fw.domain.slip.order.order.buyerchange.BuyerChangeItem">
+      UPDATE T_PUR_REQUEST
+         SET BUYER_USER_ID       = #{user.userID},
+             BUYER_USER_NAME     = #{user.userName},
+             LAST_UPD_DATE       = '${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}',
+             LAST_UPD_COMPANY_CD = '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}',
+             LAST_UPD_SECTION_CD = '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}',
+             LAST_UPD_USER_ID    = '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}'
+        WHERE PUR_REQ_SEQ = #{buyerChangeIdentify.purReqSeq}
+  </update>
+  
+  <update id="updateReqNotSelfSectionBuyer" parameterType="fw.domain.slip.order.order.buyerchange.BuyerChangeItem">
+      UPDATE T_PUR_REQUEST
+         SET BUYER_COMPANY_CD = '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}',
+             BUYER_COMPANY_NAME = '${@fw.security.SecurityUtil@getCompanyNameByEscapeSql()}',
+             BUYER_SECTION_PLACE_CD = #{user.section.sectionPlace.sectionPlaceCd},
+             BUYER_SECTION_PLACE_NAME = #{user.section.sectionPlace.sectionPlaceName},
+             BUYER_SECTION_CD = #{user.section.sectionCd},
+             BUYER_SECTION_NAME = #{user.section.sectionName},
+             BUYER_USER_ID       = '',
+             BUYER_USER_NAME     = '',
+             LAST_UPD_DATE       = '${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}',
+             LAST_UPD_COMPANY_CD = '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}',
+             LAST_UPD_SECTION_CD = '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}',
+             LAST_UPD_USER_ID    = '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}'
+        WHERE PUR_REQ_SEQ = #{buyerChangeIdentify.purReqSeq}
+  </update>
+  
+  <update id="updateReqRemandBuyer" parameterType="fw.domain.slip.order.order.buyerchange.BuyerChangeItem">
+      UPDATE T_PUR_REQUEST
+         SET PUR_REQ_STATUS = '03',
+             APP_UNIT_NO = #{purReqNo},
+             BUYER_BACK_COMPANY_CD = '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}',
+             BUYER_BACK_COMPANY_NAME = '${@fw.security.SecurityUtil@getCompanyNameByEscapeSql()}',
+             BUYER_BACK_SECTION_PLACE_CD = '${@fw.security.SecurityUtil@getSectionPlaceCdByEscapeSql()}',
+             BUYER_BACK_SECTION_PLACE_NAME = '${@fw.security.SecurityUtil@getSectionPlaceNameByEscapeSql()}',
+             BUYER_BACK_SECTION_CD = '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}',
+             BUYER_BACK_SECTION_NAME = '${@fw.security.SecurityUtil@getDefaultSectionNameByEscapeSql()}',
+             BUYER_BACK_USER_ID       = '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}',
+             BUYER_BACK_USER_NAME     = '${@fw.security.SecurityUtil@getUserNameByEscapeSql()}',
+             BUYER_BACK_USER_COMMENTS = #{receipt.remand.backReason.backReason.comment},
+             LAST_UPD_DATE       = '${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}',
+             LAST_UPD_COMPANY_CD = '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}',
+             LAST_UPD_SECTION_CD = '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}',
+             LAST_UPD_USER_ID    = '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}'
+        WHERE PUR_REQ_SEQ = #{buyerChangeIdentify.purReqSeq}
+  </update>
+  
+  <update id="updateReqRemandRecieveBuyer" parameterType="fw.domain.slip.order.order.buyerchange.BuyerChangeItem">
+      UPDATE T_PUR_REQUEST
+         SET BUYER_USER_ID       = '',
+             BUYER_USER_NAME     = '',
+             LAST_UPD_DATE       = '${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}',
+             LAST_UPD_COMPANY_CD = '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}',
+             LAST_UPD_SECTION_CD = '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}',
+             LAST_UPD_USER_ID    = '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}'
+        WHERE PUR_REQ_SEQ = #{buyerChangeIdentify.purReqSeq}
+  </update>
+
+  <!-- 見積依頼レイアウトダウンロード件数取得 -->
+  <select id="quotReqLayoutCount" parameterType="fw.domain.slip.order.order.unactionpurreq.NotActionPurReqSearchCondition"
+                                         resultType="java.lang.Long">
+    SELECT
+      COUNT(*)
+    FROM
+      T_PUR_REQUEST
+      INNER JOIN T_SLIP_MNG
+      ON
+        T_PUR_REQUEST.PUR_REQ_NO = T_SLIP_MNG.SLIP_NO
+        AND T_PUR_REQUEST.BUYER_COMPANY_CD = '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}'
+      INNER JOIN T_PUR_APL
+      ON
+        T_PUR_REQUEST.PUR_APL_SEQ = T_PUR_APL.PUR_APL_SEQ
+      LEFT JOIN M_SUPPLIER
+      ON 
+          (T_PUR_REQUEST.SUP_COMPANY_CD = M_SUPPLIER.COMPANY_CD
+           OR M_SUPPLIER.COMPANY_CD = '${@fw.common.constant.ApplicationConstant@COMPANY_CD_ALL}')
+          AND T_PUR_REQUEST.SUP_CD = M_SUPPLIER.SUP_CD
+          AND M_SUPPLIER.VALID_START_DATE &lt;= '${@fw.common.util.AppUtil@getSysDate(@fw.common.util.AppUtil@DATE_SHORT)}'
+          AND M_SUPPLIER.VALID_END_DATE >= '${@fw.common.util.AppUtil@getSysDate(@fw.common.util.AppUtil@DATE_SHORT)}'
+          AND M_SUPPLIER.TERM_FLG = '0'
+    <where>
+      <include refid="listKeyIdentityWhereCondition"/>
+    </where>
+  </select>
+
+  <resultMap type="fw.domain.slip.quot.quotreq.quotreqlist.QuotReqDownloadItem" id="QuotReqDownloadItem_Map">
+      <id column="PUR_REQ_NO" property="purAplNo.purAplNo"/>
+      <id column="ITEM_CLASS_L" property="itemKind.itemClassL"/>
+      <id column="ITEM_CLASS_M" property="itemKind.itemClassM"/>
+      <id column="ITEM_CLASS_S" property="itemKind.itemClassS"/>
+      <id column="TITLE_NAME" property="titleName.titleName"/>
+      <id column="DELIV_PLACE_CD" property="delivPlace.delivPlaceCd"/>
+      <id column="FOR_SUPPRIER_COMMENT" property="forSupplierComment.forSupplierComment.comment"/>
+      <id column="ITEM_CD" property="itemName.itemCd"/>
+      <id column="ITEM_NAME" property="itemName.itemName"/>
+      <id column="KATASHIKI" property="itemName.katashiki"/>
+      <id column="MANUFACT_CD" property="itemName.manufact.manufactCd"/>
+      <id column="MANUFACT_NAME" property="itemName.manufact.manufactName"/>
+      <id column="CURRENCY_CD" property="currency.currencyCd"/>
+      <id column="UNIT_PRICE" property="hopePrice.amount"/>
+      <id column="HOPE_VOL" property="hopeVol.vol"/>
+      <id column="UNIT_CD" property="itemName.unit.unitCd"/>
+      <id column="REQ_DELIV_DATE" property="hopeDlvEst.dateOfymd"/>
+      <id column="SUP_CD" property="supplierFrom1.supCd"/>
+      <id column="SUP_NAME" property="supplierFrom1.supplierName.supplierName"/>
+  </resultMap>
+  
+   <!-- 見積依頼レイアウトダウンロード情報取得 -->
+   <select id="quotReqLayoutData" parameterType="fw.domain.slip.order.order.unactionpurreq.NotActionPurReqSearchCondition"
+           resultMap="QuotReqDownloadItem_Map">
+    <include refid="pageHeader"/>
+    SELECT
+      T_PUR_REQUEST.PUR_REQ_NO as "PUR_REQ_NO",
+      T_PUR_REQUEST.ITEM_CLASS_L as "ITEM_CLASS_L",
+      T_PUR_REQUEST.ITEM_CLASS_M as "ITEM_CLASS_M",
+      T_PUR_REQUEST.ITEM_CLASS_S as "ITEM_CLASS_S",
+      T_PUR_APL.TITLE_NAME as "TITLE_NAME",
+      T_PUR_APL.DELIV_PLACE_CD as "DELIV_PLACE_CD",
+      T_PUR_APL.FOR_SUPPRIER_COMMENT as "FOR_SUPPRIER_COMMENT",
+      T_PUR_REQUEST.ITEM_CD as "ITEM_CD",
+      T_PUR_REQUEST.ITEM_NAME as "ITEM_NAME",
+      T_PUR_REQUEST.KATASHIKI as "KATASHIKI",
+      T_PUR_REQUEST.MANUFACT_CD as "MANUFACT_CD",
+      T_PUR_REQUEST.MANUFACT_NAME as "MANUFACT_NAME",
+      T_PUR_REQUEST.CURRENCY_CD as "CURRENCY_CD",
+      T_PUR_REQUEST.UNIT_PRICE as "UNIT_PRICE",
+      (CASE WHEN T_PUR_REQUEST.REQ_VOL IS NULL
+       THEN 0
+       ELSE T_PUR_REQUEST.REQ_VOL END) as "HOPE_VOL",
+      T_PUR_REQUEST.UNIT_CD as "UNIT_CD",
+      T_PUR_REQUEST.REQ_DELIV_DATE as "REQ_DELIV_DATE",
+      T_PUR_REQUEST.SUP_CD as "SUP_CD",
+      T_PUR_REQUEST.SUP_NAME as "SUP_NAME"
+    FROM
+      T_PUR_REQUEST
+      INNER JOIN T_SLIP_MNG
+      ON 
+        T_PUR_REQUEST.PUR_REQ_NO = T_SLIP_MNG.SLIP_NO
+        AND T_PUR_REQUEST.BUYER_COMPANY_CD = '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}'
+      INNER JOIN T_PUR_APL
+      ON
+        T_PUR_REQUEST.PUR_APL_SEQ = T_PUR_APL.PUR_APL_SEQ
+      LEFT JOIN M_SUPPLIER
+      ON 
+          (T_PUR_REQUEST.SUP_COMPANY_CD = M_SUPPLIER.COMPANY_CD
+           OR M_SUPPLIER.COMPANY_CD = '${@fw.common.constant.ApplicationConstant@COMPANY_CD_ALL}')
+          AND T_PUR_REQUEST.SUP_CD = M_SUPPLIER.SUP_CD
+          AND M_SUPPLIER.VALID_START_DATE &lt;= '${@fw.common.util.AppUtil@getSysDate(@fw.common.util.AppUtil@DATE_SHORT)}'
+          AND M_SUPPLIER.VALID_END_DATE >= '${@fw.common.util.AppUtil@getSysDate(@fw.common.util.AppUtil@DATE_SHORT)}'
+          AND M_SUPPLIER.TERM_FLG = '0'
+    <where>
+      <include refid="listKeyIdentityWhereCondition"/>
+    </where>
+    ORDER BY T_PUR_REQUEST.PUR_REQ_NO ASC
+    <include refid="pageRoot"/>
+   </select>
+</mapper>

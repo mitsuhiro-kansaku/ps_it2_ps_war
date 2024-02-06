@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="ps.dataaccess.cmn.apr.AprMapper">
+
+    <select id="number" parameterType="fw.domain.slip.common.receipt.Remand"
+        resultType="int">
+        SELECT 
+            COUNT(M_USER.COMPANY_CD)
+        FROM M_USER 
+        WHERE 
+            M_USER.COMPANY_CD = #{remandUser.remandUser.section.company.companyCd}
+            AND M_USER.SECTION_CD = #{remandUser.remandUser.section.sectionCd}
+            AND M_USER.USER_ID = #{remandUser.remandUser.userID}
+            AND M_USER.VALID_START_DATE &lt;= '${@fw.common.util.AppUtil@getSysDate()}'
+            AND M_USER.VALID_END_DATE >= '${@fw.common.util.AppUtil@getSysDate()}'
+            AND M_USER.TERM_FLG = '0'
+    </select>
+
+    <!-- 強化-00180-000 2013/03/12 MODIFY SBO_SOKOU START -->
+    <select id="search"
+            parameterType="fw.domain.slip.common.receipt.Remand"
+            resultType="fw.domain.mst.userauthority.user.User">
+        SELECT M_USER.COMPANY_CD as "section.company.companyCd",
+               M_USER.USER_ID as "userID"
+          FROM M_USER
+         INNER JOIN M_ROLE
+                 ON (M_ROLE.COMPANY_CD = M_USER.COMPANY_CD
+                 OR M_ROLE.COMPANY_CD = '${@fw.common.constant.ApplicationConstant@COMPANY_CD_ALL}')
+                AND M_ROLE.ROLE_NO = M_USER.ROLE_NO
+                AND M_ROLE.TERM_FLG = '0'
+         INNER JOIN M_ROLE_DTL
+                 ON M_ROLE_DTL.COMPANY_CD = M_ROLE.COMPANY_CD
+                AND M_ROLE_DTL.ROLE_NO = M_ROLE.ROLE_NO
+                AND M_ROLE_DTL.AUTH_NO =#{authNo}
+                AND M_ROLE_DTL.AUTH_IND = '1'
+         WHERE M_USER.COMPANY_CD = #{remandUser.remandUser.section.company.companyCd}
+           AND M_USER.SECTION_CD = #{remandUser.remandUser.section.sectionCd}
+           AND M_USER.VALID_START_DATE &lt;= '${@fw.common.util.AppUtil@getSysDate()}'
+           AND M_USER.VALID_END_DATE >= '${@fw.common.util.AppUtil@getSysDate()}'
+           AND M_USER.TERM_FLG = '0'
+         GROUP BY M_USER.COMPANY_CD,M_USER.USER_ID
+         ORDER BY M_USER.USER_ID
+    </select>
+    <!-- 強化-00180-000 2013/03/12 MODIFY SBO_SOKOU END -->
+
+</mapper>

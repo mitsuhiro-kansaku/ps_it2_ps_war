@@ -1,0 +1,428 @@
+<!doctype html>
+<html lang="ja">
+<head>
+#set($commonTitle = "#customSpringMessage('QUOT_USER_CHANGE')")
+<title>#out($commonTitle)</title><!--見積依頼担当変更-->
+<meta http-equiv="Content-type" content="text/html; charset=UTF-8">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Content-script-type" content="text/javascript">
+<link id="CSS_FONT" rel="stylesheet" href="../../include/FontS.css" type="text/css">
+<link rel="stylesheet" href="../../include/Layout.css" type="text/css">
+<link rel="stylesheet" href="../../include/Color.css" type="text/css">
+<link rel="stylesheet" href="../../include/searchbox.css" type="text/css">
+<script language="javascript" type="text/javascript" src="../../include/common.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/check.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/date.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/tablesort.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/searchbox.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/jquery-1.7.2.min.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/jquery.tablefix.js"></script>
+<script language="javascript" type="text/javascript">
+<!--
+#parse("./common/common_js.vm")
+## ビューが初めて表示される直前に発生します。
+var isOnLoaded=false;
+function onLoad(){
+    parentButtonEnable();
+    dataLoadHasPage();
+#if($!itemList.quotReqUserChangeItemList && $!itemList.quotReqUserChangeItemList.size() > 0)
+    window.parent.getObj("DownLoadSection").style.display="";
+  #foreach($!item in $!itemList.quotReqUserChangeItemList)
+    document.getElementById("operate$foreach.index").onchange();
+  #end
+#end
+    var alertMessage="$!alertMessage";
+    if(alertMessage!=""){
+        buttonUsableForList(alertMessage);
+        alert(alertMessage);
+    }
+#if($!isExecuteSuccess == "")
+    var errorMsg="$!errorMessage";
+    if(errorMsg!=""){
+        isOnLoaded=true;
+        return;
+    }
+#end
+    var isShowDetail="#jsEscape($!isShowDetail)";
+    if(isShowDetail=="true"){
+        parent.poppage('${flowExecutionUrl}&_eventId=detail','DETAIL','800','700');
+        isOnLoaded=true;
+        return;
+    }
+    var isSuccess="#jsEscape($isExecuteSuccess)";
+    if(isSuccess=="true"){
+        #set($params = ["#customSpringMessage('QUOT_USER_CHANGE')"])
+        alert('#customMessageArgs("I002",$params)');
+    }
+    isOnLoaded=true;
+}
+$(function(){
+    fillHidden();
+})
+## 「処理」コンボボックスの値を変更したときに発生します。
+var _trIndex="";
+
+function selectItemReSet(){
+    ## EDGE対応にてsetTablefixByChange後に処理列の2つのセレクトボックスが初期値になってしまうようになった為、hiddenより値をセットする
+    #if($!itemList.quotReqUserChangeItemList)
+    if (isOnLoaded) {
+        var rowIndex=$!itemList.quotReqUserChangeItemList.size();
+        for (var i=0; i<rowIndex;i++){
+            $("#operate"+i).val($("input[name='quotReqUserChangeItemList["+i+"].receipt.handlerType']").val());
+            if ($("input[name='quotReqUserChangeItemList["+i+"].user.userID']").val()!=""){
+                $("#SelUser_"+i).val($("input[name='quotReqUserChangeItemList["+i+"].user.userID']").val());
+            }
+        }
+    }
+    #end
+}
+function showList(select){
+    var index=select.selectedIndex;
+    var trIndex=$(select).attr("id").substr(7);
+    var parentIndex=window.parent.document.getElementById("approver").selectedIndex;
+    var approver=window.parent.document.getElementById("approver");
+    document.getElementById("quotReqUserChangeItemList["+trIndex+"].receipt.handlerType").value=index;
+    if(index==1){
+        ## 処理区分が 1:振分け の場合
+        $("td:[id=img_"+trIndex+"]").show();
+        $("td:[id=Sel_"+trIndex+"]").show();
+        $("td:[id=Btn_"+trIndex+"]").hide();
+        if(isOnLoaded){
+            $("select:[id=SelUser_"+trIndex+"]").each(function(i,item){
+                item.selectedIndex = parentIndex;
+            });
+            setHiddenValue(trIndex,approver.options[parentIndex]);
+        }
+    }else if(index==2){
+        ## 処理区分が 2:依頼元差戻し の場合
+        $("td:[id=img_"+trIndex+"]").hide();
+        $("td:[id=Sel_"+trIndex+"]").hide();
+        $("td:[id=Btn_"+trIndex+"]").show();
+        var comment=document.getElementById("CommentHidden_"+trIndex).value;
+        _trIndex=trIndex;
+        if(isOnLoaded){
+            receipt("1",comment,$("#inputCompanyCd_"+trIndex).val(),$("#inputSectionCd_"+trIndex).val(),$("#inputUserId_"+trIndex).val(),"30",$("#backUserShowFlg_"+trIndex).val());
+        }
+    }else if(index==0 || index==3){
+        ## 処理区分が 0:空欄 又は、3:受付差戻し の場合
+        $("td:[id=img_"+trIndex+"]").hide();
+        $("td:[id=Sel_"+trIndex+"]").hide();
+        $("td:[id=Btn_"+trIndex+"]").hide();
+    }
+    ## 背景色を変更する
+    if(index!=0){
+        $('tr:[id=Row_'+trIndex+']').css('background-color','#ff9');
+    }else{
+        $('tr:[id=Row_'+trIndex+']').css('background-color','');
+    }
+}
+## 「振分け先」コンボボックスの値を変更したときに発生します。
+function selectUser(trIndex,sel){
+    var option=sel.options[sel.selectedIndex];
+    setHiddenValue(trIndex,option);
+}
+## 「依頼元差戻し」を選択したとき発生します。
+function actionPopup(trIndex){
+    ## 選択された行のインデックスを保持する
+    _trIndex=trIndex;
+    var id="quotReqUserChangeItemList["+trIndex+"].receipt.remand.backReason.backReason.comment";
+    var comment=document.getElementById(id).value;
+    receipt("1",comment,$("#inputCompanyCd_"+trIndex).val(),$("#inputSectionCd_"+trIndex).val(),$("#inputUserId_"+trIndex).val(),"30",$("#backUserShowFlg_"+trIndex).val());
+}
+## 振分け先をHidden項目に値をセットします。
+function setHiddenValue(index,doc){
+    var id="quotReqUserChangeItemList["+index+"]";
+    document.getElementById(id+'.user.userID').value=$(doc).val();
+    document.getElementById(id+'.user.userName').value=$(doc).attr("username");
+    document.getElementById(id+'.user.section.company.companyCd').value=$(doc).attr("companycd");
+    document.getElementById(id+'.user.section.company.companyName').value=$(doc).attr("companyname");
+    document.getElementById(id+'.user.section.sectionPlace.sectionPlaceCd').value=$(doc).attr("sectionplacecd");
+    document.getElementById(id+'.user.section.sectionPlace.sectionPlaceName').value=$(doc).attr("sectionplacename");
+    document.getElementById(id+'.user.section.sectionCd').value=$(doc).attr("sectioncd");
+    document.getElementById(id+'.user.section.sectionName').value=$(doc).attr("sectionname");
+}
+## 「差戻し理由」画面をPOPUP表示します。
+function receipt(aprDisplayModel,aprRemandComment,companyCd,sectionCd,userId,authNo,backUserShowFlg){
+    masterSearch('${flowExecutionUrl}&_eventId=receipt','appRouteDtl','540','320');
+    iframeChange("${flowExecutionUrl}&_eventId=receipt","aprDisplayModel",aprDisplayModel,
+        "aprRemandComment",aprRemandComment,"companyCd",companyCd,"sectionCd",sectionCd,
+        "userId",userId,"authNo",authNo,"backUserShowFlg",backUserShowFlg,"appRouteDtl");
+}
+## 「差戻し理由」画面を閉じたときに発生します。
+function setApr(reason,userID,userName){
+    var id="quotReqUserChangeItemList["+_trIndex+"]";
+    document.getElementById(id+'.receipt.remand.backReason.backReason.comment').value=reason;
+    document.getElementById(id+'.receipt.chargeUser.chargeUser.userID').value=userID;
+    document.getElementById('inputUserId_'+_trIndex).value=userID;
+    document.getElementById('CommentText_'+_trIndex).value=userName;
+    document.getElementById('CommentHidden_'+_trIndex).value=reason;
+}
+## 振分け先及び差戻し先のHidden項目を生成します。
+function fillHidden(){
+#foreach($item in $!itemList.quotReqUserChangeItemList)
+    ## 差戻し先をセットする（エラー時に初期化されないようにセットする）
+    if($("#inputUserId_"+$foreach.index).val()==null || $("#inputUserId_"+$foreach.index).val()==""){
+        document.getElementById("CommentHidden_"+$foreach.index).value="#jsEscape($!itemList.quotReqUserChangeItemList[$foreach.index].receipt.remand.backReason.backReason.comment)";
+        document.getElementById("inputCompanyCd_"+$foreach.index).value="#jsEscape($!itemList.quotReqUserChangeItemList[$foreach.index].receipt.chargeUser.chargeUser.section.company.companyCd)";
+        document.getElementById("inputSectionCd_"+$foreach.index).value="#jsEscape($!itemList.quotReqUserChangeItemList[$foreach.index].receipt.chargeUser.chargeUser.section.sectionCd)";
+        document.getElementById("inputUserId_"+$foreach.index).value="#jsEscape($!itemList.quotReqUserChangeItemList[$foreach.index].receipt.chargeUser.chargeUser.userID)";
+        document.getElementById("backUserShowFlg_"+$foreach.index).value="#jsEscape($!itemList.quotReqUserChangeItemList[$foreach.index].receipt.chargeUser.chargeUser.userID)";
+    }
+    ## 生成する
+    var comment=document.getElementById("CommentHidden_"+$foreach.index).value;
+    var companyCd=document.getElementById("inputCompanyCd_"+$foreach.index).value;
+    var sectionCd=document.getElementById("inputSectionCd_"+$foreach.index).value;
+    var userId=document.getElementById("inputUserId_"+$foreach.index).value;
+    var remandUserFlg=document.getElementById("backUserShowFlg_"+$foreach.index).value;
+
+    var hiddens=[];
+    var id="quotReqUserChangeItemList["+$foreach.index+"]";
+    hiddens.push('<input type="hidden" id="'+id+'.receipt.handlerType" value="#jsEscape($!itemList.quotReqUserChangeItemList[$foreach.index].receipt.handlerType)" />');
+    hiddens.push('<input type="hidden" id="'+id+'.user.userID" value="#jsEscape($!itemList.quotReqUserChangeItemList[$foreach.index].user.userID)" />');
+    hiddens.push('<input type="hidden" id="'+id+'.user.userName" value="#jsEscape($!itemList.quotReqUserChangeItemList[$foreach.index].user.userName)" />');
+    hiddens.push('<input type="hidden" id="'+id+'.user.section.company.companyCd" value="#jsEscape($!itemList.quotReqUserChangeItemList[$foreach.index].user.section.company.companyCd)" />');
+    hiddens.push('<input type="hidden" id="'+id+'.user.section.company.companyName" value="#jsEscape($!itemList.quotReqUserChangeItemList[$foreach.index].user.section.company.companyName)" />');
+    hiddens.push('<input type="hidden" id="'+id+'.user.section.sectionCd" value="#jsEscape($!itemList.quotReqUserChangeItemList[$foreach.index].user.section.sectionCd)" />');
+    hiddens.push('<input type="hidden" id="'+id+'.user.section.sectionName" value="#jsEscape($!itemList.quotReqUserChangeItemList[$foreach.index].user.section.sectionName)" />');
+    hiddens.push('<input type="hidden" id="'+id+'.user.section.sectionPlace.sectionPlaceCd" value="#jsEscape($!itemList.quotReqUserChangeItemList[$foreach.index].user.section.sectionPlace.sectionPlaceCd)" />');
+    hiddens.push('<input type="hidden" id="'+id+'.user.section.sectionPlace.sectionPlaceName" value="#jsEscape($!itemList.quotReqUserChangeItemList[$foreach.index].user.section.sectionPlace.sectionPlaceName)" />');
+    hiddens.push('<input type="hidden" id="'+id+'.receipt.remand.backReason.backReason.comment" value="'+comment+'" />');
+    hiddens.push('<input type="hidden" id="'+id+'.receipt.chargeUser.chargeUser.userID" value="'+userId+'" />');
+    hiddens.push('<input type="hidden" id="'+id+'.receipt.chargeUser.chargeUser.section.company.companyCd" value="'+companyCd+'" />');
+    hiddens.push('<input type="hidden" id="'+id+'.receipt.chargeUser.chargeUser.section.sectionCd" value="'+sectionCd+'" />');
+    hiddens.push('<input type="hidden" id="'+id+'.receipt.remandUserShowFlg" value="'+remandUserFlg+'" />');
+
+    $('#hideDiv').append(hiddens.join(''));
+    hiddens=[];
+#end
+    $("#hideDiv input:hidden").each(function(){
+        $(this).attr("name",$(this).attr("id"));
+    });
+}
+## 「詳細」ボタンをクリックしたときに発生します。
+function openDetail(seqNumber,lastUpdDate){
+    parent.iframeChange("${flowExecutionUrl}&_eventId=detailValidate","quotReqSeq",seqNumber,'lastUpdDate',lastUpdDate,"HIDDENAREA");
+}
+## 「実行」ボタンをクリックしたとき発生します。
+function exec(){
+    var count=0;
+    $('select:[id^=operate]').each(function(i,item){
+        if(item.selectedIndex!=0)
+            count++;
+    });
+    if(count==0){
+        #set($params = ["#customSpringMessage('ACTION')"])
+        alert("#customMessageArgs("E003",$params)");
+    }else{
+        #set($params = ["#customSpringMessage('ACTION')","#customSpringMessage('ACTION_RUN')"]);
+        if(!confirm("#customMessageArgs('W001',$params)")){
+            return;
+        }
+        buttonDisable();
+        parentButtonDisable();
+        getObj("BodyForm").action="${flowExecutionUrl}&_eventId=execute";
+        getObj("BodyForm").submit();
+    }
+}
+//-->
+</script>
+</head>
+<body id="BODY" topmargin="0" leftmargin="0" marginwidth="0" marginheight="0" align="left" onload="onLoad();setTablefix('#TABLE', 1, 3+$!PSQOT051PageCreaterForList.printLockColumn());">
+#if($!errorMessage && $!errorMessage != "")
+<div id="error" class="error">
+    $!errorMessage
+</div>
+#end
+#if($!itemList.quotReqUserChangeItemList && $!itemList.quotReqUserChangeItemList.size() > 0)
+<form id="BodyForm" name="BodyForm" method="post">
+#foreach($!item in $!itemList.quotReqUserChangeItemList)
+    #customFormHiddenInput("CommentHidden_$foreach.index" "$!item.receipt.remand.backReason.backReason.comment")
+
+    ##初期表示時はuserの情報を取得し、それ以降はreciptの情報をセットする
+    #if ($!item.receipt.chargeUser.chargeUser.userID =="")
+        #customFormHiddenInput("inputUserId_$foreach.index" "$!item.user.userID")
+        #customFormHiddenInput("inputSectionCd_$foreach.index" "$!item.user.section.sectionCd")
+        #customFormHiddenInput("inputCompanyCd_$foreach.index" "$!item.user.section.company.companyCd")
+        #customFormHiddenInput("backUserShowFlg_$foreach.index" "$!item.user.userID")
+    #else
+        #customFormHiddenInput("inputUserId_$foreach.index" "$!item.receipt.chargeUser.chargeUser.userID")
+        #customFormHiddenInput("inputSectionCd_$foreach.index" "$!item.receipt.chargeUser.chargeUser.section.sectionCd")
+        #customFormHiddenInput("inputCompanyCd_$foreach.index" "$!item.receipt.chargeUser.chargeUser.section.company.companyCd")
+        #customFormHiddenInput("backUserShowFlg_$foreach.index" "$!item.receipt.remandUserShowFlg")
+    #end
+#end
+<div id="hideDiv"></div>
+<table id="TABLE" class="ListArea" WIDTH="100%">
+    <thead>
+        <tr id="Header">
+            <th class="BoxHeaderCenter FontSmall">No.<!--No.--></th>
+            <th class="BoxHeaderCenter FontSmall">#customSpringMessage("DETAIL")<!--詳細--></th>
+            <th class="BoxHeaderCenter FontSmall">#customSpringMessage("ACTION")<!--処理--></th>
+            #foreach($!item in $!PSQOT051PageCreaterForList.getItemListForBody())
+                #set($currentOneColumnFlag = $!PSQOT051PageCreaterForList.getOneColumnFlag($!item))
+                #if($foreach.index == 0)
+                    $!PSQOT051PageCreaterForList.printTHtag($!item,'class="BoxHeaderCenter FontSmall"')
+                #elseif($currentOneColumnFlag)
+                    $!PSQOT051PageCreaterForList.printBRtag($!item)
+                #else
+                    $!PSQOT051PageCreaterForList.printTHtagClose()
+                    $!PSQOT051PageCreaterForList.printTHtag($!item,'class="BoxHeaderCenter FontSmall"')
+                #end
+                #if($!item.getColumnName()=="T_QUOT_ACQ_APL.QUOT_ACQ_APL_NO")
+                    $!PSQOT051PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName()=="T_QUOT_ACQ_APL.URGENT_IND")
+                    $!PSQOT051PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName()=="T_QUOT_ACQ_APL.TITLE_NAME")
+                    $!PSQOT051PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName()=="T_QUOT_ACQ_APL.FOR_BOSS_COMMENT")
+                    $!PSQOT051PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName()=="T_QUOT_ACQ_APL.ITEM_CLASS_L_NAME")
+                    $!PSQOT051PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName()=="T_QUOT_ACQ_APL.ITEM_CLASS_M_NAME")
+                    $!PSQOT051PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName()=="T_QUOT_ACQ_APL.ITEM_CLASS_S_NAME")
+                    $!PSQOT051PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName()=="T_QUOT_ACQ_APL.SUP_CD")
+                    $!PSQOT051PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName()=="T_QUOT_ACQ_APL.SUP_ABBR_NAME")
+                    $!PSQOT051PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName()=="T_QUOT_ACQ_REQUEST.CURRENCY_CD")
+                    $!PSQOT051PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName()=="T_QUOT_ACQ_REQUEST.REQ_AMOUNT")
+                    $!PSQOT051PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName()=="T_QUOT_ACQ_APL.REQ_DATE")
+                    $!PSQOT051PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName()=="T_QUOT_ACQ_APL.REQ_SECTION_CD")
+                    $!PSQOT051PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName()=="T_QUOT_ACQ_APL.REQ_SECTION_NAME")
+                    $!PSQOT051PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName()=="T_QUOT_ACQ_APL.REQ_USER_ID")
+                    $!PSQOT051PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName()=="T_QUOT_ACQ_APL.REQ_USER_NAME")
+                    $!PSQOT051PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName()=="T_QUOT_ACQ_APL.BUYER_SECTION_CD")
+                    $!PSQOT051PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName()=="T_QUOT_ACQ_APL.BUYER_SECTION_NAME")
+                    $!PSQOT051PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName()=="T_QUOT_ACQ_APL.BUYER_USER_ID")
+                    $!PSQOT051PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName()=="T_QUOT_ACQ_APL.BUYER_USER_NAME")
+                    $!PSQOT051PageCreaterForList.printHead($!item)
+                #else
+                    $!PSQOT051PageCreaterForList.printHead($!item)
+                #end
+            #end
+            $!PSQOT051PageCreaterForList.printTHtagClose()
+        </tr>
+    </thead>
+    <tbody>
+    #foreach($!quotReqUserChangeItem in $!itemList.quotReqUserChangeItemList)
+        <tr id="Row_$foreach.index" name="Row_$foreach.index" #if($foreach.index % 2 == 0) bgcolor="#dce4ef" #else bgcolor="#ffffff" #end>
+            <td class="BoxDetailCenter FontList">$foreach.count</td>
+            <td class="BoxDetailCenter">
+                <img id="DetailButton_0" class="Icon" src="../../image/btnDetailDisp.gif" onclick="openDetail('#jsEscapeInHTML($!quotReqUserChangeItem.identify.identify.quotAcqAplSeq)','#jsEscapeInHTML($!quotReqUserChangeItem.identify.lastUpdDate)')"><!--詳細-->
+            </td>
+            <td class="BoxDetailLeft">
+                <table width="100%">
+                    <tr>
+                        <td>
+                            <select id="operate$foreach.index" class="Small" onchange="showList(this);setTablefixByChange('#TABLE', 1, 3+$!PSQOT051PageCreaterForList.printLockColumn());selectItemReSet();">
+                                <option value="0"></option>
+                                <option value="1" #if("$!quotReqUserChangeItem.receipt.handlerType"=="1") selected #end>#out($!optUserchange)</option>
+                                <option value="2" #if("$!quotReqUserChangeItem.receipt.handlerType"=="2") selected #end>#out($!optReqremand)</option>
+                                <option value="3" #if("$!quotReqUserChangeItem.receipt.handlerType"=="3") selected #end>#out($!optAccremand)</option>
+                            </select>
+                        </td>
+                        <td id="img_$foreach.index" style="display: none;">
+                            <img src="../../image/mrkMiniRight.gif">
+                        </td>
+                        <td id="Sel_$foreach.index" style="display:none;">
+                            <select id="SelUser_$foreach.index" name="SelUser_$foreach.index" class="Small" onchange="selectUser($foreach.index,this)">
+                            #foreach($!userItem in $!userList)
+                                <option value="#out($!userItem.userID)"
+                                    username="#out($!userItem.userName)"
+                                    sectioncd="#out($!userItem.section.sectionCd)"
+                                    sectionname="#out($!userItem.section.sectionName)"
+                                    companycd="#out($!userItem.section.company.companyCd)"
+                                    companyname="#out($!userItem.section.company.companyName)"
+                                    sectionplacecd="#out($!userItem.section.sectionPlace.sectionPlaceCd)"
+                                    sectionplacename="#out($!userItem.section.sectionPlace.sectionPlaceName)"
+                                    #if($!userItem.userID==$!quotReqUserChangeItem.user.userID) selected #end>
+                                    #out($!userItem.userName)
+                                </option>
+                            #end
+                            </select>
+                        </td>
+                        <td id="Btn_$foreach.index" style="display:none;">
+                            #customFormHiddenInput("CommentText_$foreach.index" "")
+                            <input id="RejectButton_0" onclick="actionPopup($foreach.index)" class="MiniButton" style="width:95px;" type="button" value="#customSpringMessage('COMMENT_EDIT')"><!--コメント編集-->
+                        </td>
+                    </tr>
+                </table>
+            </td>
+            #foreach($!item in $!PSQOT051PageCreaterForList.getItemListForBody($foreach.index))
+                #set($currentOneColumnFlag = $!PSQOT051PageCreaterForList.getOneColumnFlag($!item))
+                #if($foreach.index == 0)
+                    $!PSQOT051PageCreaterForList.printTDtag('class="BoxDetailLeft FontList"')
+                #elseif($currentOneColumnFlag)
+                    $!PSQOT051PageCreaterForList.printBRtag()
+                #else
+                    $!PSQOT051PageCreaterForList.printTDtagClose()
+                    $!PSQOT051PageCreaterForList.printTDtag('class="BoxDetailLeft FontList"')
+                #end
+                #if($!item.getColumnName()=="T_QUOT_ACQ_APL.QUOT_ACQ_APL_NO")
+                    $!PSQOT051PageCreaterForList.printDefault($!item,"_data_style",'class="FontSlipNo" align="left"')
+                #elseif($!item.getColumnName()=="T_QUOT_ACQ_APL.URGENT_IND")
+                    #if($!quotReqUserChangeItem.emergencyFlag == "1")
+                        $!PSQOT051PageCreaterForList.printSpecial("s25_codeNameRed", $!item, 'URGENT_IND','','_redValue','1','_boldStyle','"FontList Red"',"_data_style",'align="center"')
+                    #end
+                #elseif($!item.getColumnName()=="T_QUOT_ACQ_APL.TITLE_NAME")
+                    $!PSQOT051PageCreaterForList.printDefault($!item)
+                #elseif($!item.getColumnName()=="T_QUOT_ACQ_APL.ITEM_CLASS_L_NAME")
+                    $!PSQOT051PageCreaterForList.printDefault($!item)
+                #elseif($!item.getColumnName()=="T_QUOT_ACQ_APL.ITEM_CLASS_M_NAME")
+                    $!PSQOT051PageCreaterForList.printDefault($!item)
+                #elseif($!item.getColumnName()=="T_QUOT_ACQ_APL.ITEM_CLASS_S_NAME")
+                    $!PSQOT051PageCreaterForList.printDefault($!item)
+                #elseif($!item.getColumnName()=="T_QUOT_ACQ_APL.SUP_CD")
+                    $!PSQOT051PageCreaterForList.printDefault($!item)
+                #elseif($!item.getColumnName()=="T_QUOT_ACQ_APL.SUP_ABBR_NAME")
+                    $!PSQOT051PageCreaterForList.printDefault($!item)
+                #elseif($!item.getColumnName()=="T_QUOT_ACQ_REQUEST.CURRENCY_CD")
+                    $!PSQOT051PageCreaterForList.printDefault($!item,"_data_style",'align="center"')
+                #elseif($!item.getColumnName()=="T_QUOT_ACQ_REQUEST.REQ_AMOUNT")
+                    $!PSQOT051PageCreaterForList.printSpecial("s27_list_data_currency",$!item,"_data_style",'class="FontCurrSmall" align="right"')
+                #elseif($!item.getColumnName()=="T_QUOT_ACQ_APL.REQ_DATE")
+                    $!PSQOT051PageCreaterForList.printDefault($!item,"_data_style",'align="center"')
+                #elseif($!item.getColumnName()=="T_QUOT_ACQ_APL.REQ_SECTION_CD")
+                    $!PSQOT051PageCreaterForList.printDefault($!item,"_data_style",'align="center"')
+                #elseif($!item.getColumnName()=="T_QUOT_ACQ_APL.REQ_SECTION_NAME")
+                    $!PSQOT051PageCreaterForList.printDefault($!item)
+                #elseif($!item.getColumnName()=="T_QUOT_ACQ_APL.REQ_USER_ID")
+                    $!PSQOT051PageCreaterForList.printDefault($!item,"_data_style",'align="center"')
+                #elseif($!item.getColumnName()=="T_QUOT_ACQ_APL.REQ_USER_NAME")
+                    $!PSQOT051PageCreaterForList.printDefault($!item,"_data_style",'align="center"')
+                #elseif($!item.getColumnName()=="T_QUOT_ACQ_APL.BUYER_SECTION_CD")
+                    $!PSQOT051PageCreaterForList.printDefault($!item,"_data_style",'align="center"')
+                #elseif($!item.getColumnName()=="T_QUOT_ACQ_APL.BUYER_SECTION_NAME")
+                    $!PSQOT051PageCreaterForList.printDefault($!item)
+                #elseif($!item.getColumnName()=="T_QUOT_ACQ_APL.BUYER_USER_ID")
+                    $!PSQOT051PageCreaterForList.printDefault($!item,"_data_style",'align="center"')
+                #elseif($!item.getColumnName()=="T_QUOT_ACQ_APL.BUYER_USER_NAME")
+                    $!PSQOT051PageCreaterForList.printDefault($!item)
+                #else
+                    $!PSQOT051PageCreaterForList.printDefault($!item)
+                #end
+            #end
+            $!PSQOT051PageCreaterForList.printTDtagClose()
+        </tr>
+    #end
+    </tbody>
+</table>
+</form>
+#end
+<br>
+<table id="WAIT" class="NoBorder" style="display:none;width:100%;"><tr><td style="text-align:center;"><br><br>
+<img src="../../image/wait.gif"><br><span class="FontMini"><br>#customSpringMessage('SEARCH_MESSAGE')</span></td></tr></table><!--問い合わせ中...-->
+</body>
+</html>

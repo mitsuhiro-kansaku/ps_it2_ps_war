@@ -1,0 +1,531 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<title>#customSpringMessage('M_PRODUCT_CLASS')</title><!--品名分類マスタ-->
+<meta http-equiv="Content-type" content="text/html; charset=UTF-8">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Content-script-type" content="text/javascript">
+<link id="CSS_FONT" rel="stylesheet" href="../../include/FontS.css" type="text/css">
+<link rel="stylesheet" href="../../include/Layout.css" type="text/css">
+<link rel="stylesheet" href="../../include/Color.css" type="text/css">
+<link rel="stylesheet" href="../../include/searchbox.css" type="text/css">
+<link rel="stylesheet" href="../../include/ime.css" type="text/css">
+<script language="javascript" type="text/javascript" src="../../include/common.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/check.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/date.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/searchbox.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/jquery-1.7.2.min.js"></script>
+<script language="javascript" type="text/javascript">
+<!--
+#parse("./common/common_js.vm")
+
+function onLoad() {
+    setFocus();
+    setHideShow();
+    var alertMessage = "$!alertMessage";
+    if (alertMessage != ""){
+        alert(alertMessage);
+    }
+    document.getElementById("specialRadio").checked = !document.getElementById("allRadio").checked;
+    var errorMsg = "$!errorMessage";
+    if (errorMsg != ""){
+        document.getElementById("TR_ERROR").style.display = "";
+        return;
+    }
+        var isSuccess = '#jsEscape($!isSuccess)';
+        if(isSuccess == 'true'){
+        #set( $mItemClass = "#customSpringMessage('M_PRODUCT_CLASS')" )
+        #if($!type == "Update")
+            alert('#customMessageArgs("I002",[$mItemClass])');
+        #else
+            alert('#customMessageArgs("I005",[$mItemClass])');
+        #end
+        buttonDisable();
+        top.iframeChange("${flowExecutionUrl}&_eventId=back");
+        }
+
+}
+
+function exec() {
+    #set( $mmItemClass = "#customSpringMessage('M_PRODUCT_CLASS')" )
+    #if($!type == "Update")
+        #set( $register = "#customSpringMessage('UPDATE')" )
+        if( !confirm('#customMessageArgs("W001",[$mmItemClass,$register])') ) {
+            return;
+        }
+    #else
+        #set( $register = "#customSpringMessage('ACTION_REGISTER')" )
+        if( !confirm('#customMessageArgs("W001",[$mmItemClass,$register])') ) {
+            return;
+        }
+    #end
+
+    filter();
+    var itemClassInd = '#jsEscape($!domain.itemClassInd)';
+    var path = "${flowExecutionUrl}&_eventId=submitL";
+    if (itemClassInd == "2")
+        path = "${flowExecutionUrl}&_eventId=submitM";
+    else if (itemClassInd == "3")
+        path = "${flowExecutionUrl}&_eventId=submitS";
+    getObj("Body").action = path ;
+    buttonDisable();
+    getObj("Body").submit();
+}
+
+function filter(){
+    var size = #jsEscape($!domain.itemClassFilterList.size());
+    var check = document.getElementById("allRadio").checked;
+    var options = document.getElementById("filterData").options;
+    var area = document.getElementById("dataArea");
+    var selectCount = 0;
+    area.innerHTML = "";
+
+    if(check){
+        for(var i = 0; i< options.length ;i++){
+            if(options[i].selected)
+                options[i].selected = false;
+        }
+        addHidden(area,0,"#jsEscape($!allCompanyCd)","#jsEscape($!allSectionPlaceCd)");
+    }else{
+        var index = 0;
+        for(var i = 0; i< options.length ;i++){
+            if(options[i].selected){
+                var optvalue = options[i].value ;
+                var flag = optvalue.indexOf("<|||>");
+                var companyCd = optvalue.substring(0,flag);
+                var sectionPlaceCd = optvalue.substr(flag + 5);
+                addHidden(area,index,companyCd,sectionPlaceCd);
+                index++;
+                selectCount ++;
+           }
+        }
+        for(var i = selectCount ; i < size ; i++){
+            addHidden(area,i,"","");
+        }
+    }
+}
+
+function addHidden(area , index , companyCd , sectionPlaceCd){
+
+        var hiddenCompanyCd = document.createElement("input");
+        hiddenCompanyCd.type="hidden";
+        hiddenCompanyCd.name="itemClassFilterList[" + index + "].itemClassFilterIndentify.company.companyCd";
+        hiddenCompanyCd.value=companyCd;
+        area.appendChild(hiddenCompanyCd);
+
+        var hiddenSectionPlaceCd = document.createElement("input");
+        hiddenSectionPlaceCd.type="hidden";
+        hiddenSectionPlaceCd.name="itemClassFilterList[" + index + "].itemClassFilterIndentify.sectionPlace.sectionPlaceCd";
+        hiddenSectionPlaceCd.value=sectionPlaceCd;
+        area.appendChild(hiddenSectionPlaceCd);
+}
+
+function setHideShow(){
+    var itemClassInd = #jsEscape($!domain.itemClassInd);
+    $(".itemClass").css('display','');
+    $(".itemSmall").css('display','');
+
+    ## ＩＴ３-00119-000 2013.06.28 ADD SBO_WANGXM START
+    if(itemClassInd == "2"){
+        $(".itemSmall").css('display','none');
+    } else if (itemClassInd == "1"){
+        $(".itemClass").css('display','none');
+        $(".itemSmall").css('display','none');
+    }
+    ## ＩＴ３-00119-000 2013.06.28 ADD SBO_WANGXM -END-
+    ## ＩＴ３-00119-000 2013.06.28 DEL SBO_WANGXM START
+    /*var items = document.getElementsByTagName("tr");
+
+    if(itemClassInd == "2"){
+        for(var i=0 ; i<items.length ; i++){
+            if (items[i].name == "itemSmall"){
+                items[i].style.display = "none";
+            }
+        }
+    }else if(itemClassInd == "1"){
+        for(var i=0 ; i<items.length ; i++){
+            if (items[i].name == "itemSmall" || items[i].name == "itemClass"){
+                items[i].style.display = "none";
+            }
+        }
+    }*/
+    ## ＩＴ３-00119-000 2013.06.28 DEL SBO_WANGXM -END-
+}
+
+//-->
+</script>
+<style>
+.itemClass,.itemSmall{
+
+}
+</style>
+</head>
+<body class="Body" topmargin="10" leftmargin="10" marginwidth="10" marginheight="10" align="left" onload="onLoad();">
+<form id="Body" name="Body" action="${flowExecutionUrl}&_eventId=submit" method="post">
+    #customFormHiddenInput("pageid" "itemClass$!type")
+    ## +++++ ＩＴ３-00152-000 2013/06/26 ADD SBO_lichao START +++++
+    ##<table width="70%" style="height:20px;">
+    <table width="90%" style="height:20px; margin-right:auto; margin-left:auto;">
+    ## +++++ ＩＴ３-00152-000 2013/06/26 ADD SBO_lichao -END- +++++
+       <tr id ="TR_ERROR" style="display:none;">
+           <td class="error">
+               $!errorMessage
+           </td>
+       </tr>
+       ## 2013.03.22 ADD DAIKO_WANG START
+       <tr>
+            <td>
+                #if($!{type} == "Insert")
+                    #customSpringMessage("PSMST212_ADD_HEADER_COMMENT")
+                #else
+                    #customSpringMessage("PSMST212_EDIT_HEADER_COMMENT")
+                #end
+            </td>
+       </tr>
+       ## 2013.03.22 ADD DAIKO_WANG -END-
+    </table>
+    <table class="DTL_BOX" width="90%">
+        <tr>
+            <td class="DTL_TITLE_BOX" >
+                <table class="NoBorder" width="100%">
+                    <tr>
+                        #if("Insert" == "$!type")
+                            <td class="ScreenName" style="text-align:left;">#customSpringMessage('SCREEN_M_PRODUCT_CLASS_CREATE')</td><!--品名分類マスタ登録-->
+                        #else
+                            <td class="ScreenName" style="text-align:left;">#customSpringMessage('SCREEN_M_PRODUCT_CLASS_EDIT')</td><!--品名分類マスタ編集-->
+                        #end
+                        <td class="FontSmall" align="right">
+                            <input type="button" class="MiddleButton" value="#customSpringMessage('ACTION_REGISTER')" onClick="javascript:exec();">
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+        <tr>
+
+            <td class="DTL_INTER_BOX">
+                <table class="NoBorder" width="100%">
+                    <tr>
+                        <td class="DTL_OUTHEAD"  width="30%">
+                            <div class="DTL_INHEAD">
+                                <span class="FontDetailHeader">#customSpringMessage('ITEM_CLASS_L')</span><!--大分類コード-->
+                                #if("1" == ($!domain.itemClassInd))
+                                   #customFormRedMessageByType("class='FontWarn'" "false" "※")
+                                #end
+                            </div>
+                        </td>
+                        <td class="DTL_OUTBODY">
+                            <div class="DTL_INBODY">
+                                 <table class="NoBorder" width="100%"><tr>
+                                    <td class="FontDetailData">
+                                        #if("1" == ($!domain.itemClassInd))
+                                            #customFormInputByType("domain.itemClassIdentify.itemClassL" "class='Middle noIME' maxLength='8' size='10'" "false" "class='FontDetailData Brown'")
+                                        #else
+                                            #out($!domain.itemClassIdentify.itemClassL)
+                                        #end
+                                    </td>
+                                    <td  align="right">
+                                        #customFormSingCheckboxByType("TERMINATION" "domain.term.termFlg" "" $termFlagList "class='FontMiddle'")<!--廃止-->&nbsp;
+                                    </td>
+                                </tr></table>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="DTL_OUTHEAD" width="30%">
+                            <div class="DTL_INHEAD">
+                                <span class="FontDetailHeader">#customSpringMessage('LANGUAGE')</span>##言語
+
+                            </div>
+                        </td>
+                        <td class="DTL_OUTHEAD">
+                            <div class="DTL_INBODY">
+                                 <span class="FontDetailData">#out($!domain.baseLanguageInd.languageInd_PageValue)</span>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="DTL_OUTHEAD"  width="30%">
+                            <div class="DTL_INHEAD">
+                                <span class="FontDetailHeader">#customSpringMessage('ITEM_CLASS_L_NAME')</span><!--大分類名-->
+                                #if("1" == ($!domain.itemClassInd))
+                                <span class="FontWarn">&nbsp;※</span>
+                                <img src="../../image/mrkBook.gif" align="center">
+                                #end
+                            </div>
+                        </td>
+                        <td class="DTL_OUTBODY">
+                            <div class="DTL_INBODY">
+                                #if("1" == ($!domain.itemClassInd))
+                                    #customFormInputByType("domain.itemClassNameL" "class='Middle onIME' maxLength='30' size='76'" "true" "class='FontDetailData Brown'")
+                                #else
+                                    <span class="FontDetailData">#out($!domain.itemClassNameL)</span>
+                                #end
+                            </div>
+                        </td>
+                    </tr>
+
+            <!--hidden  start-->
+                #customFormHiddenInput("itemClassInd" "$!domain.itemClassInd")
+            <!--hidden  end-->
+                    <tr name="itemClass" class="itemClass">
+                        <td class="DTL_OUTHEAD"  width="30%">
+                            <div class="DTL_INHEAD">
+                                <span class="FontDetailHeader">#customSpringMessage('ITEM_CLASS_M')</span><!--中分類コード-->
+                                #if("2" == ($!domain.itemClassInd))
+                                    #customFormRedMessageByType("class='FontWarn'" "false" "※")
+                                #end
+                            </div>
+                        </td>
+                        <td class="DTL_OUTBODY">
+                            <div class="DTL_INBODY">
+                                <span class="FontDetailData">
+                                    #if("2" == ($!domain.itemClassInd))
+                                        #customFormInputByType("domain.itemClassIdentify.itemClassM" "class='Middle noIME' maxLength='8' size='10'" "false" "class='FontDetailData'" "class='Brown'")
+                                    #else
+                                        #out($!domain.itemClassIdentify.itemClassM)
+                                        #customFormHiddenInput("itemClassIdentify.itemClassM" "$!domain.itemClassIdentify.itemClassM")
+                                    #end
+                                </span>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr name="itemClass" class="itemClass">
+                        <td class="DTL_OUTHEAD"  width="30%">
+                            <div class="DTL_INHEAD">
+                                <span class="FontDetailHeader">#customSpringMessage('ITEM_CLASS_M_NAME')</span><!--中分類名-->
+                                #if("2" == ($!domain.itemClassInd))
+                                    <span class="FontWarn">&nbsp;※</span>
+                                    <img src="../../image/mrkBook.gif" align="center">
+                                #end
+                            </div>
+                        </td>
+                        <td class="DTL_OUTBODY">
+                            <div class="DTL_INBODY">
+                                #if("2" == ($!domain.itemClassInd))
+                                    #customFormInputByType("domain.itemClassNameM" "class='Middle onIME' maxLength='30' size='76'" "true"  "class='FontDetailData'" "class='Brown'")
+                                #else
+                                   <span class="FontDetailData"> #out($!domain.itemClassNameM)</span>
+                                   #customFormHiddenInput("itemClassNameM" "$!domain.itemClassNameM")
+                                #end
+                            </div>
+                        </td>
+                    </tr>
+
+                    <tr name="itemSmall" class="itemSmall">
+                        <td class="DTL_OUTHEAD"  width="30%">
+                        <div class="DTL_INHEAD">
+                            <span class="FontDetailHeader">#customSpringMessage('ITEM_CLASS_S')</span><!--小分類コード-->
+                            #customFormRedMessageByType("class='FontWarn'" "false" "※")
+                        </div>
+                       </td>
+                       <td class="DTL_OUTBODY">
+                        <div class="DTL_INBODY">
+                            <span class="FontDetailData">
+                            #customFormInputByType("domain.itemClassIdentify.itemClassS" "class='Middle noIME' maxLength='8' size='10'" "false" "class='FontDetailData'" "class='Brown'")
+                            </span>
+                        </div>
+                       </td>
+                    </tr>
+                    <tr name="itemSmall" class="itemSmall">
+                        <td class="DTL_OUTHEAD"  width="30%">
+                            <div class="DTL_INHEAD">
+                                <span class="FontDetailHeader">#customSpringMessage('ITEM_CLASS_S_NAME')</span><span class="FontWarn">&nbsp;※</span><!--小分類名-->
+                                <img src="../../image/mrkBook.gif" align="center">
+                            </div>
+                       </td>
+                       <td class="DTL_OUTBODY">
+                            <div class="DTL_INBODY">
+                                #if("3" == ($!domain.itemClassInd))
+                                    #customFormInputByType("domain.itemClassNameS" "class='Middle onIME' maxLength='30' size='76'" "true"  "class='FontDetailData'" "class='Brown'")
+                                #else
+                                   #customFormHiddenInput("itemClassNameS" "$!domain.itemClassNameS")
+                                #end
+                            </div>
+                       </td>
+                   </tr>
+
+
+                    <tr name="itemClass" class="itemClass">
+                        <td class="DTL_OUTHEAD"  width="30%">
+                            <div class="DTL_INHEAD">
+                                <span class="FontDetailHeader">#customSpringMessage('DLV_MAX_PCT')(%)</span><!--受入上限比率(%)-->
+                                ## 2013.02.05 ADD DAIKO_WANG
+                                <span class="FontWarn">&nbsp;※</span>
+                            </div>
+                        </td>
+                        <td class="DTL_OUTBODY">
+                            <div class="DTL_INBODY">
+                                #customFormInputByType("domain.dlvPctInfo.dlvMaxPct" "class='MiddleRight noIME' maxLength='3' size='8' value='0'" "true"  "class='FontMiniAnkBold'" "class='Brown'")
+                            </div>
+                        </td>
+                    </tr>
+                    <tr name="itemClass" class="itemClass">
+                        <td class="DTL_OUTHEAD"  width="30%">
+                            <div class="DTL_INHEAD">
+                                <span class="FontDetailHeader">#customSpringMessage('DLV_MIN_PCT')(%)</span><!--受入下限比率(%)-->
+                                ## 2013.02.05 ADD DAIKO_WANG
+                                <span class="FontWarn">&nbsp;※</span>
+                            </div>
+                        </td>
+                        <td class="DTL_OUTBODY">
+                            <div class="DTL_INBODY">
+                                #customFormInputByType("domain.dlvPctInfo.dlvMinPct" "class='MiddleRight noIME' maxLength='3' size='8' value='0'" "true"  "class='FontMiniAnkBold'" "class='Brown'")
+                            </div>
+                        </td>
+                    </tr>
+
+                    <tr>
+                        <td class="DTL_OUTHEAD"  width="30%">
+                            <div class="DTL_INHEAD">
+                                <span class="FontDetailHeader">#customSpringMessage('DSP_ORDER')</span><span class="FontWarn">&nbsp;※</span><!--表示順-->
+                            </div>
+                        </td>
+                        <td class="DTL_OUTBODY">
+                            <div class="DTL_INBODY">
+                                #customFormInputByType("domain.dspOrder" "class='Middle noIME' maxLength='3' size='10'" "true"  "class='FontMiniAnkBold'" "class='Brown'")
+                            </div>
+                        </td>
+                    </tr>
+
+                 <tr>
+                    <td nowrap class="DTL_INHEAD" align="left" >
+                        <div class="DTL_INHEAD" >
+                            <span class="FontDetailHeader">#customSpringMessage('DISPLY_OBJECT')<!--表示対象--></span><span class="FontWarn">&nbsp;※</span>
+                        </div>
+                    </td>
+                    <td class="DTL_OUTBODY">
+                        <div CLASS="FontSmall">
+
+                            ## ＩＴ３-00202-000 2013.07.12 DEL SBO_WANGXM START
+                            #*
+                            <INPUT TYPE="radio" NAME="radioBtn" id="allRadio" value="0" #if($!domain.itemClassFilterList.size()==0 ||
+                                ($!domain.itemClassFilterList.size()==1 &&
+                                $!domain.itemClassFilterList[0].itemClassFilterIndentify.sectionPlace.sectionPlaceCd == "ALL")) checked #end>全て表示
+                            <INPUT TYPE="radio" NAME="radioBtn" id="specialRadio" value="1" />表示対象指定
+                            *#
+                            ## ＩＴ３-00202-000 2013.07.12 DEL SBO_WANGXM -END-
+                            ## ＩＴ３-00202-000 2013.07.12 ADD SBO_WANGXM START
+                            <INPUT TYPE="radio" NAME="displayObject" id="allRadio" value="0" #if($!domain.itemClassFilterList.size()==0 && $domain.displayObject == 0 ||
+                                ($!domain.itemClassFilterList.size()==1 &&
+                                $!domain.itemClassFilterList[0].itemClassFilterIndentify.sectionPlace.sectionPlaceCd == "ALL")) checked #end>#customSpringMessage('ALL_VIEW')
+                            <INPUT TYPE="radio" NAME="displayObject" id="specialRadio" value="1" />#customSpringMessage('SHOW_SUBJECT_DESIGNATION')
+                            ## ＩＴ３-00202-000 2013.07.12 ADD SBO_WANGXM -END-
+                            <BR>
+
+<SELECT NAME="filterData" id="filterData" CLASS="FontSmall" MULTIPLE SIZE="10" ALIGN="left">
+    #set( $index = 0 )
+    #foreach($!filterItem in $!filterList)
+        <OPTION VALUE="#out($!filterItem.itemClassFilterIndentify.company.companyCd)<|||>#out($!filterItem.itemClassFilterIndentify.sectionPlace.sectionPlaceCd)"
+            name="itemClassFilter[$index]" id="itemClassFilter[$index]"
+            #foreach($!item in $!domain.itemClassFilterList)
+                #if($!filterItem.itemClassFilterIndentify.company.companyCd == $!item.itemClassFilterIndentify.company.companyCd &&
+                    $!filterItem.itemClassFilterIndentify.sectionPlace.sectionPlaceCd == $!item.itemClassFilterIndentify.sectionPlace.sectionPlaceCd )
+                    selected="selected"
+                #end
+            #end
+            >
+                #out($!filterItem.itemClassFilterIndentify.company.companyName)
+                &nbsp;&nbsp;
+                #out($!filterItem.itemClassFilterIndentify.sectionPlace.sectionPlaceName)
+        </OPTION>
+        #set( $index = $index + 1 )
+    #end
+</SELECT>
+<div style="display:none" id="dataArea">
+</div>
+                        </div>
+                        </td>
+                    </tr>
+                </table>
+
+                <hr>
+                <table width="100%">
+                    <tr>
+                        <td class="DTL_OUTHEAD">
+                            <div class="DTL_INHEAD">
+                                ## +++++ 強化-00976-000 2013/05/22 ADD SBO_KANGJW START +++++
+                                <input class="SmallButton" type="button" value="#customSpringMessage('ACTION_LANGUAGE_ADD')" onclick="filter();addLanguage();"><!--言語追加-->
+                                ## +++++ 強化-00976-000 2013/05/22 ADD SBO_KANGJW END +++++
+                                ## ----- 強化-00976-000 2013/05/22 DEL SBO_KANGJW START -----
+                                ##<input class="SmallButton" type="button" value=#customSpringMessage('ACTION_LANGUAGE_ADD') addLanguage();"><!--言語追加-->
+                                ## ----- 強化-00976-000 2013/05/22 DEL SBO_KANGJW END -----
+                            </div>
+                        </td>
+                    </tr>
+                </table>
+                ## 強化-01835-000 2013.06.29 DEL SBO_WANGXM
+                ##<div id="languageArea" ></div>
+                ## 強化-01835-000 2013.06.29 ADD SBO_WANGXM
+                <div id="languageArea" >
+                #foreach($!itemClassLanguage in $!domain.itemClassLanguageList.itemClassLanguageList)
+                    <div id="LAUNGAGE_FIELD_$velocityCount">
+                    <table id="lang_1" class="NoBorder" width="100%">
+                        <tr>
+                            <td class="DTL_OUTHEAD" width="10%">
+                                <div class="DTL_INHEAD">
+                                    <span class="FontDetailHeader">#customSpringMessage('LANGUAGE')</span>#customFormRedMessageByType("class='FontWarn'" "true" "※")<!--言語-->
+                                </div>
+                            </td>
+                            <td class="DTL_OUTHEAD">
+                                <div class="DTL_INBODY">
+                                    #customFormSingSelectByType("domain.itemClassLanguageList.itemClassLanguageList[$velocityCount].languageInd.languageInd" $languageList "class='Small'" "true" "class='FontMiniAnkBold'" "class='Brown'")
+                                </div>
+                            </td>
+                            <td class="DTL_OUTBODY">
+                                <div class="DTL_INBODY" align="right" rightmargin="10">
+                                    ## +++++ 強化-00976-000 2013/05/22 ADD SBO_KANGJW START +++++
+                                    <input class="SmallButton" type="button" value="#customSpringMessage('ACTION_LANGUAGE_DELETE')" onclick="filter();removeLanguage($velocityCount);"><!--言語削除-->
+                                    ## +++++ 強化-00976-000 2013/05/22 ADD SBO_KANGJW END +++++
+                                    ## ----- 強化-00976-000 2013/05/22 DEL SBO_KANGJW START -----
+                                    ##<input class="SmallButton" type="button" value=#customSpringMessage('ACTION_LANGUAGE_DELETE') onclick="removeLanguage($velocityCount);"><!--言語削除-->
+                                    ## ----- 強化-00976-000 2013/05/22 DEL SBO_KANGJW END -----
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td class="DTL_OUTHEAD" width="10%">
+                                <div class="DTL_INHEAD">
+                                    #if("1" == ($!domain.itemClassInd))
+                                        <span class="FontDetailHeader">#customSpringMessage('ITEM_CLASS_L_NAME')</span>#customFormRedMessageByType("class='FontWarn'" "true" "※")<!--大分類名-->
+                                    #elseif("2" == ($!domain.itemClassInd))
+                                        <span class="FontDetailHeader">#customSpringMessage('ITEM_CLASS_M_NAME')</span>#customFormRedMessageByType("class='FontWarn'" "true" "※")<!--中分類名-->
+                                    #elseif("3" == ($!domain.itemClassInd))
+                                        <span class="FontDetailHeader">#customSpringMessage('ITEM_CLASS_S_NAME')</span>#customFormRedMessageByType("class='FontWarn'" "true" "※")<!--小分類名-->
+                                    #end
+                                </div>
+                            </td>
+                            <td class="DTL_OUTHEAD" colspan="2">
+                                <div class="DTL_INBODY">
+                                    #customFormInputByType("domain.itemClassLanguageList.itemClassLanguageList[$velocityCount].itemClassName" "class='Middle onIME' maxLength='30' size='76'" "true" "class='FontMiniAnkBold'" "class='Brown'")
+                                </div>
+                            </td>
+                        </tr>
+                    </table>
+                    </div>
+                     #end
+                    </div>
+                <hr>
+
+                <table class="NoBorder" width="100%">
+                    <tr>
+                        <td class="DTL_MSGBOX" nowrap>
+                            #if($!{type} == "Insert")
+                                #customSpringMessage("PSMST212_ADD_FOOTER_COMMENT")
+                            #else
+                                #customSpringMessage("PSMST212_EDIT_FOOTER_COMMENT")
+                            #end
+                        </td>
+                        <td class="DTL_MSGBOX" align="right">
+                            <input type="button" class="MiddleButton" value="#customSpringMessage('ACTION_REGISTER')" onclick="javascript:exec();">
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+</form>
+
+</body>
+
+</html>

@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:webflow="http://www.springframework.org/schema/webflow-config"
+	xsi:schemaLocation="
+           http://www.springframework.org/schema/beans
+           http://www.springframework.org/schema/beans/spring-beans.xsd
+           http://www.springframework.org/schema/webflow-config
+           http://www.springframework.org/schema/webflow-config/spring-webflow-config-2.3.xsd" default-lazy-init="true">
+    <bean class="org.springframework.webflow.mvc.servlet.FlowHandlerMapping">
+        <property name="flowRegistry" ref="flowRegistry" />
+        <property name="order" value="0" />
+    </bean>
+
+    <bean class="fw.aop.webflow.FlowHandler">
+        <property name="flowExecutor" ref="flowExecutor" />
+    </bean>
+    
+    <webflow:flow-executor id="flowExecutor" flow-registry="flowRegistry">
+        <webflow:flow-execution-listeners>
+            <webflow:listener ref="viewListener"/>
+        </webflow:flow-execution-listeners>
+        <!-- IT2-01056-000 12.12.27 start-->
+        <!-- 
+            MAX-実行 - スナップショット  スナップショットの数を無制限に有効にするには、この値を-1に設定します
+        -->
+         <webflow:flow-execution-repository max-execution-snapshots="-1"/>
+        <!-- IT2-01056-000 12.12.27 end-->
+    </webflow:flow-executor>
+    
+    <bean id="viewListener" class="fw.aop.webflow.ViewStateListener" />
+    
+	<bean id="expressionParser" class="org.springframework.expression.spel.standard.SpelExpressionParser">
+		<constructor-arg name="configuration">
+			<bean class="org.springframework.expression.spel.SpelParserConfiguration">
+	        <constructor-arg name="autoGrowCollections" value="true" />
+	        <constructor-arg name="autoGrowNullReferences" value="false" />
+	      </bean>
+	    </constructor-arg>
+	</bean>
+
+	<bean id="webflowExpressionParser" class="org.springframework.webflow.expression.spel.WebFlowSpringELExpressionParser">
+    	<constructor-arg name="expressionParser" ref="expressionParser" />
+  	</bean>
+
+    <webflow:flow-builder-services id="flowBuilderServices"
+        view-factory-creator="mvcViewFactoryCreator" validator="validator" expression-parser="webflowExpressionParser"/>
+
+    <bean id="mvcViewFactoryCreator"
+        class="fw.aop.webflow.WebflowViewFactoryCreator">
+        <property name="viewResolvers" ref="viewResolver" />
+    </bean>
+    
+    <bean id="validator" class="org.springframework.validation.beanvalidation.LocalValidatorFactoryBean">
+        <property name="validationMessageSource" ref="messageSource" />
+    </bean>
+    
+    <bean id="multipartResolver"
+        class="org.springframework.web.multipart.commons.CommonsMultipartResolver">
+        <property name="maxUploadSize" value="52428800" />
+        <property name="maxInMemorySize" value="52428800" />
+    </bean>
+</beans>

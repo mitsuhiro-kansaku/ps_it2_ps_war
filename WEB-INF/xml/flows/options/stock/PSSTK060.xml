@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<flow xmlns="http://www.springframework.org/schema/webflow"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.springframework.org/schema/webflow
+        http://www.springframework.org/schema/webflow/spring-webflow-2.0.xsd"
+    parent="base">
+    
+    <var name="defaultSearchCondition" class="fw.domain.options.stock.stocklist.StockSearchCondition" />
+    
+    <on-start>
+        <evaluate expression="PSSTK060Service.init()"
+            result="flowScope.searchCondition" />
+        <set name="flowScope.isCurrentPageSearch" value="false" />
+    </on-start>
+    
+    <view-state id="PSSTK060" model="searchCondition" view="options/stock/PSSTK060">
+        <transition on="validate" validate="true">
+            <set name="flowScope.isCurrentPageSearch" value="false" />
+            <set name="flowScope.isShowList" value="true"></set>
+            <evaluate expression="PSSTK060Service.save(searchCondition)"></evaluate>
+        </transition>
+        <transition on="search" to="PSSTK061" validate="false"/>
+
+        <!-- ↓↓↓ダウンロード処理↓↓↓ -->
+        <transition on="downloadValidate" validate="true">
+            <evaluate expression="PSSTK060Service.downloadValidate(searchCondition)" result="flashScope.isDownLoadValidate"/>
+        </transition>
+        <transition on="download" validate="false">
+            <evaluate expression="PSSTK060Service.download(searchCondition)"/>
+        </transition>
+        <!-- ↑↑↑ダウンロード処理↑↑↑ -->
+
+        <transition on="back" to="home" validate="false"/>
+    </view-state>
+    
+    <subflow-state id="PSSTK061" subflow="options/stock/PSSTK061" >
+        <input name="searchCondition" value="searchCondition" />
+        <input name="isCurrentPageSearch" value="isCurrentPageSearch" />
+        <transition on="back" to="PSSTK060" >
+            <set name="flowScope.isCurrentPageSearch" value="true" />
+        </transition>
+    </subflow-state>
+    
+</flow>

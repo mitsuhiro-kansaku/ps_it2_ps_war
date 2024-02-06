@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<flow xmlns="http://www.springframework.org/schema/webflow"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.springframework.org/schema/webflow
+        http://www.springframework.org/schema/webflow/spring-webflow-2.0.xsd"
+    parent="base">
+
+    <var name="identify" class="fw.domain.slip.common.identify.OrderNo" />
+    <var name="identify090" class="fw.domain.slip.order.order.OrderIdentify" />
+
+    <!-- 入荷リスト明細識別情報 -->
+    <var name="arrivalIdentify" class="fw.domain.slip.receive.receive.Identify" />
+    
+    <input name="searchCondition" />
+    <input name="isCurrentPageSearch" />
+    <decision-state id="isSearchByKey">
+       <if test="flowScope.isCurrentPageSearch" then="searchByKey" else="searchByCondition" />
+    </decision-state>
+    <action-state id="searchByCondition">
+    <evaluate expression="PSRCV081Service.init(searchCondition)" result="flowScope.itemList" />
+        <transition to="PSRCV081"/> 
+    </action-state>
+
+    <action-state  id="searchByKey" >
+        <evaluate expression="PSRCV081Service.page(searchCondition)" result="flowScope.itemList" />
+        <transition to="PSRCV081"/>
+    </action-state>
+
+    <view-state id="PSRCV081" view="rcv/print/PSRCV081" model="itemList">
+        <transition on="order" validate="false">
+            <evaluate expression="PSRCV081Service.order(searchCondition)" 
+                 result="flowScope.itemList" />
+        </transition>
+        <transition on="page" validate="false">
+             <evaluate expression="PSRCV081Service.page(searchCondition)" 
+                result="flowScope.itemList" /> 
+        </transition>
+        <transition on="detailValidate" validate="true" >
+            <set name="identify.orderNo" value="requestParameters.orderNo"/>
+            <set name="identify090.orderSeq" value="requestParameters.orderSeq"/>
+            <set name="arrivalIdentify.arrivalSeqNo" value="requestParameters.arrivalSeqNo"/>
+            <set name="arrivalIdentify.lastUpdDate" value="requestParameters.lastUpdDate"/>
+            <set name="flashScope.isDetailValidate" value="true"></set>
+        </transition>
+        <transition on="detail" to="PSRCV050" validate="false" />
+        <transition on="print" validate="true"  to="searchByKey">
+            <evaluate expression="PSRCV081Service.print(itemList)" />
+            <set name="flashScope.isSuccess" value="true"></set>
+        </transition>
+        <transition on="back" to="home" validate="false" />
+    </view-state>
+    
+    <subflow-state id="PSRCV050" subflow="rcv/rcv/PSRCV050TOP">
+        <input name="identify050" value="identify" />
+        <input name="identify090" value="identify090" />
+        <!--  2013.01.09 DEL DAIKO_KANEKO
+        <input name="range" value="0"/>
+        <input name="approveFlg" value="1"/>
+        -->
+    </subflow-state>
+    
+</flow>

@@ -1,0 +1,1283 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="ps.dataaccess.tst.ins.InsMapper">
+
+    <!-- ====================== PSTST010 未検査一覧  Start=================== -->
+
+    <!-- 未検査識別情報MAP -->
+    <resultMap type="fw.domain.slip.receive.inspect.uninspectlist.UnInspectIdentify" id="UninspectIdentify_Map">
+        <id column="DELIV_KEY_NO" property="unInspectIdentify.delivKeyNo.delivKeyNo" />
+        <id column="ORDER_SEQ" property="unInspectIdentify.orderSeq" />
+    </resultMap>
+
+    <!-- 未検査一覧明細MAP -->
+    <resultMap type="fw.domain.slip.receive.inspect.uninspectlist.UnInspectListItem" id="UninspectItem_Map">
+        <id column="DELIV_KEY_NO" property="unInspectIdentify.unInspectIdentify.delivKeyNo.delivKeyNo" />
+        <id column="LAST_UPD_DATE" property="unInspectIdentify.unInspectIdentify.lastUpdDate" />
+        <id column="ORDER_SEQ" property="unInspectIdentify.unInspectIdentify.orderSeq" />
+        <id column="ORDER_NO" property="unInspectIdentify.unInspectIdentify.orderNo" />
+        <id column="EXCLUSIVE_SLIP_NO" property="unInspectIdentify.unInspectIdentify.exclusiveSlipId.slipNo"/>
+        <id column="EXCLUSIVE_LAST_UPD_DATE" property="unInspectIdentify.unInspectIdentify.exclusiveSlipId.lastUpdDate"/>
+    </resultMap>
+
+    <!-- 未検査一覧取得SELECT句 -->
+    <sql id="unInspectListSelect">
+        SELECT 
+            T_RECEIVE_MNG.DELIV_KEY_NO ,
+            T_RECEIVE_MNG.LAST_UPD_DATE ,
+            T_ORDER.ORDER_SEQ ,
+            T_ORDER.ORDER_NO ,
+            T_ORDER.REQ_TYPE_IND as "reqTypeInd",
+            T_ORDER.ITEM_CD as "itemCd",
+            T_ORDER.ITEM_NAME as "itemName",
+            T_ORDER.UNIT_NAME as "unitName",
+            T_ORDER.SUP_CD as "supCd",
+            T_ORDER.SUP_ABBR_NAME as "supAbbrName",
+            T_ORDER.SUBCON_IND as "subconInd",
+            T_ORDER.EDI_IND as "ediInd",
+            T_ORDER.DELIV_PLACE_CD as "delivPlaceCd", 
+            T_ORDER.DELIV_PLACE_NAME as "delivPlaceName",
+            T_ORDER.ORDER_VOL as "orderVol.vol",
+            T_ORDER.ORDER_CANCEL_VOL as "orderCancelVol.vol",
+            T_ORDER.ORDER_DELIV_DATE as "delivDate.dateOfymd",
+            T_ARRIVAL.ARRIV_EXP_DATE as "arrivExpDate.dateOfymd",
+            T_ARRIVAL.DELIV_VOL as "delivVol.vol" ,
+            T_ARRIVAL.ARRIV_SECTION_CD as "arrivSectionCd",
+            T_ARRIVAL.ARRIV_SECTION_NAME as "arrivSectionName",
+            T_ARRIVAL.ARRIV_USER_ID as "arrivUserId",
+            T_ARRIVAL.ARRIV_USER_NAME as "arrivUserName",
+            T_SLIP_MNG.SLIP_NO AS EXCLUSIVE_SLIP_NO,
+            T_SLIP_MNG.LAST_UPD_DATE AS EXCLUSIVE_LAST_UPD_DATE,
+            ${@ps.common.util.ItemSettingUtil@getItemSettingSelectSQLDomainAliasNonBinary("T_ORDER","searchResExtItemOrder")},
+            ${@ps.common.util.ItemSettingUtil@getItemSettingSelectSQLDomainAliasNonBinary("T_ARRIVAL","searchResExtItemArrival")}
+    </sql>
+
+    <!-- 未検査一覧取得FROM句 -->
+    <sql id="unInspectListFrom">
+        FROM 
+            T_RECEIVE_MNG
+        INNER JOIN 
+            T_ORDER
+        ON 
+            T_RECEIVE_MNG.ORDER_NO = T_ORDER.ORDER_NO
+        AND T_ORDER.NEW_APP_FLG = '1'
+        AND T_ORDER.DELETE_FLG = '0'
+        AND T_ORDER.REQ_TYPE_IND != '9'
+        INNER JOIN 
+            T_ARRIVAL
+        ON 
+            T_RECEIVE_MNG.NEW_ARRIVAL_SEQ = T_ARRIVAL.ARRIVAL_SEQ
+        AND T_ARRIVAL.DELETE_FLG = '0'
+        AND T_ARRIVAL.INSPECT_IND = '1'
+        INNER JOIN 
+            T_SLIP_MNG
+        ON 
+            T_ORDER.ORDER_NO = T_SLIP_MNG.SLIP_NO
+        AND T_SLIP_MNG.INSPECT_STATUS_IND != '2'
+        AND T_SLIP_MNG.DELETE_FLG = '0'
+    </sql>
+    
+    <!-- 未検査一覧取得WHERE句 -->
+    <sql id="listKeyIdentityWhereCondition">
+        ${@ps.common.util.ItemSettingUtil@getItemSettingWhereSQL()}
+        AND T_RECEIVE_MNG.DELIV_STATUS = '2104'
+        AND T_RECEIVE_MNG.DELETE_FLG = '0'
+        <if test="@org.apache.commons.collections.CollectionUtils@isEmpty(reqTypeInd)">
+            AND T_ORDER.REQ_TYPE_IND IN ('2','3')
+        </if>
+        <if test="reqTypeInd == 2">
+            AND T_ORDER.REQ_TYPE_IND IN ('2')
+        </if>
+        <if test="reqTypeInd == 3">
+            AND T_ORDER.REQ_TYPE_IND IN ('3')
+        </if>
+        AND ((
+            T_ORDER.REQ_COMPANY_CD = '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}'
+            <if test="@fw.common.cache.ConstDataCacheHolder@getConstDataCache().getSystemSetting('ARRIVAL_SECTION_SCOPE').getCondValue()==1">
+                AND T_ORDER.REQ_SECTION_CD IN (${@fw.common.util.AppUtil@getSectionViewRegion()})
+            </if>
+            <if test="@fw.common.cache.ConstDataCacheHolder@getConstDataCache().getSystemSetting('ARRIVAL_SECTION_SCOPE').getCondValue()==3">
+                AND T_ORDER.REQ_SECTION_PLACE_CD = '${@fw.security.SecurityUtil@getSectionPlaceCdByEscapeSql()}'
+            </if>
+        ) OR (
+            T_ARRIVAL.ARRIV_COMPANY_CD = '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}'
+            <if test="@fw.common.cache.ConstDataCacheHolder@getConstDataCache().getSystemSetting('ARRIVAL_SECTION_SCOPE').getCondValue()==1">
+                AND T_ARRIVAL.ARRIV_SECTION_CD IN (${@fw.common.util.AppUtil@getSectionViewRegion()})
+            </if>
+            <if test="@fw.common.cache.ConstDataCacheHolder@getConstDataCache().getSystemSetting('ARRIVAL_SECTION_SCOPE').getCondValue()==3">
+                AND T_ARRIVAL.ARRIV_SECTION_PLACE_CD = '${@fw.security.SecurityUtil@getSectionPlaceCdByEscapeSql()}'
+            </if>
+        ))
+    </sql>
+
+    <!-- 未検査一覧識別情報を取得 -->
+     <select id="listKeyIdentity" parameterType="fw.domain.slip.receive.inspect.uninspectlist.UnInspectSearchCondition" resultMap="UninspectIdentify_Map">
+        SELECT 
+            T_RECEIVE_MNG.DELIV_KEY_NO,
+            T_ORDER.ORDER_SEQ 
+        <include refid="unInspectListFrom" />
+        <where> 
+            <include refid="listKeyIdentityWhereCondition"/>
+        </where>
+        ORDER BY ${searchCondition.columnOrder.columnOrder()}
+    </select>
+
+    <!-- 未検査一覧明細を取得 -->
+    <select id="listPageItem" parameterType="fw.domain.slip.receive.inspect.uninspectlist.UnInspectSearchCondition"  resultMap="UninspectItem_Map">
+        <include refid="unInspectListSelect" />
+        <include refid="unInspectListFrom" />
+        <where> 
+            T_RECEIVE_MNG.DELIV_KEY_NO IN
+            <foreach collection="searchCondition.page.keyDomainEntityList" item="keyList"  open="(" separator="," close=")">  
+                #{keyList.unInspectIdentify.delivKeyNo.delivKeyNo} 
+            </foreach>
+            <include refid="listKeyIdentityWhereCondition"/>
+        </where>
+        ORDER BY ${searchCondition.columnOrder.columnOrder()}
+    </select>
+    
+    <!-- 未検査一覧のダウンロード件数を取得 -->
+    <select id="downloadCountUnInspectList" parameterType="fw.domain.slip.receive.inspect.uninspectlist.UnInspectSearchCondition" resultType="java.lang.Long" >
+        SELECT 
+            COUNT(1)
+        <include refid="unInspectListFrom" />
+        <where> 
+            <include refid="listKeyIdentityWhereCondition"/>
+        </where>
+    </select>
+    
+    <!-- 検査済一覧のダウンロード -->
+    <select id="downloadUnInspectList" parameterType="fw.domain.slip.receive.inspect.uninspectlist.UnInspectSearchCondition" resultMap="UninspectItem_Map" >
+        <include refid="downloadHeader"/>
+        <include refid="unInspectListSelect" />
+        <include refid="unInspectListFrom" />
+        <where> 
+            <include refid="listKeyIdentityWhereCondition"/>
+        </where>
+        ORDER BY ${searchCondition.columnOrder.columnOrder()}
+        <include refid="downloadFooter"/>
+    </select>
+        
+    <!-- ====================== PSTST010 未検査一覧  End=================== -->
+
+
+    <!-- ====================== PSTST040 検査済一覧  Start=================== -->
+
+    <!-- 検査済識別情報 -->
+    <resultMap type="fw.domain.slip.receive.inspect.inspectedlist.InspectedListIdentify" id="InspectIdentify_Map">
+        <id column="DELIV_KEY_NO" property="inspectedListIdentify.delivKeyNo.delivKeyNo" />
+        <id column="ORDER_SEQ" property="inspectedListIdentify.orderSeq" />
+    </resultMap>
+    
+    <!-- 検査済一覧明細 -->
+    <resultMap type="fw.domain.slip.receive.inspect.inspectedlist.InspectedListItem" id="InspectItem_Map">
+        <id column="DELIV_KEY_NO" property="inspectedListIdentify.inspectedListIdentify.delivKeyNo.delivKeyNo" />
+        <id column="LAST_UPD_DATE" property="inspectedListIdentify.inspectedListIdentify.lastUpdDate" />
+        <id column="ORDER_SEQ" property="inspectedListIdentify.inspectedListIdentify.orderSeq" />
+        <id column="ORDER_NO" property="inspectedListIdentify.inspectedListIdentify.orderNo" />
+        <id column="EXCLUSIVE_SLIP_NO" property="inspectedListIdentify.inspectedListIdentify.exclusiveSlipId.slipNo"/>
+        <id column="EXCLUSIVE_LAST_UPD_DATE" property="inspectedListIdentify.inspectedListIdentify.exclusiveSlipId.lastUpdDate"/>
+    </resultMap>
+
+    <!-- 検査済一覧取得SELECT句 -->
+    <sql id="inspectListSelect">
+        SELECT 
+            T_RECEIVE_MNG.DELIV_KEY_NO ,
+            T_RECEIVE_MNG.LAST_UPD_DATE ,
+            T_ORDER.ORDER_SEQ ,
+            T_ORDER.ORDER_NO ,
+            T_RECEIVE_MNG.DELIV_STATUS as "delivStatus",
+            T_ORDER.REQ_TYPE_IND as "reqTypeInd" ,
+            T_ORDER.ITEM_CD as "itemCd" ,
+            T_ORDER.ITEM_NAME as "itemName" ,
+            T_ORDER.UNIT_NAME as "unitName" ,
+            T_ORDER.SUP_CD as "supCd" ,
+            T_ORDER.SUP_ABBR_NAME as "supAbbrName" ,
+            T_ORDER.SUBCON_IND as "subconInd" ,
+            T_ORDER.EDI_IND as "ediInd",
+            T_ORDER.DELIV_PLACE_CD as "delivPlaceCd", 
+            T_ORDER.DELIV_PLACE_NAME as "delivPlaceName",
+            T_ORDER.ORDER_VOL as "orderVol.vol",
+            T_ORDER.ORDER_CANCEL_VOL as "orderCancelVol.vol",
+            T_ORDER.ORDER_DELIV_DATE as "delivDate.dateOfymd",
+            T_ARRIVAL.ARRIV_EXP_DATE as "receiveDate.dateOfymd",
+            T_ARRIVAL.DELIV_VOL as "receiveVol.vol",
+            T_INSPECT.CORRECT_CD as "correctInd",
+            T_INSPECT.INSPECT_VERSION as "historyNo",
+            T_INSPECT.INSPECT_DATE as "inspectDate.dateOfymd",
+            T_INSPECT.INSPECT_PASS_QUANT as "successVol.vol",
+            T_INSPECT.INSPECT_SECTION_CD as "inspectSectionCd",
+            T_INSPECT.INSPECT_SECTION_NAME as "inspectSectionName",
+            T_INSPECT.INSPECT_USER_ID as "inspectUserId",
+            T_INSPECT.INSPECT_USER_NAME as "inspectUserName",
+            T_SLIP_MNG.SLIP_NO AS EXCLUSIVE_SLIP_NO,
+            T_SLIP_MNG.LAST_UPD_DATE AS EXCLUSIVE_LAST_UPD_DATE,
+            ${@ps.common.util.ItemSettingUtil@getItemSettingSelectSQLDomainAliasNonBinary("T_ORDER","searchResExtItemOrder")},
+            ${@ps.common.util.ItemSettingUtil@getItemSettingSelectSQLDomainAliasNonBinary("T_INSPECT","searchResExtItemInspect")}
+    </sql>
+
+    <!-- 検査済一覧取得FROM句 -->
+    <sql id="inspectListFrom">
+        FROM 
+            T_RECEIVE_MNG
+        INNER JOIN 
+            T_INSPECT
+        ON
+            T_RECEIVE_MNG.NEW_INSPECT_SEQ = T_INSPECT.INSPECT_SEQ
+        AND T_INSPECT.INSPECT_STATUS = '04'
+        AND T_INSPECT.DELETE_FLG = '0'
+        INNER JOIN 
+            T_ORDER
+        ON
+            T_RECEIVE_MNG.ORDER_NO = T_ORDER.ORDER_NO
+        AND T_ORDER.NEW_APP_FLG = '1'
+        AND T_ORDER.DELETE_FLG = '0'
+        AND T_ORDER.REQ_TYPE_IND != 9
+        INNER JOIN 
+            T_ARRIVAL
+        ON 
+            T_RECEIVE_MNG.NEW_ARRIVAL_SEQ = T_ARRIVAL.ARRIVAL_SEQ
+        AND T_ARRIVAL.DELETE_FLG = '0'
+        INNER JOIN 
+            T_SLIP_MNG
+        ON 
+            T_ORDER.ORDER_NO = T_SLIP_MNG.SLIP_NO
+        AND T_SLIP_MNG.DELETE_FLG = '0'
+    </sql>
+
+    <!-- 検査済一覧取得WHERE句 -->
+    <sql id="listKeyIdentityInspectWhereCondition">
+        ${@ps.common.util.ItemSettingUtil@getItemSettingWhereSQL()}
+        AND T_RECEIVE_MNG.DELETE_FLG = '0'
+        AND T_INSPECT.RB_IND = '0'
+        <if test="@org.apache.commons.lang.StringUtils@isBlank(delivStatus)">
+            AND T_RECEIVE_MNG.DELIV_STATUS = '3104'
+        </if>
+        <if test="@org.apache.commons.collections.CollectionUtils@isEmpty(reqTypeInd)">
+            AND T_ORDER.REQ_TYPE_IND IN ('2','3')
+        </if>
+        <if test="reqTypeInd == 2">
+            AND T_ORDER.REQ_TYPE_IND IN ('2')
+        </if>
+        <if test="reqTypeInd == 3">
+            AND T_ORDER.REQ_TYPE_IND IN ('3')
+        </if>
+        AND (
+                ( T_ORDER.REQ_COMPANY_CD = '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}'
+                  AND T_ORDER.REQ_SECTION_CD IN (${@fw.common.util.AppUtil@getSectionViewRegion()})
+                )
+             OR (
+                 T_INSPECT.INSPECT_COMPANY_CD = '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}'
+                 AND T_INSPECT.INSPECT_SECTION_CD IN (${@fw.common.util.AppUtil@getSectionViewRegion()})
+                )
+             )
+    </sql>
+
+    <!-- 検査済一覧識別情報を取得 -->
+    <select id="listKeyIdentityInspect"  parameterType="fw.domain.slip.receive.inspect.inspectedlist.InspectedSearchCondition" resultMap="InspectIdentify_Map">
+        SELECT 
+             T_RECEIVE_MNG.DELIV_KEY_NO ,
+             T_ORDER.ORDER_SEQ ,
+             T_RECEIVE_MNG.LAST_UPD_DATE as "lastUpdDate"
+        <include refid="inspectListFrom" />
+        <where> 
+            <include refid="listKeyIdentityInspectWhereCondition"/>
+        </where>
+        ORDER BY ${searchCondition.columnOrder.columnOrder()}
+    </select>
+    
+    <!-- 検査済一覧を取得 -->
+    <select id="listPageItemInspect" parameterType="fw.domain.mst.searchcondition.SearchCondition" resultMap="InspectItem_Map">
+        <include refid="inspectListSelect"/>
+        <include refid="inspectListFrom" />
+        <where> 
+            T_RECEIVE_MNG.DELIV_KEY_NO IN
+            <foreach collection="searchCondition.page.keyDomainEntityList" item="keyList"  open="(" separator="," close=")">  
+                #{keyList.inspectedListIdentify.delivKeyNo.delivKeyNo} 
+            </foreach>
+            <include refid="listKeyIdentityInspectWhereCondition"/>
+        </where>
+        ORDER BY ${searchCondition.columnOrder.columnOrder()}
+    </select>
+    
+    <!-- 検査済一覧のダウンロード件数を取得 -->
+    <select id="downloadCountInspected" parameterType="fw.domain.slip.receive.inspect.inspectedlist.InspectedSearchCondition" resultType="java.lang.Long" >
+        SELECT 
+            COUNT(1)
+        <include refid="inspectListFrom" />
+        <where> 
+            <include refid="listKeyIdentityInspectWhereCondition"/>
+        </where>
+    </select>
+    
+    <!-- 検査済一覧のダウンロード -->
+    <select id="downloadInspected" parameterType="fw.domain.mst.searchcondition.SearchCondition" resultMap="InspectItem_Map" >
+        <include refid="downloadHeader"/>
+        <include refid="inspectListSelect"/>
+        <include refid="inspectListFrom" />
+        <where> 
+            <include refid="listKeyIdentityInspectWhereCondition"/>
+        </where>
+        ORDER BY ${searchCondition.columnOrder.columnOrder()}
+        <include refid="downloadFooter"/>
+    </select>
+
+    <!-- ====================== PSTST040 検査済一覧  End=================== -->
+
+
+    <!-- ====================== PSTST050 検査詳細  End=================== -->
+    <resultMap type="fw.domain.slip.receive.inspect.inspectdetail.InspectDetail" 
+        id="InspectDetail_Map">
+        <id column="DELIV_KEY_NO" property="delivKeyNo.delivKeyNo" />
+        <id column="UNIT_CD" property="unit.unitCd" />
+        <id column="UNIT_NAME" property="unit.unitName" />
+        <id column="INSPECT_STATUS" property="inspectApp.inspect.inspectResult.inspectStatus.inspectStatus"/>
+        <id column="INSPECT_DATE" property="inspectDate.inspectDate.dateOfymd"/>
+        <id column="INSPECT_PASS_QUANT" property="inspectVol.successAmount.vol"/>
+        <id column="INSPECT_ACCOUNT" property="inspectAccount.comment"/>
+        <id column="APP_ROUTE_NO" property="inspectApp.inspect.inspectAppRoute.approute.appRouteNo"/>
+        <id column="APP_ROUTE_NAME" property="inspectApp.inspect.inspectAppRoute.approute.appRouteName"/>
+        <id column="INSPECT_SEQ" property="inspectApp.inspect.inspectIdentify.inspectSeqNo" /> 
+        <id column="INSPECT_SECTION_CD" property="inspectUser.user.section.sectionCd"/>
+        <id column="INSPECT_SECTION_NAME" property="inspectUser.user.section.sectionName"/>
+        <id column="INSPECT_USER_ID" property="inspectUser.user.userID"/>
+        <id column="INSPECT_USER_NAME" property="inspectUser.user.userName"/>
+
+        <id column="EXT_TXT_1" property="detailExtItem.extendTxt.extendTxt1"/>
+        <id column="EXT_TXT_2" property="detailExtItem.extendTxt.extendTxt2"/>
+        <id column="EXT_TXT_3" property="detailExtItem.extendTxt.extendTxt3"/>
+        <id column="EXT_TXT_4" property="detailExtItem.extendTxt.extendTxt4"/>
+        <id column="EXT_TXT_5" property="detailExtItem.extendTxt.extendTxt5"/>
+        <id column="EXT_TXT_6" property="detailExtItem.extendTxt.extendTxt6"/>
+        <id column="EXT_TXT_7" property="detailExtItem.extendTxt.extendTxt7"/>
+        <id column="EXT_TXT_8" property="detailExtItem.extendTxt.extendTxt8"/>
+        <id column="EXT_TXT_9" property="detailExtItem.extendTxt.extendTxt9"/>
+        <id column="EXT_TXT_10" property="detailExtItem.extendTxt.extendTxt10"/>
+        <id column="EXT_AREA_1" property="detailExtItem.extendArea.extendArea1"/>
+        <id column="EXT_AREA_2" property="detailExtItem.extendArea.extendArea2"/>
+        <id column="EXT_AREA_3" property="detailExtItem.extendArea.extendArea3"/>
+        <id column="EXT_AREA_4" property="detailExtItem.extendArea.extendArea4"/>
+        <id column="EXT_AREA_5" property="detailExtItem.extendArea.extendArea5"/>
+        <id column="EXT_DATE_1" property="detailExtItem.extendDate.extendDate1.dateOfymd"/>
+        <id column="EXT_DATE_2" property="detailExtItem.extendDate.extendDate2.dateOfymd"/>
+        <id column="EXT_DATE_3" property="detailExtItem.extendDate.extendDate3.dateOfymd"/>
+        <id column="EXT_DATE_4" property="detailExtItem.extendDate.extendDate4.dateOfymd"/>
+        <id column="EXT_DATE_5" property="detailExtItem.extendDate.extendDate5.dateOfymd"/>
+        <id column="EXT_INT_1" property="detailExtItem.extendInt.extendInt1.value"/>
+        <id column="EXT_INT_2" property="detailExtItem.extendInt.extendInt2.value"/>
+        <id column="EXT_INT_3" property="detailExtItem.extendInt.extendInt3.value"/>
+        <id column="EXT_INT_4" property="detailExtItem.extendInt.extendInt4.value"/>
+        <id column="EXT_INT_5" property="detailExtItem.extendInt.extendInt5.value"/>
+        <id column="EXT_INT_6" property="detailExtItem.extendInt.extendInt6.value"/>
+        <id column="EXT_INT_7" property="detailExtItem.extendInt.extendInt7.value"/>
+        <id column="EXT_INT_8" property="detailExtItem.extendInt.extendInt8.value"/>
+        <id column="EXT_INT_9" property="detailExtItem.extendInt.extendInt9.value"/>
+        <id column="EXT_INT_10" property="detailExtItem.extendInt.extendInt10.value"/>
+        <id column="EXT_DEC_1" property="detailExtItem.extendDec.extendDec1.value"/>
+        <id column="EXT_DEC_2" property="detailExtItem.extendDec.extendDec2.value"/>
+        <id column="EXT_DEC_3" property="detailExtItem.extendDec.extendDec3.value"/>
+        <id column="EXT_DEC_4" property="detailExtItem.extendDec.extendDec4.value"/>
+        <id column="EXT_DEC_5" property="detailExtItem.extendDec.extendDec5.value"/>
+        <id column="EXT_SEL_1" property="detailExtItem.extendSel.extendSel1"/>
+        <id column="EXT_SEL_2" property="detailExtItem.extendSel.extendSel2"/>
+        <id column="EXT_SEL_3" property="detailExtItem.extendSel.extendSel3"/>
+        <id column="EXT_SEL_4" property="detailExtItem.extendSel.extendSel4"/>
+        <id column="EXT_SEL_5" property="detailExtItem.extendSel.extendSel5"/>
+        <id column="EXT_SEL_6" property="detailExtItem.extendSel.extendSel6"/>
+        <id column="EXT_SEL_7" property="detailExtItem.extendSel.extendSel7"/>
+        <id column="EXT_SEL_8" property="detailExtItem.extendSel.extendSel8"/>
+        <id column="EXT_SEL_9" property="detailExtItem.extendSel.extendSel9"/>
+        <id column="EXT_SEL_10" property="detailExtItem.extendSel.extendSel10"/>
+        <id column="EXT_CHK_1" property="detailExtItem.extendChk.extendChk1"/>
+        <id column="EXT_CHK_2" property="detailExtItem.extendChk.extendChk2"/>
+        <id column="EXT_CHK_3" property="detailExtItem.extendChk.extendChk3"/>
+        <id column="EXT_CHK_4" property="detailExtItem.extendChk.extendChk4"/>
+        <id column="EXT_CHK_5" property="detailExtItem.extendChk.extendChk5"/>
+        <id column="EXT_FILE_1" property="detailExtItem.extendFile.extendFile1.fileName"/>
+        <id column="EXT_FILE_2" property="detailExtItem.extendFile.extendFile2.fileName"/>
+        <id column="EXT_FILE_3" property="detailExtItem.extendFile.extendFile3.fileName"/>
+        <id column="EXT_FILE_BINARY_1" property="detailExtItem.extendFile.extendFile1.binary"/>
+        <id column="EXT_FILE_BINARY_2" property="detailExtItem.extendFile.extendFile2.binary"/>
+        <id column="EXT_FILE_BINARY_3" property="detailExtItem.extendFile.extendFile3.binary"/>
+        <id column="EXT_MST_1" property="detailExtItem.extendMst.extendMst1.mstKey"/>
+        <id column="EXT_MST_2" property="detailExtItem.extendMst.extendMst2.mstKey"/>
+        <id column="EXT_MST_3" property="detailExtItem.extendMst.extendMst3.mstKey"/>
+        <id column="EXT_MST_4" property="detailExtItem.extendMst.extendMst4.mstKey"/>
+        <id column="EXT_MST_5" property="detailExtItem.extendMst.extendMst5.mstKey"/>
+        <id column="EXT_MST_6" property="detailExtItem.extendMst.extendMst6.mstKey"/>
+        <id column="EXT_MST_7" property="detailExtItem.extendMst.extendMst7.mstKey"/>
+        <id column="EXT_MST_8" property="detailExtItem.extendMst.extendMst8.mstKey"/>
+        <id column="EXT_MST_NAME_1" property="detailExtItem.extendMst.extendMst1.mstName"/>
+        <id column="EXT_MST_NAME_2" property="detailExtItem.extendMst.extendMst2.mstName"/>
+        <id column="EXT_MST_NAME_3" property="detailExtItem.extendMst.extendMst3.mstName"/>
+        <id column="EXT_MST_NAME_4" property="detailExtItem.extendMst.extendMst4.mstName"/>
+        <id column="EXT_MST_NAME_5" property="detailExtItem.extendMst.extendMst5.mstName"/>
+        <id column="EXT_MST_NAME_6" property="detailExtItem.extendMst.extendMst6.mstName"/>
+        <id column="EXT_MST_NAME_7" property="detailExtItem.extendMst.extendMst7.mstName"/>
+        <id column="EXT_MST_NAME_8" property="detailExtItem.extendMst.extendMst8.mstName"/>
+    </resultMap>
+    <select id="selectDetail" resultMap="InspectDetail_Map" >
+        SELECT 
+            T_INSPECT.DELIV_KEY_NO,
+            T_INSPECT.UNIT_NAME ,
+            T_INSPECT.INSPECT_STATUS ,
+            T_INSPECT.INSPECT_DATE ,
+            T_INSPECT.INSPECT_PASS_QUANT ,
+            T_INSPECT.INSPECT_ACCOUNT ,
+            T_INSPECT.APP_ROUTE_NO ,
+            T_INSPECT.APP_ROUTE_NAME ,
+            T_INSPECT.INSPECT_SEQ 
+            ,T_INSPECT.INSPECT_SECTION_CD as "INSPECT_SECTION_CD"
+            ,T_INSPECT.INSPECT_SECTION_NAME as "INSPECT_SECTION_NAME"
+            ,T_INSPECT.INSPECT_USER_ID as "INSPECT_USER_ID"
+            ,T_INSPECT.INSPECT_USER_NAME as "INSPECT_USER_NAME"
+            ,${@ps.common.util.ItemSettingUtil@getItemSettingSelectSQL("T_INSPECT")}
+        FROM T_INSPECT 
+        WHERE T_INSPECT.ORDER_NO = #{identify.orderNo}
+            <if test="range == 1">
+            AND T_INSPECT.INSPECT_STATUS = '04'
+            </if>
+            AND T_INSPECT.DELETE_FLG = '0'
+        ORDER BY T_INSPECT.DELIV_KEY_NO,T_INSPECT.INSPECT_VERSION,T_INSPECT.CORRECT_CD
+    </select>
+    <select id="inspectDetailForHistory" resultMap="InspectDetail_Map" >
+        SELECT 
+            T_RECEIVE_MNG.DELIV_KEY_NO,
+            T_ARRIVAL.ARRIV_EXP_DATE ,
+            T_ARRIVAL.DELIV_VOL ,
+            T_ARRIVAL.UNIT_CD,
+            T_ARRIVAL.UNIT_NAME ,
+            T_INSPECT.INSPECT_STATUS ,
+            T_INSPECT.INSPECT_DATE ,
+            T_INSPECT.INSPECT_PASS_QUANT ,
+            T_INSPECT.INSPECT_ACCOUNT ,
+            T_INSPECT.APP_ROUTE_NO ,
+            T_INSPECT.APP_ROUTE_NAME ,
+            T_INSPECT.INSPECT_SEQ 
+            ,T_INSPECT.INSPECT_SECTION_CD as "INSPECT_SECTION_CD"
+            ,T_INSPECT.INSPECT_SECTION_NAME as "INSPECT_SECTION_NAME"
+            ,T_INSPECT.INSPECT_USER_ID as "INSPECT_USER_ID"
+            ,T_INSPECT.INSPECT_USER_NAME as "INSPECT_USER_NAME"
+            ,${@ps.common.util.ItemSettingUtil@getItemSettingSelectSQL("T_INSPECT")}
+        FROM T_RECEIVE_MNG 
+        INNER JOIN T_ARRIVAL
+            ON 
+            <if test="range == 0">
+                T_RECEIVE_MNG.NEW_ARRIVAL_SEQ = T_ARRIVAL.ARRIVAL_SEQ
+            </if>
+            <if test="range == 1">
+                T_RECEIVE_MNG.APP_ARRIVAL_SEQ = T_ARRIVAL.ARRIVAL_SEQ
+            </if>
+            AND T_ARRIVAL.DELETE_FLG = '0'
+        INNER JOIN T_INSPECT ON 
+            <if test="1==isBlackData">
+                T_RECEIVE_MNG.NEW_INSPECT_SEQ = T_INSPECT.INSPECT_SEQ
+            </if>
+            <if test="0==isBlackData">
+                T_RECEIVE_MNG.DELIV_KEY_NO = T_INSPECT.DELIV_KEY_NO
+                AND T_INSPECT.INSPECT_SEQ = #{inspectSeq}
+            </if>
+            AND T_INSPECT.DELETE_FLG = '0'
+        WHERE T_RECEIVE_MNG.ORDER_NO = #{orderNo}
+            AND T_RECEIVE_MNG.DELIV_KEY_NO = #{delivKeyNo}
+            AND T_RECEIVE_MNG.DELETE_FLG = '0'
+        ORDER BY T_RECEIVE_MNG.DELIV_KEY_NO
+    </select>
+    <select id="inspectDetailForHistoryObjectData" resultMap="InspectDetail_Map">
+        SELECT 
+            T_INSPECT.DELIV_KEY_NO,
+            T_INSPECT.UNIT_NAME ,
+            T_INSPECT.INSPECT_STATUS ,
+            T_INSPECT.INSPECT_DATE ,
+            T_INSPECT.INSPECT_PASS_QUANT ,
+            T_INSPECT.INSPECT_ACCOUNT ,
+            T_INSPECT.APP_ROUTE_NO ,
+            T_INSPECT.APP_ROUTE_NAME ,
+            T_INSPECT.INSPECT_SEQ 
+            ,T_INSPECT.INSPECT_SECTION_CD as "INSPECT_SECTION_CD"
+            ,T_INSPECT.INSPECT_SECTION_NAME as "INSPECT_SECTION_NAME"
+            ,T_INSPECT.INSPECT_USER_ID as "INSPECT_USER_ID"
+            ,T_INSPECT.INSPECT_USER_NAME as "INSPECT_USER_NAME"
+            ,${@ps.common.util.ItemSettingUtil@getItemSettingSelectSQL("T_INSPECT")}
+        FROM T_INSPECT 
+        WHERE T_INSPECT.ORDER_NO = #{orderNo}
+            AND T_INSPECT.DELETE_FLG = '0'
+        ORDER BY T_INSPECT.DELIV_KEY_NO,T_INSPECT.INSPECT_VERSION,T_INSPECT.CORRECT_CD
+    </select>
+    <!-- ====================== PSTST050 検査詳細  End=================== -->
+    
+    
+    <!-- ====================== PSTST070 検査未承認一覧 Start=================== -->
+    <sql id="listKeyIdentityLinkInspectUnAppWhereCondition">
+            AND T_RECEIVE_MNG.DELETE_FLG = '0'
+            AND T_ORDER.NEW_FLG='1'
+            AND T_ORDER.DELETE_FLG = '0'
+            <![CDATA[AND T_ORDER.REQ_TYPE_IND<>'9']]>
+            AND T_INSPECT.DELETE_FLG='0'
+            <!-- 全 -->
+            <if test="status==''">
+                AND T_INSPECT.INSPECT_STATUS IN ('01','02','03')
+            </if>
+            <!-- 01(承認待ち)  -->
+            <if test="status=='01'">AND T_INSPECT.INSPECT_STATUS = '01'</if>
+            <!-- 02(承認中） -->
+            <if test="status=='02'">AND T_INSPECT.INSPECT_STATUS = '02'</if>
+            <!-- 03 (差し戻し) -->
+            <if test="status=='03'">AND T_INSPECT.INSPECT_STATUS = '03'</if>
+            <!-- 担当者 -->
+            <if test="@org.apache.commons.lang.StringUtils@isNotBlank(inspectUserId)">
+              AND T_INSPECT.INSPECT_USER_ID = #{inspectUserId, jdbcType=VARCHAR}
+            </if>
+            AND T_INSPECT.INSPECT_COMPANY_CD = '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}'
+            AND T_INSPECT.INSPECT_SECTION_CD IN (${@fw.common.util.AppUtil@getSectionViewRegion()})
+    </sql>
+    
+      <select id="listKeyIdentityLinkInspectUnApp" 
+        parameterType="fw.domain.slip.receive.inspect.inspectedlist.InspectUnAppSearchCondition"
+        resultMap="InspectIdentify_Map">
+        SELECT 
+         T_RECEIVE_MNG.DELIV_KEY_NO
+         ,T_ORDER.ORDER_SEQ
+         ,T_RECEIVE_MNG.LAST_UPD_DATE as "lastUpdDate"
+        FROM T_RECEIVE_MNG
+        INNER JOIN T_ORDER
+            ON T_RECEIVE_MNG.ORDER_NO = T_ORDER.ORDER_NO
+        INNER JOIN T_INSPECT
+            ON T_RECEIVE_MNG.NEW_INSPECT_SEQ=T_INSPECT.INSPECT_SEQ 
+        INNER JOIN T_ARRIVAL
+                ON T_RECEIVE_MNG.NEW_ARRIVAL_SEQ=T_ARRIVAL.ARRIVAL_SEQ
+                AND T_ARRIVAL.DELETE_FLG='0'
+        <where>
+            AND T_RECEIVE_MNG.DELETE_FLG = '0'
+            AND T_ORDER.NEW_FLG='1'
+            AND T_ORDER.DELETE_FLG = '0'
+            <![CDATA[AND T_ORDER.REQ_TYPE_IND<>'9']]>
+            AND T_INSPECT.DELETE_FLG='0'
+            <!-- 全 -->
+            <if test="status==''">
+                AND T_INSPECT.INSPECT_STATUS IN ('01','02','03')
+            </if>
+            <!-- 01(承認待ち)  -->
+            <if test="status=='01'">AND T_INSPECT.INSPECT_STATUS = '01'</if>
+            <!-- 02(承認中） -->
+            <if test="status=='02'">AND T_INSPECT.INSPECT_STATUS = '02'</if>
+            <!-- 03 (差し戻し) -->
+            <if test="status=='03'">AND T_INSPECT.INSPECT_STATUS = '03'</if>
+            <!-- 担当者 -->
+            <if test="@org.apache.commons.lang.StringUtils@isNotBlank(inspectUserId)">
+              AND T_INSPECT.INSPECT_USER_ID = #{inspectUserId, jdbcType=VARCHAR}
+            </if>
+            AND T_INSPECT.INSPECT_COMPANY_CD = '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}'
+            AND T_INSPECT.INSPECT_SECTION_CD IN (${@fw.common.util.AppUtil@getSectionViewRegion()})
+        </where>
+        ORDER BY ${searchCondition.columnOrder.columnOrder()}
+       </select>
+       
+       <resultMap type="fw.domain.slip.receive.inspect.inspectedlist.InspectUnAppItem"
+            id="InspectUnAppItem_Map">
+            <id column="DELIV_KEY_NO" property="inspectedListIdentify.inspectedListIdentify.delivKeyNo.delivKeyNo" />
+            <id column="ORDER_SEQ" property="inspectedListIdentify.inspectedListIdentify.orderSeq" />
+            <id column="ORDER_NO" property="inspectedListIdentify.inspectedListIdentify.orderNo" />
+            <id column="LAST_UPD_DATE" property="inspectedListIdentify.inspectedListIdentify.lastUpdDate" />
+            <id column="EXCLUSIVE_SLIP_NO" property="inspectedListIdentify.inspectedListIdentify.exclusiveSlipId.slipNo" />
+            <id column="EXCLUSIVE_LAST_UPD_DATE" property="inspectedListIdentify.inspectedListIdentify.exclusiveSlipId.lastUpdDate" />
+       </resultMap>
+       <select id="listPageItemInspectUnApp" 
+           parameterType="fw.domain.slip.receive.inspect.inspectedlist.InspectUnAppSearchCondition" 
+           resultMap="InspectUnAppItem_Map">
+            SELECT 
+                T_RECEIVE_MNG.DELIV_KEY_NO,
+                T_ORDER.ORDER_SEQ ,
+                T_ORDER.ORDER_NO ,
+                T_RECEIVE_MNG.LAST_UPD_DATE,
+                T_INSPECT.PRE_SEQ AS "preSeq",
+                T_INSPECT.INSPECT_SEQ AS "inspectSeq",
+                T_INSPECT.CORRECT_CD AS "correctInd",
+                T_INSPECT.INSPECT_VERSION AS "historyNo",
+                T_INSPECT.INSPECT_STATUS AS "status",
+                T_INSPECT.INSPECT_DATE AS "inspectDate.dateOfymd",
+                T_INSPECT.INSPECT_PASS_QUANT AS "successVol.vol",
+                T_INSPECT.UNIT_NAME AS "unitName",
+                T_INSPECT.INSPECT_SECTION_CD AS "inspectSectionCd",
+                T_INSPECT.INSPECT_SECTION_NAME AS "inspectSectionName",
+                T_INSPECT.INSPECT_USER_ID AS "inspectUserId",
+                T_INSPECT.INSPECT_USER_NAME AS "inspectUserName",
+                T_INSPECT.RB_IND AS "rbInd",
+                T_ARRIVAL.ARRIV_EXP_DATE AS "receiveDate.dateOfymd",
+                T_ARRIVAL.DELIV_VOL AS "receiveVol.vol",
+                T_ORDER.REQ_TYPE_IND AS "reqTypeInd",
+                T_ORDER.ITEM_CD AS "itemCd",
+                T_ORDER.ITEM_NAME AS "itemName",
+                T_ORDER.SUP_CD AS "supCd",
+                T_ORDER.SUP_ABBR_NAME AS "supAbbrName",
+                T_ORDER.SUBCON_IND AS "subconInd",
+                T_ORDER.EDI_IND AS "ediInd",
+                T_ORDER.DELIV_PLACE_CD AS "delivPlaceCd",
+                T_ORDER.DELIV_PLACE_NAME AS "delivPlaceName",
+                T_ORDER.ORDER_VOL AS "orderVol.vol",
+                T_ORDER.ORDER_CANCEL_VOL as "orderCancelVol.vol",
+                T_ORDER.ORDER_DELIV_DATE AS "delivDate.dateOfymd",
+                T_SLIP_MNG.SLIP_NO AS EXCLUSIVE_SLIP_NO,
+                T_SLIP_MNG.LAST_UPD_DATE AS EXCLUSIVE_LAST_UPD_DATE,
+                ${@ps.common.util.ItemSettingUtil@getItemSettingSelectSQLDomainAliasNonBinary("T_ORDER","orderExtItem")},
+                ${@ps.common.util.ItemSettingUtil@getItemSettingSelectSQLDomainAliasNonBinary("T_INSPECT","inspectExtItem")}
+            FROM T_RECEIVE_MNG
+            INNER JOIN T_ORDER
+                ON T_RECEIVE_MNG.ORDER_NO = T_ORDER.ORDER_NO
+            INNER JOIN T_INSPECT
+                ON T_RECEIVE_MNG.NEW_INSPECT_SEQ=T_INSPECT.INSPECT_SEQ 
+            INNER JOIN T_ARRIVAL
+                ON T_RECEIVE_MNG.NEW_ARRIVAL_SEQ=T_ARRIVAL.ARRIVAL_SEQ
+                AND T_ARRIVAL.DELETE_FLG='0'
+            LEFT JOIN T_SLIP_MNG
+                ON T_SLIP_MNG.SLIP_NO = T_ORDER.ORDER_NO
+                AND T_SLIP_MNG.DELETE_FLG = '0'
+            <where>
+                T_RECEIVE_MNG.DELIV_KEY_NO IN
+                <foreach collection="searchCondition.page.keyDomainEntityList" item="keyList"  open="(" separator="," close=")">  
+                    #{keyList.inspectedListIdentify.delivKeyNo.delivKeyNo} 
+                </foreach>
+                <include refid="listKeyIdentityLinkInspectUnAppWhereCondition"/>
+            </where>
+            ORDER BY ${searchCondition.columnOrder.columnOrder()}
+        </select>
+    
+    <!-- 受入管理を更新(訂正区分が新規) -->
+    <update id="updateReceiveMngWhenCorrectIndIsOne" parameterType="fw.domain.slip.receive.inspect.inspectedlist.InspectUnAppItem">
+        UPDATE T_RECEIVE_MNG
+        SET 
+            DELIV_STATUS='2104',<!-- 受入承認済 -->
+            NEW_INSPECT_SEQ=#{preSeq, jdbcType=VARCHAR},
+            LAST_UPD_DATE = '${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}',
+            LAST_UPD_COMPANY_CD = '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}',
+            LAST_UPD_SECTION_CD = '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}',
+            LAST_UPD_USER_ID = '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}'
+       WHERE DELIV_KEY_NO=#{inspectedListIdentify.inspectedListIdentify.delivKeyNo.delivKeyNo, jdbcType=VARCHAR}
+    </update>
+    
+    <!-- 受入管理を更新(訂正区分が変更、取消) -->
+    <update id="updateReceiveMngWhenCorrectIndIsNotOne" parameterType="fw.domain.slip.receive.inspect.inspectedlist.InspectUnAppItem">
+       UPDATE T_RECEIVE_MNG
+        SET 
+            DELIV_STATUS='3104',<!-- 検査承認済 -->
+            NEW_INSPECT_SEQ=#{preSeq, jdbcType=VARCHAR},
+            LAST_UPD_DATE = '${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}',
+            LAST_UPD_COMPANY_CD = '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}',
+            LAST_UPD_SECTION_CD = '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}',
+            LAST_UPD_USER_ID = '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}'
+       WHERE DELIV_KEY_NO=#{inspectedListIdentify.inspectedListIdentify.delivKeyNo.delivKeyNo, jdbcType=VARCHAR}
+    </update>
+    
+    <!--検査を更新(（選択されたレコード.赤黒区分='0':黒データ）の場合、下記の更新を行う) -->
+    <update id="updateInspectWhenRbIndNotOne" parameterType="fw.domain.slip.receive.inspect.inspectedlist.InspectUnAppItem">
+       UPDATE T_INSPECT
+       SET 
+            DELETE_FLG='1',
+            LAST_UPD_DATE = '${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}',
+            LAST_UPD_COMPANY_CD = '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}',
+            LAST_UPD_SECTION_CD = '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}',
+            LAST_UPD_USER_ID = '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}'
+      WHERE INSPECT_SEQ=#{inspectSeq, jdbcType=VARCHAR}
+    </update>
+    
+    <!--検査を更新(（選択されたレコード.赤黒区分='1':赤データ）の場合、下記の更新を行う) -->
+    <update id="updateInspectWhenRbIndOne" parameterType="fw.domain.slip.receive.inspect.inspectedlist.InspectUnAppItem">
+      UPDATE T_INSPECT
+       SET 
+            DELETE_FLG='1',
+            LAST_UPD_DATE = '${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}',
+            LAST_UPD_COMPANY_CD = '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}',
+            LAST_UPD_SECTION_CD = '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}',
+            LAST_UPD_USER_ID = '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}'
+      WHERE 
+           RB_SEQ=#{inspectSeq, jdbcType=VARCHAR}
+          AND RB_IND='1'
+    </update>
+    <!-- ====================== PSTST070 検査未承認一覧 End=================== -->
+
+    <!-- ====================== PSTST020 検査入力  Start =================== -->
+    <resultMap type="fw.domain.slip.receive.inspect.InspectApl" id="initPageInspectInput_Map">
+        <id column="DELIV_KEY_NO" property="inspect.delivKeyNo.delivKeyNo"/><!-- 受入管理.納品キー番号 -->
+        <id column="LAST_UPD_DATE1" property="inspect.receiveManagement.lastUpdDate"/><!-- 受入管理.最終更新日時 -->
+        <id column="ORDER_SEQ" property="inspect.order.orderIdentify.orderSeq"/><!-- 注文.注文シーケンス番号 -->
+        <id column="ORDER_NO" property="inspect.order.orderManagement.orderNo.orderNo"/><!-- 注文.注文番号 -->
+        <id column="BUYER_COMPANY_CD" property="inspect.order.buyerCompanyCd"/><!-- 注文.購買会社コード -->
+        <id column="DELIV_PLACE_CD" property="inspect.order.complement.delivPlace.delivPlaceCd"/><!--注文.納入先コード-->
+        <id column="DELIV_PLACE_NAME" property="inspect.order.complement.delivPlace.delivPlaceName"/><!--注文.納入先名-->
+        <id column="ITEM_CD" property="inspect.order.accounting.orderItem.item.itemCd"/><!--注文.品名コード-->
+        <id column="ITEM_NAME" property="inspect.order.accounting.orderItem.item.itemName"/><!--注文.品名-->
+        <id column="ORDER_VOL" property="inspect.order.accounting.orderAmount.orderVolume.orderVol.vol"/><!--注文.注文数量-->
+        <id column="ORDER_CANCEL_VOL" property="inspect.order.orderCancel.orderCancelVol.vol"/><!--注文.打切取消数量-->
+        <id column="UNIT_CD1" property="inspect.order.accounting.orderItem.item.unit.unitCd"/><!--注文.単位コード-->
+        <id column="UNIT_NAME1" property="inspect.order.accounting.orderItem.item.unit.unitName"/><!--注文.単位名-->
+        <id column="ORDER_DELIV_DATE" property="inspect.order.schedule.dlvEst.dlvEst.dateOfymd"/><!--注文.注文納期-->
+        <id column="CURRENCY_CD" property="inspect.order.supplierFrom.currency.currencyCd"/><!--注文.通貨コード-->
+        <id column="UNIT_PRICE" property="inspect.order.accounting.orderAmount.unitPrice.amount.amount"/><!--注文.単価-->
+        <id column="UNIT_PRICE_IND" property="inspect.order.status.priceManagement.unitPriceInd"/><!--注文.単価区分-->
+        <id column="ORDER_AMOUNT" property="inspect.order.accounting.orderAmount.orderAmount.amount"/><!--注文.注文金額-->
+        <id column="ORDER_CANCEL_AMOUNT" property="inspect.order.orderCancel.orderCancelAmount.amount"/><!--注文.打切取消金額-->
+        <id column="SUP_CD" property="inspect.order.supplierFrom.supCd"/><!--注文.取引先コード-->
+        <id column="SUP_ABBR_NAME" property="inspect.order.supplierFrom.supplierName.supplierAbbrName"/><!--注文.取引先名（略称）-->
+        <id column="SUBCON_IND" property="inspect.order.supplierFrom.subcon.subconInd"/><!--注文.下請法適用業者区分-->
+        <id column="EDI_IND" property="inspect.order.supplierFrom.ediInd.ediInd"/><!--注文.EDIデータ送受信方法-->
+        <id column="TAX_IND" property="inspect.order.accounting.orderAmount.amountMng.taxCalculationInd.taxInd.taxInd"/>
+        <id column="TAX_RATE" property="inspect.order.accounting.orderAmount.taxRate.taxRate"/>
+        <id column="ORDER_CNV_RATE" property="inspect.order.accounting.orderCnv.orderCnvRate.rate"/>
+        <id column="TITLE_NAME" property="inspect.order.titleName.titleName"/><!-- 注文.件名 -->
+        <id column="KATASHIKI" property="inspect.order.accounting.orderItem.item.katashiki"/><!-- 注文.型式 -->
+        <id column="MANUFACT_CD" property="inspect.order.accounting.orderItem.item.manufact.manufactCd"/><!-- 注文.メーカーコード -->
+        <id column="MANUFACT_NAME" property="inspect.order.accounting.orderItem.item.manufact.manufactName"/><!-- 注文.メーカー名 -->
+        <id column="ORDER_DATE" property="inspect.order.schedule.orderDate.orderDate.dateOfymd"/><!-- 注文.注文日 -->
+        <id column="FOR_SUPPRIER_COMMENT" property="inspect.order.orderComment.forSupplierComment.forSupplierComment.comment"/><!-- 注文.取引先向けコメント -->
+        <id column="DELIV_VOL" property="inspect.receiveResult.receiveVol.receiveVol.vol"/><!--入荷.納入数量-->
+        <id column="TOTAL_AMOUNT" property="inspect.receiveResult.rcvPriceAmount.rcvPriceAmount.amount"/><!--入荷.合計金額-->
+        <id column="UNIT_NAME2" property="inspect.receiveResult.receiveVol.unit.unitName"/><!-- 入荷.単位名 -->
+        <id column="ARRIV_EXP_DATE" property="inspect.receiveResult.receiveDate.receiveDate.dateOfymd"/><!--入荷.納入日-->
+        <id column="HAVE_IN_STOCK_FLG" property="inspect.receiveResult.haveInStockFlg.haveInStockFlg"/><!--入荷.在庫対象フラグ-->
+        <id column="STOCK_COMPANY_CD" property="inspect.receiveResult.stockPlace.company.companyCd"/><!--入荷.在庫場所会社コード-->
+        <id column="STOCK_SECTION_PLACE_CD" property="inspect.receiveResult.stockPlace.sectionPlace.sectionPlaceCd"/><!--入荷.在庫場所事業所コード-->
+        <id column="STOCK_PLACE_CD" property="inspect.receiveResult.stockPlace.stockPlaceCd"/><!--入荷.在庫場所コード-->
+        <id column="STOCK_PLACE_NAME" property="inspect.receiveResult.stockPlace.stockPlaceName"/><!--入荷.在庫場所名-->
+        <id column="ARRIV_REMARK" property="inspect.receiveResult.receiveRemark.remark.comment"/><!--入荷.受入備考-->
+        <id column="ARRIV_COMPANY_CD" property="inspect.receiveResult.receiveUser.receiveUser.section.company.companyCd"/><!--入荷.入荷会社コード-->
+        <id column="ARRIV_SECTION_CD" property="inspect.receiveResult.receiveUser.receiveUser.section.sectionCd"/><!--入荷.入荷部門コード-->
+        <id column="ARRIV_SECTION_NAME" property="inspect.receiveResult.receiveUser.receiveUser.section.sectionName"/><!--入荷.入荷部門名-->
+        <id column="ARRIV_USER_ID" property="inspect.receiveResult.receiveUser.receiveUser.userID"/><!--入荷.入荷担当者ID-->
+        <id column="ARRIV_USER_NAME" property="inspect.receiveResult.receiveUser.receiveUser.userName"/><!--入荷.入荷担当者名-->
+        <id column="INSPECT_SEQ" property="inspect.inspectSeqNo.seqNo"/><!--検査.検査シーケンス番号-->
+        <id column="INSPECT_DATE" property="inspect.inspectResult.inspectDate.inspectDate.dateOfymd"/><!--検査.検査日-->
+        <id column="INSPECT_PASS_QUANT" property="inspect.inspectResult.inspectVol.successAmount.vol"/><!--検査.検査合格数量-->
+        <id column="INSPECT_ACCOUNT" property="inspect.inspectResult.inspectAccount.comment"/><!--検査.検査記事-->
+        <id column="INSPECT_SECTION_PLACE_CD" property="inspect.inspectResult.inspectUser.user.section.sectionPlace.sectionPlaceCd"/><!--検査.検査事業所コード-->
+        <id column="INSPECT_SECTION_PLACE_NAME" property="inspect.inspectResult.inspectUser.user.section.sectionPlace.sectionPlaceName"/><!--検査.検査事業所名-->
+        <id column="INSPECT_COMPANY_CD" property="inspect.inspectResult.inspectUser.user.section.company.companyCd"/><!--検査.検査会社コード-->
+        <id column="INSPECT_COMPANY_NAME" property="inspect.inspectResult.inspectUser.user.section.company.companyName"/><!--検査.検査会社名-->
+        <id column="INSPECT_SECTION_CD" property="inspect.inspectResult.inspectUser.user.section.sectionCd"/><!--検査.検査部門コード-->
+        <id column="INSPECT_SECTION_NAME" property="inspect.inspectResult.inspectUser.user.section.sectionName"/><!--検査.検査部門名-->
+        <id column="INSPECT_USER_ID" property="inspect.inspectResult.inspectUser.user.userID"/><!--検査.検査担当者ID-->
+        <id column="INSPECT_USER_NAME" property="inspect.inspectResult.inspectUser.user.userName"/><!--検査.検査担当者名-->
+        <id column="APP_ROUTE_NO" property="inspect.inspectAppRoute.approute.appRouteNo"/><!--検査.承認ルート番号-->
+        <id column="APP_ROUTE_NAME" property="inspect.inspectAppRoute.approute.appRouteName"/><!--検査.承認ルート名-->
+        <id column="INSPECT_STATUS" property="inspect.inspectResult.inspectStatus.inspectStatus"/><!--検査.検査ステータス-->
+        <id column="UNIT_NAME3" property="inspect.inspectResult.inspectVol.unit.unitName"/><!-- 検査.単位名 -->
+        <id column="INSPECT_VERSION" property="inspect.historyNo.historyNo"/><!-- 検査.検査版数 -->
+        <id column="CORRECT_CD" property="inspect.correctInd.correctInd"/><!-- 検査.訂正コード -->
+        <id column="RB_IND" property="inspect.rbInd.rbInd"/><!-- 検査.赤黒区分 -->
+        <id column="RB_SEQ" property="inspect.rbInd.rbSeq"/><!-- 検査.赤黒相手SEQNO -->
+        <id column="SEND_IND" property="inspect.inspectSendInd.dataSendInd.sendInd"/><!-- 検査.データ送信区分 -->
+        <id column="FAX_SEND_IND" property="inspect.inspectSendInd.faxSendInd.sendInd"/><!-- 検査.FAX送信区分 -->
+        <id column="PRINT_IND" property="inspect.inspectSendInd.printInd.printInd.sendInd"/><!-- 検査.印刷区分 -->
+        <id column="BI_OUT_IND" property="inspect.inspectSendInd.biOutInd.sendInd"/><!-- 検査.実績抽出区分 -->
+        <id column="LAST_UPD_DATE2" property="inspect.inspectIdentify.lastUpdDate"/><!-- 検査.最終更新日時 -->
+        <id column="EXCLUSIVE_SLIP_NO" property="inspect.inspectIdentify.exclusiveSlipId.slipNo"/><!-- 伝票管理.伝票番号 -->
+        <id column="EXCLUSIVE_LAST_UPD_DATE" property="inspect.inspectIdentify.exclusiveSlipId.lastUpdDate"/><!-- 伝票管理.最終更新日時 -->
+
+        <id column="EXT_TXT_1" property="inspect.inspectResult.editExtItem.editTextExtItem.textExtItem1.value" />
+        <id column="EXT_TXT_2" property="inspect.inspectResult.editExtItem.editTextExtItem.textExtItem2.value" />
+        <id column="EXT_TXT_3" property="inspect.inspectResult.editExtItem.editTextExtItem.textExtItem3.value" />
+        <id column="EXT_TXT_4" property="inspect.inspectResult.editExtItem.editTextExtItem.textExtItem4.value" />
+        <id column="EXT_TXT_5" property="inspect.inspectResult.editExtItem.editTextExtItem.textExtItem5.value" />
+        <id column="EXT_TXT_6" property="inspect.inspectResult.editExtItem.editTextExtItem.textExtItem6.value" />
+        <id column="EXT_TXT_7" property="inspect.inspectResult.editExtItem.editTextExtItem.textExtItem7.value" />
+        <id column="EXT_TXT_8" property="inspect.inspectResult.editExtItem.editTextExtItem.textExtItem8.value" />
+        <id column="EXT_TXT_9" property="inspect.inspectResult.editExtItem.editTextExtItem.textExtItem9.value" />
+        <id column="EXT_TXT_10" property="inspect.inspectResult.editExtItem.editTextExtItem.textExtItem10.value" />
+        <id column="EXT_AREA_1" property="inspect.inspectResult.editExtItem.editAreaExtItem.arrayExtItem1.value" />
+        <id column="EXT_AREA_2" property="inspect.inspectResult.editExtItem.editAreaExtItem.arrayExtItem2.value" />
+        <id column="EXT_AREA_3" property="inspect.inspectResult.editExtItem.editAreaExtItem.arrayExtItem3.value" />
+        <id column="EXT_AREA_4" property="inspect.inspectResult.editExtItem.editAreaExtItem.arrayExtItem4.value" />
+        <id column="EXT_AREA_5" property="inspect.inspectResult.editExtItem.editAreaExtItem.arrayExtItem5.value" />
+        <id column="EXT_DATE_1" property="inspect.inspectResult.editExtItem.editDateExtItem.dateExtItem1.dateType.dateOfymd" />
+        <id column="EXT_DATE_2" property="inspect.inspectResult.editExtItem.editDateExtItem.dateExtItem2.dateType.dateOfymd" />
+        <id column="EXT_DATE_3" property="inspect.inspectResult.editExtItem.editDateExtItem.dateExtItem3.dateType.dateOfymd" />
+        <id column="EXT_DATE_4" property="inspect.inspectResult.editExtItem.editDateExtItem.dateExtItem4.dateType.dateOfymd" />
+        <id column="EXT_DATE_5" property="inspect.inspectResult.editExtItem.editDateExtItem.dateExtItem5.dateType.dateOfymd" />
+        <id column="EXT_INT_1" property="inspect.inspectResult.editExtItem.editIntExtItem.intExtItem1.value" />
+        <id column="EXT_INT_2" property="inspect.inspectResult.editExtItem.editIntExtItem.intExtItem2.value" />
+        <id column="EXT_INT_3" property="inspect.inspectResult.editExtItem.editIntExtItem.intExtItem3.value" />
+        <id column="EXT_INT_4" property="inspect.inspectResult.editExtItem.editIntExtItem.intExtItem4.value" />
+        <id column="EXT_INT_5" property="inspect.inspectResult.editExtItem.editIntExtItem.intExtItem5.value" />
+        <id column="EXT_INT_6" property="inspect.inspectResult.editExtItem.editIntExtItem.intExtItem6.value" />
+        <id column="EXT_INT_7" property="inspect.inspectResult.editExtItem.editIntExtItem.intExtItem7.value" />
+        <id column="EXT_INT_8" property="inspect.inspectResult.editExtItem.editIntExtItem.intExtItem8.value" />
+        <id column="EXT_INT_9" property="inspect.inspectResult.editExtItem.editIntExtItem.intExtItem9.value" />
+        <id column="EXT_INT_10" property="inspect.inspectResult.editExtItem.editIntExtItem.intExtItem10.value" />
+        <id column="EXT_DEC_1" property="inspect.inspectResult.editExtItem.editDecExtItem.decExtItem1.value" />
+        <id column="EXT_DEC_2" property="inspect.inspectResult.editExtItem.editDecExtItem.decExtItem2.value" />
+        <id column="EXT_DEC_3" property="inspect.inspectResult.editExtItem.editDecExtItem.decExtItem3.value" />
+        <id column="EXT_DEC_4" property="inspect.inspectResult.editExtItem.editDecExtItem.decExtItem4.value" />
+        <id column="EXT_DEC_5" property="inspect.inspectResult.editExtItem.editDecExtItem.decExtItem5.value" />
+        <id column="EXT_SEL_1" property="inspect.inspectResult.editExtItem.editSelExtItem.selExtItem1.value" />
+        <id column="EXT_SEL_2" property="inspect.inspectResult.editExtItem.editSelExtItem.selExtItem2.value" />
+        <id column="EXT_SEL_3" property="inspect.inspectResult.editExtItem.editSelExtItem.selExtItem3.value" />
+        <id column="EXT_SEL_4" property="inspect.inspectResult.editExtItem.editSelExtItem.selExtItem4.value" />
+        <id column="EXT_SEL_5" property="inspect.inspectResult.editExtItem.editSelExtItem.selExtItem5.value" />
+        <id column="EXT_SEL_6" property="inspect.inspectResult.editExtItem.editSelExtItem.selExtItem6.value" />
+        <id column="EXT_SEL_7" property="inspect.inspectResult.editExtItem.editSelExtItem.selExtItem7.value" />
+        <id column="EXT_SEL_8" property="inspect.inspectResult.editExtItem.editSelExtItem.selExtItem8.value" />
+        <id column="EXT_SEL_9" property="inspect.inspectResult.editExtItem.editSelExtItem.selExtItem9.value" />
+        <id column="EXT_SEL_10" property="inspect.inspectResult.editExtItem.editSelExtItem.selExtItem10.value" />
+        <id column="EXT_CHK_1" property="inspect.inspectResult.editExtItem.editChkExtItem.chkExtItem1.value" />
+        <id column="EXT_CHK_2" property="inspect.inspectResult.editExtItem.editChkExtItem.chkExtItem2.value" />
+        <id column="EXT_CHK_3" property="inspect.inspectResult.editExtItem.editChkExtItem.chkExtItem3.value" />
+        <id column="EXT_CHK_4" property="inspect.inspectResult.editExtItem.editChkExtItem.chkExtItem4.value" />
+        <id column="EXT_CHK_5" property="inspect.inspectResult.editExtItem.editChkExtItem.chkExtItem5.value" />
+        <id column="EXT_FILE_1" property="inspect.inspectResult.editExtItem.editFileExtItem.fileExtItem1.fileName" />
+        <id column="EXT_FILE_2" property="inspect.inspectResult.editExtItem.editFileExtItem.fileExtItem2.fileName" />
+        <id column="EXT_FILE_3" property="inspect.inspectResult.editExtItem.editFileExtItem.fileExtItem3.fileName" />
+        <id column="EXT_FILE_BINARY_1" property="inspect.inspectResult.editExtItem.editFileExtItem.fileExtItem1.binary" />
+        <id column="EXT_FILE_BINARY_2" property="inspect.inspectResult.editExtItem.editFileExtItem.fileExtItem2.binary" />
+        <id column="EXT_FILE_BINARY_3" property="inspect.inspectResult.editExtItem.editFileExtItem.fileExtItem3.binary" />
+        <id column="EXT_MST_1" property="inspect.inspectResult.editExtItem.editMstExtItem.mstExtItem1.mstKey" />
+        <id column="EXT_MST_2" property="inspect.inspectResult.editExtItem.editMstExtItem.mstExtItem2.mstKey" />
+        <id column="EXT_MST_3" property="inspect.inspectResult.editExtItem.editMstExtItem.mstExtItem3.mstKey" />
+        <id column="EXT_MST_4" property="inspect.inspectResult.editExtItem.editMstExtItem.mstExtItem4.mstKey" />
+        <id column="EXT_MST_5" property="inspect.inspectResult.editExtItem.editMstExtItem.mstExtItem5.mstKey" />
+        <id column="EXT_MST_6" property="inspect.inspectResult.editExtItem.editMstExtItem.mstExtItem6.mstKey" />
+        <id column="EXT_MST_7" property="inspect.inspectResult.editExtItem.editMstExtItem.mstExtItem7.mstKey" />
+        <id column="EXT_MST_8" property="inspect.inspectResult.editExtItem.editMstExtItem.mstExtItem8.mstKey" />
+        <id column="EXT_MST_NAME_1" property="inspect.inspectResult.editExtItem.editMstExtItem.mstExtItem1.mstName" />
+        <id column="EXT_MST_NAME_2" property="inspect.inspectResult.editExtItem.editMstExtItem.mstExtItem2.mstName" />
+        <id column="EXT_MST_NAME_3" property="inspect.inspectResult.editExtItem.editMstExtItem.mstExtItem3.mstName" />
+        <id column="EXT_MST_NAME_4" property="inspect.inspectResult.editExtItem.editMstExtItem.mstExtItem4.mstName" />
+        <id column="EXT_MST_NAME_5" property="inspect.inspectResult.editExtItem.editMstExtItem.mstExtItem5.mstName" />
+        <id column="EXT_MST_NAME_6" property="inspect.inspectResult.editExtItem.editMstExtItem.mstExtItem6.mstName" />
+        <id column="EXT_MST_NAME_7" property="inspect.inspectResult.editExtItem.editMstExtItem.mstExtItem7.mstName" />
+        <id column="EXT_MST_NAME_8" property="inspect.inspectResult.editExtItem.editMstExtItem.mstExtItem8.mstName" />
+    </resultMap>
+    <!-- 検査入力 -->
+    <select id="initPageInspectInput" parameterType ="fw.domain.slip.receive.receive.Identify"
+     resultMap="initPageInspectInput_Map">
+        SELECT T_RECEIVE_MNG.DELIV_KEY_NO,<!--受入管理.納品キー番号-->
+               T_RECEIVE_MNG.LAST_UPD_DATE AS "LAST_UPD_DATE1",<!--受入管理.最終更新日時-->
+               T_ORDER.ORDER_SEQ,<!--注文.注文シーケンス番号-->
+               T_ORDER.ORDER_NO,<!--注文.注文番号-->
+               T_ORDER.BUYER_COMPANY_CD,<!-- 注文.購買会社コード -->
+               T_ORDER.DELIV_PLACE_CD,<!--注文.納入先コード-->
+               T_ORDER.DELIV_PLACE_NAME,<!--注文.納入先名-->
+               T_ORDER.ITEM_CD,<!--注文.品名コード-->
+               T_ORDER.ITEM_NAME,<!--注文.品名-->
+               T_ORDER.ORDER_VOL,<!--注文.注文数量-->
+               T_ORDER.ORDER_CANCEL_VOL,<!--注文.打切取消数量-->
+               T_ORDER.UNIT_CD AS "UNIT_CD1",<!--注文.単位コード-->
+               T_ORDER.UNIT_NAME AS "UNIT_NAME1",<!--注文.単位名-->
+               T_ORDER.ORDER_DELIV_DATE,<!-- 注文.注文納期 -->
+               T_ORDER.CURRENCY_CD,<!--注文.通貨コード-->
+               T_ORDER.UNIT_PRICE,<!--注文.単価-->
+               T_ORDER.UNIT_PRICE_IND,<!--注文.単価区分-->
+               T_ORDER.ORDER_AMOUNT,<!--注文.注文金額-->
+               T_ORDER.ORDER_CANCEL_AMOUNT,<!--注文.打切取消金額-->
+               T_ORDER.SUP_CD,<!--注文.取引先コード-->
+               T_ORDER.SUP_ABBR_NAME,<!--注文.取引先名（略称）-->
+               T_ORDER.SUBCON_IND,<!--注文.下請法適用業者区分-->
+               T_ORDER.EDI_IND,<!--注文.EDIデータ送受信方法-->
+               T_ORDER.TAX_IND,
+               T_ORDER.TAX_RATE,
+               T_ORDER.ORDER_CNV_RATE,
+               T_ORDER.TITLE_NAME,<!-- 注文.件名 -->
+               T_ORDER.KATASHIKI,<!-- 注文.型式 -->
+               T_ORDER.MANUFACT_CD,<!-- 注文.メーカーコード -->
+               T_ORDER.MANUFACT_NAME,<!-- 注文.メーカー名 -->
+               T_ORDER.ORDER_FIRST_DATE AS "ORDER_DATE",<!-- 注文.注文日 -->
+               T_ORDER.FOR_SUPPRIER_COMMENT,<!-- 注文.取引先向けコメント -->
+               T_ARRIVAL.DELIV_VOL,<!--入荷.納入数量-->
+               T_ARRIVAL.TOTAL_AMOUNT,<!--入荷.合計金額-->
+               T_ARRIVAL.UNIT_NAME AS "UNIT_NAME2",<!-- 入荷.単位名 -->
+               T_ARRIVAL.ARRIV_EXP_DATE,<!--入荷.納入日-->
+               T_ARRIVAL.HAVE_IN_STOCK_FLG,<!--入荷.在庫対象フラグ-->
+               T_ARRIVAL.STOCK_COMPANY_CD,<!--入荷.在庫場所会社コード-->
+               T_ARRIVAL.STOCK_SECTION_PLACE_CD,<!--入荷.在庫場所事業所コード-->
+               T_ARRIVAL.STOCK_PLACE_CD,<!--入荷.在庫場所コード-->
+               T_ARRIVAL.STOCK_PLACE_NAME,<!--入荷.在庫場所名-->
+               T_ARRIVAL.ARRIV_REMARK,<!--入荷.受入備考-->
+               T_ARRIVAL.ARRIV_COMPANY_CD,<!--入荷.入荷会社コード-->
+               T_ARRIVAL.ARRIV_SECTION_CD,<!--入荷.入荷部門コード-->
+               T_ARRIVAL.ARRIV_SECTION_NAME,<!--入荷.入荷部門名-->
+               T_ARRIVAL.ARRIV_USER_ID,<!--入荷.入荷担当者ID-->
+               T_ARRIVAL.ARRIV_USER_NAME,<!--入荷.入荷担当者名-->
+               T_INSPECT.INSPECT_SEQ,<!--検査.検査シーケンス番号-->
+               T_INSPECT.INSPECT_PASS_QUANT,<!--検査.検査合格数量-->
+               T_INSPECT.INSPECT_DATE,<!--検査.検査日-->
+               T_INSPECT.INSPECT_ACCOUNT,<!--検査.検査記事-->
+               T_INSPECT.INSPECT_SECTION_PLACE_CD,<!--検査.検査事業所コード-->
+               T_INSPECT.INSPECT_SECTION_PLACE_NAME,<!--検査.検査事業所名-->
+               T_INSPECT.INSPECT_COMPANY_CD,<!--検査.検査会社コード-->
+               T_INSPECT.INSPECT_COMPANY_NAME,<!--検査.検査会社名-->
+               T_INSPECT.INSPECT_SECTION_CD,<!--検査.検査部門コード-->
+               T_INSPECT.INSPECT_SECTION_NAME,<!--検査.検査部門名-->
+               T_INSPECT.INSPECT_USER_ID,<!--検査.検査担当者ID-->
+               T_INSPECT.INSPECT_USER_NAME,<!--検査.検査担当者名-->
+               T_INSPECT.APP_ROUTE_NO,<!--検査.承認ルート番号-->
+               T_INSPECT.APP_ROUTE_NAME,<!--検査.承認ルート名-->
+               T_INSPECT.INSPECT_STATUS,<!--検査.検査ステータス-->
+               T_INSPECT.UNIT_NAME AS "UNIT_NAME3",<!-- 検査.単位名 -->
+               T_INSPECT.INSPECT_VERSION,<!--検査.検査版数-->
+               T_INSPECT.RB_IND,<!--検査.赤黒区分-->
+               T_INSPECT.RB_SEQ,<!--検査.赤黒相手SEQNO-->
+               T_INSPECT.SEND_IND,<!--検査.データ送信区分-->
+               T_INSPECT.FAX_SEND_IND,<!--検査.FAX送信区分-->
+               T_INSPECT.PRINT_IND,<!--検査.印刷区分-->
+               T_INSPECT.BI_OUT_IND,<!--検査.実績抽出区分-->
+               T_INSPECT.CORRECT_CD,<!--検査.訂正コード-->
+               T_INSPECT.LAST_UPD_DATE  AS "LAST_UPD_DATE2",<!--検査.最終更新日時-->
+               T_SLIP_MNG.SLIP_NO AS EXCLUSIVE_SLIP_NO,<!--伝票管理.伝票番号-->
+               T_SLIP_MNG.LAST_UPD_DATE AS EXCLUSIVE_LAST_UPD_DATE,<!--伝票管理.最終更新日時-->
+               ${@ps.common.util.ItemSettingUtil@getItemSettingSelectSQL("T_INSPECT")}
+          FROM T_ORDER<!--注文-->
+    INNER JOIN T_RECEIVE_MNG<!--受入管理-->
+            ON T_ORDER.ORDER_NO = T_RECEIVE_MNG.ORDER_NO<!--注文.注文番号 = 受入管理.注文番号-->
+            AND T_RECEIVE_MNG.DELETE_FLG = '0'<!--:有効データ-->
+    INNER JOIN T_ARRIVAL<!--入荷-->
+            ON T_RECEIVE_MNG.APP_ARRIVAL_SEQ = T_ARRIVAL.ARRIVAL_SEQ<!--受入管理.承認済入荷シーケンス番号 = 入荷.入荷シーケンス番号-->
+    LEFT JOIN T_INSPECT<!--検査-->
+            ON T_RECEIVE_MNG.NEW_INSPECT_SEQ = T_INSPECT.INSPECT_SEQ<!--受入管理.最新検査シーケンス番号 = 検査.検査シーケンス番号-->
+    LEFT JOIN T_SLIP_MNG
+            ON T_SLIP_MNG.SLIP_NO = T_ORDER.ORDER_NO
+            AND T_SLIP_MNG.DELETE_FLG = '0'
+         WHERE T_ORDER.ORDER_SEQ =  #{orderSeq, jdbcType=DECIMAL} <!--注文.注文シーケンス番号   = セッション情報の注文シーケンス番号  -->
+           AND T_RECEIVE_MNG.DELIV_KEY_NO = #{delivKeyNo.delivKeyNo, jdbcType=VARCHAR} <!--受入管理.納品キー番号  = セッション.納品キー番号-->
+           AND T_ORDER.INFO_CD &lt;> '0504'<!--:取消-->
+           AND T_ORDER.NEW_APP_FLG = '1'<!--:最新-->
+    </select>
+
+   <!-- 受入管理の更新 -->
+    <update id="updateReceive">
+        UPDATE T_RECEIVE_MNG <!--受入管理-->
+           SET T_RECEIVE_MNG.DELIV_STATUS = #{delivStatus, jdbcType=VARCHAR}, <!--受入管理ステータス -->
+           <if test="@org.apache.commons.lang.StringUtils@isNotEmpty(newInspectSeq)">
+               T_RECEIVE_MNG.NEW_INSPECT_SEQ = #{newInspectSeq, jdbcType=DECIMAL}, <!--最新検査シーケンス番号 = 上記①で取得した最新検査シーケンス番号-->
+           </if>
+               T_RECEIVE_MNG.LAST_UPD_DATE = '${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}', <!--最終更新日時 = システム日時（yyyyMMddHHmmssSSS）-->
+               T_RECEIVE_MNG.LAST_UPD_COMPANY_CD = '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}', <!--最終更新会社コード = ログインユーザー.会社コード-->
+               T_RECEIVE_MNG.LAST_UPD_SECTION_CD = '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}', <!--最終更新部門コード = ログインユーザー.部門コード-->
+               T_RECEIVE_MNG.LAST_UPD_USER_ID = '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}' <!--最終更新ユーザーID = ログインユーザー.ユーザID-->
+         WHERE T_RECEIVE_MNG.DELIV_KEY_NO = #{delivKeyNo, jdbcType=VARCHAR}  <!--納品キー番号 = 画面.納品キー番号-->
+    </update>
+
+    <!-- 検査テーブルの新規 -->
+    <insert id="insertInspect">
+        INSERT INTO T_INSPECT( 
+            INSPECT_SEQ,<!--検査シーケンス番号-->
+            DELIV_KEY_NO,<!--納品キー番号-->
+            ORDER_NO,<!--注文番号-->
+            INSPECT_VERSION,<!--検査版数-->
+            CORRECT_CD,<!--訂正コード-->
+            PRE_SEQ,<!--変更前シーケンス番号-->
+            RB_IND,<!--赤黒区分-->
+            RB_SEQ,<!--赤黒相手SEQNO-->
+            INSPECT_STATUS,<!--検査ステータス-->
+            INSPECT_DATE,<!--検査日-->
+            INSPECT_COMPANY_CD,<!--検査会社コード-->
+            INSPECT_COMPANY_NAME,<!--検査会社名-->
+            INSPECT_SECTION_PLACE_CD,<!--検査事業所コード-->
+            INSPECT_SECTION_PLACE_NAME,<!--検査事業所名-->
+            INSPECT_SECTION_CD,<!--検査部門コード-->
+            INSPECT_SECTION_NAME,<!--検査部門名-->
+            INSPECT_USER_ID,<!--検査担当者ID-->
+            INSPECT_USER_NAME,<!--検査担当者名-->
+            INSPECT_PASS_QUANT,<!--検査合格数量-->
+            UNIT_CD,<!--単位コード-->
+            UNIT_NAME,<!--単位名-->
+            INSPECT_ACCOUNT,<!--検査記事-->
+            APP_ROUTE_NO,<!--承認ルート番号-->
+            APP_ROUTE_NAME,<!--承認ルート名-->
+            SEND_IND,<!--データ送信区分-->
+            FAX_SEND_IND,<!--FAX送信区分-->
+            PRINT_IND,<!--印刷区分-->
+            BI_OUT_IND,<!--実績抽出区分-->
+            DELETE_FLG,<!--削除フラグ-->
+            AUTO_DELETE_FLG,<!--自動データ削除フラグ-->
+            AUTO_DELETE_DATE,<!--自動データ削除日-->
+            ${@ps.common.util.ItemSettingUtil@getItemSettingInsertSQL()},
+            LAST_UPD_DATE,<!--最終更新日時-->
+            LAST_UPD_COMPANY_CD,<!--最終更新会社コード-->
+            LAST_UPD_SECTION_CD,<!--最終更新部門コード-->
+            LAST_UPD_USER_ID,<!--最終更新ユーザーID-->
+            REG_DATE,<!--登録日時-->
+            REG_COMPANY_CD,<!--登録会社コード-->
+            REG_SECTION_CD,<!--登録部門コード-->
+            REG_USER_ID<!--登録ユーザーID-->
+      ) VALUES (
+            #{newSeqNo, jdbcType=DECIMAL},<!--検査シーケンス番号-->
+            #{delivKeyNo, jdbcType=VARCHAR},<!--納品キー番号-->
+            #{orderNo, jdbcType=VARCHAR},<!--注文番号-->
+            #{historyNo, jdbcType=DECIMAL},<!--検査版数-->
+            #{correctInd, jdbcType=VARCHAR},<!--訂正コード-->
+            #{preSeq, jdbcType=DECIMAL},<!--変更前シーケンス番号-->
+            #{rbInd, jdbcType=VARCHAR},<!--赤黒区分-->
+            #{rbSeq, jdbcType=DECIMAL},<!--赤黒相手SEQNO-->
+            #{inspectStatus, jdbcType=VARCHAR},<!--検査ステータス-->
+            #{inspectDate, jdbcType=VARCHAR},<!--検査日-->
+            <if test="isUpdateSection == true">
+                #{companyCd, jdbcType=VARCHAR},<!--検査会社コード-->
+                #{companyName, jdbcType=VARCHAR},<!--検査会社名-->
+                #{sectionPlaceCd, jdbcType=VARCHAR},<!--検査事業所コード-->
+                #{sectionPlaceName, jdbcType=VARCHAR},<!--検査事業所名-->
+                #{sectionCd, jdbcType=VARCHAR},<!--検査部門コード-->
+                #{sectionName, jdbcType=VARCHAR},<!--検査部門名-->
+                #{userId, jdbcType=VARCHAR},<!--検査担当者ID-->
+                #{userName, jdbcType=VARCHAR},<!--検査担当者名-->
+            </if>
+            <if test="isUpdateSection == false">
+                '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}',<!--検収会社コード -->
+                '${@fw.security.SecurityUtil@getCompanyNameByEscapeSql()}',<!--検収会社名 -->
+                '${@fw.security.SecurityUtil@getSectionPlaceCdByEscapeSql()}',<!--検収事業所コード -->
+                '${@fw.security.SecurityUtil@getSectionPlaceNameByEscapeSql()}',<!--検収事業所名 -->
+                '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}',<!--検収部門コード -->
+                '${@fw.security.SecurityUtil@getDefaultSectionNameByEscapeSql()}',<!--検収部門名 -->
+                '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}',<!--検収担当者ID -->
+                '${@fw.security.SecurityUtil@getUserNameByEscapeSql()}',<!--検収担当者名 -->
+            </if>
+            #{passQuant, jdbcType=DECIMAL},<!--検査合格数量-->
+            #{unitCd, jdbcType=VARCHAR},<!--単位コード-->
+            #{unitName, jdbcType=VARCHAR},<!--単位名-->
+            #{account, jdbcType=VARCHAR},<!--検査記事-->
+            #{appRouteNo, jdbcType=DECIMAL},<!--承認ルート番号-->
+            #{appRouteName, jdbcType=VARCHAR},<!--承認ルート名-->
+            #{sendInd, jdbcType=VARCHAR},<!--データ送信区分-->
+            #{faxSendInd, jdbcType=VARCHAR},<!--FAX送信区分-->
+            #{printInd, jdbcType=VARCHAR},<!--印刷区分-->
+            #{biOutInd, jdbcType=VARCHAR},<!--実績抽出区分-->
+            '0',<!--削除フラグ-->
+            '0',<!--自動データ削除フラグ-->
+            '',<!--自動データ削除日-->
+
+            <!-- 拡張項目 -->
+            #{textExtItem1, jdbcType=VARCHAR},
+            #{textExtItem2, jdbcType=VARCHAR},
+            #{textExtItem3, jdbcType=VARCHAR},
+            #{textExtItem4, jdbcType=VARCHAR},
+            #{textExtItem5, jdbcType=VARCHAR},
+            #{textExtItem6, jdbcType=VARCHAR},
+            #{textExtItem7, jdbcType=VARCHAR},
+            #{textExtItem8, jdbcType=VARCHAR},
+            #{textExtItem9, jdbcType=VARCHAR},
+            #{textExtItem10, jdbcType=VARCHAR},
+            #{arrayExtItem1, jdbcType=VARCHAR},
+            #{arrayExtItem2, jdbcType=VARCHAR},
+            #{arrayExtItem3, jdbcType=VARCHAR},
+            #{arrayExtItem4, jdbcType=VARCHAR},
+            #{arrayExtItem5, jdbcType=VARCHAR},
+            #{dateExtItem1, jdbcType=VARCHAR},
+            #{dateExtItem2, jdbcType=VARCHAR},
+            #{dateExtItem3, jdbcType=VARCHAR},
+            #{dateExtItem4, jdbcType=VARCHAR},
+            #{dateExtItem5, jdbcType=VARCHAR},
+            #{intExtItem1, jdbcType=VARCHAR},
+            #{intExtItem2, jdbcType=VARCHAR},
+            #{intExtItem3, jdbcType=VARCHAR},
+            #{intExtItem4, jdbcType=VARCHAR},
+            #{intExtItem5, jdbcType=VARCHAR},
+            #{intExtItem6, jdbcType=VARCHAR},
+            #{intExtItem7, jdbcType=VARCHAR},
+            #{intExtItem8, jdbcType=VARCHAR},
+            #{intExtItem9, jdbcType=VARCHAR},
+            #{intExtItem10, jdbcType=VARCHAR},
+            #{decExtItem1, jdbcType=VARCHAR},
+            #{decExtItem2, jdbcType=VARCHAR},
+            #{decExtItem3, jdbcType=VARCHAR},
+            #{decExtItem4, jdbcType=VARCHAR},
+            #{decExtItem5, jdbcType=VARCHAR},
+            #{selExtItem1, jdbcType=VARCHAR},
+            #{selExtItem2, jdbcType=VARCHAR},
+            #{selExtItem3, jdbcType=VARCHAR},
+            #{selExtItem4, jdbcType=VARCHAR},
+            #{selExtItem5, jdbcType=VARCHAR},
+            #{selExtItem6, jdbcType=VARCHAR},
+            #{selExtItem7, jdbcType=VARCHAR},
+            #{selExtItem8, jdbcType=VARCHAR},
+            #{selExtItem9, jdbcType=VARCHAR},
+            #{selExtItem10, jdbcType=VARCHAR},
+            #{chkExtItem1, jdbcType=VARCHAR},
+            #{chkExtItem2, jdbcType=VARCHAR},
+            #{chkExtItem3, jdbcType=VARCHAR},
+            #{chkExtItem4, jdbcType=VARCHAR},
+            #{chkExtItem5, jdbcType=VARCHAR},
+            #{fileExtItem1_fileName, jdbcType=VARCHAR},
+            #{fileExtItem1_binary, jdbcType=BLOB},
+            #{fileExtItem2_fileName, jdbcType=VARCHAR},
+            #{fileExtItem2_binary, jdbcType=BLOB},
+            #{fileExtItem3_fileName, jdbcType=VARCHAR},
+            #{fileExtItem3_binary, jdbcType=BLOB},
+            #{mstExtItem1_mstKey, jdbcType=VARCHAR},
+            #{mstExtItem1_mstName, jdbcType=VARCHAR},
+            #{mstExtItem2_mstKey, jdbcType=VARCHAR},
+            #{mstExtItem2_mstName, jdbcType=VARCHAR},
+            #{mstExtItem3_mstKey, jdbcType=VARCHAR},
+            #{mstExtItem3_mstName, jdbcType=VARCHAR},
+            #{mstExtItem4_mstKey, jdbcType=VARCHAR},
+            #{mstExtItem4_mstName, jdbcType=VARCHAR},
+            #{mstExtItem5_mstKey, jdbcType=VARCHAR},
+            #{mstExtItem5_mstName, jdbcType=VARCHAR},
+            #{mstExtItem6_mstKey, jdbcType=VARCHAR},
+            #{mstExtItem6_mstName, jdbcType=VARCHAR},
+            #{mstExtItem7_mstKey, jdbcType=VARCHAR},
+            #{mstExtItem7_mstName, jdbcType=VARCHAR},
+            #{mstExtItem8_mstKey, jdbcType=VARCHAR},
+            #{mstExtItem8_mstName, jdbcType=VARCHAR},
+
+            '${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}',<!--最終更新日時-->
+            '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}',<!--最終更新会社コード -->
+            '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}',<!--最終更新部門コード -->
+            '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}',<!--最終更新ユーザーID -->
+            '${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}',<!--登録日時 -->
+            '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}',<!--登録会社コード -->
+            '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}',<!--登録部門コード -->
+            '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}'<!--登録ユーザーID -->
+            )
+    </insert>
+
+    <!--最大版数 -->
+    <select id="getMaxVersion" resultType="java.lang.Integer">
+      SELECT MAX(T_INSPECT.INSPECT_VERSION) 
+        FROM T_INSPECT 
+       WHERE T_INSPECT.DELIV_KEY_NO = #{delivKeyNo}
+         AND T_INSPECT.DELETE_FLG = '0'
+    </select>
+    
+    <!--検査の更新(訂正（未承認から）訂正コードが取消)-->
+    <update id="updateInspectWithCorrectDel">
+      UPDATE T_INSPECT
+        SET APP_ROUTE_NO = #{appRouteNo, jdbcType=DECIMAL} <!--承認ルート番号 -->
+        , APP_ROUTE_NAME = #{appRouteName, jdbcType=VARCHAR} <!--承認ルート名-->
+       WHERE INSPECT_SEQ = #{seqNo, jdbcType=DECIMAL} <!--検査シーケンス番号-->
+    </update>
+    
+    <!--検査の更新(訂正（差戻しから）黒データのみ)-->
+    <update id="updateInspectWithBlack">
+      UPDATE T_INSPECT
+        SET DELETE_FLG = '1'<!--削除フラグ0:有効データ,1:削除データ-->
+        ,LAST_UPD_DATE = '${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}'<!--最終更新日時-->
+        ,LAST_UPD_COMPANY_CD = '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}'<!--最終更新会社コード-->
+        ,LAST_UPD_SECTION_CD = '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}'<!--最終更新部門コード-->
+        ,LAST_UPD_USER_ID = '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}'<!--最終更新ユーザーID-->
+       WHERE INSPECT_SEQ = #{seqNo, jdbcType=DECIMAL}
+    </update>
+    
+    <!--検査の更新(訂正（差戻しから）赤データのみ)-->
+    <update id="updateInspectWithRed">
+      UPDATE T_INSPECT
+        SET RB_SEQ = #{newSeqNo, jdbcType=DECIMAL}<!--赤黒相手SEQNO-->
+        ,INSPECT_STATUS = #{inspectStatus, jdbcType=VARCHAR}<!--検査ステータス-->
+        ,LAST_UPD_DATE = '${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}'<!--最終更新日時-->
+        ,LAST_UPD_COMPANY_CD = '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}'<!--最終更新会社コード-->
+        ,LAST_UPD_SECTION_CD = '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}'<!--最終更新部門コード-->
+        ,LAST_UPD_USER_ID = '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}'<!--最終更新ユーザーID-->
+       WHERE RB_SEQ = #{seqNo, jdbcType=DECIMAL}
+    </update>
+
+    <!--検査の更新(訂正（未承認から）訂正コードが新規、変更)-->
+    <update id="updateInspectWithCorrect">
+      UPDATE T_INSPECT
+        SET INSPECT_DATE= #{inspectDate, jdbcType=VARCHAR}<!--検査日-->
+        ,INSPECT_COMPANY_CD= '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}'<!--検収会社コード-->
+        ,INSPECT_COMPANY_NAME= '${@fw.security.SecurityUtil@getCompanyNameByEscapeSql()}'<!--検収会社名-->
+        ,INSPECT_SECTION_PLACE_CD= '${@fw.security.SecurityUtil@getSectionPlaceCdByEscapeSql()}'<!--検収事業所コード-->
+        ,INSPECT_SECTION_PLACE_NAME= '${@fw.security.SecurityUtil@getSectionPlaceNameByEscapeSql()}'<!--検収事業所名-->
+        ,INSPECT_SECTION_CD= '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}'<!--検収部門コード-->
+        ,INSPECT_SECTION_NAME= '${@fw.security.SecurityUtil@getDefaultSectionNameByEscapeSql()}'<!--検収部門名-->
+        ,INSPECT_USER_ID= '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}'<!--検収担当者ID-->
+        ,INSPECT_USER_NAME= '${@fw.security.SecurityUtil@getUserNameByEscapeSql()}'<!--検収担当者名-->
+        ,INSPECT_PASS_QUANT= #{passQuant, jdbcType=DECIMAL}<!--検査合格数量-->
+        ,UNIT_CD= #{unitCd, jdbcType=VARCHAR}<!--単位コード-->
+        ,UNIT_NAME= #{unitName, jdbcType=VARCHAR}<!--単位名-->
+        ,INSPECT_ACCOUNT= #{account, jdbcType=VARCHAR}<!--検査記事-->
+        ,APP_ROUTE_NO= #{appRouteNo, jdbcType=DECIMAL}<!--承認ルート番号-->
+        ,APP_ROUTE_NAME= #{appRouteName, jdbcType=VARCHAR}<!--承認ルート名-->
+        <!-- 拡張項目 -->
+        ,EXT_TXT_1 = #{textExtItem1, jdbcType=VARCHAR}
+        ,EXT_TXT_2 = #{textExtItem2, jdbcType=VARCHAR}
+        ,EXT_TXT_3 = #{textExtItem3, jdbcType=VARCHAR}
+        ,EXT_TXT_4 = #{textExtItem4, jdbcType=VARCHAR}
+        ,EXT_TXT_5 = #{textExtItem5, jdbcType=VARCHAR}
+        ,EXT_TXT_6 = #{textExtItem6, jdbcType=VARCHAR}
+        ,EXT_TXT_7 = #{textExtItem7, jdbcType=VARCHAR}
+        ,EXT_TXT_8 = #{textExtItem8, jdbcType=VARCHAR}
+        ,EXT_TXT_9 = #{textExtItem9, jdbcType=VARCHAR}
+        ,EXT_TXT_10 = #{textExtItem10, jdbcType=VARCHAR}
+        ,EXT_AREA_1 = #{arrayExtItem1, jdbcType=VARCHAR}
+        ,EXT_AREA_2 = #{arrayExtItem2, jdbcType=VARCHAR}
+        ,EXT_AREA_3 = #{arrayExtItem3, jdbcType=VARCHAR}
+        ,EXT_AREA_4 = #{arrayExtItem4, jdbcType=VARCHAR}
+        ,EXT_AREA_5 = #{arrayExtItem5, jdbcType=VARCHAR}
+        ,EXT_DATE_1 = #{dateExtItem1, jdbcType=VARCHAR}
+        ,EXT_DATE_2 = #{dateExtItem2, jdbcType=VARCHAR}
+        ,EXT_DATE_3 = #{dateExtItem3, jdbcType=VARCHAR}
+        ,EXT_DATE_4 = #{dateExtItem4, jdbcType=VARCHAR}
+        ,EXT_DATE_5 = #{dateExtItem5, jdbcType=VARCHAR}
+        ,EXT_INT_1 = #{intExtItem1, jdbcType=VARCHAR}
+        ,EXT_INT_2 = #{intExtItem2, jdbcType=VARCHAR}
+        ,EXT_INT_3 = #{intExtItem3, jdbcType=VARCHAR}
+        ,EXT_INT_4 = #{intExtItem4, jdbcType=VARCHAR}
+        ,EXT_INT_5 = #{intExtItem5, jdbcType=VARCHAR}
+        ,EXT_INT_6 = #{intExtItem6, jdbcType=VARCHAR}
+        ,EXT_INT_7 = #{intExtItem7, jdbcType=VARCHAR}
+        ,EXT_INT_8 = #{intExtItem8, jdbcType=VARCHAR}
+        ,EXT_INT_9 = #{intExtItem9, jdbcType=VARCHAR}
+        ,EXT_INT_10 = #{intExtItem10, jdbcType=VARCHAR}
+        ,EXT_DEC_1 = #{decExtItem1, jdbcType=VARCHAR}
+        ,EXT_DEC_2 = #{decExtItem2, jdbcType=VARCHAR}
+        ,EXT_DEC_3 = #{decExtItem3, jdbcType=VARCHAR}
+        ,EXT_DEC_4 = #{decExtItem4, jdbcType=VARCHAR}
+        ,EXT_DEC_5 = #{decExtItem5, jdbcType=VARCHAR}
+        ,EXT_SEL_1 = #{selExtItem1, jdbcType=VARCHAR}
+        ,EXT_SEL_2 = #{selExtItem2, jdbcType=VARCHAR}
+        ,EXT_SEL_3 = #{selExtItem3, jdbcType=VARCHAR}
+        ,EXT_SEL_4 = #{selExtItem4, jdbcType=VARCHAR}
+        ,EXT_SEL_5 = #{selExtItem5, jdbcType=VARCHAR}
+        ,EXT_SEL_6 = #{selExtItem6, jdbcType=VARCHAR}
+        ,EXT_SEL_7 = #{selExtItem7, jdbcType=VARCHAR}
+        ,EXT_SEL_8 = #{selExtItem8, jdbcType=VARCHAR}
+        ,EXT_SEL_9 = #{selExtItem9, jdbcType=VARCHAR}
+        ,EXT_SEL_10 = #{selExtItem10, jdbcType=VARCHAR}
+        ,EXT_CHK_1 = #{chkExtItem1, jdbcType=VARCHAR}
+        ,EXT_CHK_2 = #{chkExtItem2, jdbcType=VARCHAR}
+        ,EXT_CHK_3 = #{chkExtItem3, jdbcType=VARCHAR}
+        ,EXT_CHK_4 = #{chkExtItem4, jdbcType=VARCHAR}
+        ,EXT_CHK_5 = #{chkExtItem5, jdbcType=VARCHAR}
+        ,EXT_FILE_1 = #{fileExtItem1_fileName, jdbcType=VARCHAR}
+        ,EXT_FILE_BINARY_1 = #{fileExtItem1_binary, jdbcType=BLOB}
+        ,EXT_FILE_2 = #{fileExtItem2_fileName, jdbcType=VARCHAR}
+        ,EXT_FILE_BINARY_2 = #{fileExtItem2_binary, jdbcType=BLOB}
+        ,EXT_FILE_3 = #{fileExtItem3_fileName, jdbcType=VARCHAR}
+        ,EXT_FILE_BINARY_3 = #{fileExtItem3_binary, jdbcType=BLOB}
+        ,EXT_MST_1 = #{mstExtItem1_mstKey, jdbcType=VARCHAR}
+        ,EXT_MST_NAME_1 = #{mstExtItem1_mstName, jdbcType=VARCHAR}
+        ,EXT_MST_2 = #{mstExtItem2_mstKey, jdbcType=VARCHAR}
+        ,EXT_MST_NAME_2 = #{mstExtItem2_mstName, jdbcType=VARCHAR}
+        ,EXT_MST_3 = #{mstExtItem3_mstKey, jdbcType=VARCHAR}
+        ,EXT_MST_NAME_3 = #{mstExtItem3_mstName, jdbcType=VARCHAR}
+        ,EXT_MST_4 = #{mstExtItem4_mstKey, jdbcType=VARCHAR}
+        ,EXT_MST_NAME_4 = #{mstExtItem4_mstName, jdbcType=VARCHAR}
+        ,EXT_MST_5 = #{mstExtItem5_mstKey, jdbcType=VARCHAR}
+        ,EXT_MST_NAME_5 = #{mstExtItem5_mstName, jdbcType=VARCHAR}
+        ,EXT_MST_6 = #{mstExtItem6_mstKey, jdbcType=VARCHAR}
+        ,EXT_MST_NAME_6 = #{mstExtItem6_mstName, jdbcType=VARCHAR}
+        ,EXT_MST_7 = #{mstExtItem7_mstKey, jdbcType=VARCHAR}
+        ,EXT_MST_NAME_7 = #{mstExtItem7_mstName, jdbcType=VARCHAR}
+        ,EXT_MST_8 = #{mstExtItem8_mstKey, jdbcType=VARCHAR}
+        ,EXT_MST_NAME_8 = #{mstExtItem8_mstName, jdbcType=VARCHAR}
+
+        ,LAST_UPD_DATE = '${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}'<!--最終更新日時-->
+        ,LAST_UPD_COMPANY_CD = '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}'<!--最終更新会社コード-->
+        ,LAST_UPD_SECTION_CD = '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}'<!--最終更新部門コード-->
+        ,LAST_UPD_USER_ID = '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}'<!--最終更新ユーザーID-->
+       WHERE INSPECT_SEQ = #{seqNo, jdbcType=DECIMAL}
+    </update>
+    <!-- ====================== PSTST020 検査入力  End =================== -->
+
+
+    <!-- ====================== 共通 START =================== -->
+    <!-- ダウンロードSQLヘッダ -->
+    <sql id="downloadHeader">
+       SELECT * FROM (
+    </sql>
+    <!-- ダウンロードSQLフッタ -->
+    <sql id="downloadFooter">
+        ) WHERE  ROWNUM &lt;=${@fw.common.util.PropertiesUtil@getLong("DOWNLOAD_MAXCNT")}
+    </sql>
+    <!-- ====================== 共通 END =================== -->
+    
+</mapper>

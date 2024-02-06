@@ -1,0 +1,652 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="ps.dataaccess.dlv.ans.DlvAnsMapper">
+
+    <sql id="listKeyIdentityWhereCondition">
+         ${@ps.common.util.ItemSettingUtil@getItemSettingWhereSQL('10')}
+         AND T_ORDER.ORDER_STATUS = '05'
+         AND T_ORDER.NEW_APP_FLG = '1'
+         AND T_ORDER.DELETE_FLG = '0'
+        <if test="!@org.springframework.util.CollectionUtils@isEmpty(ansStatusList)">
+            <if test="&quot;1&quot;==ansStatusList[0] and &quot;2&quot;==ansStatusList[1]">
+         AND (T_DLV_EST_MNG.INQ_RESP_IND IN ('1', '2') OR T_DLV_EST_MNG.DELIV_VERSION IS NULL)
+            </if>
+            <if test="&quot;1&quot;==ansStatusList[0] and &quot;2&quot;!=ansStatusList[1]">
+         AND (T_DLV_EST_MNG.INQ_RESP_IND = '1' OR T_DLV_EST_MNG.DELIV_VERSION IS NULL)
+            </if>
+            <if test="&quot;1&quot;!=ansStatusList[0] and &quot;2&quot;==ansStatusList[1]">
+         AND T_DLV_EST_MNG.INQ_RESP_IND = '2'
+            </if>
+        </if>
+         AND T_ORDER.BUYER_COMPANY_CD = '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}'
+         AND T_ORDER.BUYER_SECTION_CD = '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}'
+        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(delivDateReturn)">
+         AND T_DLV_EST_MNG.CONFIRM_MARK = '2'
+         AND T_DLV_EST_MNG.INQ_RESP_IND = '2'
+        </if>
+    </sql>
+
+    <select id="listKeyIdentity" parameterType="fw.domain.slip.dlvestmng.DelivRespSearchCondition"
+        resultType="fw.domain.slip.dlvestmng.dlvresp.Identify">
+      SELECT T_ORDER.ORDER_SEQ AS "orderIdentify.orderSeq"
+        FROM T_ORDER
+        LEFT OUTER JOIN T_DLV_EST_MNG
+             INNER JOIN
+                  (SELECT T_DLV_EST_MNG_B.ORDER_NO
+                        , T_DLV_EST_MNG_B.DELIV_VERSION AS MAX_DELIV_VERSION
+                        , MIN(T_DLV_EST_MNG_B.INQ_RESP_IND) AS MIN_INQ_RESP_IND
+                     FROM T_DLV_EST_MNG T_DLV_EST_MNG_B
+                    INNER JOIN
+                         (SELECT T_DLV_EST_MNG_A.ORDER_NO
+                               , MAX(T_DLV_EST_MNG_A.DELIV_VERSION) AS MAX_DELIV_VERSION
+                            FROM T_DLV_EST_MNG T_DLV_EST_MNG_A
+                           WHERE T_DLV_EST_MNG_A.DELETE_FLG = '0'
+                        GROUP BY T_DLV_EST_MNG_A.ORDER_NO) T_DLV_EST_MNG_C
+                       ON T_DLV_EST_MNG_B.ORDER_NO = T_DLV_EST_MNG_C.ORDER_NO
+                      AND T_DLV_EST_MNG_B.DELIV_VERSION = T_DLV_EST_MNG_C.MAX_DELIV_VERSION
+                    WHERE T_DLV_EST_MNG_B.DELETE_FLG = '0'
+                 GROUP BY T_DLV_EST_MNG_B.ORDER_NO,T_DLV_EST_MNG_B.DELIV_VERSION) T_DLV_EST_MNG_INFO
+                ON T_DLV_EST_MNG.ORDER_NO = T_DLV_EST_MNG_INFO.ORDER_NO
+               AND T_DLV_EST_MNG.DELIV_VERSION = T_DLV_EST_MNG_INFO.MAX_DELIV_VERSION
+               AND T_DLV_EST_MNG.INQ_RESP_IND = T_DLV_EST_MNG_INFO.MIN_INQ_RESP_IND
+          ON T_ORDER.ORDER_NO = T_DLV_EST_MNG.ORDER_NO
+         AND T_ORDER.ORDER_VERSION = T_DLV_EST_MNG.ORDER_VERSION
+         AND T_DLV_EST_MNG.DELETE_FLG = '0'
+        LEFT JOIN
+            (SELECT T_RECEIVE_MNG.ORDER_NO
+                  , SUM(T_RECEIVE_MNG.DELIV_VOL) AS  DELIV_VOL
+               FROM T_RECEIVE_MNG
+              WHERE T_RECEIVE_MNG.DELETE_FLG = '0'
+           GROUP BY T_RECEIVE_MNG.ORDER_NO) T_RECEIVE_MNG_INFO
+          ON T_ORDER.ORDER_NO = T_RECEIVE_MNG_INFO.ORDER_NO
+        <where>
+            <include refid="listKeyIdentityWhereCondition"/>
+         AND T_ORDER.ORDER_VOL > COALESCE(T_RECEIVE_MNG_INFO.DELIV_VOL, 0)
+        </where>
+    ORDER BY ${searchCondition.columnOrder.columnOrder()}
+    </select>
+
+    <resultMap type="fw.domain.slip.dlvestmng.DelivRespItem" id="DelivRespItem_Map">
+        <id column="ORDERSEQ" property="delivRespIdentify.orderIdentify.orderSeq"/>
+        <id column="DELIVMNGSEQ" property="delivRespIdentify.delivManagementIdentify.delivManagementSeqNo"/>
+        <id column="EXCLUSIVE_SLIP_NO" property="delivRespIdentify.orderIdentify.exclusiveSlipId.slipNo"/>
+        <id column="EXCLUSIVE_LAST_UPD_DATE" property="delivRespIdentify.orderIdentify.exclusiveSlipId.lastUpdDate"/>
+    </resultMap>
+
+    <select id="listPageItem" parameterType="fw.domain.slip.dlvestmng.DelivRespSearchCondition"
+        resultMap="DelivRespItem_Map">
+      SELECT T_ORDER.ORDER_SEQ AS "ORDERSEQ"
+           , T_ORDER.LAST_UPD_DATE AS "delivRespIdentify.lastUpdDate"
+           , T_ORDER.ORDER_NO AS "orderNo"
+           , T_ORDER.CORRECT_CD AS "correctInd"
+           , T_ORDER.TITLE_NAME AS "titleName"
+           , T_ORDER.ITEM_CD AS "itemCd"
+           , T_ORDER.ITEM_NAME AS "item"
+           , T_ORDER.SUP_CD AS "supplierFromCd"
+           , T_ORDER.SUP_ABBR_NAME AS "supplierFromName"
+           , T_ORDER.EDI_IND AS "edi"
+           , T_ORDER.ORDER_FIRST_DATE AS "orderDate.dateOfymd"
+           , T_ORDER.ORDER_DELIV_DATE AS "orderDelivDate.dateOfymd"
+           , T_ORDER.ORDER_CANCEL_VOL AS "orderCancelVol.vol"
+           , T_DLV_EST_MNG.DELIV_MNG_SEQ AS "DELIVMNGSEQ"
+           , T_DLV_EST_MNG.INQ_RESP_IND AS "inqRespInd"
+           , T_DLV_EST_MNG.CONFIRM_MARK AS "delivRespAppFlg"
+           , T_DLV_EST_MNG.DELIV_VERSION AS "delivVersion"
+           , T_ORDER.UNIT_NAME AS "unit"
+           , T_ORDER.ORDER_VOL AS "orderVol.vol"
+           , CASE WHEN N.DELIVVOL IS NULL THEN T_ORDER.ORDER_VOL ELSE (T_ORDER.ORDER_VOL - N.DELIVVOL) END AS "receiveRemainingVol.vol"
+           , T_ORDER.DELIV_PLACE_CD AS "delivPlaceCd"
+           , T_ORDER.DELIV_PLACE_NAME AS "delivPlaceName"
+           , T_ORDER.REQ_SECTION_CD AS "reqSectionCd"
+           , T_ORDER.REQ_SECTION_NAME AS "reqSectionName"
+           , T_ORDER.REQ_USER_ID AS "reqUserCd"
+           , T_ORDER.REQ_USER_NAME AS "reqUserName"
+           , T_ORDER.BUYER_SECTION_CD AS "buySectionCd"
+           , T_ORDER.BUYER_SECTION_NAME AS "buySectionName"
+           , T_ORDER.BUYER_USER_ID AS "buyUserCd"
+           , T_ORDER.BUYER_USER_NAME AS "buyUserName"
+           , T_SLIP_MNG.SLIP_NO AS EXCLUSIVE_SLIP_NO
+           , T_SLIP_MNG.LAST_UPD_DATE AS EXCLUSIVE_LAST_UPD_DATE
+           , ${@ps.common.util.ItemSettingUtil@getItemSettingSelectSQLDomainAliasNonBinary("T_ORDER", "searchResExtItem")}
+        FROM T_ORDER
+       INNER JOIN T_SLIP_MNG
+          ON T_ORDER.ORDER_NO = T_SLIP_MNG.SLIP_NO
+         AND T_SLIP_MNG.DELETE_FLG = '0'
+        LEFT OUTER JOIN T_DLV_EST_MNG
+             INNER JOIN
+                  (SELECT T_DLV_EST_MNG_B.ORDER_NO
+                        , T_DLV_EST_MNG_B.DELIV_VERSION AS MAX_DELIV_VERSION
+                        , MIN(T_DLV_EST_MNG_B.INQ_RESP_IND) AS MIN_INQ_RESP_IND
+                     FROM T_DLV_EST_MNG T_DLV_EST_MNG_B
+                    INNER JOIN
+                         (SELECT T_DLV_EST_MNG_A.ORDER_NO
+                               , MAX(T_DLV_EST_MNG_A.DELIV_VERSION) AS MAX_DELIV_VERSION
+                            FROM T_DLV_EST_MNG T_DLV_EST_MNG_A
+                           WHERE T_DLV_EST_MNG_A.DELETE_FLG = '0'
+                        GROUP BY T_DLV_EST_MNG_A.ORDER_NO) T_DLV_EST_MNG_C
+                       ON T_DLV_EST_MNG_B.ORDER_NO = T_DLV_EST_MNG_C.ORDER_NO
+                      AND T_DLV_EST_MNG_B.DELIV_VERSION = T_DLV_EST_MNG_C.MAX_DELIV_VERSION
+                    WHERE T_DLV_EST_MNG_B.DELETE_FLG = '0'
+                 GROUP BY T_DLV_EST_MNG_B.ORDER_NO,T_DLV_EST_MNG_B.DELIV_VERSION) T_DLV_EST_MNG_INFO
+                ON T_DLV_EST_MNG.ORDER_NO = T_DLV_EST_MNG_INFO.ORDER_NO
+               AND T_DLV_EST_MNG.DELIV_VERSION = T_DLV_EST_MNG_INFO.MAX_DELIV_VERSION
+               AND T_DLV_EST_MNG.INQ_RESP_IND = T_DLV_EST_MNG_INFO.MIN_INQ_RESP_IND
+          ON T_ORDER.ORDER_NO = T_DLV_EST_MNG.ORDER_NO
+         AND T_ORDER.ORDER_VERSION = T_DLV_EST_MNG.ORDER_VERSION
+         AND T_DLV_EST_MNG.DELETE_FLG = '0'
+        LEFT JOIN
+            (SELECT T_RECEIVE_MNG.ORDER_NO AS "ORDERNO"
+                  , SUM(T_RECEIVE_MNG.DELIV_VOL) AS "DELIVVOL"
+               FROM T_RECEIVE_MNG
+              WHERE T_RECEIVE_MNG.DELETE_FLG = '0'
+           GROUP BY T_RECEIVE_MNG.ORDER_NO) N
+          ON T_ORDER.ORDER_NO = N.ORDERNO
+        <where>
+            <include refid="listKeyIdentityWhereCondition"/>
+         AND T_ORDER.ORDER_SEQ IN
+            <foreach collection="searchCondition.page.keyDomainEntityList" item="keyList" open="(" separator="," close=")">
+               ${keyList.orderIdentify.orderSeq}
+            </foreach>
+        </where>
+    ORDER BY ${searchCondition.columnOrder.columnOrder()}
+    </select>
+
+    <resultMap type="fw.domain.slip.dlvestmng.RespItemInformation" id="RespItemInformation_Map">
+        <id column="DLVESTDATE" property="respDlvEst.respDlvEst.dateOfymd"></id>
+    </resultMap>
+
+    <select id="searchItemList" parameterType="fw.domain.slip.dlvestmng.dlvresp.Identify"
+        resultMap="RespItemInformation_Map">
+      SELECT T_DLV_EST_DTL.DELIV_LINE_NO
+           , T_DLV_EST_DTL.EST_DELIV_DATE AS "DLVESTDATE"
+           , T_DLV_EST_DTL.EST_DELIV_VOL AS "respVol.respVol.vol"
+           , T_DLV_EST_MNG.INQ_RESP_DATE AS "delivRespDate"
+           , T_DLV_EST_MNG.INQ_RESP_COMMENT AS "respRemark"
+           , T_DLV_EST_MNG.DELIV_MNG_SEQ AS "delivMngSeq"
+        FROM T_DLV_EST_MNG
+        LEFT OUTER JOIN T_DLV_EST_DTL
+          ON T_DLV_EST_MNG.DELIV_MNG_SEQ = T_DLV_EST_DTL.DELIV_MNG_SEQ
+       WHERE T_DLV_EST_MNG.ORDER_NO = #{orderNo}
+         AND T_DLV_EST_MNG.DELIV_VERSION =
+            (SELECT COALESCE(MAX(DELIV_VERSION), 0)
+               FROM T_DLV_EST_MNG T_DLV_EST_MNG_A
+              WHERE T_DLV_EST_MNG_A.ORDER_NO = #{orderNo}
+                AND T_DLV_EST_MNG_A.INQ_RESP_IND = '2'
+                AND T_DLV_EST_MNG_A.DELETE_FLG = '0'
+                AND T_DLV_EST_MNG.ORDER_VERSION = (
+                    SELECT      MAX(ORDER_VERSION) as MAX_VERSION
+                    FROM        T_ORDER
+                    WHERE       T_ORDER.ORDER_NO = #{orderNo}
+                    AND         T_ORDER.DELETE_FLG = '0'
+                    AND         T_ORDER.ORDER_STATUS = '05'
+                )
+            )
+         AND T_DLV_EST_MNG.INQ_RESP_IND = '2'
+         AND T_DLV_EST_MNG.DELETE_FLG = '0'
+    ORDER BY T_DLV_EST_DTL.DELIV_MNG_SEQ
+           , T_DLV_EST_DTL.DELIV_LINE_NO
+    </select>
+
+    <resultMap type="fw.domain.slip.dlvestmng.DelivManagement" id="DelivManagementForDetail_Map">
+        <id column="T_DLV_EST_MNG$DELIV_MNG_SEQ" property="delivManagementIdentify.delivManagementSeqNo"/>
+        <id column="T_ORDER$ORDER_NO" property="order.orderManagement.orderNo.orderNo"/>
+        <id column="RESP$INQ_RESP_DATE" property="respInformation.respDate.respDate.dateOfymd"/>
+        <id column="APP$INQ_RESP_DATE" property="appInformation.appDate.appDate.dateOfymd"/>
+        <id column="T_ORDER$ORDER_VOL" property="order.accounting.orderAmount.orderVolume.orderVol.vol"/>
+        <id column="T_ORDER$ORDER_DELIV_DATE" property="order.schedule.dlvEst.dlvEst.dateOfymd"/>
+        <id column="RESP$INQ_RESP_COMMENT" property="respInformation.respBackup.respBackup.comment"/>
+        <id column="APP$INQ_RESP_COMMENT" property="appInformation.appRemark.comment.comment"/>
+        <id column="T_ORDER$UNIT_CD" property="order.accounting.orderItem.item.unit.unitCd"/>
+        <id column="T_ORDER$UNIT_NAME" property="order.accounting.orderItem.item.unit.unitName"/>
+        <id column="T_DLV$RESP_LIMIT_DATE" property="delivRespLimit.delivRespLimit.dateOfymd"/>
+    </resultMap>
+
+    <select id="getDelivDetail" resultMap="DelivManagementForDetail_Map">
+      SELECT T_DLV_EST_MNG.DELIV_MNG_SEQ AS "T_DLV_EST_MNG$DELIV_MNG_SEQ"
+           , T_ORDER.ORDER_NO AS "T_ORDER$ORDER_NO"
+           , T_ORDER.ORDER_SEQ AS "order.orderIdentify.orderSeq"
+           , T_DLV_EST_MNG.INQ_RESP_DATE AS "RESP$INQ_RESP_DATE"
+           , T_DLV_EST_MNG.INQ_RESP_DATE AS "APP$INQ_RESP_DATE"
+           , T_ORDER.ORDER_VOL AS "T_ORDER$ORDER_VOL"
+           , T_ORDER.UNIT_CD AS "T_ORDER$UNIT_CD"
+           , T_ORDER.UNIT_NAME AS "T_ORDER$UNIT_NAME"
+           , T_ORDER.ORDER_DELIV_DATE AS "T_ORDER$ORDER_DELIV_DATE"
+           , T_DLV_EST_MNG.INQ_RESP_COMMENT AS "RESP$INQ_RESP_COMMENT"
+           , T_DLV_EST_MNG.INQ_RESP_COMMENT AS "APP$INQ_RESP_COMMENT"
+           , T_DLV_EST_MNG.CONFIRM_MARK AS "appMark.appMark"
+           , T_DLV_EST_MNG.RESP_LIMIT_DATE AS "T_DLV$RESP_LIMIT_DATE"
+        FROM T_ORDER
+        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(delivMngSeq)">
+        INNER JOIN (
+            SELECT      *
+            FROM        T_DLV_EST_MNG
+            WHERE       DELIV_MNG_SEQ = #{delivMngSeq}
+            AND         T_DLV_EST_MNG.DELETE_FLG = '0'
+            <if test="'true' == isResp">
+            AND         T_DLV_EST_MNG.INQ_RESP_IND = '2'
+            </if>
+            <if test="'true' != isResp">
+            AND         T_DLV_EST_MNG.INQ_RESP_IND = '1'
+            </if>
+        ) T_DLV_EST_MNG
+        ON  T_ORDER.ORDER_NO = T_DLV_EST_MNG.ORDER_NO
+        AND T_ORDER.ORDER_VERSION = T_DLV_EST_MNG.ORDER_VERSION
+        </if>
+        <if test="@org.apache.commons.lang.StringUtils@isBlank(delivMngSeq)">
+        INNER JOIN (
+            SELECT      *
+            FROM        T_DLV_EST_MNG
+            INNER JOIN (
+                SELECT      MAX(T_DLV_EST_MNG.DELIV_MNG_SEQ) as MAX_VERSION_SEQ
+                FROM        T_DLV_EST_MNG
+                WHERE       T_DLV_EST_MNG.ORDER_NO = #{orderNo}
+                <if test="'true' == isResp">
+                AND         T_DLV_EST_MNG.INQ_RESP_IND = '2'
+                </if>
+                <if test="'true' != isResp">
+                AND         T_DLV_EST_MNG.INQ_RESP_IND = '1'
+                </if>
+                AND         T_DLV_EST_MNG.DELETE_FLG = '0'
+                AND         T_DLV_EST_MNG.ORDER_VERSION = (
+                    SELECT      MAX(ORDER_VERSION) as MAX_VERSION
+                    FROM        T_ORDER
+                    WHERE       T_ORDER.ORDER_NO = #{orderNo}
+                    AND         T_ORDER.DELETE_FLG = '0'
+                    AND         T_ORDER.ORDER_STATUS = '05'
+                )
+            ) MAX_VERSION_DLV_EST
+            ON          T_DLV_EST_MNG.DELIV_MNG_SEQ = MAX_VERSION_DLV_EST.MAX_VERSION_SEQ
+        ) T_DLV_EST_MNG
+        ON  T_ORDER.ORDER_NO = T_DLV_EST_MNG.ORDER_NO
+        AND T_ORDER.ORDER_VERSION = T_DLV_EST_MNG.ORDER_VERSION
+        </if>
+       WHERE T_ORDER.ORDER_NO = #{orderNo}
+         AND T_ORDER.ORDER_STATUS IN ('05','10','20')
+        <if test="@org.apache.commons.lang.StringUtils@isBlank(delivMngSeq)">
+         AND T_ORDER.NEW_APP_FLG = '1'
+        </if>
+         AND T_ORDER.DELETE_FLG = '0'
+    </select>
+
+    <select id="getDelivDetailItem" resultType="fw.domain.slip.dlvestmng.DelivRespItem">
+      SELECT T_DLV_EST_DTL.DELIV_LINE_NO AS "delivRespItemIdentifyNo.rowNo"
+           , T_DLV_EST_DTL.EST_DELIV_DATE AS "respDelivDate.dateOfymd"
+           , T_DLV_EST_DTL.EST_DELIV_VOL AS "respVol.vol"
+        FROM T_DLV_EST_DTL
+       WHERE T_DLV_EST_DTL.DELETE_FLG = '0'
+         AND T_DLV_EST_DTL.DELIV_MNG_SEQ = #{delivMngSeq}
+    ORDER BY T_DLV_EST_DTL.DELIV_LINE_NO
+    </select>
+
+    <select id="searchOrderInfo" parameterType="string" resultMap="DelivManagement_Map">
+      SELECT T_ORDER.ORDER_NO
+           , T_ORDER.ORDER_VERSION
+           , T_ORDER.ORDER_FIRST_DATE AS "ORDER_DATE"
+           , T_ORDER.TITLE_NAME
+           , T_ORDER.ITEM_CD
+           , T_ORDER.ITEM_NAME
+           , T_ORDER.KATASHIKI
+           , T_ORDER.MANUFACT_CD
+           , T_ORDER.MANUFACT_NAME
+           , T_ORDER.ORDER_DELIV_DATE
+           , T_ORDER.ORDER_VOL
+           , T_ORDER.ORDER_CANCEL_VOL
+           , CASE WHEN T_RECEIVE_MNG.SUM_DELIV_VOL IS NULL
+                  THEN T_ORDER.ORDER_VOL
+                  ELSE (T_ORDER.ORDER_VOL - T_RECEIVE_MNG.SUM_DELIV_VOL)
+             END AS "UN_DELIV_VOL"
+           , T_ORDER.UNIT_NAME
+           , T_ORDER.SUP_CD
+           , T_ORDER.SUP_ABBR_NAME
+           , T_ORDER.SUBCON_IND
+           , T_ORDER.SUP_ZIP_CD
+           , T_ORDER.SUP_ADDRESS1
+           , T_ORDER.SUP_ADDRESS2
+           , T_ORDER.SUP_TEL_NO
+           , T_ORDER.SUP_FAX_NO
+           , T_ORDER.BUYER_SECTION_CD
+           , T_ORDER.BUYER_SECTION_NAME
+           , T_ORDER.BUYER_USER_ID
+           , T_ORDER.BUYER_USER_NAME
+           , T_ORDER.BUYER_USER_EXTENSION_NO
+           , T_ORDER.BUYER_USER_TEL_NO
+           , T_ORDER.REQ_SECTION_CD
+           , T_ORDER.REQ_SECTION_NAME
+           , T_ORDER.REQ_USER_ID
+           , T_ORDER.REQ_USER_NAME
+           , T_ORDER.REQ_USER_EXTENSION_NO
+           , T_ORDER.REQ_USER_TEL_NO
+           , T_ORDER.FOR_SUPPRIER_COMMENT
+           , T_ORDER.SUBJECT_CD
+           , T_ORDER.SUBJECT_NAME
+           , T_ORDER.DELIV_PLACE_NAME
+           , T_SLIP_MNG.SLIP_NO AS EXCLUSIVE_SLIP_NO
+           , T_SLIP_MNG.LAST_UPD_DATE AS EXCLUSIVE_LAST_UPD_DATE
+        FROM T_ORDER
+       INNER JOIN T_SLIP_MNG
+          ON T_ORDER.ORDER_NO = T_SLIP_MNG.SLIP_NO
+         AND T_SLIP_MNG.DELETE_FLG = '0'
+        LEFT JOIN
+            (SELECT SUM(DELIV_VOL) SUM_DELIV_VOL,ORDER_NO
+               FROM T_RECEIVE_MNG
+              WHERE T_RECEIVE_MNG.DELIV_STATUS != '1105'
+                AND T_RECEIVE_MNG.DELETE_FLG = '0'
+           GROUP BY ORDER_NO) T_RECEIVE_MNG
+          ON T_RECEIVE_MNG.ORDER_NO  = T_ORDER.ORDER_NO
+       WHERE T_ORDER.ORDER_SEQ = #{orderSeq}
+    </select>
+
+    <resultMap type="fw.domain.slip.dlvestmng.DelivManagement" id="DelivManagement_Map">
+        <id column="ORDER_NO" property="order.orderManagement.orderNo.orderNo" />
+        <id column="ORDER_VERSION" property="order.orderManagement.historyNo.historyNo" />
+        <id column="ORDER_DATE" property="order.schedule.orderDate.orderDate.dateOfymd" />
+        <id column="TITLE_NAME" property="order.orderManagement.titleName.titleName" />
+        <id column="ITEM_CD" property="order.accounting.orderItem.item.itemCd" />
+        <id column="ITEM_NAME" property="order.accounting.orderItem.item.itemName" />
+        <id column="KATASHIKI" property="order.accounting.orderItem.item.katashiki" />
+        <id column="MANUFACT_CD" property="order.accounting.orderItem.item.manufact.manufactCd" />
+        <id column="MANUFACT_NAME" property="order.accounting.orderItem.item.manufact.manufactName" />
+        <id column="ORDER_DELIV_DATE" property="order.schedule.dlvEst.dlvEst.dateOfymd" />
+        <id column="ORDER_VOL" property="order.accounting.orderAmount.orderVolume.orderVol.vol" />
+        <id column="ORDER_CANCEL_VOL" property="order.orderCancel.orderCancelVol.vol" />
+        <id column="UN_DELIV_VOL" property="order.accounting.orderAmount.orderVolume.receivedVol.vol" />
+        <id column="UNIT_NAME" property="order.accounting.orderItem.item.unit.unitName" />
+        <id column="SUP_CD" property="order.supplierFrom.supCd" />
+        <id column="SUP_ABBR_NAME" property="order.supplierFrom.supplierName.supplierAbbrName" />
+        <id column="SUBCON_IND" property="order.supplierFrom.subcon.subconInd" />
+        <id column="SUP_ZIP_CD" property="order.supplierFrom.supplierContact.ctc.zipCd.zipCd" />
+        <id column="SUP_ADDRESS1" property="order.supplierFrom.supplierContact.ctc.address1.address" />
+        <id column="SUP_ADDRESS2" property="order.supplierFrom.supplierContact.ctc.address2.address" />
+        <id column="SUP_TEL_NO" property="order.supplierFrom.supplierContact.ctc.telNo.telNo" />
+        <id column="SUP_FAX_NO" property="order.supplierFrom.supplierContact.ctc.faxNo.faxNo" />
+        <id column="BUYER_SECTION_CD" property="order.user.buyUser.buyUser.section.sectionCd" />
+        <id column="BUYER_SECTION_NAME" property="order.user.buyUser.buyUser.section.sectionName" />
+        <id column="BUYER_USER_ID" property="order.user.buyUser.buyUser.userID" />
+        <id column="BUYER_USER_NAME" property="order.user.buyUser.buyUser.userName" />
+        <id column="BUYER_USER_EXTENSION_NO" property="order.user.buyUser.buyUser.extNo.extensionNo" />
+        <id column="BUYER_USER_TEL_NO" property="order.user.buyUser.buyUser.externalNo.externalNo" />
+        <id column="REQ_SECTION_CD" property="order.user.reqUser.reqUser.section.sectionCd" />
+        <id column="REQ_SECTION_NAME" property="order.user.reqUser.reqUser.section.sectionName" />
+        <id column="REQ_USER_ID" property="order.user.reqUser.reqUser.userID" />
+        <id column="REQ_USER_NAME" property="order.user.reqUser.reqUser.userName" />
+        <id column="REQ_USER_EXTENSION_NO" property="order.user.reqUser.reqUser.extNo.extensionNo" />
+        <id column="REQ_USER_TEL_NO" property="order.user.reqUser.reqUser.externalNo.externalNo" />
+        <id column="FOR_SUPPRIER_COMMENT" property="order.orderComment.forSupplierComment.forSupplierComment.comment" />
+        <id column="SUBJECT_CD" property="order.accounting.subject.subjectCd" />
+        <id column="SUBJECT_NAME" property="order.accounting.subject.subjectName" />
+        <id column="DELIV_PLACE_NAME" property="order.complement.delivPlace.delivPlaceName" />
+        <id column="EXCLUSIVE_SLIP_NO" property="order.orderIdentify.exclusiveSlipId.slipNo"/>
+        <id column="EXCLUSIVE_LAST_UPD_DATE" property="order.orderIdentify.exclusiveSlipId.lastUpdDate"/>
+    </resultMap>
+
+    <select id="checkDlvEstMngInfo" resultType="String" >
+      SELECT MAX(T_DLV_EST_MNG.DELIV_VERSION)
+        FROM T_DLV_EST_MNG
+       WHERE T_DLV_EST_MNG.ORDER_NO = #{orderNo}
+         AND T_DLV_EST_MNG.INQ_RESP_IND = #{inqRespInd}
+         AND T_DLV_EST_MNG.DELETE_FLG = '0'
+         AND T_DLV_EST_MNG.ORDER_VERSION = (
+                    SELECT      MAX(ORDER_VERSION) as MAX_VERSION
+                    FROM        T_ORDER
+                    WHERE       T_ORDER.ORDER_NO = #{orderNo}
+                    AND         T_ORDER.DELETE_FLG = '0'
+                    AND         T_ORDER.ORDER_STATUS = '05'
+                )
+    </select>
+
+    <select id="searchRespLimit" parameterType="String" resultType="String">
+      SELECT T_DLV_EST_MNG.RESP_LIMIT_DATE
+        FROM T_DLV_EST_MNG
+       WHERE T_DLV_EST_MNG.ORDER_NO = #{orderNo}
+         AND T_DLV_EST_MNG.DELETE_FLG = '0'
+         AND T_DLV_EST_MNG.DELIV_VERSION =
+            (SELECT MAX(T_DLV_EST_MNG.DELIV_VERSION)
+               FROM T_DLV_EST_MNG
+              WHERE T_DLV_EST_MNG.ORDER_NO = #{orderNo}
+                AND T_DLV_EST_MNG.INQ_RESP_IND = '1'
+                AND T_DLV_EST_MNG.DELETE_FLG = '0'
+                AND T_DLV_EST_MNG.ORDER_VERSION = (
+                    SELECT      MAX(ORDER_VERSION) as MAX_VERSION
+                    FROM        T_ORDER
+                    WHERE       T_ORDER.ORDER_NO = #{orderNo}
+                    AND         T_ORDER.DELETE_FLG = '0'
+                    AND         T_ORDER.ORDER_STATUS = '05'
+                )
+            )
+         AND T_DLV_EST_MNG.INQ_RESP_IND = '1'
+    </select>
+
+    <select id="searchDlvEstMngInfo" resultType="hashmap">
+      SELECT T_DLV_EST_DTL.DELIV_LINE_NO
+           , T_DLV_EST_MNG.INQ_RESP_COMMENT
+           , T_DLV_EST_DTL.EST_DELIV_VOL
+           , T_ORDER.UNIT_NAME
+           , T_DLV_EST_DTL.EST_DELIV_DATE
+        FROM T_ORDER
+       INNER JOIN T_DLV_EST_MNG
+          ON T_ORDER.ORDER_NO = T_DLV_EST_MNG.ORDER_NO
+         AND T_ORDER.ORDER_VERSION = T_DLV_EST_MNG.ORDER_VERSION
+         AND T_DLV_EST_MNG.DELETE_FLG = '0'
+         AND T_DLV_EST_MNG.DELIV_VERSION = #{version}
+         AND T_DLV_EST_MNG.INQ_RESP_IND = #{inqRespInd}
+        LEFT OUTER JOIN T_DLV_EST_DTL
+          ON T_DLV_EST_MNG.DELIV_MNG_SEQ = T_DLV_EST_DTL.DELIV_MNG_SEQ
+         AND T_DLV_EST_DTL.DELETE_FLG = '0'
+       WHERE T_ORDER.ORDER_SEQ = #{orderSeq}
+    ORDER BY T_DLV_EST_DTL.DELIV_LINE_NO
+    </select>
+
+    <resultMap type="fw.domain.slip.dlvestmng.RespItemInformation" id="DLV_EST_DTL_Map">
+        <id column="EST_DELIV_DATE" property="respDlvEst.respDlvEst.dateOfymd" />
+        <id column="EST_DELIV_VOL" property="respVol.respVol.vol" />
+    </resultMap>
+
+    <select id="searchOrderNoCnt" parameterType="string" resultType="int">
+      SELECT COUNT(1)
+        FROM T_DLV_EST_MNG
+       WHERE T_DLV_EST_MNG.ORDER_NO = #{orderNo}
+         AND T_DLV_EST_MNG.DELETE_FLG = '0'
+    </select>
+
+    <select id="searchOrderVolDate" parameterType="string" resultType="hashmap">
+      SELECT T_ORDER.ORDER_VOL
+           , T_ORDER.ORDER_DELIV_DATE
+        FROM T_ORDER
+       WHERE T_ORDER.ORDER_NO = #{orderNo}
+         AND T_ORDER.CORRECT_CD != '3'
+         AND T_ORDER.NEW_APP_FLG = '1'
+         AND T_ORDER.DELETE_FLG = '0'
+    </select>
+
+    <insert id="insertDlvEstDtl">
+      INSERT INTO T_DLV_EST_DTL (
+        DELIV_MNG_SEQ
+      , DELIV_LINE_NO
+      , EST_DELIV_DATE
+      , EST_DELIV_VOL
+      , CONFIRM_MARK
+      , DELETE_FLG
+      , AUTO_DELETE_FLG
+      , AUTO_DELETE_DATE
+      , LAST_UPD_DATE
+      , LAST_UPD_COMPANY_CD
+      , LAST_UPD_SECTION_CD
+      , LAST_UPD_USER_ID
+      , REG_DATE
+      , REG_COMPANY_CD
+      , REG_SECTION_CD
+      , REG_USER_ID
+      ) VALUES (
+        #{delivMngSeq}
+      , #{lineNo}
+      , #{delivDate}
+      , #{delivVol}
+      , #{confirmMark}
+      , '0'
+      , '0'
+      , NULL
+      , '${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}'
+      , '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}'
+      , '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}'
+      , '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}'
+      , '${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}'
+      , '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}'
+      , '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}'
+      , '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}'
+      )
+    </insert>
+
+    <select id="searchConfirmMarkCnt" parameterType="string" resultType="int">
+      SELECT COUNT(1) AS CNT_MARK
+        FROM T_DLV_EST_DTL
+       WHERE T_DLV_EST_DTL.DELIV_MNG_SEQ = #{delivMngSeq}
+         AND T_DLV_EST_DTL.CONFIRM_MARK != '1'
+         AND T_DLV_EST_DTL.DELETE_FLG = '0'
+    </select>
+
+    <select id="searchMaxDelivVersion" parameterType="string" resultType="string">
+      SELECT MAX(T_DLV_EST_MNG.DELIV_VERSION)
+        FROM T_DLV_EST_MNG
+       WHERE T_DLV_EST_MNG.ORDER_NO = #{orderNo}
+         AND T_DLV_EST_MNG.DELETE_FLG = '0'
+    </select>
+
+    <insert id="insertDlvEstMng">
+      INSERT INTO T_DLV_EST_MNG (
+        DELIV_MNG_SEQ
+      , ORDER_NO
+      , ORDER_VERSION
+      , DELIV_VERSION
+      , INQ_RESP_IND
+      , INQ_RESP_DATE
+      , RESP_LIMIT_DATE
+      , TOTAL_DELIV_VOL
+      , UN_DELIV_VOL
+      , INQ_RESP_COMMENT
+      , RESP_CONFIRM_FLG
+      , SEND_IND
+      , RECEIPT_NUMBER
+      , FAX_SEND_IND
+      , FAX_RECEIPT_NUMBER
+      , PRINT_IND
+      , CONFIRM_MARK
+      , DELETE_FLG
+      , AUTO_DELETE_FLG
+      , AUTO_DELETE_DATE
+      , LAST_UPD_DATE
+      , LAST_UPD_COMPANY_CD
+      , LAST_UPD_SECTION_CD
+      , LAST_UPD_USER_ID
+      , REG_DATE
+      , REG_COMPANY_CD
+      , REG_SECTION_CD
+      , REG_USER_ID
+      ) VALUES (
+        #{delivMngSeq}
+      , #{management.order.orderManagement.orderNo.orderNo}
+      , #{management.order.orderManagement.historyNo.historyNo}
+      , #{delivVersion}
+      , '2'
+      , '${@fw.common.util.AppUtil@getSysDate()}'
+      , null
+      , #{totalDelivVol}
+      , #{unDelivVol}
+      , #{management.respInformation.respBackup.respBackup.comment}
+      , '0'
+      , '9'
+      , NULL
+      , '9'
+      , NULL
+      , '9'
+      , #{confirmMark}
+      , '0'
+      , '0'
+      , NULL
+      , '${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}'
+      , '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}'
+      , '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}'
+      , '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}'
+      , '${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}'
+      , '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}'
+      , '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}'
+      , '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}'
+      )
+    </insert>
+
+    <resultMap type="fw.domain.slip.dlvestmng.DelivRespItem" id="DelivRespInqItem_Map">
+        <id column="EST_DELIV_DATE" property="respDelivDate.dateOfymd"/>
+        <id column="EST_DELIV_VOL" property="respVol.vol"/>
+    </resultMap>
+
+    <select id="searchInqRespInd" resultType="String" >
+      SELECT T.DELIV_MNG_SEQ
+        FROM T_DLV_EST_MNG T
+       WHERE T.ORDER_NO = #{orderNo}
+         AND T.DELIV_VERSION =
+            (SELECT MAX(T1.DELIV_VERSION)
+               FROM T_DLV_EST_MNG T1
+              WHERE T1.ORDER_NO = #{orderNo}
+                AND T1.INQ_RESP_IND = '1'
+                AND T1.ORDER_VERSION = (
+                    SELECT      MAX(ORDER_VERSION) as MAX_VERSION
+                    FROM        T_ORDER
+                    WHERE       T_ORDER.ORDER_NO = #{orderNo}
+                    AND         T_ORDER.DELETE_FLG = '0'
+                    AND         T_ORDER.ORDER_STATUS = '05'
+                )
+           GROUP BY T1.ORDER_NO)
+    </select>
+
+    <select id="searchDlvEstInqInfo" resultMap="DelivRespInqItem_Map">
+      SELECT EST_DELIV_DATE
+           , EST_DELIV_VOL
+        FROM T_DLV_EST_DTL
+       WHERE DELIV_MNG_SEQ = #{delivMngSeq}
+    ORDER BY DELIV_LINE_NO
+    </select>
+
+    <resultMap type="fw.domain.slip.dlvestmng.AppItemInformation" id="AppItemInformation_Map">
+        <id column="APPDLVDATE" property="appDelivDate.appDelivDate.dlvEst.dateOfymd"></id>
+    </resultMap>
+
+    <select id="getConfirmInfo" resultMap="AppItemInformation_Map">
+      SELECT T_DLV_EST_MNG.RESP_LIMIT_DATE AS "respLimitDate"
+           , T_DLV_EST_MNG.INQ_RESP_DATE AS "delivAppDate"
+           , T_DLV_EST_MNG.INQ_RESP_COMMENT AS "appRemark"
+           , T_DLV_EST_DTL.EST_DELIV_DATE AS "APPDLVDATE"
+           , T_DLV_EST_DTL.EST_DELIV_VOL AS "appVol.appVol.vol"
+        FROM T_DLV_EST_MNG
+        LEFT OUTER JOIN T_DLV_EST_DTL
+          ON T_DLV_EST_MNG.DELIV_MNG_SEQ = T_DLV_EST_DTL.DELIV_MNG_SEQ
+       WHERE T_DLV_EST_MNG.ORDER_NO = #{orderNo}
+         AND T_DLV_EST_MNG.DELIV_VERSION =
+            (SELECT COALESCE(MAX(DELIV_VERSION), 0)
+               FROM T_DLV_EST_MNG T_DLV_EST_MNG_A
+              WHERE T_DLV_EST_MNG_A.ORDER_NO = #{orderNo}
+                AND T_DLV_EST_MNG_A.INQ_RESP_IND = '1'
+                AND T_DLV_EST_MNG_A.DELETE_FLG = '0'
+                AND T_DLV_EST_MNG.ORDER_VERSION = (
+                    SELECT      MAX(ORDER_VERSION) as MAX_VERSION
+                    FROM        T_ORDER
+                    WHERE       T_ORDER.ORDER_NO = #{orderNo}
+                    AND         T_ORDER.DELETE_FLG = '0'
+                    AND         T_ORDER.ORDER_STATUS = '05'
+                )
+            )
+         AND T_DLV_EST_MNG.INQ_RESP_IND = '1'
+         AND T_DLV_EST_MNG.DELETE_FLG = '0'
+    ORDER BY T_DLV_EST_DTL.DELIV_MNG_SEQ
+           , T_DLV_EST_DTL.DELIV_LINE_NO
+    </select>
+
+    <select id="getPreDelivRespItem" resultMap="DelivManagementForDetail_Map">
+      SELECT T_DLV_EST_MNG.INQ_RESP_DATE AS "RESP$INQ_RESP_DATE"
+           , T_DLV_EST_MNG.INQ_RESP_COMMENT AS "RESP$INQ_RESP_COMMENT"
+           , T_DLV_EST_MNG.CONFIRM_MARK AS "appMark.appMark"
+        FROM T_DLV_EST_MNG
+       WHERE T_DLV_EST_MNG.DELETE_FLG = '0'
+         AND T_DLV_EST_MNG.DELIV_MNG_SEQ = #{delivMngSeq}
+    </select>
+
+</mapper>

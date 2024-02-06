@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="ps.dataaccess.src.manufactpopup.ManufactPopupMapper">
+
+    <!-- SRC-00115-00 include化共通-->
+    <sql id="listKeyIdentityWhereCondition">
+        AND '${@fw.common.util.AppUtil@getSysDate()}' BETWEEN M_MANUFACT.VALID_START_DATE AND M_MANUFACT.VALID_END_DATE
+        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(manufactCd)">
+            AND M_MANUFACT.MANUFACT_CD ${@fw.common.util.SearchModeUtil@getSearchSQL("fw.domain.mst.material.manufact.ManufactPopupSearchCondition","manufactCd")}
+        </if>
+        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(manufactName)">
+            AND M_MANUFACT_LANG.MANUFACT_NAME ${@fw.common.util.SearchModeUtil@getSearchSQL("fw.domain.mst.material.manufact.ManufactPopupSearchCondition","manufactName")}
+        </if>
+        <if test="@fw.domain.mst.searchcondition.SearchCondition@termFlgIsNotEmpty(searchCondition.termFlg) and searchCondition.termFlg==0">
+            AND M_MANUFACT.TERM_FLG = #{searchCondition.termFlg, jdbcType=VARCHAR}
+        </if>
+    </sql>
+
+    <select id="listKeyIdentity" parameterType ="fw.domain.mst.material.manufact.ManufactPopupSearchCondition" resultType="fw.domain.mst.material.manufact.ManufactIdentify">
+        SELECT 
+            M_MANUFACT.MANUFACT_CD AS "manufactCd",
+            M_MANUFACT_LANG.MANUFACT_NAME AS "manufactName"
+        FROM M_MANUFACT
+        LEFT JOIN M_MANUFACT_LANG       
+            ON M_MANUFACT.MANUFACT_CD=M_MANUFACT_LANG.MANUFACT_CD
+            AND M_MANUFACT_LANG.LANGUAGE_IND='${@fw.security.SecurityUtil@getCompanyUseLanguageIndByEscapeSql()}'
+        <where>
+            <include refid="listKeyIdentityWhereCondition"/>
+        </where>
+        ORDER BY ${searchCondition.columnOrder.columnOrder()}
+    </select>
+
+    <select id="listPageItem" parameterType ="fw.domain.mst.material.manufact.ManufactPopupSearchCondition" 
+            resultType="fw.domain.mst.material.manufact.ManufactPopupItem">
+         SELECT 
+            M_MANUFACT.MANUFACT_CD AS "manufactIdentify.manufactCd",
+            M_MANUFACT_LANG.MANUFACT_NAME AS "manufactName"
+        FROM M_MANUFACT
+        LEFT JOIN M_MANUFACT_LANG       
+            ON M_MANUFACT.MANUFACT_CD=M_MANUFACT_LANG.MANUFACT_CD
+            AND M_MANUFACT_LANG.LANGUAGE_IND='${@fw.security.SecurityUtil@getCompanyUseLanguageIndByEscapeSql()}'
+        WHERE
+            (M_MANUFACT.MANUFACT_CD) in
+                  <foreach collection="searchCondition.page.keyDomainEntityList" item="keyList"  open="(" separator="," close=")">  
+                 (#{keyList.manufactCd}) 
+                  </foreach>
+            <include refid="listKeyIdentityWhereCondition"/>
+        ORDER BY ${searchCondition.columnOrder.columnOrder()}
+    </select>
+
+    <select id="lostFocusSearch" parameterType ="fw.domain.mst.searchcondition.SearchCondition" 
+            resultType="String">
+        SELECT 
+            M_MANUFACT_LANG.MANUFACT_NAME
+        FROM M_MANUFACT
+        LEFT JOIN M_MANUFACT_LANG
+            ON M_MANUFACT.MANUFACT_CD=M_MANUFACT_LANG.MANUFACT_CD
+            AND M_MANUFACT_LANG.LANGUAGE_IND = '${@fw.security.SecurityUtil@getCompanyUseLanguageIndByEscapeSql()}'
+        WHERE     
+             M_MANUFACT.MANUFACT_CD = #{manufactCd, jdbcType=VARCHAR}
+             AND M_MANUFACT.TERM_FLG = #{searchCondition.termFlg, jdbcType=VARCHAR}
+    </select>
+</mapper>

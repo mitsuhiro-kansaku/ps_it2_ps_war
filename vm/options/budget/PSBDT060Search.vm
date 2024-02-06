@@ -1,0 +1,168 @@
+<!doctype html>
+<html lang="ja">
+<head>
+#set($commonTitle = "#customSpringMessage('RINGI_BUDGET_DTL_LIST')")
+<title>$commonTitle</title><!--稟議予算明細一覧 -->
+<meta http-equiv="Content-type" content="text/html; charset=UTF-8">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Content-script-type" content="text/javascript">
+<link rel="stylesheet" href="../../include/Layout.css" type="text/css">
+<link rel="stylesheet" href="../../include/Color.css" type="text/css">
+<link rel="stylesheet" href="../../include/searchbox.css" type="text/css">
+<link rel="stylesheet" href="../../include/ime.css" type="text/css">
+<script language="javascript" type="text/javascript" src="../../include/jquery-1.7.2.min.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/common.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/date.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/check.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/searchbox.js"></script>
+<script language="javascript" type="text/javascript">
+<!--
+#set($searchViewStateID='PSBDT060Search')
+#set($listViewStateID='PSBDT060')
+var pinName="PSBDT060Search_Pin";
+#parse("./common/common_js.vm")
+
+function onLoad(){
+    parentButtonDisable();
+    buttonDisable();
+    var isDownload = "#jsEscape($!isDownLoadValidate)";
+    var isShowList = "#jsEscape($isShowList)";
+    getObj("BodyForm").target="_self";
+    if (isDownload == 'true') {
+        iframeChange("${flowExecutionUrl}&_eventId=download","pageid","$listViewStateID","HIDDENAREA");
+    } else if (isShowList == 'true'){
+        iframeChange("${flowExecutionUrl}&_eventId=search","pageid","$listViewStateID");
+    }else{
+        parentButtonEnable();
+    }
+    var alertMessage = "$!alertMessage";
+    if (alertMessage != ""){
+        buttonUsableForList(alertMessage);
+        alert(alertMessage);
+    }
+    var errorMsg = "$!errorMessage";
+    if (errorMsg != ""){
+       setErrorMessage("ERRORDIV", errorMsg, "DATAAREA");
+       return;
+    }
+}
+
+//固定行表示のため上書き
+function resetTableFix() {
+    var iframe = getObj("DATAAREA");
+    if (iframe != null) {
+        setTimeout(function() {
+        var bodyTableDiv = iframe.contentWindow.document.getElementById("bodyTableDiv");
+        // テーブルが固定されていない場合、何もしない
+        if (bodyTableDiv != null) {
+            var bodyHeight = document.body.clientHeight;
+            if($(".error",iframe.contentWindow.document).height() != null){
+                bodyHeight = bodyHeight - $(".error",iframe.contentWindow.document).height() - 35;
+            }
+            bodyHeight -= 64;
+            var top = bodyTableDiv.offsetTop + iframe.parentElement.offsetTop;
+
+            var colTableDiv = iframe.contentWindow.document.getElementById("colTableDiv");
+            var rowTableDiv = iframe.contentWindow.document.getElementById("rowTableDiv");
+            var scrollBarWidth = 17;
+
+            if (bodyHeight > top) {
+                var divHeight = bodyTableDiv.offsetHeight;
+                var bodyTable = bodyTableDiv.getElementsByTagName("table")[0];
+                var tableHeight = bodyTable.offsetHeight - bodyTableDiv.offsetTop;
+                var tableWidth = bodyTable.offsetWidth;
+                var pageHeight = top + divHeight;
+                if (divHeight - scrollBarWidth < tableHeight || bodyHeight < pageHeight) {
+                    bodyTableDiv.style.height = bodyHeight - top + "px";
+                    var tempHeight = bodyHeight - top;
+                    if (bodyTableDiv.offsetHeight > bodyTableDiv.clientHeight) {
+                        tempHeight -= scrollBarWidth;
+                    }
+                    if (tempHeight >= 0) {
+                        colTableDiv.style.height = tempHeight + "px";
+                    }
+                }
+            }
+            var width = document.body.offsetWidth + document.body.scrollLeft - colTableDiv.offsetWidth;
+            bodyTableDiv.style.width = width + "px";
+            if (bodyTableDiv.offsetWidth > bodyTableDiv.clientWidth) {
+                width -= scrollBarWidth;
+            }
+            rowTableDiv.style.width = width + "px";
+        }
+        }, 50);
+    } else {
+        resetTableFix2();
+    }
+}
+
+function doDownload() {
+    //メッセージは空設定
+    getObj("TR_ERROR").style.display = "none";
+    getObj("ERRORDIV").innerHTML="";
+    getObj("BodyForm").target = "HIDDENAREA";
+    buttonDisable();
+    setTimeout(buttonUsable,1000);
+    getObj("BodyForm").action = "${flowExecutionUrl}&_eventId=downloadValidate";
+    getObj("BodyForm").submit();
+}
+
+//-->
+</script>
+<style type="text/css">
+.ScreenName {
+    color:  #000099;
+    font-family:    'MS UI Gothic';
+    font-size:  12pt;
+    font-weight:    bold;
+    white-space:nowrap
+}
+</style>
+</head>
+<body topmargin="0" leftmargin="0" marginwidth="0" marginheight="0" align="center" width="100%" style="height:100%;overflow-y:hidden;" onload="onLoad();">
+<form id="BodyForm" name="Body" method="post"><!-- target="DATAAREA" -->
+    <table class="NoBorder" style="width:100%;height:100%;z-index:0;">
+        <tr>
+            <td id="SEARCH_AREA" class="SearchArea" style="height:0px;border-bottom:1px solid #999999;text-align:left;vertical-align:top;"><!-- onLoadで変更 -->
+                #parse("./common/common_title_title_only.vm")
+                <table width="100%"><tr id="SEARCH_AREA2"><td></td></tr></table>
+            </td>
+        </tr>
+        <tr id="UPLOADAREA">
+            <td class="UploadArea">
+                <table class="NoBorder" width="100%" style="margin:auto;">
+                    <tr>
+                        <td align="left">
+                            <table width="100%">
+                                <td align="left"></td>
+                                <td align="center"></td>
+                                <td align="right">
+                                    <table>
+                                        <tr>
+                                            <td id="download">
+                                                <input id="button_exec_nm" class="SmallButton" type="button" value="#customSpringMessage("ACTION_DOWNLOAD")" onclick="doDownload();">
+                                            </td>
+                                        </tr>
+                                    </table>
+                                </td>
+                            </table>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+        <tr id ="TR_ERROR" style="display:none;">
+            <td class="error" style="height:0px;">
+                <div id="ERRORDIV">$!errorMessage </div>
+            </td>
+        </tr>
+        <tr>
+            <td class="NoBorder" style="height:auto;">
+                <iframe id="DATAAREA" name="DATAAREA" framespacing="0" frameborder="0" src="../../layout/default.vm" scrolling="no" frameborder="no" style="position:static;width:100%;border:0px solid #999999;height:100%;z-index:0;"></iframe>
+            </td>
+        </tr>
+    </table>
+<iframe id="HIDDENAREA" name="HIDDENAREA" framespacing="0" frameborder="0" src="" scrolling="no" frameborder="no" style="display:none"></iframe>
+</form>
+</body>
+</html>

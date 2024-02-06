@@ -1,0 +1,113 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="ps.dataaccess.his.history.PSHIS162Mapper">
+    <sql id="listKeyIdentityWhereCondition">
+            AND T_HISTORY.SLIP_NO = #{slipNo}
+            <if test="showSupIfHistory == 1">
+                AND T_HISTORY.SWITCH_IND &lt;> #{showSupIfHistory, jdbcType=VARCHAR}
+            </if>
+            AND T_HISTORY.DELETE_FLG = '0'
+    </sql>
+    <select id="listKeyIdentity" parameterType="fw.domain.slip.businesscommon.history.detail.HistoryDetailAllSearchCondition"
+        resultType="fw.domain.slip.businesscommon.history.HistoryIdentify">
+        SELECT 
+            HISTORY_SEQ AS "historySeq"
+        FROM (
+            SELECT *
+            FROM T_HISTORY
+            <where>
+                <include refid="listKeyIdentityWhereCondition"/>
+            </where>
+            UNION ALL
+            SELECT *
+            FROM H_HISTORY T_HISTORY
+        <where>
+            <include refid="listKeyIdentityWhereCondition"/>
+        </where>
+        ) T_HISTORY
+        ORDER BY ${searchCondition.columnOrder.columnOrder()}
+    </select>
+
+    <resultMap type="fw.domain.slip.businesscommon.history.detail.HistoryDetailItem" id="HistoryDetailItem_Map">
+       <result column="HISTORY_SEQ" property="history.historyIdentify.historySeq"/>
+       <result column="DELIV_KEY_NO" property="history.slipNo.delivKeyNo"/>
+       <result column="HISTORY_DATA_IND" property="history.historyDataInd.historyDataInd"/>
+       <result column="OPE_IND" property="history.opeInd.opeInd"/>
+       <result column="FUNCTION_IND" property="history.functionInd.functionInd"/>
+       <result column="CURRENCY_CD" property="history.currency.currencyCd"/>
+       <result column="VOL" property="history.vol.vol"/>
+       <result column="UNIT_NAME"  property="history.unit.unitName" />
+       <result column="UNIT_PRICE" property="history.unitPrice.amount.amount"/>
+       <result column="AMOUNT" property="history.amount.amount"/>
+       <result column="LAST_UPD_DATE" property="history.historyIdentify.lastUpdDate"/>
+       <result column="DSP_IND" property="history.dspInd.dspInd"/>
+    </resultMap>
+    <select id="listPageItem" parameterType="fw.domain.slip.businesscommon.history.detail.HistoryDetailAllSearchCondition"
+        resultMap="HistoryDetailItem_Map">
+        SELECT
+            T_HISTORY.HISTORY_SEQ ,
+            T_HISTORY.DELIV_KEY_NO ,
+            T_HISTORY.HISTORY_DATA_IND ,
+            T_HISTORY.OPE_IND ,
+            T_HISTORY.FUNCTION_IND ,
+            T_HISTORY.CURRENCY_CD ,
+            T_HISTORY.VOL ,
+            T_HISTORY.UNIT_NAME ,
+            T_HISTORY.UNIT_PRICE ,
+            T_HISTORY.AMOUNT ,
+            T_HISTORY.LAST_UPD_DATE ,
+            T_HISTORY.LAST_UPD_COMPANY_CD AS "lastUpdCompanyCd",
+            T_HISTORY.LAST_UPD_USER_ID AS "lastUpdUserId",
+            T_HISTORY.DSP_IND
+        FROM (
+            SELECT 
+                T_HISTORY.HISTORY_SEQ ,
+                T_HISTORY.DELIV_KEY_NO ,
+                T_HISTORY.HISTORY_DATA_IND ,
+                T_HISTORY.OPE_IND ,
+                T_HISTORY.FUNCTION_IND ,
+                T_HISTORY.CURRENCY_CD ,
+                T_HISTORY.VOL ,
+                T_HISTORY.UNIT_NAME ,
+                T_HISTORY.UNIT_PRICE ,
+                T_HISTORY.AMOUNT ,
+                T_HISTORY.LAST_UPD_DATE ,
+                T_HISTORY.LAST_UPD_COMPANY_CD,
+                T_HISTORY.LAST_UPD_USER_ID,
+                T_HISTORY.DSP_IND
+            FROM T_HISTORY
+            <where> T_HISTORY.HISTORY_SEQ IN 
+                <foreach collection="searchCondition.page.keyDomainEntityList" item="keyList"  open="(" separator="," close=")">  
+                    #{keyList.historySeq}
+                </foreach>
+                <include refid="listKeyIdentityWhereCondition"/>
+            </where>
+            UNION ALL
+            SELECT 
+                T_HISTORY.HISTORY_SEQ ,
+                T_HISTORY.DELIV_KEY_NO ,
+                T_HISTORY.HISTORY_DATA_IND ,
+                T_HISTORY.OPE_IND ,
+                T_HISTORY.FUNCTION_IND ,
+                T_HISTORY.CURRENCY_CD ,
+                T_HISTORY.VOL ,
+                T_HISTORY.UNIT_NAME ,
+                T_HISTORY.UNIT_PRICE ,
+                T_HISTORY.AMOUNT ,
+                T_HISTORY.LAST_UPD_DATE ,
+                T_HISTORY.LAST_UPD_COMPANY_CD,
+                T_HISTORY.LAST_UPD_USER_ID,
+                T_HISTORY.DSP_IND
+            FROM H_HISTORY T_HISTORY
+            <where> T_HISTORY.HISTORY_SEQ IN 
+                <foreach collection="searchCondition.page.keyDomainEntityList" item="keyList"  open="(" separator="," close=")">  
+                    #{keyList.historySeq}
+                </foreach>
+                <include refid="listKeyIdentityWhereCondition"/>
+            </where>
+        ) T_HISTORY
+        ORDER BY ${searchCondition.columnOrder.columnOrder()}
+    </select>
+</mapper>

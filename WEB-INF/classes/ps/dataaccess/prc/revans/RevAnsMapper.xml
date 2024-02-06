@@ -1,0 +1,614 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="ps.dataaccess.prc.revans.RevAnsMapper">
+    
+    <!-- SRC-00115-00 include化共通-->
+    <sql id="listKeyIdentityWhereCondition">
+        AND T_PRICE_REV.PRICE_STATUS IN ('10','15','20')
+             <!-- 購買担当会社コード -->
+             AND T_PRICE_REV.PRICE_REQ_COMPANY_CD='${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}'
+             <!-- 購買担当部門コード -->
+             AND T_PRICE_REV.PRICE_REQ_SECTION_CD='${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}'
+             <!-- 価格改定依頼日 -->
+             <if test="@org.apache.commons.lang.StringUtils@isNotBlank(priceReqDateFrom.dateOfymd)">
+                 AND T_PRICE_REV.PRICE_REQ_DATE>=#{priceReqDateFrom.dateOfymd}
+             </if>
+             <if test="@org.apache.commons.lang.StringUtils@isNotBlank(priceReqDateTo.dateOfymd)">
+                 <![CDATA[AND T_PRICE_REV.PRICE_REQ_DATE<=#{priceReqDateTo.dateOfymd}]]>
+             </if>
+             <!-- 価格改定回答日 -->
+             <if test="@org.apache.commons.lang.StringUtils@isNotBlank(priceRespDateFrom.dateOfymd)">
+                 AND T_PRICE_REV.PRICE_RESP_DATE>=#{priceRespDateFrom.dateOfymd}
+             </if>
+             <if test="@org.apache.commons.lang.StringUtils@isNotBlank(priceRespDateTo.dateOfymd)">
+                 <![CDATA[AND T_PRICE_REV.PRICE_RESP_DATE<=#{priceRespDateTo.dateOfymd}]]>
+             </if>
+             <!-- 見直時期 -->
+             <if test="@org.apache.commons.lang.StringUtils@isNotBlank(nextUpdateYMFrom.dateOfym)">
+                 AND T_PRICE_REV.UPD_YM>=#{nextUpdateYMFrom.dateOfym}
+             </if>
+             <if test="@org.apache.commons.lang.StringUtils@isNotBlank(nextUpdateYMTo.dateOfym)">
+                 <![CDATA[AND T_PRICE_REV.UPD_YM<=#{nextUpdateYMTo.dateOfym}]]>
+             </if>
+             <!-- 取引先コード -->
+             <if test="@org.apache.commons.lang.StringUtils@isNotBlank(supplierCd)">
+                 AND T_PRICE_REV.SUP_CD=  #{supplierCd, jdbcType=VARCHAR}
+             </if>
+            <!--状態 -->
+             <if test="@org.apache.commons.collections.CollectionUtils@isNotEmpty(statusList)">
+                  AND T_PRICE_REV.PRICE_STATUS IN
+                 <foreach collection="statusList" item="priceStatus" open="(" separator="," close=")">
+                     <if test="@org.apache.commons.lang.StringUtils@isNotBlank(priceStatus)">
+                          #{priceStatus, jdbcType=VARCHAR}
+                     </if>
+                 </foreach>
+             </if>
+             AND T_PRICE_REV.DELETE_FLG='0'
+    </sql> 
+    <!--回答価格改定表のキーを取得する-->
+    <select id="listKeyIdentity" parameterType="fw.domain.slip.price.revision.resp.RespPriceRevDownSearchCondition"
+            resultType="fw.domain.slip.price.revision.resp.RespPriceRevIdentify">
+        SELECT 
+            PRICE_REV_SEQ AS "priceRevSeq",
+            LAST_UPD_DATE AS "lastUpdDate"
+        FROM T_PRICE_REV
+        <where>
+             <include refid="listKeyIdentityWhereCondition"/>
+        </where>
+        ORDER BY ${searchCondition.columnOrder.columnOrder()}
+    </select>
+    
+     <resultMap type="fw.domain.slip.price.revision.resp.resppricerevisiondownload.RespPriceRevDownloadItem"
+        id="RespPriceRevDownloadItem_Map">
+          <id column="PRICE_REV_SEQ" property="respPriceRevIdentify.priceRevSeq"/>
+          <id column="LAST_UPD_DATE" property="respPriceRevIdentify.lastUpdDate"/>
+          <id column="UPD_YM" property="nextUpdateYM.nextUpdateYM.dateOfym"/>
+          <id column="PRICE_RESP_DATE" property="priceRespDate.priceRespDate.dateOfymd"/>
+          <id column="SEND_IND" property="sendInd"/>
+    </resultMap>
+    <select id="listPageItem" 
+        parameterType="fw.domain.mst.searchcondition.SearchCondition" 
+        resultMap="RespPriceRevDownloadItem_Map">
+        SELECT 
+            T_PRICE_REV.PRICE_REV_SEQ,
+            T_PRICE_REV.LAST_UPD_DATE,
+            T_PRICE_REV.SUP_CD AS "supplierCd",
+            T_PRICE_REV.SUP_ABBR_NAME AS "supplierName",
+            T_PRICE_REV.PRICE_STATUS AS "status",
+            T_PRICE_REV.UPD_YM,
+            T_PRICE_REV.TITLE_NAME AS "titleName",
+            T_PRICE_REV.PRICE_RESP_DATE,
+            T_PRICE_REV.PRICE_REQ_SECTION_CD AS "updateReqSectionCd",
+            T_PRICE_REV.PRICE_REQ_SECTION_NAME AS "updateReqSectionName",
+            T_PRICE_REV.PRICE_REQ_USER_ID AS "updateReqUserId",
+            T_PRICE_REV.PRICE_REQ_USER_NAME AS "updateReqUserName",
+            T_PRICE_REV.SEND_IND,
+            T_PRICE_REV_ATTACH.PRICE_REV_SEQ AS "attachFile.seqNo",
+            T_PRICE_REV_ATTACH.ATTACH_FILE_NAME AS "attachFile.fileName"
+            FROM T_PRICE_REV
+            LEFT JOIN T_PRICE_REV_ATTACH
+            ON T_PRICE_REV.PRICE_REV_SEQ=T_PRICE_REV_ATTACH.PRICE_REV_SEQ
+            AND T_PRICE_REV_ATTACH.DELETE_FLG='0'
+            <where> T_PRICE_REV.PRICE_REV_SEQ IN
+            <foreach collection="searchCondition.page.keyDomainEntityList" item="keyList"  open="(" separator="," close=")">  
+                 #{keyList.priceRevSeq, jdbcType=VARCHAR}
+           </foreach>
+           <include refid="listKeyIdentityWhereCondition"/>
+           </where>
+
+        ORDER BY ${searchCondition.columnOrder.columnOrder()}
+    </select>
+    
+     <!--価格改定を更新-->
+    <update id="update" parameterType="fw.domain.slip.price.revision.resp.RespPriceRevIdentify">
+       UPDATE T_PRICE_REV 
+            SET 
+            PRICE_STATUS='20',
+            PRICE_RESP_DATE='${@fw.common.util.AppUtil@getSysDate()}',
+            LAST_UPD_DATE ='${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}',
+            LAST_UPD_COMPANY_CD ='${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}',
+            LAST_UPD_SECTION_CD ='${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}',
+            LAST_UPD_USER_ID='${@fw.security.SecurityUtil@getUserIdByEscapeSql()}'
+         WHERE PRICE_REV_SEQ=#{priceRevSeq, jdbcType=VARCHAR}
+    </update>
+    
+    <!--回答価格改定表をアップロード時に価格回答確認ファイルが存在するを検索する-->
+    <select id="searchPriceRevAnsFile" resultMap="RespPriceRev_Map">
+        SELECT
+            T_PRICE_REV.PRICE_STATUS,
+            T_PRICE_REV.PRICE_REV_SEQ,
+            T_PRICE_REV.PRICE_REQ_COMPANY_CD,
+            T_PRICE_REV.PRICE_REQ_COMPANY_NAME,
+            T_PRICE_REV.PRICE_REQ_SECTION_PLACE_CD,
+            T_PRICE_REV.PRICE_REQ_SECTION_PLACE_NAME,
+            T_PRICE_REV.PRICE_REQ_SECTION_CD,
+            T_PRICE_REV.PRICE_REQ_SECTION_NAME,
+            T_PRICE_REV.PRICE_REQ_USER_ID,
+            T_PRICE_REV.PRICE_REQ_USER_NAME,
+            T_PRICE_REV.PRICE_REQ_USER_EXTENSION_NO,
+            T_PRICE_REV.PRICE_REQ_USER_TEL_NO,
+            T_PRICE_REV.UPD_YM,
+            T_PRICE_REV.PRICE_CREATE_DATE,
+            T_PRICE_REV.PRICE_REQ_DATE,
+            T_PRICE_REV.PRICE_REQ_ITME_VOL,
+            T_PRICE_REV.PRICE_RESP_DATE,
+            T_PRICE_REV.FROM_SUP_COMMENT,
+            T_PRICE_REV.PRICE_REV_DATE,
+            T_PRICE_REV.PRICE_REV_ITME_VOL,
+            T_PRICE_REV.APP_ROUTE_NO,
+            T_PRICE_REV.APP_ROUTE_NAME,
+            T_PRICE_REV_ATTACH.PRICE_FILE_NAME,
+            T_PRICE_REV_ATTACH.PRICE_FILE,
+            T_PRICE_REV_ATTACH.PRICE_FILE_SIZE,
+            T_PRICE_REV_ATTACH.RESPONSE_FILE_NAME,
+            T_PRICE_REV_ATTACH.RESPONSE_FILE,
+            T_PRICE_REV_ATTACH.RESPONSE_FILE_SIZE,
+            T_PRICE_REV_ATTACH.RESPONSE_CHECK_FILE_NAME,
+            T_PRICE_REV_ATTACH.RESPONSE_CHECK_FILE,
+            T_PRICE_REV_ATTACH.RESPONSE_CHECK_FILE_SIZE,
+            T_PRICE_REV_ATTACH.ATTACH_FILE_NAME,
+            T_PRICE_REV_ATTACH.ATTACH_FILE,
+            T_PRICE_REV_ATTACH.ATTACH_FILE_SIZE
+       FROM T_PRICE_REV
+           LEFT JOIN T_PRICE_REV_ATTACH ON
+           T_PRICE_REV.PRICE_REV_SEQ = T_PRICE_REV_ATTACH.PRICE_REV_SEQ
+           AND T_PRICE_REV_ATTACH.DELETE_FLG = '0'
+       WHERE
+           T_PRICE_REV.PRICE_REQ_COMPANY_CD = '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}'
+           AND T_PRICE_REV.PRICE_REQ_SECTION_CD = '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}'
+           AND T_PRICE_REV.SUP_CD = #{supCd}
+           AND T_PRICE_REV.PRICE_STATUS != '30'
+           AND T_PRICE_REV.DELETE_FLG = '0'
+       ORDER BY T_PRICE_REV.PRICE_REV_SEQ
+    </select>
+    <resultMap type="fw.domain.slip.price.revision.resp.RespPriceRev" id="RespPriceRev_Map">
+        <id column="PRICE_STATUS" property="priceRevStatus.priceRevStatus"/>
+        <id column="PRICE_REV_SEQ" property="respPriceRevIdentify.priceRevSeq"/>
+        <id column="PRICE_REQ_COMPANY_CD" property="buyUser.buyUser.section.company.companyCd"/>
+        <id column="PRICE_REQ_COMPANY_NAME" property="buyUser.buyUser.section.company.companyName"/>
+        <id column="PRICE_REQ_SECTION_PLACE_CD" property="buyUser.buyUser.section.sectionPlace.sectionPlaceCd"/>
+        <id column="PRICE_REQ_SECTION_PLACE_NAME" property="buyUser.buyUser.section.sectionPlace.sectionPlaceName"/>
+        <id column="PRICE_REQ_SECTION_CD" property="buyUser.buyUser.section.sectionCd"/>
+        <id column="PRICE_REQ_SECTION_NAME" property="buyUser.buyUser.section.sectionName"/>
+        <id column="PRICE_REQ_USER_ID" property="buyUser.buyUser.userID"/>
+        <id column="PRICE_REQ_USER_NAME" property="buyUser.buyUser.userName"/>
+        <id column="PRICE_REQ_USER_EXTENSION_NO" property="buyUser.buyUser.extNo.extensionNo"/>
+        <id column="PRICE_REQ_USER_TEL_NO" property="buyUser.buyUser.externalNo.externalNo"/>
+        <id column="UPD_YM" property="nextUpdateYM.nextUpdateYM.dateOfym"/>
+        <id column="PRICE_CREATE_DATE" property="priceCreateDate.priceCreateDate.dateOfymd"/>
+        <id column="PRICE_REQ_DATE" property="priceReqDate.priceReqDate.dateOfymd"/>
+        <id column="PRICE_REQ_ITME_VOL" property="priceReqItemVol.priceReqItemVol"/>
+        <id column="PRICE_RESP_DATE" property="respSupplyInfo.priceRespDate.priceRespDate.dateOfymd"/>
+        <id column="FROM_SUP_COMMENT" property="respSupplyInfo.supplierComment.comment.comment"/>
+        <id column="PRICE_REV_DATE" property="respSupplyInfo.priceRevDate.priceRevDate.dateOfymd"/>
+        <!-- 強化-01045-000 2013/04/23 DEL SBO_WANGXM START
+        <id column="PRICE_REV_ITME_VOL" property="respSupplyInfo.priceRevItemVol.priceRevItemVol"/> -->
+        <!-- 強化-01045-000 2013/04/23 ADD SBO_WANGXM START -->
+        <id column="PRICE_REV_ITME_VOL" property="respSupplyInfo.priceRevItemVol.priceRevItemVol.vol"/>
+        <id column="APP_ROUTE_NO" property="reqApproute.appRouteNo"/>
+        <id column="APP_ROUTE_NAME" property="reqApproute.appRouteName"/>
+        <id column="PRICE_FILE_NAME" property="priceRevTable.attachFile.fileName"/>
+        <!-- 強化-00605-000 2013/03/25 DEL SBO_lizhe START -->
+        <!-- <id column="PRICE_FILE" property="priceRevTable.attachFile.file"/> -->
+        <!-- 強化-00605-000 2013/03/25 DEL SBO_lizhe -END- -->
+        <!-- 強化-00605-000 2013/03/25 ADD SBO_lizhe START -->
+        <id column="PRICE_FILE" property="priceRevTable.attachFile.data"/>
+        <!-- 強化-00605-000 2013/03/25 ADD SBO_lizhe -END- -->
+        <id column="PRICE_FILE_SIZE" property="priceRevTable.attachFile.size"/>
+        <id column="RESPONSE_FILE_NAME" property="respSupplyInfo.priceRevSheet.attachFile.fileName"/>
+        <!-- 強化-00605-000 2013/03/25 DEL SBO_lizhe START -->
+        <!-- <id column="RESPONSE_FILE" property="respSupplyInfo.priceRevSheet.attachFile.file"/> -->
+        <!-- 強化-00605-000 2013/03/25 DEL SBO_lizhe -END- -->
+        <!-- 強化-00605-000 2013/03/25 ADD SBO_lizhe START -->
+        <id column="RESPONSE_FILE" property="respSupplyInfo.priceRevSheet.attachFile.data"/>
+        <!-- 強化-00605-000 2013/03/25 ADD SBO_lizhe -END- -->
+        <id column="RESPONSE_FILE_SIZE" property="respSupplyInfo.priceRevSheet.attachFile.size"/>
+        <id column="RESPONSE_CHECK_FILE_NAME" property="respCheckFile.attachFile.fileName"/>
+        <!-- 強化-00605-000 2013/03/25 DEL SBO_lizhe START -->
+        <!-- <id column="RESPONSE_CHECK_FILE" property="respCheckFile.attachFile.file"/> -->
+        <!-- 強化-00605-000 2013/03/25 DEL SBO_lizhe -END- -->
+        <!-- 強化-00605-000 2013/03/25 ADD SBO_lizhe START -->
+        <id column="RESPONSE_CHECK_FILE" property="respCheckFile.attachFile.data"/>
+        <!-- 強化-00605-000 2013/03/25 ADD SBO_lizhe -END- -->
+        <id column="RESPONSE_CHECK_FILE_SIZE" property="respCheckFile.attachFile.size"/>
+        <id column="ATTACH_FILE_NAME" property="respSupplyInfo.attachFile.fileName"/>
+        <!-- 強化-00605-000 2013/03/25 DEL SBO_lizhe START -->
+        <!-- <id column="ATTACH_FILE" property="respSupplyInfo.attachFile.file"/> -->
+        <!-- 強化-00605-000 2013/03/25 DEL SBO_lizhe -END- -->
+        <!-- 強化-00605-000 2013/03/25 ADD SBO_lizhe START -->
+        <id column="ATTACH_FILE" property="respSupplyInfo.attachFile.data"/>
+        <!-- 強化-00605-000 2013/03/25 ADD SBO_lizhe -END- -->
+        <id column="ATTACH_FILE_SIZE" property="respSupplyInfo.attachFile.size"/>
+    </resultMap>
+    
+    <!-- 回答価格改定表アップロード時の価格改定登録 -->
+    <insert id="insertPriceRevForUpload">
+        INSERT INTO T_PRICE_REV (
+            PRICE_REV_SEQ,
+            PRICE_STATUS,
+            PRICE_REQ_COMPANY_CD,
+            PRICE_REQ_COMPANY_NAME,
+            PRICE_REQ_SECTION_PLACE_CD,
+            PRICE_REQ_SECTION_PLACE_NAME,
+            PRICE_REQ_SECTION_CD,
+            PRICE_REQ_SECTION_NAME,
+            PRICE_REQ_USER_ID,
+            PRICE_REQ_USER_NAME,
+            PRICE_REQ_USER_EXTENSION_NO,
+            PRICE_REQ_USER_TEL_NO,
+            UPD_YM,
+            PRICE_CREATE_DATE,
+            PRICE_REQ_DATE,
+            PRICE_REQ_ITME_VOL,
+            PRICE_RESP_DATE,
+            FROM_SUP_COMMENT,
+            PRICE_REV_DATE,
+            PRICE_REV_ITME_VOL,
+            SUP_COMPANY_CD,
+            SUP_CD,
+            SUP_NAME,
+            SUP_ABBR_NAME,
+            TITLE_NAME,
+            APP_ROUTE_NO,
+            APP_ROUTE_NAME,
+            RES_APP_ROUTE_NO,
+            RES_APP_ROUTE_NAME,
+            SEND_IND,
+            RECEIPT_NUMBER,
+            DELETE_FLG,
+            LAST_UPD_DATE,
+            LAST_UPD_COMPANY_CD,
+            LAST_UPD_SECTION_CD,
+            LAST_UPD_USER_ID,
+            REG_DATE,
+            REG_COMPANY_CD,
+            REG_SECTION_CD,
+            REG_USER_ID
+        ) VALUES (
+            #{respPriceRev.respPriceRevIdentify.priceRevSeq}, 
+            '21',
+            #{respPriceRev.buyUser.buyUser.section.company.companyCd}, 
+            #{respPriceRev.buyUser.buyUser.section.company.companyName},
+            #{respPriceRev.buyUser.buyUser.section.sectionPlace.sectionPlaceCd},
+            #{respPriceRev.buyUser.buyUser.section.sectionPlace.sectionPlaceName},
+            #{respPriceRev.buyUser.buyUser.section.sectionCd},
+            #{respPriceRev.buyUser.buyUser.section.sectionName},
+            #{respPriceRev.buyUser.buyUser.userID},
+            #{respPriceRev.buyUser.buyUser.userName},
+            #{respPriceRev.buyUser.buyUser.extNo.extensionNo},
+            #{respPriceRev.buyUser.buyUser.externalNo.externalNo},
+            #{respPriceRev.nextUpdateYM.nextUpdateYM.dateOfym},
+            #{respPriceRev.priceCreateDate.priceCreateDate.dateOfymd},
+            #{respPriceRev.priceReqDate.priceReqDate.dateOfymd},
+            #{respPriceRev.priceReqItemVol.priceReqItemVol},
+            #{respPriceRev.respSupplyInfo.priceRespDate.priceRespDate.dateOfymd},
+            #{respPriceRev.respSupplyInfo.supplierComment.comment.comment},
+            <!-- 2013.02.26 DEL DAIKO_WANG 
+            #{respPriceRev.respSupplyInfo.priceRevDate.priceRevDate.dateOfymd},
+            -->
+            <!-- 2013.02.26 ADD DAIKO_WANG -->
+            '${@fw.common.util.AppUtil@getSysDate()}',
+            <!-- 2013.02.26 DEL DAIKO_WANG 
+            #{respPriceRev.respSupplyInfo.priceRevItemVol.priceRevItemVol},
+            -->
+            <!-- 2013.02.26 ADD DAIKO_WANG -->
+            #{respPriceRev.respSupplyInfo.priceRevItemVol.priceRevItemVol.vol},
+            '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}',
+            #{respPriceRev.supplierFrom.supCd},
+            #{respPriceRev.supplierFrom.supplierName.supplierName},
+            #{respPriceRev.supplierFrom.supplierName.supplierAbbrName},
+            #{respPriceRev.titleName.titleName},
+            #{respPriceRev.reqApproute.appRouteNo},
+            #{respPriceRev.reqApproute.appRouteName},
+            #{respPriceRev.respApproute.appRouteNo},
+            #{respPriceRev.respApproute.appRouteName},
+            '',
+            '',
+            '0',
+            '${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}',
+            '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}',
+            '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}',
+            '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}',
+            '${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}',
+            '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}',
+            '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}',
+            '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}'
+        )
+    </insert>
+    
+    <!-- 回答価格改定表アップロード時の価格改定添付登録 -->
+    <insert id="insertPriceRevAttachForUpload">
+        INSERT INTO T_PRICE_REV_ATTACH (
+            PRICE_REV_SEQ,
+            PRICE_FILE_NAME,
+            PRICE_FILE,
+            PRICE_FILE_SIZE,
+            RESPONSE_FILE_NAME,
+            RESPONSE_FILE,
+            RESPONSE_FILE_SIZE,
+            RESPONSE_CHECK_FILE_NAME,
+            RESPONSE_CHECK_FILE,
+            RESPONSE_CHECK_FILE_SIZE,
+            ATTACH_FILE_NAME,
+            ATTACH_FILE,
+            ATTACH_FILE_SIZE,
+            DELETE_FLG,
+            LAST_UPD_DATE,
+            LAST_UPD_COMPANY_CD,
+            LAST_UPD_SECTION_CD,
+            LAST_UPD_USER_ID,
+            REG_DATE,
+            REG_COMPANY_CD,
+            REG_SECTION_CD,
+            REG_USER_ID
+        ) VALUES (
+            #{respPriceRev.respPriceRevIdentify.priceRevSeq},
+            #{respPriceRev.priceRevTable.attachFile.fileName},
+            #{respPriceRev.priceRevTable.attachFile.data},
+            #{respPriceRev.priceRevTable.attachFile.size},
+            #{respPriceRev.respSupplyInfo.priceRevSheet.attachFile.fileName},
+            #{respPriceRev.respSupplyInfo.priceRevSheet.attachFile.data},
+            <!-- 強化-00896-000 2013/05/08 ADD SBO_KANGJW START -->
+            <if test="@org.apache.commons.lang.StringUtils@isBlank(respPriceRev.respSupplyInfo.priceRevSheet.attachFile.fileName)">
+            '',
+            </if>
+            <if test="@org.apache.commons.lang.StringUtils@isNotBlank(respPriceRev.respSupplyInfo.priceRevSheet.attachFile.fileName)">
+            <!-- 強化-00896-000 2013/05/08 ADD SBO_KANGJW END -->
+            #{respPriceRev.respSupplyInfo.priceRevSheet.attachFile.size},
+            <!-- 強化-00896-000 2013/05/08 ADD SBO_KANGJW START -->
+            </if>
+            <!-- 強化-00896-000 2013/05/08 ADD SBO_KANGJW END -->
+            #{respPriceRev.respCheckFile.attachFile.fileName},
+            #{respPriceRev.respCheckFile.attachFile.data},
+            <!-- 強化-00896-000 2013/05/08 ADD SBO_KANGJW START -->
+            <if test="@org.apache.commons.lang.StringUtils@isBlank(respPriceRev.respCheckFile.attachFile.fileName)">
+            '',
+            </if>
+            <if test="@org.apache.commons.lang.StringUtils@isNotBlank(respPriceRev.respCheckFile.attachFile.fileName)">
+            <!-- 強化-00896-000 2013/05/08 ADD SBO_KANGJW END -->
+            #{respPriceRev.respCheckFile.attachFile.size},
+            <!-- 強化-00896-000 2013/05/08 ADD SBO_KANGJW START -->
+            </if>
+            <!-- 強化-00896-000 2013/05/08 ADD SBO_KANGJW END -->
+            #{respPriceRev.respSupplyInfo.attachFile.fileName},
+            #{respPriceRev.respSupplyInfo.attachFile.data},
+            <!-- 強化-00896-000 2013/05/08 ADD SBO_KANGJW START -->
+            <if test="@org.apache.commons.lang.StringUtils@isBlank(respPriceRev.respSupplyInfo.attachFile.fileName)">
+            '',
+            </if>
+            <if test="@org.apache.commons.lang.StringUtils@isNotBlank(respPriceRev.respSupplyInfo.attachFile.fileName)">
+            <!-- 強化-00896-000 2013/05/08 ADD SBO_KANGJW END -->
+            #{respPriceRev.respSupplyInfo.attachFile.size},
+            <!-- 強化-00896-000 2013/05/08 ADD SBO_KANGJW START -->
+            </if>
+            <!-- 強化-00896-000 2013/05/08 ADD SBO_KANGJW END -->
+            '0',
+            '${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}',
+            '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}',
+            '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}',
+            '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}',
+            '${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}',
+            '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}',
+            '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}',
+            '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}'
+        )
+    </insert>
+    
+        <!-- 回答価格改定表アップロード時の価格改定更新(変更前レコード削除) -->
+    <update id="updatePriceRevForDel">
+        UPDATE T_PRICE_REV SET 
+            DELETE_FLG='1',
+            LAST_UPD_DATE = '${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}',
+            LAST_UPD_COMPANY_CD = '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}',
+            LAST_UPD_SECTION_CD = '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}',
+            LAST_UPD_USER_ID= '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}'
+       WHERE
+            PRICE_REV_SEQ IN
+        <foreach collection="respPriceRevIdentifyList" item="respPriceRevIdentify"  open="(" separator="," close=")">  
+                    (#{respPriceRevIdentify.priceRevSeq})
+        </foreach>
+    </update>
+
+    <!-- 回答価格改定表アップロード時の価格改定更新 -->
+    <update id="updatePriceRevForUpload">
+        UPDATE T_PRICE_REV SET 
+            PRICE_STATUS = '21',
+            SUP_NAME = #{respPriceRev.supplierFrom.supplierName.supplierName},
+            SUP_ABBR_NAME = #{respPriceRev.supplierFrom.supplierName.supplierAbbrName},
+            TITLE_NAME = #{respPriceRev.titleName.titleName},
+            RES_APP_ROUTE_NO = #{respPriceRev.respApproute.appRouteNo},
+            RES_APP_ROUTE_NAME = #{respPriceRev.respApproute.appRouteName},
+            DELETE_FLG='0',
+            LAST_UPD_DATE = '${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}',
+            LAST_UPD_COMPANY_CD = '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}',
+            LAST_UPD_SECTION_CD = '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}',
+            LAST_UPD_USER_ID= '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}'
+            <!-- 2013.02.26 ADD DAIKO_WANG START -->
+            ,PRICE_REV_DATE = '${@fw.common.util.AppUtil@getSysDate()}'
+            <!-- 2013.04.23 DEL SBO_WANGXM START
+            ,PRICE_REV_ITME_VOL = #{respPriceRev.priceRevItemVol.vol} -->
+            <!-- 2013.04.23 ADD SBO_WANGXM START -->
+            ,PRICE_REV_ITME_VOL = #{respPriceRev.respSupplyInfo.priceRevItemVol.priceRevItemVol.vol} 
+            <!-- 2013.02.26 ADD DAIKO_WANG -END- -->
+       WHERE
+            PRICE_REV_SEQ IN
+        <foreach collection="respPriceRevIdentifyList" item="respPriceRevIdentify"  open="(" separator="," close=")">  
+                    (#{respPriceRevIdentify.priceRevSeq})
+        </foreach>
+    </update>
+
+    <!-- 回答価格改定表アップロード時の価格改定添付更新 -->
+    <update id="updatePriceRevAttachForUpload">
+        UPDATE T_PRICE_REV_ATTACH SET 
+            RESPONSE_CHECK_FILE_NAME = #{respPriceRev.respCheckFile.attachFile.fileName},
+            RESPONSE_CHECK_FILE = #{respPriceRev.respCheckFile.attachFile.data},
+            RESPONSE_CHECK_FILE_SIZE = #{respPriceRev.respCheckFile.attachFile.size},
+            DELETE_FLG='0',
+            LAST_UPD_DATE = '${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}',
+            LAST_UPD_COMPANY_CD = '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}',
+            LAST_UPD_SECTION_CD = '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}',
+            LAST_UPD_USER_ID = '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}'
+       WHERE
+            PRICE_REV_SEQ IN
+        <foreach collection="respPriceRevIdentifyList" item="respPriceRevIdentify"  open="(" separator="," close=")">  
+                    (#{respPriceRevIdentify.priceRevSeq})
+        </foreach>
+    </update>
+    
+    <sql id="listKeyIdentityBySearchConditionWhereCondition">
+      <!-- 購買担当会社コード -->
+        AND T_PRICE_REV.PRICE_REQ_COMPANY_CD='${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}'
+        <!-- 購買担当部門コード -->
+        AND T_PRICE_REV.PRICE_REQ_SECTION_CD='${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}'
+        <!--状態 -->
+        <choose>
+          <when test="@org.apache.commons.lang.StringUtils@isNotEmpty(status)">
+              AND T_PRICE_REV.PRICE_STATUS = #{status}
+          </when>
+          <otherwise>
+               <!-- 価格改定依頼日 -->
+               <if test="@org.apache.commons.lang.StringUtils@isNotBlank(priceReqDateFrom.dateOfymd)">
+                   AND T_PRICE_REV.PRICE_REQ_DATE>=#{priceReqDateFrom.dateOfymd}
+               </if>
+               <if test="@org.apache.commons.lang.StringUtils@isNotBlank(priceReqDateTo.dateOfymd)">
+                   <![CDATA[AND T_PRICE_REV.PRICE_REQ_DATE<=#{priceReqDateTo.dateOfymd}]]>
+               </if>
+               <!-- 価格改定回答日 -->
+               <if test="@org.apache.commons.lang.StringUtils@isNotBlank(priceRespDateFrom.dateOfymd)">
+                   AND T_PRICE_REV.PRICE_RESP_DATE>=#{priceRespDateFrom.dateOfymd}
+               </if>
+               <if test="@org.apache.commons.lang.StringUtils@isNotBlank(priceRespDateTo.dateOfymd)">
+                   <![CDATA[AND T_PRICE_REV.PRICE_RESP_DATE<=#{priceRespDateTo.dateOfymd}]]>
+               </if>
+               <!-- 見直時期 -->
+               <if test="@org.apache.commons.lang.StringUtils@isNotBlank(nextUpdYmFrom.dateOfym)">
+                   AND T_PRICE_REV.UPD_YM>=#{nextUpdYmFrom.dateOfym}
+               </if>
+               <if test="@org.apache.commons.lang.StringUtils@isNotBlank(nextUpdYmTo.dateOfym)">
+                   <![CDATA[AND T_PRICE_REV.UPD_YM<=#{nextUpdYmTo.dateOfym}]]>
+               </if>
+               <!-- 取引先コード -->
+               <if test="@org.apache.commons.lang.StringUtils@isNotBlank(supCd)">
+                   AND T_PRICE_REV.SUP_CD=#{supCd, jdbcType=VARCHAR}
+               </if>
+               <if test="@org.apache.commons.collections.CollectionUtils@isNotEmpty(statusList)">
+                   AND T_PRICE_REV.PRICE_STATUS IN
+                   <foreach collection="statusList" item="priceStatus" open="(" separator="," close=")">
+                       <if test="@org.apache.commons.lang.StringUtils@isNotBlank(priceStatus)">
+                            #{priceStatus, jdbcType=VARCHAR}
+                       </if>
+                   </foreach>
+               </if>
+               <if test="@org.apache.commons.collections.CollectionUtils@isEmpty(statusList)">
+                      AND T_PRICE_REV.PRICE_STATUS IN ('21','22','23')
+               </if>
+          </otherwise>
+        </choose>
+       AND T_PRICE_REV.DELETE_FLG='0'
+    </sql>
+    
+    <!-- 回答価格改定一覧： 検索ボタン押下時に検索条件で全てのキーリストを取得する -->
+    <select id="listKeyIdentityBySearchCondition"
+        parameterType="fw.domain.slip.price.revision.resp.RespPriceRevSearchCondition"
+        resultType="fw.domain.slip.price.revision.resp.RespPriceRevIdentify">
+        SELECT 
+            PRICE_REV_SEQ AS "priceRevSeq"
+        FROM T_PRICE_REV
+        <where>
+            <include refid="listKeyIdentityBySearchConditionWhereCondition"/>
+            <if test="@org.apache.commons.lang.StringUtils@isNotBlank(priceReqUserId)">
+                AND PRICE_REQ_USER_ID = #{priceReqUserId}
+            </if>
+        </where>
+        ORDER BY ${searchCondition.columnOrder.columnOrder()}
+    </select>
+    
+    <!-- 回答価格改定一覧：回答価格改定明細を取得する -->
+    <select id="listPageItemForRespPriceRev" resultMap="RespPriceRevItem_Map">
+        SELECT
+            T_PRICE_REV.PRICE_REV_SEQ,
+            T_PRICE_REV.LAST_UPD_DATE,
+            T_PRICE_REV.SUP_CD,
+            <!-- 2013/06/10 DEL DAIKO_TAKEDA 
+            T_PRICE_REV.SUP_NAME,
+            -->
+            <!-- 2013/06/10 ADD DAIKO_TAKEDA -->
+            T_PRICE_REV.SUP_ABBR_NAME,
+            T_PRICE_REV.PRICE_STATUS,
+            T_PRICE_REV.UPD_YM,
+            T_PRICE_REV.TITLE_NAME,
+            T_PRICE_REV.PRICE_RESP_DATE,
+            T_PRICE_REV_ATTACH.ATTACH_FILE_NAME,
+            T_PRICE_REV.PRICE_REQ_COMPANY_CD,
+            T_PRICE_REV.PRICE_REQ_SECTION_CD,
+            T_PRICE_REV.PRICE_REQ_SECTION_NAME,
+            T_PRICE_REV.PRICE_REQ_USER_ID,
+            T_PRICE_REV.PRICE_REQ_USER_NAME,
+            T_APPROVAL.BACK_APP_COMMENTS
+       FROM T_PRICE_REV
+           LEFT JOIN T_PRICE_REV_ATTACH ON
+           T_PRICE_REV.PRICE_REV_SEQ = T_PRICE_REV_ATTACH.PRICE_REV_SEQ
+           AND T_PRICE_REV_ATTACH.DELETE_FLG = '0'
+           LEFT JOIN T_APPROVAL ON
+           T_APPROVAL.APP_VOUCHER_KEY = T_PRICE_REV.PRICE_REV_SEQ
+           AND T_APPROVAL.APP_VOUCHER_IND = 'F'
+           AND APP_STATUS_IND IN 4
+           AND T_APPROVAL.DELETE_FLG = '0'
+         <where>
+                 T_PRICE_REV.PRICE_REV_SEQ IN
+        <foreach collection="searchCondition.page.keyDomainEntityList" item="keyList"  open="(" separator="," close=")">  
+                 #{keyList.priceRevSeq}
+        </foreach>
+            <include refid="listKeyIdentityBySearchConditionWhereCondition"/>
+        </where>
+        ORDER BY ${searchCondition.columnOrder.columnOrder()}
+    </select>
+    <resultMap type="fw.domain.slip.price.revision.resp.resppricerevisionlist.RespPriceRevItem"
+        id="RespPriceRevItem_Map">
+          <id column="PRICE_REV_SEQ" property="respPriceRevIdentify.priceRevSeq"/>
+          <id column="LAST_UPD_DATE" property="respPriceRevIdentify.lastUpdDate"/>
+          <id column="SUP_CD" property="supCd"/>
+          <!-- 2013/06/10 DEL DAIKO_TAKEDA 
+          <id column="SUP_NAME" property="supName"/>
+          -->
+          <!-- 2013/06/10 ADD DAIKO_TAKEDA -->
+          <id column="SUP_ABBR_NAME" property="supName"/>
+          <id column="PRICE_STATUS" property="status"/>
+          <id column="UPD_YM" property="nextUpdateYM.dateOfym"/>
+          <id column="TITLE_NAME" property="titleName"/>
+          <id column="PRICE_RESP_DATE" property="priceRespDate.dateOfymd"/>
+          <id column="ATTACH_FILE_NAME" property="attachFile.fileName"/>
+          <id column="PRICE_REQ_COMPANY_CD" property="backApp.backAppUser.section.company.companyCd"/>
+          <id column="PRICE_REQ_SECTION_CD" property="backApp.backAppUser.section.sectionCd"/>
+          <id column="PRICE_REQ_SECTION_NAME" property="backApp.backAppUser.section.sectionName"/>
+          <id column="PRICE_REQ_USER_ID" property="priceReqUserId"/>
+          <id column="PRICE_REQ_USER_NAME" property="priceReqUserName"/>
+          <id column="BACK_APP_COMMENTS" property="backApp.backAppReason.backReason.comment"/>
+    </resultMap>
+ 
+     <!-- 回答価格改定表アップロード時の価格改定更新 -->
+    <update id="updatePriceRevToStop">
+        UPDATE T_PRICE_REV SET 
+            DELETE_FLG='1',
+            LAST_UPD_DATE = '${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}',
+            LAST_UPD_COMPANY_CD = '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}',
+            LAST_UPD_SECTION_CD = '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}',
+            LAST_UPD_USER_ID= '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}'
+       WHERE
+            PRICE_REV_SEQ = #{priceRevSeq}
+    </update>
+ 
+    <!-- 回答価格改定一覧：「中止」ボタンクリック時に価格改定添付を更新 -->
+    <update id="updatePriceRevAttachToStop">
+        UPDATE T_PRICE_REV_ATTACH SET 
+            DELETE_FLG='1',
+            LAST_UPD_DATE = '${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}',
+            LAST_UPD_COMPANY_CD = '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}',
+            LAST_UPD_SECTION_CD = '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}',
+            LAST_UPD_USER_ID = '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}'
+       WHERE
+            PRICE_REV_SEQ = #{priceRevSeq}
+    </update>
+</mapper>

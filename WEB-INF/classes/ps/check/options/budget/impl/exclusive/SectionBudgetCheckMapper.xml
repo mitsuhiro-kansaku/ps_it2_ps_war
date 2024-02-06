@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="ps.check.options.budget.impl.exclusive.SectionBudgetCheckMapper">
+
+    <resultMap type="fw.domain.options.budget.sectionbudget.SectionBudgetIdentify" id="identify_Map">
+        <id column="COMPANY_CD" property="section.company.companyCd" />
+        <id column="SECTION_PLACE_CD" property="section.sectionPlace.sectionPlaceCd" />
+        <id column="SECTION_CD" property="section.sectionCd" />
+        <id column="SUBJECT_CD" property="subject.subjectCd" />
+        <id column="BUDGET_YEAR" property="budgetYear" />
+        <id column="LAST_UPD_DATE" property="lastUpdDate" />
+    </resultMap>
+
+    <select id="searchForCheck"
+    resultMap="identify_Map">
+        SELECT
+            T_SECTION_BUDGET.COMPANY_CD
+            , T_SECTION_BUDGET.SECTION_PLACE_CD
+            , T_SECTION_BUDGET.SECTION_CD
+            , T_SECTION_BUDGET.SUBJECT_CD
+            , T_SECTION_BUDGET.BUDGET_YEAR
+            , T_SECTION_BUDGET.LAST_UPD_DATE
+        FROM
+           T_SECTION_BUDGET
+        <where>
+            (
+                T_SECTION_BUDGET.COMPANY_CD
+                ,T_SECTION_BUDGET.SECTION_PLACE_CD
+                ,T_SECTION_BUDGET.SECTION_CD
+                ,T_SECTION_BUDGET.SUBJECT_CD
+                ,T_SECTION_BUDGET.BUDGET_YEAR
+                <if test="@org.apache.commons.lang.StringUtils@isNotBlank(lastUpdDate)">
+                ,T_SECTION_BUDGET.LAST_UPD_DATE
+                </if>
+            ) =
+            ((
+                #{companyCd}
+                ,#{sectionPlaceCd}
+                ,#{sectionCd}
+                <if test="@org.apache.commons.lang.StringUtils@isNotBlank(subjectCd)">
+                ,#{subjectCd}
+                </if>
+                <if test="@org.apache.commons.lang.StringUtils@isBlank(subjectCd)">
+                ,'　'
+                </if>
+                ,#{budgetYear}
+                <if test="@org.apache.commons.lang.StringUtils@isNotBlank(lastUpdDate)">
+                ,#{lastUpdDate}
+                </if>
+            ))
+        </where>
+    </select>
+
+    <select id="searchForCheckNotSubjectCd"
+    resultMap="identify_Map">
+        SELECT
+            T_SECTION_BUDGET.COMPANY_CD
+            , T_SECTION_BUDGET.SECTION_PLACE_CD
+            , T_SECTION_BUDGET.SECTION_CD
+            , T_SECTION_BUDGET.SUBJECT_CD
+            , T_SECTION_BUDGET.BUDGET_YEAR
+            , T_SECTION_BUDGET.LAST_UPD_DATE
+        FROM
+           T_SECTION_BUDGET
+        <where>
+            (
+                T_SECTION_BUDGET.COMPANY_CD
+                ,T_SECTION_BUDGET.SECTION_PLACE_CD
+                ,T_SECTION_BUDGET.SECTION_CD
+                ,T_SECTION_BUDGET.BUDGET_YEAR
+                <if test="@org.apache.commons.lang.StringUtils@isNotBlank(lastUpdDate)">
+                ,T_SECTION_BUDGET.LAST_UPD_DATE
+                </if>
+            ) =
+            ((
+                #{companyCd}
+                ,#{sectionPlaceCd}
+                ,#{sectionCd}
+                ,#{budgetYear}
+                <if test="@org.apache.commons.lang.StringUtils@isNotBlank(lastUpdDate)">
+                ,#{lastUpdDate}
+                </if>
+            ))
+        </where>
+    </select>
+
+    <select id="searchSection"
+    resultType="fw.domain.mst.organization.section.Section">
+		SELECT 
+		  SECTION_CD as "sectionCd" ,
+          COMPANY_CD as "company.companyCd", 
+          SECTION_PLACE_CD as "sectionPlace.sectionPlaceCd"
+		FROM 
+		  M_SECTION 
+		WHERE 
+          SECTION_CD = #{sectionCd}
+          AND (COMPANY_CD = #{companyCd} OR COMPANY_CD='ALL') 
+		  AND VALID_START_DATE &lt;= #{validStartDate} AND VALID_END_DATE &gt;= #{validStartDate} 
+    </select>
+</mapper>

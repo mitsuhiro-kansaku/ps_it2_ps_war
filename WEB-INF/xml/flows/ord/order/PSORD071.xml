@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<flow xmlns="http://www.springframework.org/schema/webflow"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.springframework.org/schema/webflow
+        http://www.springframework.org/schema/webflow/spring-webflow-2.0.xsd"
+    parent="base">
+
+    <var name="identify" class="fw.domain.slip.order.order.OrderIdentify" />
+    <var name="quotStatusIdentify" class="fw.domain.slip.quot.quotstatus.purreqstatuslist.reqstatuslist.QuotStatusIdentify"/>
+
+    <input name="searchCondition" />
+    <input name="isCurrentPageSearch" />
+    <input name="hasOrdered"/>
+
+    <decision-state id="isSearchByKey">
+        <if test="flowScope.isCurrentPageSearch" then="searchByKey" else="searchByCondition" />
+    </decision-state>
+
+    <action-state id="searchByCondition">
+        <evaluate expression="PSORD061_071Service.init(searchCondition)" result="flowScope.itemList"/>
+        <transition to="PSORD071"/> 
+    </action-state>
+
+    <action-state  id="searchByKey" >
+        <evaluate expression="PSORD061_071Service.page(searchCondition)" result="flowScope.itemList"/>
+        <transition to="PSORD071"/>
+    </action-state>
+
+    <view-state id="PSORD071" model="identify" view="ord/order/PSORD061_071">
+        <transition on="order" validate="false">
+            <evaluate expression="PSORD061_071Service.order(searchCondition)" result="flowScope.itemList"/>
+        </transition>
+        <transition on="page" validate="false">
+            <evaluate expression="PSORD061_071Service.page(searchCondition)" result="flowScope.itemList"/> 
+        </transition>
+        <transition on="applyCancel" validate="false" to="searchByKey">
+            <evaluate expression="PSORD061_071Service.applyCancel(identify)" />
+            <set name="flashScope.isSuccess" value="true" /> 
+        </transition>
+        <transition on="delete" validate="false" to="searchByKey">
+            <evaluate expression="PSORD061_071Service.delete(identify)" /> 
+            <set name="flashScope.isSuccess" value="true" /> 
+        </transition>
+        <transition on="detailValidate" validate="true">
+            <set name="flashScope.isShowDetail" value="true"/>
+        </transition>
+        <transition on="orderModifyValidate" validate="true">
+            <set name="flashScope.isShowOrderModify" value="true"/>
+        </transition>
+        <transition on="actionCancelValidate" validate="true">
+            <set name="flashScope.isShowActionCancel" value="true"/>
+        </transition>
+        <!-- 見積状況 -->
+        <transition on="quoteInfoValidate" validate="true">
+            <set name="quotStatusIdentify.quotReqSeq" value="requestParameters.quotReqSeq" />
+            <set name="quotStatusIdentify.lastUpdDate" value="requestParameters.quotLastUpdDate" />
+            <set name="flashScope.isShowQuotInfo" value="true"/>
+        </transition>
+
+        <transition on="detail" to="PSORD090TOP" validate="false" />
+        <transition on="orderInput" to="PSORD040" validate="false" />
+        <!-- 見積状況 -->
+        <transition on="quotInfo" to="PSQOT070" validate="false" />
+        <transition on="back" to="home" validate="false" />
+    </view-state>
+
+    <!-- 注文詳細 -->
+    <subflow-state id="PSORD090TOP" subflow="ord/order/PSORD090TOP">
+        <input name="orderIdentify" value="identify" />
+    </subflow-state>
+    
+    <!-- 注文入力 -->
+    <subflow-state id="PSORD040" subflow="ord/order/PSORD040">
+        <input name="orderIdentify" value="identify" />
+        <input name="eventType" value="requestParameters.eventType" />
+        <input name="SessionKey" value="SessionKey" />
+    </subflow-state>
+    
+    <!-- 見積状況 -->
+    <subflow-state id="PSQOT070" subflow="qot/ref/PSQOT070">
+        <input name="quotStatusIdentify" value="quotStatusIdentify" />
+    </subflow-state>
+
+</flow>

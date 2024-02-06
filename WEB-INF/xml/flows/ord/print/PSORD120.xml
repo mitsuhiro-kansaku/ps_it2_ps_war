@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<flow xmlns="http://www.springframework.org/schema/webflow"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.springframework.org/schema/webflow
+        http://www.springframework.org/schema/webflow/spring-webflow-2.0.xsd"
+    parent="base">
+    
+   <var name="defaultSearchCondition" class="fw.domain.slip.order.order.orderissue.OrderIssueSearchCondition" />
+    
+     <!-- クイックリンクかどうか判定 -->
+    <decision-state id="isQuickLinkSearch">
+       <if test="requestParameters.quickLink" then="searchByQuickLinkSearch" else="searchBySearchCondition"/>
+    </decision-state>
+    
+    <!-- クイックリンクを押下する場合 -->
+    <action-state id="searchByQuickLinkSearch">
+        <evaluate expression="PSORD120Service.quickLink()"
+            result="flowScope.searchCondition" />
+        <transition on="success" to="PSORD120" >
+        <set name="flowScope.isQuickLinkSearch" value="true"/>
+        </transition>
+    </action-state>
+    
+     <!-- 検索ボタンを押下する場合 -->
+    <action-state id="searchBySearchCondition">
+        <evaluate expression="PSORD120Service.init()"
+            result="flowScope.searchCondition" />
+        <transition on="success" to="PSORD120" />
+    </action-state>
+    
+    <view-state id="PSORD120" view="ord/print/PSORD120" model="searchCondition">
+        <transition on="validate" validate="true">
+            <set name="flowScope.isCurrentPageSearch" value="false" />
+            <set name="flowScope.isShowList" value="true"></set>
+            <evaluate expression="PSORD120Service.search(searchCondition)"></evaluate>
+        </transition>
+        <!-- クイックリンク検索 -->
+        <transition on="quickLinkSearch" validate="false">
+            <set name="flowScope.isCurrentPageSearch" value="false" />
+            <set name="flowScope.isShowList" value="true"></set>
+            <set name="flowScope.isQuickLinkSearch" value="true"></set>
+        </transition>
+        <!-- 検索ボタンを押下する場合 -->
+        <transition on="search" to="PSORD121" validate="false">
+             <set name="flowScope.isQuickLinkSearch" value="false"></set>
+        </transition>
+         <!-- BACK押下する場合 -->
+        <transition on="back" to="home" validate="false"/>
+    </view-state> 
+
+    <!-- 一覧フロー -->
+     <subflow-state id="PSORD121" subflow="ord/print/PSORD121" >
+        <input name="searchCondition" value="searchCondition" />
+        <input name="isCurrentPageSearch" value="isCurrentPageSearch" />
+        <input name="isQuickLinkSearch" value="isQuickLinkSearch" />
+        <transition on="back" to="PSORD120" >
+            <set name="flowScope.isCurrentPageSearch" value="true" />
+        </transition>
+    </subflow-state> 
+</flow>

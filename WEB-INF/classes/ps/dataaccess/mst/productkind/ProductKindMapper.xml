@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="ps.dataaccess.mst.productkind.ProductKindMapper">
+
+    <!-- 強化-00180-000 2013/03/13 MODIFY SBO_SOKOU START -->
+    <select id="listItemKindItem"
+            parameterType="fw.domain.mst.material.itemkind.ItemKindSearchCondition"
+            resultType="fw.domain.mst.material.itemkind.ItemKindItem">
+        SELECT M_ITEM_KIND.COMPANY_CD as "itemKindIdentify.companyCd",
+               M_ITEM_KIND.ITEM_CLASS_L as "itemKindIdentify.itemClassL",
+               M_ITEM_KIND.ITEM_CLASS_M as "itemKindIdentify.itemClassM",
+               M_ITEM_KIND.ITEM_CLASS_S as "itemKindIdentify.itemClassS",
+               M_ITEM_KIND.ITEM_CLASS_IND as "itemClassInd",
+               CASE WHEN M_ITEM_KIND_LANG.ITEM_CLASS_NAME IS NOT NULL
+                    THEN M_ITEM_KIND_LANG.ITEM_CLASS_NAME
+                    ELSE M_ITEM_KIND_LANG_SYSTEM.ITEM_CLASS_NAME
+                     END
+                      AS "itemClassName"
+          FROM M_ITEM_KIND
+          LEFT JOIN M_COMPANY 
+                 ON M_ITEM_KIND.COMPANY_CD = M_COMPANY.COMPANY_CD
+          LEFT JOIN M_ITEM_KIND_LANG M_ITEM_KIND_LANG
+                 ON M_ITEM_KIND.COMPANY_CD = M_ITEM_KIND_LANG.COMPANY_CD
+                AND M_ITEM_KIND.ITEM_CLASS_L = M_ITEM_KIND_LANG.ITEM_CLASS_L
+                AND M_ITEM_KIND.ITEM_CLASS_M = M_ITEM_KIND_LANG.ITEM_CLASS_M
+                AND M_ITEM_KIND.ITEM_CLASS_S = M_ITEM_KIND_LANG.ITEM_CLASS_S
+                AND M_COMPANY.COMPANY_USE_LANGUAGE_IND = M_ITEM_KIND_LANG.LANGUAGE_IND
+          LEFT JOIN M_ITEM_KIND_LANG M_ITEM_KIND_LANG_SYSTEM
+                 ON M_ITEM_KIND.COMPANY_CD = M_ITEM_KIND_LANG.COMPANY_CD
+                AND M_ITEM_KIND.ITEM_CLASS_L = M_ITEM_KIND_LANG.ITEM_CLASS_L
+                AND M_ITEM_KIND.ITEM_CLASS_M = M_ITEM_KIND_LANG.ITEM_CLASS_M
+                AND M_ITEM_KIND.ITEM_CLASS_S = M_ITEM_KIND_LANG.ITEM_CLASS_S
+                AND M_COMPANY.COMPANY_USE_LANGUAGE_IND = '${@fw.common.util.AppUtil@getSysLanguageByEscapeSql()}'
+        <where>
+            <if test="companyCd !=''">
+                AND (M_ITEM_KIND.COMPANY_CD = #{companyCd, jdbcType=VARCHAR}
+                 OR M_ITEM_KIND.COMPANY_CD = '${@fw.common.constant.ApplicationConstant@COMPANY_CD_ALL}')
+            </if>
+            <if test="itemClassL !=''">
+                AND M_ITEM_KIND.ITEM_CLASS_L = #{itemClassL, jdbcType=VARCHAR}
+            </if>
+            <if test="itemClassM !=''">
+                AND M_ITEM_KIND.ITEM_CLASS_M = #{itemClassM, jdbcType=VARCHAR}
+            </if>
+            <if test="itemClassS !=''">
+                AND M_ITEM_KIND.ITEM_CLASS_S = #{itemClassS, jdbcType=VARCHAR}
+            </if>
+        </where> 
+         ORDER BY DSP_ORDER
+    </select>
+    <!-- 強化-00180-000 2013/03/13 MODIFY SBO_SOKOU END -->
+</mapper>

@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<flow xmlns="http://www.springframework.org/schema/webflow"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.springframework.org/schema/webflow
+        http://www.springframework.org/schema/webflow/spring-webflow-2.0.xsd"
+    parent="base">
+
+    <var name="detailIdentify" class="fw.domain.slip.price.pricemasterlist.PriceIdentify" />
+
+    <!-- 価格マスタ登録一括承認 -->
+    <input name="identify" />
+    <input name="isInitIndividualApr" />
+    <input name="SessionKey" />
+    <input name="searchCondition" />
+
+    <decision-state id="isInitIndividualApr">
+    <!-- 強化-01278-000 2013/05/27 DEL SBO_pangzhen START -->
+    <!-- <if test="flowScope.isInitIndividualApr" then="initDetail" else="back" /> -->
+    <!-- 強化-01278-000 2013/05/27 DEL SBO_pangzhen -END- -->
+    <!-- 強化-01278-000 2013/05/27 ADD SBO_pangzhen START -->
+        <if test="flowScope.isExclusiveCheck != null and flowScope.isExclusiveCheck" then="PSAPR122" />
+        <if test="flowScope.isInitIndividualApr == null or flowScope.isInitIndividualApr" then="initDetail" else="back" />
+    <!-- 強化-01278-000 2013/05/27 ADD SBO_pangzhen -END- -->
+    </decision-state>
+
+    <!-- 画面初期表示 -->
+    <action-state id="initDetail">
+        <evaluate expression="PSAPR122Service.init(identify)" result="flowScope.domain" />
+        <transition to="PSAPR122"/> 
+    </action-state>
+
+    <!-- 価格マスタ登録承認(個別)  -->
+    <view-state id="PSAPR122" model="domain" view="apr/prc/PSAPR122">
+
+        <!-- 差戻し  -->
+        <transition on="sendBack" validate="true" >
+            <evaluate expression="PSAPR122Service.sendBack(identify,domain)"/>
+            <set name="flashScope.isReturnSuccess" value="true"></set>
+        </transition>
+        <!-- 承認  -->
+        <transition on="approval" validate="true" >
+            <evaluate expression="PSAPR122Service.approval(identify,domain)"/>
+            <set name="flashScope.isApprovalSuccess" value="true"></set>
+        </transition>
+        <transition on="next" validate="false" to="isInitIndividualApr">
+             <evaluate expression="PSAPR122Service.next()" result="flowScope.identify"/> 
+             <set name="flashScope.isSuccessForApproval" value="false"></set> 
+             <set name="flashScope.isSuccessForSendBack" value="false"></set> 
+        </transition>
+        <!-- 承認者の追加  -->
+        <transition on="addAuthorizer" validate="false">
+             <evaluate expression="PSAPR122Service.addAuthorizer(domain)" result="flowScope.domain"/> 
+        </transition>
+        <!-- 承認者の削除  -->
+        <transition on="removeAuthorizer" validate="false">
+             <evaluate expression="PSAPR122Service.removeAuthorizer(domain)" result="flowScope.domain"/> 
+        </transition>
+        <transition on="page" validate="false" to="isInitIndividualApr">
+             <evaluate expression="PSAPR122Service.page()" result="flowScope.identify"/> 
+        </transition>
+        <transition on="download" validate="false" >
+            <evaluate expression="PSAPR122Service.download(requestParameters.downFlag,identify)"/>
+        </transition>
+
+        <transition on="detail" to="PSPRC050" validate="false" />
+    </view-state>
+
+    <subflow-state id="PSPRC050" subflow="prc/price/PSPRC050" >
+        <on-entry>
+            <set name="detailIdentify.purPriceHistSeq" value="domain.buyerPrice.historySeqNo"/>
+        </on-entry>
+        <input name="priceIdentify" value="detailIdentify" />
+    </subflow-state>
+</flow>

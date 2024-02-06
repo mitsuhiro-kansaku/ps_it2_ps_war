@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="ps.check.impl.business.SupplierIsEqualQuotedPolicyMapper">
+    <sql id="innerClause">
+        INNER JOIN T_QUOT_REQUEST ON
+               T_QUOT_REQUEST.QUOT_REQ_SEQ = T_QUOT_REQ_SUP.QUOT_REQ_SEQ
+           AND T_QUOT_REQUEST.NEW_FLG = '1'
+           AND T_QUOT_REQUEST.DELETE_FLG = '0'
+        INNER JOIN T_PUR_REQUEST ON
+               (T_PUR_REQUEST.PUR_APL_NO = T_QUOT_REQ_SUP.QUOT_REQ_NO
+           OR  T_PUR_REQUEST.PUR_REQ_NO = T_QUOT_REQ_SUP.QUOT_REQ_NO)
+           AND T_PUR_REQUEST.NEW_APP_FLG = '1'
+           AND T_PUR_REQUEST.NEW_FLG = '1'
+           AND T_PUR_REQUEST.DELETE_FLG = '0'
+        INNER JOIN T_PUR_APL ON
+               T_PUR_APL.PUR_APL_SEQ = T_PUR_REQUEST.PUR_APL_SEQ
+           AND T_PUR_APL.DELETE_FLG = '0'
+    </sql>
+
+    <sql id="whereClause">
+        WHERE
+               T_PUR_REQUEST.PUR_REQ_NO = #{orderNo}
+           AND (    T_QUOT_REQUEST.QUOT_REQ_STATUS &lt;&gt; '21'
+                OR  T_QUOT_REQUEST.QUOT_ADO_STATUS IS NOT NULL)
+    </sql>
+    
+    <select id="countQuot" resultType="int">
+        SELECT
+            COUNT(1)
+        FROM T_QUOT_REQ_SUP
+        <include refid="innerClause"/>
+        <include refid="whereClause"/>
+    </select>
+
+    <select id="countQuotBySupplierCd" resultType="int">
+        SELECT 
+            COUNT(1)
+        FROM T_QUOT_REQ_SUP
+        <include refid="innerClause"/>
+        <include refid="whereClause"/>
+        AND T_QUOT_REQ_SUP.SUP_CD = #{supplierCd}               
+    </select>
+    
+</mapper>

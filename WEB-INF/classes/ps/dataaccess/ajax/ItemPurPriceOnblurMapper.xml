@@ -1,0 +1,123 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="ps.dataaccess.ajax.ItemPurPriceOnblurMapper">
+
+    <!-- 強化-00180-000 2013/03/13 MODIFY SBO_SOKOU START -->
+    <select id="getItemPurPriceInfoOnBlur"
+            resultType="fw.domain.mst.material.item.ItemPopupItem">
+        SELECT 
+             <!-- 2013/04/15 DEL DAIKO_KANEKO START
+             M_PUR_PRICE.ITEM_CD as "itemIdentify.itemCd",
+             -->
+             <!-- 2013/04/15 ADD DAIKO_KANEKO START -->
+             <!-- バグ修正 -->
+              M_PUR_PRICE.ITEM_CD as "priceArticleIdentify.itemCd",
+             <!-- 2013/04/15 ADD DAIKO_KANEKO -END- -->
+               M_ITEM_LANG.ITEM_NAME as "itemName",
+               (SELECT M_ITEM_CLASS_LANG.ITEM_CLASS_NAME
+                  FROM M_ITEM_CLASS_LANG 
+                 WHERE M_ITEM_CLASS_LANG.ITEM_CLASS_L = M_ITEM.ITEM_CLASS_L
+                   AND M_ITEM_CLASS_LANG.ITEM_CLASS_M = ' '
+                   AND M_ITEM_CLASS_LANG.ITEM_CLASS_S = ' '
+                   AND M_ITEM_CLASS_LANG.LANGUAGE_IND = '${@fw.security.SecurityUtil@getCompanyUseLanguageIndByEscapeSql()}') 
+                AS itemClassNameL,
+                (SELECT M_ITEM_CLASS_LANG.ITEM_CLASS_NAME
+                   FROM M_ITEM_CLASS_LANG 
+                  WHERE M_ITEM_CLASS_LANG.ITEM_CLASS_L = M_ITEM.ITEM_CLASS_L
+                    AND M_ITEM_CLASS_LANG.ITEM_CLASS_M = M_ITEM.ITEM_CLASS_M
+                    AND M_ITEM_CLASS_LANG.ITEM_CLASS_S = ' '
+                    AND M_ITEM_CLASS_LANG.LANGUAGE_IND = '${@fw.security.SecurityUtil@getCompanyUseLanguageIndByEscapeSql()}') 
+                AS itemClassNameM,
+                (SELECT M_ITEM_CLASS_LANG.ITEM_CLASS_NAME
+                   FROM M_ITEM_CLASS_LANG 
+                  WHERE M_ITEM_CLASS_LANG.ITEM_CLASS_L = M_ITEM.ITEM_CLASS_L
+                    AND M_ITEM_CLASS_LANG.ITEM_CLASS_M = M_ITEM.ITEM_CLASS_M
+                    AND M_ITEM_CLASS_LANG.ITEM_CLASS_S = M_ITEM.ITEM_CLASS_S
+                    AND M_ITEM_CLASS_LANG.ITEM_CLASS_S != ' '
+                    AND M_ITEM_CLASS_LANG.LANGUAGE_IND = '${@fw.security.SecurityUtil@getCompanyUseLanguageIndByEscapeSql()}') 
+                AS itemClassNameS,
+                M_ITEM.ITEM_CLASS_L as "itemClassL",
+                M_ITEM.ITEM_CLASS_M as "itemClassM",
+                M_ITEM.ITEM_CLASS_S as "itemClassS",
+                M_MANUFACT_LANG.MANUFACT_NAME as "manufactName",
+                M_ITEM.MANUFACT_CD as "manufactCd",
+                M_ITEM.KATASHIKI as "katashiki",
+                M_UNIT_NAME_LANG.UNIT_NAME as "unitName",
+                M_ITEM.UNIT_CD as "unitCd",
+                M_SUPPLIER.SUP_CD as "supCd",
+                M_SUPPLIER_LANG.SUP_NAME as "supName",
+                M_SUPPLIER_LANG.SUP_ABBR_NAME as "supAbbrName",
+                M_PUR_PRICE.CURRENCY_CD as "currencyCd",
+                M_CURRENCY.CURRENCY_MARK as "currencyMark",
+                M_PUR_PRICE.INSPECT_IND as "inspectInd",
+                '1' as "priceFlg",
+                CASE WHEN PRICE_TYPE = '1'
+                     THEN M_PUR_PRICE.BUY_PRICE 
+                     ELSE M_PUR_PRICE_DTL.BUY_PRICE 
+                      END
+                       AS "unitPrice.amount.amount",
+                M_PUR_PRICE.AUTO_ORDER_FLG as "autoOrderFlg.autoOrderFlg",
+                M_PUR_PRICE.TAX_IND as "taxInd.taxInd"
+           FROM M_PUR_PRICE
+          INNER JOIN M_PUR_PRICE_DSP_AUTH
+                  ON M_PUR_PRICE_DSP_AUTH.BUYER_COMPANY_CD = M_PUR_PRICE.BUYER_COMPANY_CD
+                 AND M_PUR_PRICE_DSP_AUTH.BUYER_SECTION_CD = M_PUR_PRICE.BUYER_SECTION_CD
+                 AND M_PUR_PRICE_DSP_AUTH.ITEM_CD = M_PUR_PRICE.ITEM_CD
+                 AND M_PUR_PRICE_DSP_AUTH.SUP_CD = M_PUR_PRICE.SUP_CD
+                 AND M_PUR_PRICE_DSP_AUTH.VALID_START_DATE = M_PUR_PRICE.VALID_START_DATE
+                 AND M_PUR_PRICE_DSP_AUTH.VALID_END_DATE = M_PUR_PRICE.VALID_END_DATE
+                 AND M_PUR_PRICE_DSP_AUTH.REQ_COMPANY_CD = '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}'
+                 AND (M_PUR_PRICE_DSP_AUTH.REQ_SECTION_PLACE_CD = '${@fw.security.SecurityUtil@getSectionPlaceCdByEscapeSql()}'
+                 <!-- 強化-00746-000 2013/03/29 ADD SBO_lichao START -->
+                     OR M_PUR_PRICE_DSP_AUTH.REQ_SECTION_PLACE_CD = 'ALL')
+                 <!-- 強化-00746-000 2013/03/29 ADD SBO_lichao -END- -->
+           LEFT JOIN M_PUR_PRICE_DTL
+                  ON M_PUR_PRICE_DTL.BUYER_COMPANY_CD=M_PUR_PRICE.BUYER_COMPANY_CD
+                 AND M_PUR_PRICE_DTL.BUYER_SECTION_CD=M_PUR_PRICE.BUYER_SECTION_CD
+                 AND M_PUR_PRICE_DTL.ITEM_CD=M_PUR_PRICE.ITEM_CD
+                 AND M_PUR_PRICE_DTL.SUP_CD=M_PUR_PRICE.SUP_CD
+                 AND M_PUR_PRICE_DTL.VALID_START_DATE=M_PUR_PRICE.VALID_START_DATE
+                 AND M_PUR_PRICE_DTL.VALID_END_DATE=M_PUR_PRICE.VALID_END_DATE
+                 AND M_PUR_PRICE_DTL.LOWER_VOL&lt;= #{reqVol}
+                 AND M_PUR_PRICE_DTL.UPPER_VOL>=#{reqVol}
+           INNER JOIN M_ITEM
+                   ON (M_ITEM.COMPANY_CD = M_PUR_PRICE.BUYER_COMPANY_CD
+                   OR M_ITEM.COMPANY_CD = '${@fw.common.constant.ApplicationConstant@COMPANY_CD_ALL}')
+                  AND M_ITEM.ITEM_CD = M_PUR_PRICE.ITEM_CD
+           INNER JOIN M_SUPPLIER
+                   ON M_SUPPLIER.COMPANY_CD = M_ITEM.COMPANY_CD
+                  AND M_SUPPLIER.SUP_CD = M_PUR_PRICE.SUP_CD
+            LEFT JOIN M_SUPPLIER_LANG
+                   ON M_SUPPLIER_LANG.SUP_CD = M_SUPPLIER.SUP_CD
+                  AND M_SUPPLIER_LANG.COMPANY_CD = M_SUPPLIER.COMPANY_CD
+                  AND M_SUPPLIER_LANG.LANGUAGE_IND = '${@fw.security.SecurityUtil@getCompanyUseLanguageIndByEscapeSql()}'
+            LEFT JOIN M_ITEM_LANG
+                   ON  M_ITEM.COMPANY_CD = M_ITEM_LANG.COMPANY_CD
+                  AND M_ITEM.ITEM_CD = M_ITEM_LANG.ITEM_CD
+                  AND M_ITEM_LANG.LANGUAGE_IND = '${@fw.security.SecurityUtil@getCompanyUseLanguageIndByEscapeSql()}'
+            LEFT JOIN M_MANUFACT_LANG
+                   ON  M_MANUFACT_LANG.MANUFACT_CD = M_ITEM.MANUFACT_CD
+                  AND M_MANUFACT_LANG.LANGUAGE_IND = '${@fw.security.SecurityUtil@getCompanyUseLanguageIndByEscapeSql()}'
+            LEFT JOIN M_UNIT_NAME_LANG
+                   ON  M_UNIT_NAME_LANG.UNIT_CD = M_ITEM.UNIT_CD
+                  AND M_UNIT_NAME_LANG.LANGUAGE_IND = '${@fw.security.SecurityUtil@getCompanyUseLanguageIndByEscapeSql()}'
+            LEFT JOIN M_CURRENCY
+                   ON  M_PUR_PRICE.CURRENCY_CD = M_CURRENCY.CURRENCY_CD
+                  AND M_CURRENCY.TERM_FLG = '0'
+           WHERE M_PUR_PRICE.BUYER_COMPANY_CD = #{buyCompanyCd}
+             AND M_PUR_PRICE.BUYER_SECTION_CD = #{buySectionCd}
+             AND M_PUR_PRICE.ITEM_CD = #{itemCd}
+             AND M_PUR_PRICE.SUP_CD = #{supCd}
+             AND M_PUR_PRICE.APP_STATUS_IND = '2'
+             AND '${@fw.common.util.AppUtil@getSysDate(@fw.common.util.AppUtil@DATE_SHORT)}' BETWEEN M_PUR_PRICE.VALID_START_DATE AND M_PUR_PRICE.VALID_END_DATE
+             AND (M_PUR_PRICE.PUR_STOP_FROM &gt; '${@fw.common.util.AppUtil@getSysDate()}'
+              OR M_PUR_PRICE.PUR_STOP_TO &lt; '${@fw.common.util.AppUtil@getSysDate()}'
+              OR (M_PUR_PRICE.PUR_STOP_FROM is null and M_PUR_PRICE.PUR_STOP_TO is null))
+            <if test="@org.apache.commons.lang.StringUtils@isNotBlank(termFlag) and termFlag==0">
+             AND M_PUR_PRICE.TERM_FLG = #{termFlag, jdbcType=VARCHAR}
+            </if>
+    </select>
+    <!-- 強化-00180-000 2013/03/13 MODIFY SBO_SOKOU END -->
+</mapper>

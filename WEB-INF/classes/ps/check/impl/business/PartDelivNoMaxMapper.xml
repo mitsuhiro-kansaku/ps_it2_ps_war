@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="ps.check.impl.business.PartDelivNoMaxMapper">
+
+    <select id="searchCount" resultType="Integer">
+        SELECT COUNT(1) + 1
+        FROM T_RECEIVE_MNG
+        WHERE T_RECEIVE_MNG.ORDER_NO = #{orderNo}
+        AND T_RECEIVE_MNG.DELIV_STATUS != '1105'
+        AND T_RECEIVE_MNG.DELETE_FLG = '0'
+        AND NOT EXISTS
+            (
+            SELECT
+                *
+            FROM
+                T_ARRIVAL
+            WHERE T_RECEIVE_MNG.DELIV_KEY_NO = T_ARRIVAL.DELIV_KEY_NO
+            AND T_ARRIVAL.CORRECT_CD = '3'
+            AND ARRIVAL_VERSION = 
+                (
+                SELECT
+                    MAX(ARRIVAL_VERSION)
+                FROM
+                    T_ARRIVAL
+                WHERE T_RECEIVE_MNG.DELIV_KEY_NO = T_ARRIVAL.DELIV_KEY_NO
+                )
+            )
+    </select>
+
+</mapper>

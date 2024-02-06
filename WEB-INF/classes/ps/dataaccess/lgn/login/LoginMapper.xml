@@ -1,0 +1,461 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="ps.dataaccess.lgn.login.LoginMapper">
+
+    <select id="searchLanguageIndList" resultType="fw.domain.slip.businesscommon.usersetting.LanguageIndList">
+        SELECT
+            M_B_USER.USE_LANGUAGE_IND as "languageInd.languageInd"
+        FROM M_B_USER
+        WHERE M_B_USER.USER_ID= '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}'
+        GROUP BY M_B_USER.USE_LANGUAGE_IND
+    </select>
+
+    <resultMap type="fw.domain.slip.businesscommon.usersetting.UserSetting" id="User_Map">
+        <id column="OFFICIAL_NAME" property="affiliation.official.officialName"/>
+<!-- TODO 14/11/14 add パスワード暗号化 daiko t.watanabe start -->
+        <id column="PW_SALT" property="authentication.passwordSalt"/>
+        <id column="PW_CHANGED_TIME" property="authentication.passwordValidStartTime.dateOfymd"/>
+<!-- TODO 14/11/14 add パスワード暗号化 daiko t.watanabe end -->
+        <id column="MAIL_ADDR" property="contact.mailAddr.mail"/>
+        <id column="DEFAULT_LOGIN_SECTION_CD" property="affiliation.defaultLoginSectionCd"/>
+        <id column="SECTION_CD" property="affiliation.editSectionCd"/>
+        <id column="EXTENSION_NO" property="contact.extNo.extensionNo"/>
+        <id column="TEL_NO" property="contact.telNo.telNo"/>
+        <id column="FAX_NO" property="contact.faxNo.faxNo"/>
+        <id column="ROLE_NAME" property="affiliation.roleName"/>
+        <id column="APPROVAL_MAIL_RCV_FLG" property="mailRcvFlg.mailRcvNotice"/>
+        <id column="REJECT_MAIL_RCV_FLG" property="mailRcvFlg.mailRcvReject"/>
+        <id column="RECEIPT_MAIL_RCV_FLG" property="mailRcvFlg.mailRcvReceipt"/>
+        <id column="LAST_UPD_DATE" property="lastUpdDate"/>
+    </resultMap>
+
+    <select id="search" resultMap="User_Map">
+        SELECT M_USER.OFFICIAL_NAME,
+<!-- TODO 14/11/14 add パスワード暗号化 daiko t.watanabe start -->
+               M_B_USER.PW_SALT,
+               M_B_USER.PW_CHANGED_TIME,
+<!-- TODO 14/11/14 add パスワード暗号化 daiko t.watanabe end -->
+               M_B_USER.MAIL_ADDR ,
+               M_B_USER.DEFAULT_LOGIN_SECTION_CD,
+               M_USER.SECTION_CD,
+               M_USER.EXTENSION_NO,
+               M_USER.TEL_NO,
+               M_USER.FAX_NO,
+               M_ROLE.ROLE_NAME,
+               M_B_USER.APPROVAL_MAIL_RCV_FLG,
+               M_B_USER.REJECT_MAIL_RCV_FLG,
+               M_B_USER.RECEIPT_MAIL_RCV_FLG,
+               M_B_USER.LAST_UPD_DATE
+          FROM M_B_USER
+          LEFT JOIN M_USER
+                 ON M_USER.COMPANY_CD = M_B_USER.COMPANY_CD
+                AND M_USER.USER_ID = M_B_USER.USER_ID
+                AND M_USER.SECTION_CD = '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}'
+          LEFT JOIN M_ROLE
+                 ON (M_ROLE.COMPANY_CD = M_USER.COMPANY_CD
+                 OR M_ROLE.COMPANY_CD = '${@fw.common.constant.ApplicationConstant@COMPANY_CD_ALL}')
+                AND M_ROLE.ROLE_NO = M_USER.ROLE_NO
+         WHERE M_B_USER.COMPANY_CD = '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}'
+           AND M_B_USER.USER_ID= '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}'
+    </select>
+
+    <select id="searchSectionInfo" resultMap="User_Map">
+        SELECT M_USER.OFFICIAL_NAME,
+               M_B_USER.MAIL_ADDR ,
+               M_B_USER.DEFAULT_LOGIN_SECTION_CD,
+               M_USER.EXTENSION_NO,
+               M_USER.TEL_NO,
+               M_USER.FAX_NO,
+               M_ROLE.ROLE_NAME,
+               M_B_USER.APPROVAL_MAIL_RCV_FLG,
+               M_B_USER.REJECT_MAIL_RCV_FLG,
+               M_B_USER.RECEIPT_MAIL_RCV_FLG,
+               M_B_USER.LAST_UPD_DATE
+          FROM M_B_USER
+          LEFT JOIN M_USER
+                 ON M_USER.COMPANY_CD = M_B_USER.COMPANY_CD
+                AND M_USER.USER_ID = M_B_USER.USER_ID
+          LEFT JOIN M_ROLE
+                 ON (M_ROLE.COMPANY_CD = M_USER.COMPANY_CD
+                 OR M_ROLE.COMPANY_CD = '${@fw.common.constant.ApplicationConstant@COMPANY_CD_ALL}')
+                AND M_ROLE.ROLE_NO = M_USER.ROLE_NO
+         WHERE M_B_USER.COMPANY_CD = '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}'
+           AND M_B_USER.USER_ID= '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}'
+           AND M_USER.SECTION_CD = #{sectionCd, jdbcType=VARCHAR} 
+    </select>
+
+    <update id="userSettingUpdate" parameterType="fw.domain.slip.businesscommon.usersetting.UserSetting">
+        UPDATE M_B_USER
+        SET
+            USE_LANGUAGE_IND = #{languageInd.languageInd,jdbcType=VARCHAR},
+            <if test = "@org.apache.commons.lang.StringUtils@isNotEmpty(authentication.passwordNew)">
+                PASSWORD = #{authentication.passwordNew,jdbcType=VARCHAR},
+                PW_SALT = #{authentication.passwordSalt,jdbcType=VARCHAR},
+                PW_CHANGED_TIME = #{authentication.passwordValidStartTime.dateOfymd,jdbcType=VARCHAR},
+                PW_LOCKED_TIME  = NULL,
+                PW_FAILED_COUNT = 0,
+            </if>
+            MAIL_ADDR = #{contact.mailAddr.mail,jdbcType=VARCHAR},
+            DEFAULT_LOGIN_SECTION_CD = #{affiliation.defaultLoginSectionCd,jdbcType=VARCHAR},
+            REJECT_MAIL_RCV_FLG = #{mailRcvFlg.mailRcvReject,jdbcType=VARCHAR},
+            RECEIPT_MAIL_RCV_FLG = #{mailRcvFlg.mailRcvReceipt,jdbcType=VARCHAR},
+            APPROVAL_MAIL_RCV_FLG = #{mailRcvFlg.mailRcvNotice,jdbcType=VARCHAR},
+<!-- TODO 14/11/14 mod パスワード暗号化 daiko t.watanabe start -->
+            LAST_UPD_DATE = #{lastUpdDate,jdbcType=VARCHAR},
+<!-- TODO 14/11/14 mod パスワード暗号化 daiko t.watanabe end -->
+            LAST_UPD_COMPANY_CD = '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}',
+            LAST_UPD_SECTION_CD = '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}',
+            LAST_UPD_USER_ID = '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}' 
+        WHERE
+             COMPANY_CD = '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}'
+             AND USER_ID = '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}'
+    </update>
+  
+    <update id="userUpdate" parameterType="fw.domain.slip.businesscommon.usersetting.UserSetting">
+        UPDATE M_USER
+           SET OFFICIAL_NAME = #{affiliation.official.officialName,jdbcType=VARCHAR},
+               EXTENSION_NO = #{contact.extNo.extensionNo,jdbcType=VARCHAR},
+               TEL_NO = #{contact.telNo.telNo,jdbcType=VARCHAR},
+               FAX_NO = #{contact.faxNo.faxNo,jdbcType=VARCHAR},
+               LAST_UPD_DATE = 
+                  '${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}',
+               LAST_UPD_COMPANY_CD = 
+                  '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}',
+               LAST_UPD_SECTION_CD = 
+                  '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}',
+               LAST_UPD_USER_ID = 
+                  '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}'
+         WHERE COMPANY_CD = 
+                  '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}'
+               AND SECTION_CD = 
+                   #{affiliation.editSectionCd,jdbcType=VARCHAR}
+               AND USER_ID = 
+                   '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}' 
+    </update>
+    
+    <select id="getSystemBaseLanguage" resultType="String">
+        SELECT M_COND.COND_VALUE
+        FROM M_COND
+        WHERE M_COND.COND_KEY = 'SYSTEM_BASE_LANGUAGE'
+   </select>
+   
+   <select id="getCompanyList" parameterType="String" resultType="fw.common.cache.ListItem">
+        SELECT M_COMPANY.COMPANY_CD as "value",
+               M_COMPANY_LANG.COMPANY_NAME as "text"
+        FROM M_COMPANY
+        INNER JOIN M_COMPANY_LANG
+        ON M_COMPANY_LANG.COMPANY_CD= M_COMPANY.COMPANY_CD
+        AND M_COMPANY_LANG.LANGUAGE_IND= #{systembaseLanguage}
+        AND M_COMPANY.TERM_FLG = '0'
+        ORDER BY M_COMPANY.COMPANY_CD
+    </select>
+    
+    <resultMap type="fw.domain.slip.common.login.LoginUser" id="DefaultLoginUser_Map">
+<!-- TODO 14/11/14 mod パスワード暗号化 daiko t.watanabe start -->
+        <id column="PW_SALT" property="user.passwordSalt"/>
+        <id column="PW_CHANGED_TIME" property="user.passwordChangedTime"/>
+        <id column="PW_LOCKED_TIME" property="user.passwordLockedTime"/>
+        <id column="PW_FAILED_COUNT" property="user.passwordFailedCount"/>
+<!-- TODO 14/11/14 mod パスワード暗号化 daiko t.watanabe end -->
+        <id column="USE_LANGUAGE_IND" property="useLanguageInd.languageInd.languageInd"/>
+        <id column="EXTENSION_NO" property="user.extNo.extensionNo"/>
+        <id column="TEL_NO" property="user.externalNo.externalNo"/>
+        <id column="COMPANY_USE_LANGUAGE_IND" property="companyUseLanguageInd.baseLanguageInd.languageInd"/>
+        <id column="BASE_CURRENCY_CD" property="user.section.company.currency.currencyCd"/>
+        <id column="CURRENCY_MARK" property="user.section.company.currency.currencyMark"/>
+        <id column="UNITPRICE_DEC_NUM" property="user.section.company.currency.unitpriceDecNum"/>
+        <id column="TOTALPRICE_DEC_NUM" property="user.section.company.currency.totalpriceDecNum"/>
+        <id column="COMPANY_CD" property="user.section.company.companyCd"/>
+        <id column="COMPANY_NAME" property="user.section.company.companyName"/>
+        <id column="SECTION_CD" property="user.section.sectionCd"/>
+        <id column="SECTION_NAME" property="user.section.sectionName"/>
+        <id column="SECTION_PLACE_CD" property="user.section.sectionPlace.sectionPlaceCd"/>
+        <id column="SECTION_PLACE_NAME" property="user.section.sectionPlace.sectionPlaceName"/>
+    </resultMap>
+    <select id="getDefaultLoginUserInformation" parameterType="fw.domain.slip.common.login.LoginAuthenticate"
+        resultMap="DefaultLoginUser_Map">
+        SELECT M_B_USER.USER_ID as "user.userID",
+               M_B_USER.PASSWORD as "user.password",
+<!-- TODO 14/11/14 mod パスワード暗号化 daiko t.watanabe start -->
+               M_B_USER.PW_SALT,
+               M_B_USER.PW_CHANGED_TIME,
+               M_B_USER.PW_LOCKED_TIME,
+               M_B_USER.PW_FAILED_COUNT,
+<!-- TODO 14/11/14 mod パスワード暗号化 daiko t.watanabe end -->
+               M_B_USER.DEFAULT_LOGIN_SECTION_CD,
+               M_B_USER.MAIL_ADDR as "user.mailAddr.mail",
+               M_B_USER.LAST_LOGIN_DATE as "lastLoginDate",
+               M_B_USER.USE_LANGUAGE_IND,
+               M_B_USER_LANG.USER_NAME as "user.userName",
+               M_USER.EXTENSION_NO,
+               M_USER.TEL_NO,
+               M_COMPANY.COMPANY_USE_LANGUAGE_IND,
+               M_COMPANY.BASE_CURRENCY_CD,
+               M_CURRENCY.CURRENCY_MARK,
+               M_CURRENCY.UNITPRICE_DEC_NUM,
+               M_CURRENCY.TOTALPRICE_DEC_NUM,
+               M_COMPANY_LANG.COMPANY_CD,
+               M_COMPANY_LANG.COMPANY_NAME,
+               '${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}' as "loginDate",
+               M_SECTION.SECTION_CD,
+               M_SECTION_LANG.SECTION_NAME,
+               M_SECTION.SECTION_PLACE_CD,
+               M_SECTION_PLACE_LANG.SECTION_PLACE_NAME
+        FROM M_B_USER
+        INNER JOIN M_USER
+        ON M_USER.COMPANY_CD= M_B_USER.COMPANY_CD
+           AND M_USER.SECTION_CD= M_B_USER.DEFAULT_LOGIN_SECTION_CD
+           AND M_USER.USER_ID= M_B_USER.USER_ID
+           AND M_USER.TERM_FLG= '0' 
+           AND M_USER.VALID_START_DATE &lt;= '${@fw.common.util.AppUtil@getSysDate()}'
+           AND M_USER.VALID_END_DATE &gt;= '${@fw.common.util.AppUtil@getSysDate()}'
+        INNER JOIN M_COMPANY
+        ON M_COMPANY.COMPANY_CD= M_B_USER.COMPANY_CD
+           AND M_COMPANY.TERM_FLG= '0'
+        INNER JOIN M_CURRENCY
+        ON M_CURRENCY.CURRENCY_CD= M_COMPANY.BASE_CURRENCY_CD
+           AND M_CURRENCY.TERM_FLG= '0'
+        LEFT JOIN M_B_USER_LANG
+        ON M_B_USER_LANG.COMPANY_CD= M_B_USER.COMPANY_CD
+           AND M_B_USER_LANG.USER_ID= M_B_USER.USER_ID
+           AND M_B_USER_LANG.LANGUAGE_IND= M_B_USER.USE_LANGUAGE_IND
+        INNER JOIN M_COMPANY_LANG
+        ON M_COMPANY_LANG.COMPANY_CD= M_COMPANY.COMPANY_CD
+           AND M_COMPANY_LANG.LANGUAGE_IND=M_COMPANY.COMPANY_USE_LANGUAGE_IND
+        INNER JOIN M_SECTION
+        ON M_SECTION.COMPANY_CD= M_B_USER.COMPANY_CD
+           AND M_SECTION.SECTION_CD= M_USER.SECTION_CD
+           AND M_SECTION.VALID_START_DATE &lt;= '${@fw.common.util.AppUtil@getSysDate()}'
+           AND M_SECTION.VALID_END_DATE &gt;= '${@fw.common.util.AppUtil@getSysDate()}'
+           AND M_SECTION.TERM_FLG= '0'
+        INNER JOIN M_SECTION_LANG
+        ON M_SECTION_LANG.COMPANY_CD= M_SECTION.COMPANY_CD
+           AND M_SECTION_LANG.SECTION_CD= M_SECTION.SECTION_CD
+           AND M_SECTION_LANG.VALID_START_DATE &lt;= '${@fw.common.util.AppUtil@getSysDate()}'
+           AND M_SECTION_LANG.VALID_END_DATE &gt;= '${@fw.common.util.AppUtil@getSysDate()}'
+           AND M_SECTION_LANG.LANGUAGE_IND= M_COMPANY.COMPANY_USE_LANGUAGE_IND
+        INNER JOIN M_SECTION_PLACE_LANG
+        ON M_SECTION_PLACE_LANG.COMPANY_CD= M_B_USER.COMPANY_CD
+           AND M_SECTION_PLACE_LANG.SECTION_PLACE_CD= M_SECTION.SECTION_PLACE_CD
+           AND M_SECTION_PLACE_LANG.LANGUAGE_IND= M_COMPANY.COMPANY_USE_LANGUAGE_IND
+        WHERE M_B_USER.COMPANY_CD= #{companyCd}
+              AND M_B_USER.USER_ID= #{userId}
+              AND M_B_USER.TERM_FLG= '0'
+    </select>
+    
+    <resultMap type="fw.domain.slip.common.login.LoginUser" id="LoginUser_Map">
+<!-- TODO 14/11/14 mod パスワード暗号化 daiko t.watanabe start -->
+        <id column="PW_SALT" property="user.passwordSalt"/>
+        <id column="PW_CHANGED_TIME" property="user.passwordChangedTime"/>
+        <id column="PW_LOCKED_TIME" property="user.passwordLockedTime"/>
+        <id column="PW_FAILED_COUNT" property="user.passwordFailedCount"/>
+<!-- TODO 14/11/14 mod パスワード暗号化 daiko t.watanabe end -->
+        <id column="USE_LANGUAGE_IND" property="useLanguageInd.languageInd.languageInd"/>
+        <id column="EXTENSION_NO" property="user.extNo.extensionNo"/>
+        <id column="TEL_NO" property="user.externalNo.externalNo"/>
+        <id column="COMPANY_USE_LANGUAGE_IND" property="companyUseLanguageInd.baseLanguageInd.languageInd"/>
+        <id column="BASE_CURRENCY_CD" property="user.section.company.currency.currencyCd"/>
+        <id column="CURRENCY_MARK" property="user.section.company.currency.currencyMark"/>
+        <id column="UNITPRICE_DEC_NUM" property="user.section.company.currency.unitpriceDecNum"/>
+        <id column="TOTALPRICE_DEC_NUM" property="user.section.company.currency.totalpriceDecNum"/>
+        <id column="COMPANY_CD" property="user.section.company.companyCd"/>
+        <id column="COMPANY_NAME" property="user.section.company.companyName"/>
+        <id column="SECTION_CD" property="user.section.sectionCd"/>
+        <id column="SECTION_NAME" property="user.section.sectionName"/>
+        <id column="SECTION_PLACE_CD" property="user.section.sectionPlace.sectionPlaceCd"/>
+        <id column="SECTION_PLACE_NAME" property="user.section.sectionPlace.sectionPlaceName"/>
+    </resultMap>
+    <select id="getLoginUserInformation" parameterType="fw.domain.slip.common.login.LoginAuthenticate"
+        resultMap="LoginUser_Map">
+        SELECT M_B_USER.USER_ID as "user.userID",
+               M_B_USER.PASSWORD as "user.password",
+<!-- TODO 14/11/14 mod パスワード暗号化 daiko t.watanabe start -->
+               M_B_USER.PW_SALT,
+               M_B_USER.PW_CHANGED_TIME,
+               M_B_USER.PW_LOCKED_TIME,
+               M_B_USER.PW_FAILED_COUNT,
+<!-- TODO 14/11/14 mod パスワード暗号化 daiko t.watanabe end -->
+               M_USER.SECTION_CD,
+               M_B_USER.MAIL_ADDR as "user.mailAddr.mail",
+               M_B_USER.LAST_LOGIN_DATE as "lastLoginDate",
+               M_B_USER.USE_LANGUAGE_IND,
+               M_B_USER_LANG.USER_NAME as "user.userName",
+               M_USER.EXTENSION_NO,
+               M_USER.TEL_NO,
+               M_COMPANY.COMPANY_USE_LANGUAGE_IND,
+               M_COMPANY.BASE_CURRENCY_CD,
+               M_CURRENCY.CURRENCY_MARK,
+               M_CURRENCY.UNITPRICE_DEC_NUM,
+               M_CURRENCY.TOTALPRICE_DEC_NUM,
+               M_COMPANY_LANG.COMPANY_CD,
+               M_COMPANY_LANG.COMPANY_NAME,
+               '${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}' as "loginDate",
+               M_SECTION.SECTION_CD,
+               M_SECTION_LANG.SECTION_NAME,
+               M_SECTION.SECTION_PLACE_CD,
+               M_SECTION_PLACE_LANG.SECTION_PLACE_NAME
+        FROM M_B_USER
+        INNER JOIN M_USER
+        ON M_USER.COMPANY_CD= M_B_USER.COMPANY_CD
+           AND M_USER.USER_ID= M_B_USER.USER_ID
+           AND M_USER.TERM_FLG= '0'
+           AND M_USER.VALID_START_DATE &lt;= '${@fw.common.util.AppUtil@getSysDate()}'
+           AND M_USER.VALID_END_DATE &gt;= '${@fw.common.util.AppUtil@getSysDate()}'
+        INNER JOIN M_COMPANY
+        ON M_COMPANY.COMPANY_CD= M_B_USER.COMPANY_CD
+           AND M_COMPANY.TERM_FLG= '0'
+        INNER JOIN M_CURRENCY
+        ON M_CURRENCY.CURRENCY_CD= M_COMPANY.BASE_CURRENCY_CD
+           AND M_CURRENCY.TERM_FLG= '0'
+        LEFT JOIN M_B_USER_LANG
+        ON M_B_USER_LANG.COMPANY_CD= M_B_USER.COMPANY_CD
+           AND M_B_USER_LANG.USER_ID= M_B_USER.USER_ID
+           AND M_B_USER_LANG.LANGUAGE_IND= M_B_USER.USE_LANGUAGE_IND
+        INNER JOIN M_COMPANY_LANG
+        ON M_COMPANY_LANG.COMPANY_CD= M_COMPANY.COMPANY_CD
+           AND M_COMPANY_LANG.LANGUAGE_IND=M_COMPANY.COMPANY_USE_LANGUAGE_IND
+        INNER JOIN M_SECTION
+        ON M_SECTION.COMPANY_CD= M_B_USER.COMPANY_CD
+           AND M_SECTION.SECTION_CD= M_USER.SECTION_CD
+           AND M_SECTION.VALID_START_DATE &lt;= '${@fw.common.util.AppUtil@getSysDate()}'
+           AND M_SECTION.VALID_END_DATE &gt;= '${@fw.common.util.AppUtil@getSysDate()}'
+           AND M_SECTION.TERM_FLG= '0'
+        INNER JOIN M_SECTION_LANG
+        ON M_SECTION_LANG.COMPANY_CD= M_SECTION.COMPANY_CD
+           AND M_SECTION_LANG.SECTION_CD= M_SECTION.SECTION_CD
+           AND M_SECTION_LANG.VALID_START_DATE &lt;= '${@fw.common.util.AppUtil@getSysDate()}'
+           AND M_SECTION_LANG.VALID_END_DATE &gt;= '${@fw.common.util.AppUtil@getSysDate()}'
+           AND M_SECTION_LANG.LANGUAGE_IND= M_COMPANY.COMPANY_USE_LANGUAGE_IND
+        INNER JOIN M_SECTION_PLACE_LANG
+        ON M_SECTION_PLACE_LANG.COMPANY_CD= M_B_USER.COMPANY_CD
+           AND M_SECTION_PLACE_LANG.SECTION_PLACE_CD= M_SECTION.SECTION_PLACE_CD
+           AND M_SECTION_PLACE_LANG.LANGUAGE_IND= M_COMPANY.COMPANY_USE_LANGUAGE_IND
+        WHERE M_B_USER.COMPANY_CD= #{companyCd}
+              AND M_B_USER.USER_ID= #{userId}
+              AND M_B_USER.TERM_FLG= '0'
+        ORDER BY M_USER.SECTION_CD ASC
+    </select>
+    
+    <resultMap type="fw.domain.slip.common.login.AffiliationSection" id="AffiliationSectionList_Map">
+            <id property="roleItem.roleNo" column="ROLE_NO" />
+            <id property="roleItem.roleName" column="ROLE_NAME" />
+            <id property="section.sectionCd" column="SECTION_CD" />
+            <id property="section.sectionName" column="SECTION_NAME" />
+            <id property="section.sectionPlace.sectionPlaceCd" column="SECTION_PLACE_CD" />
+            <id property="section.sectionPlace.sectionPlaceName" column="SECTION_PLACE_NAME" />
+            <id column="M_USER$SECTION_CD" property="user.section.sectionCd"/>
+            <id column="M_USER$SECTION_NAME" property="user.section.sectionName"/>
+             <id property="user.userID" column="USER_ID" />
+            <id property="user.userName" column="USER_NAME" />
+            <id property="user.official.officialName" column="OFFICIAL_NAME" />
+            <id property="user.extNo.extensionNo" column="EXTENSION_NO" />
+            <id property="user.externalNo.externalNo" column="TEL_NO" />
+            <collection property="roleItem.roleDtlList.roleDtlList" ofType="fw.domain.mst.userauthority.role.RoleDtl">
+                <id property="authName.authIdentify.authNo" column="AUTH_NO"/>
+                <id property="authName.authName" column="AUTH_NAME"/>
+                <id property="authInd" column="AUTH_IND"/>
+                <id property="authName.authRemarks" column="AUTH_REMARKS"/>
+                <id property="authName.authGroupNo" column="AUTH_GROUP_NO"/>
+                <id property="authName.authTopFlg" column="AUTH_TOP_FLG"/>
+                <id property="authName.dspOrder" column="DSP_ORDER"/>
+            </collection>
+    </resultMap>
+
+    <select id="getLoginUserSectionInformationList"
+            parameterType="fw.domain.slip.common.login.LoginAuthenticate"
+            resultMap="AffiliationSectionList_Map">
+        SELECT M_USER.ROLE_NO,
+               M_ROLE.ROLE_NAME,
+               M_SECTION.SECTION_CD,
+               M_SECTION_LANG.SECTION_NAME,
+               M_SECTION.SECTION_PLACE_CD,
+               M_SECTION_PLACE_LANG.SECTION_PLACE_NAME,
+               M_AUTH_NAME.AUTH_NO,
+               M_AUTH_NAME.AUTH_NAME,
+               M_ROLE_DTL.AUTH_IND,
+               M_AUTH_NAME.AUTH_REMARKS,
+               M_AUTH_NAME.AUTH_GROUP_NO,
+               M_AUTH_NAME.AUTH_TOP_FLG,
+               M_AUTH_NAME.DSP_ORDER,
+               M_USER.OFFICIAL_NAME,
+               M_USER.EXTENSION_NO,
+               M_USER.TEL_NO,
+               M_USER.USER_ID,
+               M_B_USER_LANG.USER_NAME,
+               M_USER.SECTION_CD as "M_USER$SECTION_CD",
+               M_SECTION_LANG.SECTION_NAME as "M_USER$SECTION_NAME",
+               M_USER.SECTION_CD as "M_USER$SECTION_CD",
+               M_SECTION_LANG.SECTION_NAME as "M_USER$SECTION_NAME"
+          FROM M_B_USER
+         INNER JOIN M_USER
+                 ON M_USER.COMPANY_CD= M_B_USER.COMPANY_CD
+                AND M_USER.USER_ID= M_B_USER.USER_ID
+                AND M_USER.TERM_FLG = '0'
+                AND M_USER.VALID_START_DATE &lt;= '${@fw.common.util.AppUtil@getSysDate(@fw.common.util.AppUtil@DATE_SHORT)}'
+                AND M_USER.VALID_END_DATE >= '${@fw.common.util.AppUtil@getSysDate(@fw.common.util.AppUtil@DATE_SHORT)}'
+          LEFT JOIN M_B_USER_LANG
+                 ON M_B_USER_LANG.COMPANY_CD= M_B_USER.COMPANY_CD
+                AND M_B_USER_LANG.USER_ID= M_B_USER.USER_ID
+                AND M_B_USER_LANG.LANGUAGE_IND= M_B_USER.USE_LANGUAGE_IND
+         LEFT JOIN M_ROLE
+                 ON (M_ROLE.COMPANY_CD = M_USER.COMPANY_CD
+                 OR M_ROLE.COMPANY_CD = '${@fw.common.constant.ApplicationConstant@COMPANY_CD_ALL}')
+                AND M_ROLE.ROLE_NO= M_USER.ROLE_NO
+                AND M_ROLE.TERM_FLG = '0'
+         LEFT JOIN M_ROLE_DTL
+                 ON M_ROLE_DTL.ROLE_NO=M_ROLE.ROLE_NO
+                AND M_ROLE_DTL.COMPANY_CD=M_ROLE.COMPANY_CD
+         LEFT JOIN M_AUTH_NAME
+                 ON M_AUTH_NAME.AUTH_NO=M_ROLE_DTL.AUTH_NO
+                AND M_AUTH_NAME.TERM_FLG='0'
+         INNER JOIN M_COMPANY
+                 ON M_COMPANY.COMPANY_CD= M_B_USER.COMPANY_CD
+                AND M_COMPANY.TERM_FLG= '0'
+         INNER JOIN M_SECTION
+                 ON M_SECTION.COMPANY_CD= M_B_USER.COMPANY_CD
+                AND M_SECTION.SECTION_CD= M_USER.SECTION_CD
+                AND M_SECTION.VALID_START_DATE &lt;= '${@fw.common.util.AppUtil@getSysDate()}'
+                AND M_SECTION.VALID_END_DATE &gt;= '${@fw.common.util.AppUtil@getSysDate()}'
+                AND M_SECTION.TERM_FLG= '0'
+         INNER JOIN M_SECTION_LANG
+                 ON M_SECTION_LANG.COMPANY_CD= M_SECTION.COMPANY_CD
+                AND M_SECTION_LANG.SECTION_CD= M_SECTION.SECTION_CD
+                AND M_SECTION_LANG.VALID_START_DATE &lt;= '${@fw.common.util.AppUtil@getSysDate()}'
+                AND M_SECTION_LANG.VALID_END_DATE &gt;= '${@fw.common.util.AppUtil@getSysDate()}'
+                AND M_SECTION_LANG.LANGUAGE_IND= M_COMPANY.COMPANY_USE_LANGUAGE_IND
+         INNER JOIN M_SECTION_PLACE_LANG
+                 ON M_SECTION_PLACE_LANG.COMPANY_CD= M_B_USER.COMPANY_CD
+                AND M_SECTION_PLACE_LANG.SECTION_PLACE_CD= M_SECTION.SECTION_PLACE_CD
+                AND M_SECTION_PLACE_LANG.LANGUAGE_IND= M_COMPANY.COMPANY_USE_LANGUAGE_IND
+         WHERE M_B_USER.COMPANY_CD= #{companyCd}
+           AND M_B_USER.USER_ID= #{userId}
+           AND M_B_USER.TERM_FLG= '0'
+         ORDER BY M_SECTION_PLACE_LANG.SECTION_PLACE_NAME, M_SECTION.SECTION_CD
+    </select>
+    <update id="updateLastLoginDate" parameterType="fw.domain.slip.common.login.LoginAuthenticate">
+        UPDATE M_B_USER
+        SET LAST_LOGIN_DATE = '${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}'
+        WHERE M_B_USER.COMPANY_CD = #{companyCd}
+              AND M_B_USER.USER_ID = #{userId}
+    </update>
+<!-- TODO 14/11/14 add パスワード暗号化 daiko t.watanabe start -->
+    <update id="updateLoginSuccessful" parameterType="fw.domain.slip.common.login.LoginUser">
+        UPDATE M_B_USER SET
+               LAST_LOGIN_DATE = #{loginDate},
+               PW_LOCKED_TIME  = #{user.passwordLockedTime},
+               PW_FAILED_COUNT = #{user.passwordFailedCount}
+         WHERE COMPANY_CD = #{user.section.company.companyCd}
+           AND USER_ID = #{user.userID}
+    </update>
+
+    <update id="updateLoginFailed" parameterType="fw.domain.slip.common.login.LoginUser">
+        UPDATE M_B_USER SET
+               PW_LOCKED_TIME  = #{user.passwordLockedTime},
+               PW_FAILED_COUNT = #{user.passwordFailedCount}
+         WHERE COMPANY_CD = #{user.section.company.companyCd}
+           AND USER_ID = #{user.userID}
+    </update>
+<!-- TODO 14/11/14 add パスワード暗号化 daiko t.watanabe end -->
+</mapper> 

@@ -1,0 +1,323 @@
+<!doctype html>
+<html lang="ja">
+<head>
+#set($commonTitle = "#customSpringMessage('RINGI_BUDGET_DTL_LIST')")
+<title>$commonTitle</title><!--稟議予算明細一覧 -->
+<meta http-equiv="Content-type" content="text/html; charset=UTF-8">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Content-script-type" content="text/javascript">
+<link id="CSS_FONT" rel="stylesheet" href="../../include/FontS.css" type="text/css">
+<link rel="stylesheet" href="../../include/Layout.css" type="text/css">
+<link rel="stylesheet" href="../../include/Color.css" type="text/css">
+<script language="javascript" type="text/javascript" src="../../include/jquery-1.7.2.min.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/jquery.tablefix.js"></script>
+<script language="javascript" TYPE="text/javascript" src="../../include/common.js"></script>
+<script language="javascript" TYPE="text/javascript" src="../../include/check.js"></script>
+<script language="javascript" TYPE="text/javascript" src="../../include/date.js"></script>
+<script language="javascript" TYPE="text/javascript" src="../../include/tablesort.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/searchbox.js"></script>
+<script language="javascript" type="text/javascript">
+<!--
+#set($listViewStateID='PSBDT060')
+#parse("./common/common_js.vm")
+function onLoad() {
+    TableSort.init();
+    dataLoadHasPage();
+    var isShowSelect = "#jsEscape($isShowSelect)";
+    if (isShowSelect == 'true'){
+        parentButtonDisable();
+        buttonDisable();
+        top.iframeChange("${flowExecutionUrl}&_eventId=select","pageid","$listViewStateID");
+    }else{
+        parentButtonEnable();
+    }
+    var alertMessage = "$!alertMessage";
+    if (alertMessage != ""){
+        buttonUsableForList(alertMessage);
+        alert(alertMessage);
+    }
+    var errorMsg = "$!errorMessage";
+    if (errorMsg != ""){
+        return;
+    }
+}
+
+function openSelect(companyCd,sectionPlaceCd,budgetNo,budgetDtlNo,lastUpdDate){
+    parentButtonDisable();
+    buttonDisable();
+    parent.iframeChange("${flowExecutionUrl}&_eventId=selectValidate"
+    , 'company.companyCd',companyCd
+    , 'sectionPlace.sectionPlaceCd',sectionPlaceCd
+    , 'budgetNo.budgetNo',budgetNo
+    , 'budgetDtlNo.budgetDtlNo',budgetDtlNo
+    , 'lastUpdDate',lastUpdDate);
+}
+
+//固定行表示のため上書き
+function setTablefix(id,fixR,fixC) {
+
+    flag = false;
+    var windowHeight = $(window).height();
+    if($(".error").height() != null){
+        windowHeight = windowHeight - $(".error").height() - 35;
+    }
+    windowHeight -= 64;
+
+    if($(id).parent().attr("id")!="colTableDiv"){
+        $(function() {
+            $(id).tablefix({width: $(window).width(), height:  windowHeight,  fixRows: fixR, fixCols: fixC});
+        });
+    }else{
+        $(function() {
+            $(id).tablefixByChange({width: $(window).width(), height: windowHeight,  fixRows: fixR, fixCols: fixC});
+        });
+    }
+    flag = true;
+}
+
+function setorder(stateID) {
+    parentButtonDisable();
+    buttonDisable();
+    parent.iframeChange('${flowExecutionUrl}&_eventId=order','column',stateID);
+}
+//-->
+</script>
+
+</head>
+<body id="BODY" topmargin="0" leftmargin="0" marginwidth="0" marginheight="0" align="left" onload="onLoad();setTablefix('#TABLE2',1,3);">
+#if($!itemList.ringiBudgetDtlListItemList && $!itemList.ringiBudgetDtlListItemList.size()>0)
+#if($!itemList.ringiBudgetManagement)
+<div style="width:100%; overflow-x:scroll;">
+    <table id="TABLE1" class="ListArea" width="100%">
+        <thead>
+            <tr id="Header">
+                <th class="BoxHeaderCenter FontSmall">
+                    <span class="column SortColumn">#customSpringMessage('BUDGET_NO')<!--予算番号--></span>
+                </th>
+                <th class="BoxHeaderCenter FontSmall">
+                    <span class="column SortColumn">#customSpringMessage('BUDGET_TITLE_NAME')<!--予算件名--></span>
+                </th>
+                <th class="BoxHeaderCenter FontSmall">
+                    <span class="column SortColumn">#customSpringMessage('REQ_SECTION_CD')<!--依頼部門コード--></span>
+                </th>
+                <th class="BoxHeaderCenter FontSmall">
+                    <span class="column SortColumn">#customSpringMessage('REQ_SECTION_NAME')<!--依頼部門名--></span>
+                </th>
+                <th class="BoxHeaderCenter FontSmall">
+                    <span class="column SortColumn">#customSpringMessage('PLAN_USER_ID')<!--起案者コード--></span>
+                </th>
+                <th class="BoxHeaderCenter FontSmall">
+                    <span class="column SortColumn">#customSpringMessage('PLAN_USER_NAME')<!--起案者名--></span>
+                </th>
+                <th class="BoxHeaderCenter FontSmall">
+                    <span class="column SortColumn">#customSpringMessage('CURRENCY_CD')<!--通貨コード--></span>
+                </th>
+                <th class="BoxHeaderCenter FontSmall">
+                    <span class="column SortColumn">#customSpringMessage('BUDGET_SUM')<!--予算額--></span>
+                </th>
+                <th class="BoxHeaderCenter FontSmall">
+                    <span class="column SortColumn">#customSpringMessage('BUDGET_DTL_TOTAL')<!--明細予算合計額--></span>
+                </th>
+                <th class="BoxHeaderCenter FontSmall">
+                    <span class="column SortColumn">#customSpringMessage('PERMIT_DATE')<!--許可日--></span>
+                </th>
+                <th class="BoxHeaderCenter FontSmall">
+                    <span class="column SortColumn">#customSpringMessage('END_EXP_DATE')<!--完了予定日--></span>
+                </th>
+                <th class="BoxHeaderCenter FontSmall">
+                    <span class="column SortColumn">#customSpringMessage('END_DATE')<!--完了日--></span>
+                </th>
+                <th class="BoxHeaderCenter FontSmall">
+                    <span class="column SortColumn">#customSpringMessage('TOTAL_CHK')<!--総額チェック--></span>
+                </th>
+                <th class="BoxHeaderCenter FontSmall">
+                    <span class="column SortColumn">#customSpringMessage('TOTAL_DIFF_MAX_AMOUNT')<!--総額差額上限金額--></span>
+                </th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr id="Row" name="Row" #if($itemList.budgetOverFlg == '1')  bgcolor="#ffb6c1" #else bgcolor="#dce4ef" #end>
+                <td class="BoxDetailLeft FontList">
+                    #out($!itemList.ringiBudgetManagement.ringiBudgetIdentify.budgetNo.budgetNo)
+                </td>
+                <td class="BoxDetailLeft FontList">
+                    #out($!itemList.ringiBudgetManagement.titleName.titleName)
+                </td>
+                <td class="BoxDetailCenter FontList">
+                    #out($!itemList.ringiBudgetManagement.planInfo.reqSection.sectionCd)
+                </td>
+                <td class="BoxDetailLeft FontList">
+                    #out($!itemList.ringiBudgetManagement.planInfo.reqSection.sectionName)
+                </td>
+                <td class="BoxDetailCenter FontList">
+                    #out($!itemList.ringiBudgetManagement.planInfo.planUser.userID)
+                </td>
+                <td class="BoxDetailLeft FontList">
+                    #out($!itemList.ringiBudgetManagement.planInfo.planUser.userName)
+                </td>
+                <td class="BoxDetailCenter FontList">
+                    #out($!itemList.ringiBudgetManagement.ringiBudgetIdentify.company.currency.currencyCd)
+                </td>
+                <td class="BoxDetailRight FontCurrSmall">
+                    #if("$!itemList.ringiBudgetManagement.budgetAmount.budgetAmount.amount"!="")
+                        #out($!itemList.ringiBudgetManagement.ringiBudgetIdentify.company.currency.currencyMark)&nbsp;&nbsp;#out($!itemList.ringiBudgetManagement.budgetAmount.budgetAmount.amountFormat)
+                    #end
+                </td>
+                <td class="BoxDetailRight FontCurrSmall">
+                    #if("$!itemList.budgetDtlTotal.amount"!="")
+                        #out($!itemList.ringiBudgetManagement.ringiBudgetIdentify.company.currency.currencyMark)&nbsp;&nbsp;#out($!itemList.budgetDtlTotal.amountFormat)
+                    #end
+                </td>
+                <td class="BoxDetailCenter FontList">
+                    #out($!itemList.ringiBudgetManagement.permitDate.permitDate.dateOfymdFormat)
+                </td>
+                <td class="BoxDetailCenter FontList">
+                    #out($!itemList.ringiBudgetManagement.endExpDate.endExpDate.dateOfymdFormat)
+                </td>
+                <td class="BoxDetailCenter FontList">
+                    #out($!itemList.ringiBudgetManagement.endDate.endDate.dateOfymdFormat)
+                </td>
+                <td class="BoxDetailCenter FontList">
+                    #out($!itemList.ringiBudgetManagement.rinTotalChkInd.rinTotalChkInd_PageValue)
+                </td>
+                <td class="BoxDetailRight FontCurrSmall">
+                    #if("$!itemList.ringiBudgetManagement.diffMaxAmount.diffMaxAmount.amount"!="")
+                        #out($!itemList.ringiBudgetManagement.ringiBudgetIdentify.company.currency.currencyMark)&nbsp;&nbsp;#out($!itemList.ringiBudgetManagement.diffMaxAmount.diffMaxAmount.amountFormat)
+                    #end
+                </td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+#end
+<div style="width:100%;">
+    <table id="TABLE2" class="ListArea" width="100%" height="100%">
+        <thead>
+            <tr id="Header" style= "position:relative;overflow-y:auto;">
+                <th class="BoxHeaderCenter FontSmall">No.<!--No.--></th>
+                <th class="BoxHeaderCenter FontSmall">#customSpringMessage('SELECTION')<!--選択--></th>
+                <th label="case" class="BoxHeaderCenter FontSmall" id="BUDGET_DTL_NO" onclick="setorder('BUDGET_DTL_NO')">
+                    #customSpringMessage('DETAIL_NO')<!--予算明細番号-->
+                </th>
+                <th label="case" class="BoxHeaderCenter FontSmall" id="BUDGET_NAME" onclick="setorder('BUDGET_NAME')">
+                    #customSpringMessage('BUDGET_NAME')<!--予算名-->
+                </th>
+                <th label="case" class="BoxHeaderCenter FontSmall" id="SUBJECT_CD" onclick="setorder('SUBJECT_CD')">
+                    #customSpringMessage('SUBJECT_CD')<!--科目コード-->
+                </th>
+                <th label="case" class="BoxHeaderCenter FontSmall" id="SUBJECT_NAME" onclick="setorder('SUBJECT_NAME')">
+                    #customSpringMessage('SUBJECT_NAME')<!--科目名-->
+                </th>
+                <th label="case" class="BoxHeaderCenter FontSmall" id="BUDGET_AMOUNT" onclick="setorder('BUDGET_AMOUNT')">
+                    #customSpringMessage('BUDGET_AMOUNT')<!--予算金額-->
+                </th>
+                <th label="case" class="BoxHeaderCenter FontSmall" id="ACCEPT_SUM" onclick="setorder('ACCEPT_SUM')">
+                    #customSpringMessage('ACCEPT_SUM')<!--検収累計額-->
+                </th>
+                <th label="case" class="BoxHeaderCenter FontSmall" id="BUDGET_BAL_RES" onclick="setorder('BUDGET_BAL_RES')">
+                    #customSpringMessage('BUDGET_BAL_RES')<!--予算残(実績)-->
+                </th>
+                <th label="case" class="BoxHeaderCenter FontSmall" id="PROGRESS_RATE_RES" onclick="setorder('PROGRESS_RATE_RES')">
+                    #customSpringMessage('PROGRESS_RATE_RES')<!--進捗率(実績)-->
+                </th>
+                <th label="case" class="BoxHeaderCenter FontSmall" id="PUR_REQ_SUM" onclick="setorder('PUR_REQ_SUM')">
+                    #customSpringMessage('PUR_REQ_SUM')<!--購入依頼累計額-->
+                </th>
+                <th label="case" class="BoxHeaderCenter FontSmall" id="BUDGET_BAL_EST" onclick="setorder('BUDGET_BAL_EST')">
+                    #customSpringMessage('BUDGET_BAL_EST')<!--予算残(見込)-->
+                </th>
+                <th label="case" class="BoxHeaderCenter FontSmall" id="PROGRESS_RATE_EST" onclick="setorder('PROGRESS_RATE_EST')">
+                    #customSpringMessage('PROGRESS_RATE_EST')<!--進捗率(見込)-->
+                </th>
+                <th label="case" class="BoxHeaderCenter FontSmall" id="ORDER_SUM" onclick="setorder('ORDER_SUM')">
+                    #customSpringMessage('ORDER_SUM')<!--発注累計額-->
+                </th>
+                <th label="case" class="BoxHeaderCenter FontSmall" id="ORDER_DIFF_SUM" onclick="setorder('ORDER_DIFF_SUM')">
+                    #customSpringMessage('ORDER_DIFF_SUM')<!--発注差分累計額-->
+                </th>
+            </tr>
+        </thead>
+        <tbody>
+        #set ($No=0)
+        #foreach($!item in $!itemList.ringiBudgetDtlListItemList)
+            #set( $No = $No + 1 )
+            <tr id="Row_$velocityCount" name="Row_$velocityCount" #if($item.budgetOverFlg == '1')  bgcolor="#ffb6c1" #elseif($velocityCount % 2 == 0) bgcolor="#dce4ef" #else bgcolor="#ffffff" #end>
+                <td class="BoxDetailCenter FontList">$No</td>
+                <td class="BoxDetailCenter">
+                #if($LoginUser.hasAuth(${AuthNoConstant.getValue("RINGI_BUDGET_DTL_READ_GRANT")}))
+                    <input type="button" class="SmallButton" value="#customSpringMessage('SELECTION')" onclick="javascript:openSelect('#jsEscapeInHTML($!item.ringiBudgetDtlIdentify.company.companyCd)','#jsEscapeInHTML($!item.ringiBudgetDtlIdentify.sectionPlace.sectionPlaceCd)','#jsEscapeInHTML($!item.ringiBudgetDtlIdentify.budgetNo.budgetNo)','#jsEscapeInHTML($!item.ringiBudgetDtlIdentify.budgetDtlNo.budgetDtlNo)','#jsEscapeInHTML($!item.ringiBudgetDtlIdentify.lastUpdDate)')">
+                #end
+                </td>
+                <td class="BoxDetailLeft FontList">
+                    #out($!item.ringiBudgetDtlIdentify.budgetDtlNo.budgetDtlNo)
+                </td>
+                <td class="BoxDetailLeft FontList">
+                    #out($!item.budgetTitleName)
+                </td>
+                <td class="BoxDetailCenter FontList">
+                    #out($!item.subjectCd)
+                </td>
+                <td class="BoxDetailLeft FontList">
+                    #out($!item.subjectName)
+                </td>
+                <td class="BoxDetailRight FontCurrSmall">
+                    #if("$!item.budgetAmount.amount"!="")
+                        #out($!item.currencyMark)&nbsp;&nbsp;#out($!item.budgetAmount.amountFormat)
+                    #end
+                </td>
+                <td class="BoxDetailRight FontCurrSmall">
+                    #if("$!item.acceptSum.amount"!="")
+                        #out($!item.currencyMark)&nbsp;&nbsp;#out($!item.acceptSum.amountFormat)
+                    #end
+                </td>
+                <td class="BoxDetailRight FontCurrSmall">
+                    #if("$!item.budgetBalRes.amount"!="")
+                        #out($!item.currencyMark)&nbsp;&nbsp;#out($!item.budgetBalRes.amountFormat)
+                    #end
+                </td>
+                <td class="BoxDetailRight FontList">
+                    #if("$!item.progressRateRes"!="")
+                        #out($!item.progressRateRes)%
+                    #end
+                </td>
+                <td class="BoxDetailRight FontCurrSmall">
+                    #if("$!item.purReqSum.amount"!="")
+                        #out($!item.currencyMark)&nbsp;&nbsp;#out($!item.purReqSum.amountFormat)
+                    #end
+                </td>
+                <td class="BoxDetailRight FontCurrSmall">
+                    #if("$!item.budgetBalEst.amount"!="")
+                        #out($!item.currencyMark)&nbsp;&nbsp;#out($!item.budgetBalEst.amountFormat)
+                    #end
+                </td>
+                <td class="BoxDetailRight FontList">
+                    #if("$!item.progressRateEst"!="")
+                        #out($!item.progressRateEst)%
+                    #end
+                </td>
+                <td class="BoxDetailRight FontCurrSmall">
+                    #if("$!item.orderSum.amount"!="")
+                        #out($!item.currencyMark)&nbsp;&nbsp;#out($!item.orderSum.amountFormat)
+                    #end
+                </td>
+                <td class="BoxDetailRight FontCurrSmall">
+                    #if("$!item.orderDiffSum.amount"!="")
+                        #out($!item.currencyMark)&nbsp;&nbsp;#out($!item.orderDiffSum.amountFormat)
+                    #end
+                </td>
+            </tr>
+        #end
+        </tbody>
+    </table>
+</div>
+#end
+#if($!errorMessage && $!errorMessage!="")
+<div id="error" name="error" class="error">
+    $!errorMessage
+</div>
+#end
+<br>
+<table id="WAIT" class="NoBorder" style="display:none;width:100%;"><tr><td style="text-align:center;"><br><br>
+<img src="../../image/wait.gif"><br><span class="FontMini"><br>#customSpringMessage('SEARCH_MESSAGE')</span></td></tr></table><!--問い合わせ中...-->
+</body>
+</html>

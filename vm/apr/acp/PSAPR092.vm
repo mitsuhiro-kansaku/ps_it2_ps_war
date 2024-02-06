@@ -1,0 +1,781 @@
+<!doctype html>
+<html lang="ja">
+<head>
+#set($commonTitle = "#customSpringMessage('ACCEPT_APP')")
+<title>$!commonTitle
+</title><!--検収承認-->
+<meta http-equiv="Content-type" content="text/html; charset=UTF-8">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Content-script-type" content="text/javascript">
+<link id="CSS_FONT" rel="stylesheet" href="../../include/FontS.css" type="text/css">
+<link rel="stylesheet" href="../../include/Layout.css" type="text/css">
+<link rel="stylesheet" href="../../include/Color.css" type="text/css">
+<link rel="stylesheet" href="../../include/searchbox.css" type="text/css">
+<script language="javascript" type="text/javascript" src="../../include/common.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/check.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/date.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/tablesort.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/searchbox.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/jquery-1.7.2.min.js"></script>
+<script LANGUAGE="javascript" type="text/javascript"> 
+<!--
+#set($isActiveProfileStock = "#isActiveProfile('stock')")
+#parse("./common/common_js.vm")
+var isFinalAppUser = "false";
+var isClickable = false;
+function onLoad() {
+    //setFocusForInput();
+    parent.document.title="#customSpringMessage('ACCEPT_APP')";
+    var alertMessage = "$!alertMessage";
+    if (alertMessage != ""){
+        alert(alertMessage);
+        if(alertMessage.indexOf("#customSpringMessage('E035')") != -1){ 
+            buttonDisable();
+            parent.iframeChange("${flowExecutionUrl}&_eventId=next");   
+            return;
+        }   
+    }
+    var errorMsg = "$!errorMessage";
+    if (errorMsg == ""){
+        var isSuccessForApproval = '#jsEscape($!isSuccessForApproval)';
+        #if($!isSuccessForApproval == true)
+            #set( $approvalqAccept = "#customSpringMessage('ACCEPT')")
+            alert('#customMessageArgs("I028",[$approvalqAccept])');
+            buttonDisable();
+            parent.iframeChange("${flowExecutionUrl}&_eventId=next");
+            return;
+        #end
+        #if($!isSuccessForSendBack == true)
+            #set( $approvalqAccept = "#customSpringMessage('ACCEPT')")
+            alert('#customMessageArgs("I029",[$approvalqAccept])');
+            buttonDisable();
+            parent.iframeChange("${flowExecutionUrl}&_eventId=next");
+            return;
+        #end
+    } else{
+        getObj("TR_ERROR").style.display = "";
+    }
+    approvalPaging();
+    isClickable = true;
+}
+//差戻し
+function execSendBack() {
+    if(!isClickable) {
+        return;
+    }
+    #set( $approvalqAccept = "#customSpringMessage('ACCEPT')")
+    #set( $approvalqReturn = "#customSpringMessage('RETURN')")
+    if( !confirm('#customMessageArgs("W001",[$approvalqAccept,$approvalqReturn])') ) {
+        return;
+    }
+    buttonDisable();
+    getObj("Body").action = "${flowExecutionUrl}&_eventId=sendBack";
+    getObj('Body').submit();
+}
+function forward() {
+    setDisplay("DetailArea",false);
+    setDisplay("ForwardArea",true);
+    getObj("DetailTab").className = "DetailTabsOff";
+    getObj("ForwardTab").className = "DetailTabsOn";
+    getObj("Detail").href = "javascript:detail();";
+    parent.adjustArea(ROWNUM);
+}
+function detail() {
+    setDisplay("DetailArea",true);
+    setDisplay("ForwardArea",false);
+    getObj("DetailTab").className = "DetailTabsOn";
+    getObj("ForwardTab").className = "DetailTabsOff";
+    getObj("Forward").href = "javascript:forward();";
+    parent.adjustArea(ROWNUM);
+}
+//承認
+function execApproval() {
+    if(!isClickable) {
+        return;
+    }
+    #set( $approvalqAccept = "#customSpringMessage('ACCEPT')")
+    #set( $approvalqAppoval = "#customSpringMessage('APPROVAL')")
+    if( !confirm('#customMessageArgs("W001",[$approvalqAccept,$approvalqAppoval])') ) {
+        return;
+    }
+    buttonDisable();
+    getObj("Body").action = "${flowExecutionUrl}&_eventId=approval";
+    getObj('Body').submit();
+}
+//承認者の削除
+function removeAuthorizer(appSeq) {
+    if(!isClickable) {
+        return;
+    }
+    getObj("Body").action="${flowExecutionUrl}&_eventId=removeAuthorizer&appSeq="+appSeq;
+    getObj("Body").submit();
+}
+//承認者の追加
+function addAuthorizer() {
+    if(!isClickable) {
+        return;
+    }
+    getObj("Body").action="${flowExecutionUrl}&_eventId=addAuthorizer";
+    getObj("Body").submit();
+}
+function commentPassed(){
+    var comment = getObj("accept.appManagement.backApp.backAppReason.backReason.comment");
+    if(comment.value.length>200){
+       alert("差戻理由を入力してください。（200バイト以内）");
+       return false;
+    }else if(comment.value.length <=0 ){
+        #set( $comment = "#customSpringMessage('BACK_APP_COMMENTS')")
+        alert('#customMessageArgs("E002",[$comment])');
+        return false;
+    }else{
+        return true;
+    }
+}
+//承認者を検索
+function searchAuthorizer() {
+    var userId = getObj('accept.appManagement.appList.appUserName.userID');
+    var userName = getObj('accept.appManagement.appList.appUserName.userName');
+    var sectionCd = getObj('accept.appManagement.appList.appUserName.section.sectionCd');
+    var sectionName = getObj('accept.appManagement.appList.appUserName.section.sectionName');
+    var officialName = getObj('accept.appManagement.appList.appUserName.official.officialName');
+    var sectionPlaceCd = getObj('accept.appManagement.appList.appUserName.section.sectionPlace.sectionPlaceCd');
+    var sectionPlaceName = getObj('accept.appManagement.appList.appUserName.section.sectionPlace.sectionPlaceName');
+    var mail = getObj('accept.appManagement.appList.appUserName.mailAddr.mail');
+    var extensionNo = getObj('accept.appManagement.appList.appUserName.extNo.extensionNo');
+    var externalNo = getObj('accept.appManagement.appList.appUserName.externalNo.externalNo');
+    userPopup.setObject(userId, userName, sectionCd, sectionName, officialName, sectionPlaceCd, sectionPlaceName, mail, extensionNo, externalNo); 
+    masterSearch('../../src/userPopup/search?pageid=userPopupSearch&popupPageid=PSAPR092','UserSearch','750','500');
+}
+function downloadExt(filename, file) {
+    iframeChange("${flowExecutionUrl}&_eventId=downloadext", 'filename', filename, 'file', file);
+}
+//-->
+</script>
+</head>
+<body topmargin="0" leftmargin="0" marginwidth="0" marginheight="0" align="center" onload="onLoad()"  style="overflow:hidden">
+<form name="Body" id="Body" method="post">
+<table class="SearchBody">
+        <tr>
+            <td id="SEARCH_AREA" class="SearchArea"><!-- onLoadで変更 -->
+                #parse("./common/common_title_tran_with_individual_approval.vm")
+            </td>
+        </tr>
+    <tr>
+     <td class="NoBorder" style="height:auto; background-color:#CCC;" align = "center" valign="top" >
+            <div id="Area" style="OVERFLOW-Y: scroll;HEIGHT: 100%;display:none;" >
+      <table class="HomeBox">
+        <tr>
+            <td >
+                <table>
+                    <tr>
+                        <td style="padding:55px,15px,0px,15px">
+                        <!-- ＊＊＊＊＊＊＊＊＊＊左サイド＊＊＊＊＊＊＊＊＊＊ -->
+                            <table class="NoBorder" width="98%">
+                                <tr>
+                                    <td>
+                                        <u><img src="../../image/mrkCircle.gif"><span id="StepTitle" class="FontStepTitle">#customSpringMessage('ACCEPT_APP')</span></u><br><br>
+                                        <span id="ReqNo" class="FontSmallBold DarkBlue">#customSpringMessage('PSAPR092_HEADER_COMMENT')<!--内容を確認の上、「承認」ボタンを押してください。<br>差戻す場合は、画面下部の差戻し理由を入力して「差戻し」ボタンを押してください。--></span>
+                                    </td>
+                                    <td align="right" valign="middle">
+                                        <input type="button" class="LargeButton Red" value="#customSpringMessage('RETURN')" onclick="execSendBack();"><!--差戻し-->&nbsp;&nbsp;<input id="Submit" type="button" class="LargeButton" value="#customSpringMessage('APPROVAL')" onclick="execApproval();"><!--承認-->
+                                    </td>
+                                </tr>
+                                <tr id ="TR_ERROR" style="display:none;"><td class="error" style="height:0px;">
+                                    $!errorMessage
+                                </td></tr>
+                            </table>
+                            $!PSAPR092PageCreater.build('upd','_td_style_right', 'class="Box1D FontSmallAnk"', '_td_style_left','class="Box1H FontBoxHeader"')
+                              <table class="Box1G" width="100%">
+                                <tbody class="Box1G">
+                                    <tr>
+                                        <td nowrap class="Box1H FontBoxHeader">#customSpringMessage('DELIV_KEY_NO')</td><!--納品キー番号-->
+                                        <td nowrap class="Box1D FontSmallAnk"><span class="FontSlipNo">#out($!domain.accept.delivKeyNo.delivKeyNo)</span></td>
+                                    </tr>
+                                    <tr>
+                                        <td nowrap class="Box1H FontBoxHeader">#customSpringMessage('CORRECT_NAME')</td> ## 訂正区分
+                                        <td nowrap class="Box1D FontSmallAnk">#out($!domain.accept.correctInd.correctInd_PageValue)</td>
+                                    </tr>
+                                    <tr>
+                                        <td nowrap class="Box1H FontBoxHeader">#customSpringMessage('REVISION_NUMBER')</td><!--履歴番号-->
+                                        <td nowrap class="Box1D FontSmallAnk">#out($!domain.accept.historyNo.historyNo)</td>
+                                    </tr>
+                                    <tr>
+                                        <td nowrap class="Box1H FontBoxHeader">#customSpringMessage('TITLE_NAME')</td><!--件名-->
+                                        <td nowrap class="Box1D FontSmallAnk">#out($!domain.accept.order.titleName.titleName)</td>
+                                    </tr>
+                                    <tr>
+                                        <td nowrap class="Box1H FontBoxHeader">#customSpringMessage('DELIVERY_PLACE')</td><!--納入先-->
+                                        <td nowrap class="Box1D FontSmallAnk">#out($!domain.accept.order.complement.delivPlace.delivPlaceCd) #out($!domain.accept.order.complement.delivPlace.delivPlaceName)</td>
+                                    </tr>
+                                    <tr>
+                                        <td nowrap class="Box1H FontBoxHeader">#customSpringMessage('ITEM_CD')<!--品名コード--></td>
+                                        <td nowrap class="Box1D FontSmallAnk">#out($!domain.accept.order.accounting.orderItem.item.itemCd)</td>
+                                    </tr>
+                                    <tr>
+                                        <td nowrap class="Box1H FontBoxHeader">#customSpringMessage('ITEM_NAME')</td><!--品名-->
+                                        <td nowrap class="Box1D FontSmallAnk">#out($!domain.accept.order.accounting.orderItem.item.itemName)</td>
+                                    </tr>
+                                    <tr>
+                                        <td nowrap class="Box1H FontBoxHeader">#customSpringMessage('KATASHIKI')</td><!--型式-->
+                                        <td nowrap class="Box1D FontSmallAnk">#out($!domain.accept.order.accounting.orderItem.item.katashiki)</td>
+                                    </tr>
+                                    <tr>
+                                        <td nowrap class="Box1H FontBoxHeader">#customSpringMessage('MANUFACT')</td><!--メーカー-->
+                                        <td nowrap class="Box1D FontSmallAnk">#out($!domain.accept.order.accounting.orderItem.item.manufact.manufactCd) #out($!domain.accept.order.accounting.orderItem.item.manufact.manufactName)</td>
+                                    </tr>
+                                    <tr>
+                                        <td nowrap class="Box1H FontBoxHeader">#customSpringMessage('ORDER_DATE')</td><!--注文日-->
+                                        <td nowrap class="Box1D FontSmallAnk">#out($!domain.accept.order.schedule.reqDate.reqDate.dateOfymdFormat)</td>
+                                    </tr>                                                         
+                                    <tr>
+                                        <td nowrap class="Box1H FontBoxHeader">#customSpringMessage('DELIV_DATE')</td><!--納期-->
+                                        <td nowrap class="Box1D FontSmallAnk">#out($!domain.accept.order.schedule.dlvEst.dlvEst.dateOfymdFormat)</td>
+                                    </tr>
+                                    <tr>
+                                        <td nowrap class="Box1H FontBoxHeader">#customSpringMessage('CURRENCY_CD')</td><!--通貨コード-->
+                                        <td nowrap class="Box1D FontSmallAnk">#out($!domain.accept.order.accounting.orderAmount.amountMng.currency.currencyCd)</td>
+                                    </tr>
+                                    <tr>
+                                        <td nowrap class="Box1H FontBoxHeader">#customSpringMessage('UNIT_PRICE')</td><!--単価-->
+                                        <td nowrap class="Box1D FontSmall">
+                                            <span class="FontCurrSmall">#out($!domain.accept.order.accounting.orderAmount.amountMng.currency.currencyMark)
+                                            #out($!domain.accept.order.accounting.orderAmount.unitPrice.amount.amountFormat)</span>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td nowrap class="Box1H FontBoxHeader">#customSpringMessage('ORDER_VOL')</td><!--注文数量-->
+                                            <td nowrap class="Box1D">
+                                                <table width="100%">
+                                                    <tr>
+                                                        <td nowrap class="FontSmallAnk">
+                                                            #out($!domain.accept.order.originVol.volFormat)
+                                                            &nbsp;
+                                                            #out($!domain.accept.order.accounting.orderItem.item.unit.unitName)
+                                                        </td>
+                                                        #if( $!domain.accept.order.orderCancel.orderCancelVol.vol != "" && $!domain.accept.order.orderCancel.orderCancelVol.vol != "0" )
+                                                        <td nowrap class="FontSmallAnk" align="right">
+                                                            #customSpringMessage("ORDER_CANCEL_VOL")&nbsp;&nbsp;
+                                                            #out($!domain.accept.order.orderCancel.orderCancelVol.volFormat)
+                                                            &nbsp;
+                                                            #out($!domain.accept.order.accounting.orderItem.item.unit.unitName)
+                                                        </td>
+                                                        #end
+                                    </tr>
+                                                </table>
+                                            </td>
+                                    </tr>
+                                    <tr>
+                                        <td nowrap class="Box1H FontBoxHeader">
+                                            #customSpringMessage('ORDER_AMOUNT')
+                                        </td><!--注文金額-->
+                                        <td nowrap class="Box1D">
+                                            <table width="100%">
+                                                <tr>
+                                                    <td class="FontCurrSmall">
+                                                        #out($!domain.accept.order.accounting.orderAmount.amountMng.currency.currencyMark)
+                                                        #out($!domain.accept.order.originAmount.amountFormat)
+                                                    </td>
+                                                    #if( $!domain.accept.order.orderCancel.orderCancelAmount.amount != "" && $!domain.accept.order.orderCancel.orderCancelAmount.amount != "0" )
+                                                    <td class="FontCurrSmall" align="right" nowrap>
+                                                        <span class="FontSmall">#customSpringMessage("ORDER_CANCEL_AMOUNT")</span>&nbsp;&nbsp;
+                                                        #out($!domain.accept.order.accounting.orderAmount.amountMng.currency.currencyMark)
+                                                        #out($!domain.accept.order.orderCancel.orderCancelAmount.amountFormat)
+                                                    </td>
+                                                    #end
+                                    </tr>
+                                            </table>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td nowrap class="Box1H FontBoxHeader">#customSpringMessage('TAX_IND')</td><!--課税区分-->
+                                        <td nowrap class="Box1D FontSmallAnk">#out($!domain.accept.amountMng.taxCalculationInd.taxInd.taxInd_PageValue)</td>
+                                    </tr>
+                                    <tr>
+                                        <td nowrap class="Box1H FontBoxHeader">#customSpringMessage('PAY_CONDITION_CD')</td><!--支払い条件コード-->
+                                        <td nowrap class="Box1D FontSmallAnk">#out($!domain.accept.order.payConditionItem.payConditionIdentify.payConditionCd)</td>
+                                    </tr>
+                                    <tr>
+                                        <td nowrap class="Box1H FontBoxHeader">#customSpringMessage('PAY_CONDITION_NAME')</td><!--支払い条件名-->
+                                        <td nowrap class="Box1D FontSmallAnk">#out($!domain.accept.order.payConditionItem.payConditionName)</td>
+                                    </tr>
+                                    <tr>
+                                        <td nowrap class="Box1H FontBoxHeader">#customSpringMessage('SUPPLIER')</td><!--取引先-->
+                                        <td nowrap class="Box1D FontSmallAnk">
+                                            #out($!domain.accept.order.supplierFrom.supCd)&nbsp;
+                                            <span class="FontSmallBold">#out($!domain.accept.order.supplierFrom.supplierName.supplierAbbrName)</span>&nbsp;
+                                        #if ($!domain.accept.order.supplierFrom.subcon.subconInd == '1')
+                                            <span class="FontSubcon Subcon">#out($!domain.accept.order.supplierFrom.subcon.subconInd_PageValue)</span>
+                                        #end
+                                        #if ($!domain.accept.order.supplierFrom.ediInd.ediInd != '')
+                                            <span class="FontSmallAnk">#out($!domain.accept.order.supplierFrom.ediInd.ediInd_PageValue)</span>
+                                        #end
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td nowrap class="Box1H FontBoxHeader">#customSpringMessage('FOR_SUPPRIER_COMMENT')</td><!--取引先向けコメント-->
+                                        <td nowrap class="Box1D FontSmallAnk">#out($!domain.accept.order.orderComment.forSupplierComment.forSupplierComment.comment)</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="Box1H FontBoxHeader" WIDTH="20%">
+                                            #customSpringMessage('CLIENT')
+                                        </td><!--依頼者-->
+                                        <td class="Box1D FontSmallAnk">
+                                            <table class="NoBorder">
+                                                <tr>
+                                                    <td valign="top" rowspan="2"><img class="Mark" src="../../image/mrkHuman.gif"></td>
+                                                    <td rowspan="2" nowrap>
+                                                        <span class="FontSmall">
+															#out($!domain.accept.order.user.reqUser.reqUser.section.sectionCd) 
+															#out($!domain.accept.order.user.reqUser.reqUser.section.sectionName)
+														</span><br>
+														<span class="FontSmall">
+															#out($!domain.accept.order.user.reqUser.reqUser.userID) &nbsp;
+                                                        </span>
+														<span class="FontUserName">
+															<b class="FontUserName">#out($!domain.accept.order.user.reqUser.reqUser.userName)</b>
+														</span>
+                                                    </td>
+                                                    <td><img class="Mark" src="../../image/mrkTel.gif" ></td>
+                                                    <td class="FontMini" nowrap>
+                                                        #customSpringMessage('EXTENSION_NO')：<!-- 内線番号--><span class="FontSmallAnk">#out($!domain.accept.order.user.reqUser.reqUser.extNo.extensionNo)</span>&nbsp;&nbsp;#customSpringMessage('EXTERNAL_NO')：<!-- 外線番号--><span class="FontSmallAnk">#out($!domain.accept.order.user.reqUser.reqUser.externalNo.externalNo)</span>
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <td><img class="Mark" src="../../image/mrkMail.gif" ></td>
+                                                    <td class="FontMiniAnkBold" nowrap>
+                                                        <span class="FontMiniAnk">
+                                                            #if("$!domain.accept.order.user.reqUser.reqUser.mailAddr.mail" != "")
+                                                            <A HREF='mailto:#out($!domain.accept.order.user.reqUser.reqUser.userName)<#out($!domain.accept.order.user.reqUser.reqUser.mailAddr.mail)>'>#out($!domain.accept.order.user.reqUser.reqUser.mailAddr.mail)</A>
+                                                            #end
+                                                        </span></td><td align="right" valign="bottom">
+                                                    </td>
+                                                </tr>
+                                            </table>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td class="Box1H FontBoxHeader" WIDTH="20%">
+                                            #customSpringMessage('BUYER_USER')<!-- 購買担当者-->
+                                        </td>
+                                        <td class="Box1D FontSmallAnk">
+                                            <table class="NoBorder">
+                                                <tr>
+                                                    <td valign="top" rowspan="2"><img class="Mark" src="../../image/mrkHuman.gif" ></td>
+                                                    <td rowspan="2" nowrap>
+                                                        <span class="FontSmall">
+															#out($!domain.accept.order.user.buyUser.buyUser.section.sectionCd) 
+															#out($!domain.accept.order.user.buyUser.buyUser.section.sectionName)
+														</span><br>
+														<span class="FontSmall">
+															#out($!domain.accept.order.user.buyUser.buyUser.userID) &nbsp;
+                                                        </span>
+														<span class="FontUserName">
+															<b class="FontUserName">#out($!domain.accept.order.user.buyUser.buyUser.userName)</b>
+														</span>
+                                                    </td>
+                                                    <td><img class="Mark" src="../../image/mrkTel.gif" ></td>
+                                                    <td class="FontMini" nowrap>
+                                                        #customSpringMessage('EXTENSION_NO')：<!-- 内線番号--><span class="FontSmallAnk">#out($!domain.accept.order.user.buyUser.buyUser.extNo.extensionNo)</span>&nbsp;&nbsp;#customSpringMessage('EXTERNAL_NO')：<!-- 外線番号--><span class="FontSmallAnk">$!domain.accept.order.user.buyUser.buyUser.externalNo.externalNo</span>
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <td><img class="Mark" src="../../image/mrkMail.gif" ></td>
+                                                    <td class="FontMiniAnkBold" nowrap>
+                                                        <span class="FontMiniAnk">
+                                                            #if("$!domain.accept.order.user.buyUser.buyUser.mailAddr.mail" != "")
+                                                            <A HREF='mailto:#out($!domain.accept.order.user.buyUser.buyUser.userName)<#out($!domain.accept.order.user.buyUser.buyUser.mailAddr.mail)>'>#out($!domain.accept.order.user.buyUser.buyUser.mailAddr.mail)</A>
+                                                            #end
+                                                        </span></td><td align="right" valign="bottom">
+                                                    </td>
+                                                </tr>
+                                            </table>
+                                        </td>
+                                    </tr>
+                                    #foreach($!item in $!PSAPR092PageCreater.getItemListById("extend"))
+                                        $!PSAPR092PageCreater.printDefaultForCancelForDispPos(1, $!item)
+                                    #end
+                                </tbody>
+                               </table>
+                                <br>
+                                <table class="Box1G" width="100%">
+                                <tbody class="Box1G">
+                                    <tr>
+                                        <td nowrap class="Box1H FontBoxHeader">#customSpringMessage('RCV_DATE')<!--受入日--></td>
+                                        <td nowrap class="Box1D FontSmallAnk">#out($!domain.accept.receiveResult.receiveDate.receiveDate.dateOfymdFormat)</td>
+                                    </tr>
+                                    <tr>
+                                        <td nowrap class="Box1H FontBoxHeader">#customSpringMessage('RCV_AMOUNT')<!--受入数量--></td>
+                                        <td nowrap class="Box1D FontSmallAnk">   #out($!domain.accept.receiveManagement.delivVol.delivVol.volFormat)　#out($!domain.accept.order.accounting.orderItem.item.unit.unitName)</td>
+                                    </tr>
+                                #if($isActiveProfileStock == "true")## 在庫オプション
+                                    <tr>
+                                        <td nowrap class="Box1H FontBoxHeader">#customSpringMessage('HAVE_IN_STOCK_FLG')<!--在庫対象--></td>
+                                        <td nowrap class="Box1D FontSmallAnk">
+                                            #out($!{domain.accept.receiveResult.haveInStockFlg.haveInStockFlg_PageValue})
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td nowrap class="Box1H FontBoxHeader">#customSpringMessage('STOCK_PLACE')<!--在庫場所--></td>
+                                        <td nowrap class="Box1D FontSmallAnk">
+                                            #out($!{domain.accept.receiveResult.stockPlace.stockPlaceCd})
+                                            #out($!{domain.accept.receiveResult.stockPlace.stockPlaceName})
+                                        </td>
+                                    </tr>
+                                #end
+                                    <tr>
+                                        <td nowrap class="Box1H FontBoxHeader">#customSpringMessage('RCV_REMARK')<!--受入備考--></td>
+                                        <td class="Box1D FontSmallAnk">
+                                            #out($!domain.accept.receiveResult.receiveRemark.remark.comment)
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td class="Box1H FontBoxHeader" WIDTH="20%">
+                                            #customSpringMessage('RCV_USER')<!-- 受入担当者-->
+                                        </td>
+                                        <td class="Box1D FontSmallAnk">
+                                            <table class="NoBorder">
+                                                <tr>
+                                                    <td valign="top" rowspan="2"><img class="Mark" src="../../image/mrkHuman.gif" ></td>
+                                                    <td rowspan="2" nowrap>
+                                                        <span class="FontSmall">
+															#out($!domain.accept.receiveResult.receiveUser.receiveUser.section.sectionCd) 
+															#out($!domain.accept.receiveResult.receiveUser.receiveUser.section.sectionName)
+														</span><br>
+														<span class="FontSmall">
+                                                        #out($!domain.accept.receiveResult.receiveUser.receiveUser.userID) &nbsp;
+														</span>
+														<span class="FontUserName">
+															<b class="FontUserName">#out($!domain.accept.receiveResult.receiveUser.receiveUser.userName)</b>
+														</span>
+                                                    </td>
+                                                    <td><img class="Mark" src="../../image/mrkTel.gif" ></td>
+                                                    <td class="FontMini" nowrap>
+                                                        #customSpringMessage('EXTENSION_NO')：<!-- 内線番号--><span class="FontSmallAnk">#out($!domain.accept.receiveResult.receiveUser.receiveUser.extNo.extensionNo)</span>&nbsp;&nbsp;#customSpringMessage('EXTERNAL_NO')：<!-- 外線番号--><span class="FontSmallAnk">#out($!domain.accept.receiveResult.receiveUser.receiveUser.externalNo.externalNo)</span>
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <td><img class="Mark" src="../../image/mrkMail.gif" ></td>
+                                                    <td class="FontMiniAnkBold" nowrap>
+                                                        <span class="FontMiniAnk">
+                                                            #if("$!domain.accept.receiveResult.receiveUser.receiveUser.mailAddr.mail" != "")
+                                                            <A HREF='mailto:#out($!domain.accept.receiveResult.receiveUser.receiveUser.userName)<#out($!domain.accept.receiveResult.receiveUser.receiveUser.mailAddr.mail)>'>#out($!domain.accept.receiveResult.receiveUser.receiveUser.mailAddr.mail)</A>
+                                                            #end
+                                                        </span></td><td align="right" valign="bottom">
+                                                    </td>
+                                                </tr>
+                                            </table>
+                                        </td>
+                                    </tr>
+                                    #foreach($!item in $!PSAPR092PageCreater.getItemListById("extend"))
+                                        $!PSAPR092PageCreater.printDefaultForCancelForDispPos(2, $!item)
+                                    #end
+                                </tbody>
+                               </table>
+                                <br>
+                             #if("$!domain.accept.inspectResult.inspectDate.inspectDate.dateOfymd"!="")
+                                <table class="Box1G" width="100%">
+                                <tbody class="Box1H FontBoxHeader ListBorderWidth">
+                                    <tr>
+                                        <td nowrap class="Box1H FontBoxHeader">#customSpringMessage('INSPECT_DATE')<!-- 検査日--></td>
+                                        <td nowrap class="Box1D FontSmallAnk">#out($!domain.accept.inspectResult.inspectDate.inspectDate.dateOfymdFormat)</td>
+                                    </tr>
+                                    <tr>
+                                        <td nowrap class="Box1H FontBoxHeader">
+                                            #customSpringMessage('SUCCESS_AMOUNT')<!-- 合格数量-->
+                                        </td>
+                                        <td nowrap class="Box1D FontSmallAnk">
+                                            <span >#out($!domain.accept.inspectResult.inspectVol.successAmount.volFormat)</span>
+                                            <span class="FontSmall">&nbsp;#out($!domain.accept.order.accounting.orderItem.item.unit.unitName)</span>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td nowrap class="Box1H FontBoxHeader">
+                                            #customSpringMessage('INSPECT_ACCOUNT')<!-- 検査記事-->
+                                        </td>
+                                        <td nowrap class="Box1D FontSmallAnk">
+                                            #out($!domain.accept.inspectResult.inspectAccount.comment)
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td class="Box1H FontBoxHeader" WIDTH="20%">
+                                            #customSpringMessage('INSPECTION_USER')<!-- 検査担当者-->
+                                        </td>
+                                        <td class="Box1D FontSmallAnk">
+                                            <table class="NoBorder">
+                                                <tr>
+                                                    <td valign="top" rowspan="2"><img class="Mark" src="../../image/mrkHuman.gif" ></td>
+                                                    <td rowspan="2" nowrap>
+                                                        <span class="FontSmall">
+															#out($!domain.accept.inspectResult.inspectUser.user.section.sectionCd) 
+															#out($!domain.accept.inspectResult.inspectUser.user.section.sectionName)
+														</span><br>
+														<span class="FontSmall">
+															#out($!domain.accept.inspectResult.inspectUser.user.userID) &nbsp;
+                                                        </span>
+														<span class="FontUserName">
+															<b class="FontUserName">#out($!domain.accept.inspectResult.inspectUser.user.userName)</b>
+														</span>
+                                                    </td>
+                                                    <td><img class="Mark" src="../../image/mrkTel.gif"  ></td>
+                                                    <td class="FontMini" nowrap>
+                                                        #customSpringMessage('EXTENSION_NO')：<!-- 内線番号--><span class="FontSmallAnk">#out($!domain.accept.inspectResult.inspectUser.user.extNo.extensionNo)</span>&nbsp;&nbsp;#customSpringMessage('EXTERNAL_NO')：<!-- 外線番号--><span class="FontSmallAnk">#out($!domain.accept.inspectResult.inspectUser.user.externalNo.externalNo)</span>
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <td><img class="Mark" src="../../image/mrkMail.gif" ></td>
+                                                    <td class="FontMiniAnkBold" nowrap>
+                                                        <span class="FontMiniAnk">
+                                                            #if("$!domain.accept.inspectResult.inspectUser.user.mailAddr.mail" != "")
+                                                            <A HREF='mailto:#out($!domain.accept.inspectResult.inspectUser.user.userName)<#out($!domain.accept.inspectResult.inspectUser.user.mailAddr.mail)>'>#out($!domain.accept.inspectResult.inspectUser.user.mailAddr.mail)</A>
+                                                            #end
+                                                        </span></td><td align="right" valign="bottom">
+                                                    </td>
+                                                </tr>
+                                            </table>
+                                        </td>
+                                    </tr>
+                                    #foreach($!item in $!PSAPR092PageCreater.getItemListById("extend"))
+                                        $!PSAPR092PageCreater.printDefaultForCancelForDispPos(3, $!item)
+                                    #end
+                                </tbody>
+                               </table>
+                                <br>
+                               #end
+
+                               <table class="Box1G" width="100%">
+                                <tbody class="Box1H FontBoxHeader ListBorderWidth">
+                                    #foreach($!item in $!PSAPR092PageCreater.getItemListForBody())
+                                        #if($!item.getColumnName()=="T_ACCEPTANCE.LOAD_SECTION_CD")
+                                            $!PSAPR092PageCreater.printDefaultForCancel($!item)
+                                        #elseif($!item.getColumnName()=="T_ACCEPTANCE.SUBJECT_CD")
+                                            $!PSAPR092PageCreater.printDefaultForCancel($!item)
+                                        #elseif($!item.getColumnName()=="T_ACCEPTANCE.BUDGET_NO")
+                                            $!PSAPR092PageCreater.printDefaultForCancel($!item)
+                                        #elseif($!item.getColumnName()=="T_ACCEPTANCE.ACCEPT_DATE")
+                                            $!PSAPR092PageCreater.printDefaultForCancel($!item)
+                                        #elseif($!item.getColumnName()=="T_ACCEPTANCE.UNIT_PRICE")
+                                            $!PSAPR092PageCreater.printSpecial("s24_currency", $!item,"_item_style",'class="FontCurrSmall"')
+                                        #elseif($!item.getColumnName()=="T_ACCEPTANCE.ACCEPT_VOL")
+                                            $!PSAPR092PageCreater.printSpecial('s16_showVol', $!item)
+                                        #elseif($!item.getColumnName()=="T_ACCEPTANCE.ACCEPT_AMOUNT")
+                                            $!PSAPR092PageCreater.printSpecial("s24_currency", $!item,"_item_style",'class="FontCurrSmall"')
+                                        #elseif($!item.getColumnName()=="T_ACCEPTANCE.TAX_RATE")
+                                            $!PSAPR092PageCreater.printSpecial('s43_showPercentage',$!item)
+                                        #elseif($!item.getColumnName()=="T_ACCEPTANCE.TOTAL_AMOUNT")
+                                            $!PSAPR092PageCreater.printSpecial("s24_currency", $!item,"_item_style",'class="FontCurrSmall"')
+                                        #elseif($!item.getColumnName()=="T_ACCEPTANCE.ACCEPT_USER_ID")
+                                            $!PSAPR092PageCreater.printSpecial("ACCEPT_USER", "m15_showUser",$!item)
+                                        #elseif($!item.getColumnName()=="T_ACCEPTANCE.HAVE_IN_STOCK_FLG")
+                                          #if($isActiveProfileStock == "true")## 在庫オプション
+                                            $!PSAPR092PageCreater.printSpecial("s00_label", $!item,
+                                                '_page_value', 'true'
+                                            )
+                                          #end
+                                        #elseif($!item.getColumnName()=="T_ACCEPTANCE.STOCK_PLACE_CD")
+                                          #if($isActiveProfileStock == "true")## 在庫オプション
+                                            $!PSAPR092PageCreater.printSpecial("STOCK_PLACE", "m36_showStockPlace", $!item)
+                                          #end
+                                        #else
+                                            $!PSAPR092PageCreater.printDefaultForCancelForDispPos(4, $!item)
+                                        #end
+                                    #end
+                                </tbody>
+                              </table>
+                            <br/>
+
+                              <table class="Box1G" width="100%">
+                                <tbody class="Box1H FontBoxHeader ListBorderWidth">
+                                    <tr>
+                                        <td nowrap class="Box1H FontBoxHeader">
+                                            #customSpringMessage('APP_ROUTE_NAME')<!--承認ルート名-->
+                                        </td>
+                                        <td class="Box1D FontSmallAnk">
+                                            #out($!domain.accept.acceptAppRoute.approute.appRouteName)
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td class="Box1H FontBoxHeader">#customSpringMessage('APP_USER')<!--承認者--></td>
+                                        <td class="Box1D FontSmallAnk">
+                                            <table id="authorizer" class="AppSheet" width="98%" style="-webkit-box-shadow:2px 2px 0px #000000">
+                                                #if($!domain.accept.appManagement.appList.appItemList.size()!=0)
+                                                #foreach($!appItem in $!domain.accept.appManagement.appList.appItemList)
+                                                    
+                                                    <tr id = "row_$velocityCount" name = "row_$velocityCount">
+                                                        <td class="AppNoArea">
+                                                            <span class="FontNumber">#out($!appItem.appSeq)</span>
+                                                        </td>
+                                                        <td class="AppPersonArea FontSmall" nowrap>
+                                                            #if($!appItem.subAppFlg == '1')
+                                                            #out($!appItem.subAppUserName.section.sectionCd) 
+															#out($!appItem.subAppUserName.section.sectionName)
+															<br>
+                                                            #out($!appItem.subAppUserName.userID) &nbsp;
+															<span class="FontUserName">
+																<b class="FontUserName">#out($!appItem.subAppUserName.userName)</b>
+                                                            </span>
+                                                            #else
+                                                            #out($!appItem.appUserName.section.sectionCd) 
+                                                            #out($!appItem.appUserName.section.sectionName)
+                                                            <br>
+                                                            #out($!appItem.appUserName.userID) &nbsp;
+                                                            <span class="FontUserName">
+                                                                <b class="FontUserName">#out($!appItem.appUserName.userName)</b>
+                                                            </span>
+                                                            #end
+                                                            &nbsp;
+                                                            <span class="FontMini">
+                                                            #if($!appItem.subAppFlg == '1')
+                                                            #out($!appItem.subAppUserName.official.officialName)
+                                                            #else
+                                                            #out($!appItem.appUserName.official.officialName)
+                                                            #end
+                                                            </span>
+                                                        </td>
+                                                        <td class="AppPersonArea">
+                                                            <table class="NoBorder">
+                                                                <tr>
+                                                                    <td><img src="../../image/mrkTel.gif" ></td>
+                                                                    <td class="FontMini" nowrap>
+                                                                        #customSpringMessage('EXTENSION_NO')：<!-- 内線番号--><span class="FontSmallAnk">
+                                                                        #if($!appItem.subAppFlg == '1')
+                                                                           #out($!appItem.subAppUserName.extNo.extensionNo)
+                                                                           #else
+                                                                           #out($!appItem.appUserName.extNo.extensionNo)
+                                                                           #end
+                                                                        </span>&nbsp;&nbsp;#customSpringMessage('EXTERNAL_NO')：<!-- 外線番号--><span class="FontSmallAnk">
+                                                                        #if($!appItem.subAppFlg == '1')
+                                                                           #out($!appItem.subAppUserName.externalNo.externalNo)
+                                                                           #else
+                                                                           #out($!appItem.appUserName.externalNo.externalNo)
+                                                                           #end
+                                                                        </span>
+                                                                    </td>
+                                                                </tr>
+                                                                <tr>
+                                                                    <td><img src="../../image/mrkMail.gif"  ></td>
+                                                                    <td class="FontMiniAnkBold" nowrap>
+                                                                        <span class="FontMiniAnk">
+                                                                            #if($!appItem.subAppFlg == '1')
+                                                                                   #if("$!appItem.subAppUserName.mailAddr.mail" != "")
+                                                                                   <A HREF='mailto:#out($!appItem.subAppUserName.userName)<#out($!appItem.subAppUserName.mailAddr.mail)>'>
+                                                                                       #out($!appItem.subAppUserName.mailAddr.mail)
+                                                                                  </A>
+                                                                                  #end
+                                                                               #else
+                                                                                  #if("$!appItem.appUserName.mailAddr.mail" != "")
+                                                                                  <A HREF='mailto:#out($!appItem.appUserName.userName)<#out($!appItem.appUserName.mailAddr.mail)>'>
+                                                                                       #out($!appItem.appUserName.mailAddr.mail)
+                                                                                  </A>
+                                                                                  #end
+                                                                              #end
+                                                                         </span></td><td align="right" valign="bottom">
+                                                                    </td>
+                                                                </tr>
+                                                            </table>
+                                                        </td>
+                                                        #if("$!appItem.appItemStatus.appItemStatus"=="3"||
+                                                            "$!appItem.appItemStatus.appItemStatus"=="2")
+                                                        <td nowrap class="AppStampArea">
+                                                            <span class="ScreenName">$!appItem.appItemStatus.appItemStatus_PageValue</span><!--承認-->
+                                                                 <span class="FontMiniAnkBold"><br>#out($!appItem.appDate.appDate.dateOfymdDispYMD)</span>
+                                                        </td>
+                                                        #elseif("$!appItem.appItemStatus.appItemStatus"=="4")
+                                                        <td nowrap class="AppStampArea">
+                                                            <span class="FontBigBold Red">$!appItem.appItemStatus.appItemStatus_PageValue</span><!--差戻し--><br />
+                                                            <span class="FontMiniAnkBold">$!appItem.appDate.appDate.dateOfymdDispYMD</span>
+                                                        </td>
+                                                        #elseif($!appItem.appSeq!=$!domain.accept.appManagement.appList.appSeq&&$!appItem.canDelete())
+                                                        <td class="AppStampArea">
+                                                          <input type='button' class='MiniButton' onclick='removeAuthorizer($velocityCount + 1)' value='#customSpringMessage('ACTION_DELETE')'><!--削除-->
+                                                        </td>
+                                                        #else
+                                                        <td class="AppStampArea">
+                                                            <span>&nbsp;</span>
+                                                        </td>
+                                                        #end
+                                                    </tr>
+                                                #if($velocityCount+1 < $!domain.accept.appManagement.appList.appItemList.size())
+                                                    <tr id = "row_$velocityCount" name = "row_$velocityCount"><td colspan="5" class="AppBorder">&nbsp;</td></tr>
+                                                    #end
+                                                    #end
+                                                #end
+                                                
+                                            </table>
+                                            <br>
+                                            <table>
+                                                <tr>
+                                                    <td valign="top"><img src="../../image/mrkGuide.gif">&nbsp;</td>
+                                                    <td class="FontMini">
+                                                        #customSpringMessage('APP_ADD_BUTTON_COMMENT')
+                                                        <!--承認者を追加したい場合は、追加したい承認者とその順序を指定して、「承認者の追加」ボタンをクリックしてください。<br>自分の承認した後の順序に追加できます。-->
+                                                        <br>
+                                                    <td>
+                                                </tr>
+                                                <tr>
+                                                    <td nowrap colspan="2" align="center">
+                                                        <table>
+                                                            <tr>
+                                                                <td class="FontMini" align="left" valign="middle" nowrap>#customSpringMessage('ADD_APP_USER')<!--追加する承認者-->:</td>  
+                                                                <td>
+                                                                    #springFormInput("domain.accept.appManagement.appList.appUserName.userID" "class='SmallDsp' maxlength='12' type='text' size='14' readonly tabIndex='-1' ondblclick='searchAuthorizer();'")
+                                                                    #springFormInput("domain.accept.appManagement.appList.appUserName.userName" "class='SmallDsp' type='text' size='20' readonly tabIndex='-1' ondblclick='searchAuthorizer();'")
+                                                                    <img class="Icon" name="UserSearch" src="../../image/btnLupe.gif" onclick="searchAuthorizer();" />
+                                                                   
+                                                                    #springFormHiddenInput("domain.accept.appManagement.appList.appUserName.section.sectionCd" "")
+                                                                    #springFormHiddenInput("domain.accept.appManagement.appList.appUserName.section.sectionName" "")
+                                                                    #springFormHiddenInput("domain.accept.appManagement.appList.appUserName.official.officialName" "")
+                                                                    #springFormHiddenInput("domain.accept.appManagement.appList.appUserName.section.sectionPlace.sectionPlaceCd" "")
+                                                                    #springFormHiddenInput("domain.accept.appManagement.appList.appUserName.section.sectionPlace.sectionPlaceName" "")
+                                                                    #springFormHiddenInput("domain.accept.appManagement.appList.appUserName.mailAddr.mail" "")
+                                                                    #springFormHiddenInput("domain.accept.appManagement.appList.appUserName.extNo.extensionNo" "")
+                                                                    #springFormHiddenInput("domain.accept.appManagement.appList.appUserName.externalNo.externalNo" "")
+                                                                </td>
+                                                                <td class="FontMini" align="left" valign="middle" nowrap>#customSpringMessage('ORDER'):</td><!--順序-->
+                                                                <td class="FontMini" align="left" valign="middle" nowrap>
+                                                                    #customFormSingleSelectForApproval("domain.accept.appManagement.appList.appSeqByAdd" $!approvalList "class='Small'")
+                                                                </td>   
+                                                                <td>
+                                                                    <input type="button" class="MiniButton" value="#customSpringMessage('ACTION_ADD_APP_USER')" onclick="addAuthorizer()"><!--承認者の追加-->
+                                                                </td>
+                                                            </tr>
+                                                        </table>
+                                                    </td>
+                                                </tr>
+                                            </table>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                       </table>
+                       <br>
+                                #set($backUserName = $!domain.accept.appManagement.backApp.backAppFirstUser.userName)
+                                #set($domainPath = "domain.accept.appManagement")
+                                #set($delComment = "APL_USER_COMMENT")
+                                <table class="Box1G" width="100%">
+                                #parse("./common/common_back.vm")
+                                </table>
+                                
+                             <br>
+                             <table class="NoBorder" width="98%">
+                                <tr>
+                                    <td>#customSpringMessage('PSAPR092_FOOTER_COMMENT')</td>
+                                    <td align="right" valign="middle">
+                                        <input type="button" class="LargeButton Red" value="#customSpringMessage('RETURN')" onclick="execSendBack();">&nbsp;&nbsp;<!--差戻し-->
+                                        <input id="Submit" type="button" class="LargeButton" value="#customSpringMessage('APPROVAL')" onclick="execApproval();"><!--承認-->
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+    </div>
+ </td></tr>
+</table>
+</form>
+</body>
+</html>
+<script>
+    getObj("Area").style.display = "block";
+</script>

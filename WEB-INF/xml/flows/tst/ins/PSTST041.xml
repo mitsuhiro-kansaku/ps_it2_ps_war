@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<flow xmlns="http://www.springframework.org/schema/webflow"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.springframework.org/schema/webflow
+        http://www.springframework.org/schema/webflow/spring-webflow-2.0.xsd"
+    parent="base">
+   
+    <var name="identify" class="fw.domain.slip.receive.inspect.inspectedlist.InspectedListIdentify" />
+    <var name="identify090" class="fw.domain.slip.order.order.OrderIdentify" />
+    <var name="rcv050Identify" class="fw.domain.slip.common.identify.OrderNo" />
+
+    <input name="searchCondition" />
+    <input name="isCurrentPageSearch" />
+    
+    <decision-state id="isSearchByKey">
+       <if test="flowScope.isCurrentPageSearch" then="searchByKey" else="searchByCondition" />
+    </decision-state>
+    
+    <action-state id="searchByCondition">
+        <evaluate expression="PSTST041Service.init(searchCondition)" result="flowScope.itemList"/>
+        <transition to="PSTST041"/> 
+    </action-state>
+
+    <action-state  id="searchByKey" >
+        <evaluate expression="PSTST041Service.page(searchCondition)" result="flowScope.itemList" />
+        <transition to="PSTST041"/>
+    </action-state>
+
+    <view-state id="PSTST041" model="identify" view="tst/ins/PSTST041">
+       <transition on="order" validate="false">
+            <evaluate expression="PSTST041Service.order(searchCondition)" result="flowScope.itemList"  />
+        </transition>
+        <transition on="page" validate="false">
+             <evaluate expression="PSTST041Service.page(searchCondition)" result="flowScope.itemList"  /> 
+        </transition>
+        <transition on="back" to="home" validate="false" />
+        
+        <transition on="inspectModify" validate="true">
+            <set name="flashScope.isInspectModifySuccess" value="true"></set>
+        </transition>
+        <transition on="inspectModifySuccess" to="PSTST020Modify" validate="false" />
+        
+        <transition on="inspectCancel" validate="true">
+            <set name="flashScope.isInspectCancelSuccess" value="true"></set>
+        </transition>
+        <transition on="inspectCancelSuccess" to="PSTST020Cancel" validate="false" />
+        
+        <transition on="detailValidate" validate="true">
+            <set name="rcv050Identify.orderNo" value="identify.inspectedListIdentify.orderNo"/>
+            <set name="identify090.orderSeq" value="identify.inspectedListIdentify.orderSeq"/>
+            <set name="flashScope.isShowDetail" value="true" />
+        </transition>
+        <transition on="detail" to="PSTST050" validate="false" />
+    </view-state>
+
+    <subflow-state id="PSTST020Modify" subflow="tst/ins/PSTST020" >
+        <input name="identify" value="identify.inspectedListIdentify" />
+        <input name="patternName" value="'Change'" />
+    </subflow-state>
+    <subflow-state id="PSTST020Cancel" subflow="tst/ins/PSTST020" >
+        <input name="identify" value="identify.inspectedListIdentify" />
+        <input name="patternName" value="'Cancel'" />
+    </subflow-state>
+
+    <subflow-state id="PSTST050" subflow="tst/ins/PSTST050TOP" >
+        <input name="tst050Identify" value="identify.inspectedListIdentify" />
+        <input name="identify050" value="rcv050Identify" />
+        <input name="identify090" value="identify090" />
+    </subflow-state>
+</flow>

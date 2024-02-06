@@ -1,0 +1,461 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="ps.dataaccess.src.sectionpopup.LoadSectionPopupMapper">
+
+    <!-- SRC-00115-00 include化共通-->
+    <sql id="listKeyIdentityWhereCondition">
+        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(companyCd)">
+            AND M_SECTION.COMPANY_CD = #{companyCd, jdbcType=VARCHAR}
+        </if>
+        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(sectionCd)">
+            AND M_SECTION.SECTION_CD ${@fw.common.util.SearchModeUtil@getSearchSQL("fw.domain.mst.organization.section.LoadSectionPopupSearchCondition","sectionCd")}
+        </if>
+        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(sectionName)">
+            AND M_SECTION_LANG.SECTION_NAME ${@fw.common.util.SearchModeUtil@getSearchSQL("fw.domain.mst.organization.section.LoadSectionPopupSearchCondition","sectionName")}
+        </if>
+        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(sectionPlaceCd)">
+            AND M_SECTION.SECTION_PLACE_CD ${@fw.common.util.SearchModeUtil@getSearchSQL("fw.domain.mst.organization.section.LoadSectionPopupSearchCondition","sectionPlaceCd")}
+        </if>
+        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(sectionPlaceName)">
+            AND M_SECTION_PLACE_LANG.SECTION_PLACE_NAME ${@fw.common.util.SearchModeUtil@getSearchSQL("fw.domain.mst.organization.section.LoadSectionPopupSearchCondition","sectionPlaceName")}
+        </if>
+        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(subjectCd)">
+            AND SECTION_BUDGET.SUBJECT_CD ${@fw.common.util.SearchModeUtil@getSearchSQL("fw.domain.mst.organization.section.LoadSectionPopupSearchCondition","subjectCd")}
+        </if>
+        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(subjectName)">
+            AND SECTION_BUDGET.SUBJECT_NAME ${@fw.common.util.SearchModeUtil@getSearchSQL("fw.domain.mst.organization.section.LoadSectionPopupSearchCondition","subjectName")}
+        </if>
+        <if test="searchCondition.termFlg==0">
+            AND M_SECTION.TERM_FLG = #{searchCondition.termFlg, jdbcType=VARCHAR}
+            AND M_SECTION_PLACE.TERM_FLG = #{searchCondition.termFlg, jdbcType=VARCHAR}
+            <!--  ＩＴ３-00026-000  2013/06/17 DEL SBO_wangzf START -->
+            <!--AND '${@fw.common.util.AppUtil@getSysDate(@fw.common.util.AppUtil@DATE_SHORT)}' BETWEEN M_SECTION.VALID_START_DATE AND M_SECTION.VALID_END_DATE
+            AND '${@fw.common.util.AppUtil@getSysDate(@fw.common.util.AppUtil@DATE_SHORT)}' BETWEEN M_SECTION_PLACE.VALID_START_DATE AND M_SECTION_PLACE.VALID_END_DATE -->
+            <!-- ＩＴ３-00026-000  2013/06/17 DEL SBO_wangzf END -->
+        </if>
+        <if test="validDateFlg!=0">
+        <!--  ＩＴ３-00026-000  2013/06/17 ADD SBO_wangzf START -->
+            AND '${@fw.common.util.AppUtil@getSysDate(@fw.common.util.AppUtil@DATE_SHORT)}' BETWEEN M_SECTION.VALID_START_DATE AND M_SECTION.VALID_END_DATE
+            AND '${@fw.common.util.AppUtil@getSysDate(@fw.common.util.AppUtil@DATE_SHORT)}' BETWEEN M_SECTION_PLACE.VALID_START_DATE AND M_SECTION_PLACE.VALID_END_DATE
+        <!-- ＩＴ３-00026-000  2013/06/17 ADD SBO_wangzf END -->
+        </if>
+        <!-- 2013.01.08 ADD DAIKO_MUTO START -->
+        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(loadSectionFlg)">
+            AND M_SECTION.PLANNED_SECTION_FLG='1'
+        </if>
+        <!-- 2013.01.08 ADD DAIKO_MUTO -END- -->
+    </sql>
+
+    <select id="listKeyIdentity" parameterType ="fw.domain.mst.organization.section.LoadSectionPopupSearchCondition" resultType="fw.domain.mst.organization.section.LoadSectionPopupSearchCondition">
+        SELECT
+            M_SECTION.COMPANY_CD AS "companyCd",
+            M_SECTION.SECTION_CD AS "sectionCd",
+            SECTION_BUDGET.SUBJECT_CD AS "subjectCd" 
+        FROM M_SECTION
+        INNER JOIN (
+                  SELECT
+                    M_COMPANY.COMPANY_CD,
+                    COMPANY_USE_LANGUAGE_IND
+                  FROM M_COMPANY
+                    INNER JOIN M_COMPANY_LANG
+                    ON M_COMPANY.COMPANY_CD = M_COMPANY_LANG.COMPANY_CD
+                    AND M_COMPANY.COMPANY_USE_LANGUAGE_IND = M_COMPANY_LANG.LANGUAGE_IND
+                    <!-- ＩＴ２-01476-000 2013/05/30 DEL SBOQD_jiang START -->
+                    <!-- AND M_COMPANY.COMPANY_USE_LANGUAGE_IND = '${@fw.security.SecurityUtil@getCompanyUseLanguageIndByEscapeSql()}'-->
+                    <!-- ＩＴ２-01476-000 2013/05/30 DEL SBOQD_jiang END -->
+                    <if test="@org.apache.commons.lang.StringUtils@isNotBlank(companyCd)">
+                        AND M_COMPANY.COMPANY_CD = #{companyCd, jdbcType=VARCHAR}
+                    </if>
+            ) M_COMPAN
+                ON  M_SECTION.COMPANY_CD=M_COMPAN.COMPANY_CD
+        INNER JOIN M_SECTION_LANG
+            ON
+                M_SECTION.SECTION_CD = M_SECTION_LANG.SECTION_CD
+                AND M_SECTION.COMPANY_CD = M_SECTION_LANG.COMPANY_CD
+                AND M_SECTION.VALID_START_DATE = M_SECTION_LANG.VALID_START_DATE
+                AND M_SECTION.VALID_END_DATE = M_SECTION_LANG.VALID_END_DATE
+                AND M_SECTION_LANG.LANGUAGE_IND=M_COMPAN.COMPANY_USE_LANGUAGE_IND
+        LEFT JOIN M_SECTION_PLACE
+            ON M_SECTION_PLACE.SECTION_PLACE_CD = M_SECTION.SECTION_PLACE_CD
+            AND M_SECTION_PLACE.COMPANY_CD = M_SECTION.COMPANY_CD
+        LEFT JOIN M_SECTION_PLACE_LANG
+            ON M_SECTION_PLACE_LANG.SECTION_PLACE_CD = M_SECTION_PLACE.SECTION_PLACE_CD
+             AND M_SECTION_PLACE_LANG.COMPANY_CD = M_SECTION_PLACE.COMPANY_CD
+             AND M_SECTION_PLACE_LANG.LANGUAGE_IND=M_COMPAN.COMPANY_USE_LANGUAGE_IND
+        LEFT JOIN
+        	<include refid="sectionBudget"/>
+        	ON
+        		M_SECTION.COMPANY_CD = SECTION_BUDGET.COMPANY_CD
+        		AND M_SECTION.SECTION_PLACE_CD = SECTION_BUDGET.SECTION_PLACE_CD
+        		AND M_SECTION.SECTION_CD = SECTION_BUDGET.SECTION_CD
+        		AND BUDGET_YEAR = #{fiscalYear}
+        <where>
+            <include refid="listKeyIdentityWhereCondition"/>
+        </where>
+        ORDER BY ${searchCondition.columnOrder.columnOrder()}
+    </select>
+
+
+    <select id="listPageItem" parameterType ="fw.domain.mst.searchcondition.SearchCondition"
+            resultType="fw.domain.mst.organization.section.LoadSectionPopupItem">
+        SELECT
+            M_SECTION.COMPANY_CD AS "sectionIdentify.companyCd"
+            , M_SECTION.SECTION_CD AS "sectionIdentify.sectionCd"
+            , M_COMPANY_LANG.COMPANY_NAME AS "companyName"
+            , M_SECTION_LANG.SECTION_NAME AS "sectionName"
+            , M_SECTION.SECTION_PLACE_CD AS "sectionPlaceCd"
+            , M_SECTION_PLACE_LANG.SECTION_PLACE_NAME AS "sectionPlaceName"
+            , M_SECTION.LAST_UPD_DATE
+			, SECTION_BUDGET.SUBJECT_CD as "subjectCd"
+			, SECTION_BUDGET.BUDGET_YEAR as "fiscalYear"
+			, SECTION_BUDGET.SUBJECT_NAME as "subjectName"
+			, NVL(SECTION_BUDGET.CURRENCY_CD, (SELECT BASE_CURRENCY_CD FROM M_COMPANY WHERE COMPANY_CD= #{companyCd})) as "currencyCode"
+			, SECTION_BUDGET.BUDGET_AMOUNT_T as "budgetTotalSum.amount"
+			, SECTION_BUDGET.ACCEPT_SUM_AMOUNT_T as "acceptSum.amount" 
+			, SECTION_BUDGET.SEC_TOTAL_CHK_IND as "secTotalChkInd"
+			, SECTION_BUDGET.START_MONTH as "startMonth"
+			, SECTION_BUDGET.BUDGET_BAL_EST as "budgetBalEst.amount"
+			, SECTION_BUDGET.BUDGET_AMOUNT_1 as "budgetAmount1.amount"
+			, SECTION_BUDGET.BUDGET_AMOUNT_2 as "budgetAmount2.amount"
+			, SECTION_BUDGET.BUDGET_AMOUNT_3 as "budgetAmount3.amount"
+			, SECTION_BUDGET.BUDGET_AMOUNT_4 as "budgetAmount4.amount"
+			, SECTION_BUDGET.BUDGET_AMOUNT_5 as "budgetAmount5.amount"
+			, SECTION_BUDGET.BUDGET_AMOUNT_6 as "budgetAmount6.amount"
+			, SECTION_BUDGET.BUDGET_AMOUNT_7 as "budgetAmount7.amount"
+			, SECTION_BUDGET.BUDGET_AMOUNT_8 as "budgetAmount8.amount"
+			, SECTION_BUDGET.BUDGET_AMOUNT_9 as "budgetAmount9.amount"
+			, SECTION_BUDGET.BUDGET_AMOUNT_10 as "budgetAmount10.amount"
+			, SECTION_BUDGET.BUDGET_AMOUNT_11 as "budgetAmount11.amount"
+			, SECTION_BUDGET.BUDGET_AMOUNT_12 as "budgetAmount12.amount"
+			, SECTION_BUDGET.ACCEPT_SUM_AMOUNT_1 as "acceptSumAmount1.amount"
+			, SECTION_BUDGET.ACCEPT_SUM_AMOUNT_2 as "acceptSumAmount2.amount"
+			, SECTION_BUDGET.ACCEPT_SUM_AMOUNT_3 as "acceptSumAmount3.amount"
+			, SECTION_BUDGET.ACCEPT_SUM_AMOUNT_4 as "acceptSumAmount4.amount"
+			, SECTION_BUDGET.ACCEPT_SUM_AMOUNT_5 as "acceptSumAmount5.amount"
+			, SECTION_BUDGET.ACCEPT_SUM_AMOUNT_6 as "acceptSumAmount6.amount"
+			, SECTION_BUDGET.ACCEPT_SUM_AMOUNT_7 as "acceptSumAmount7.amount"
+			, SECTION_BUDGET.ACCEPT_SUM_AMOUNT_8 as "acceptSumAmount8.amount"
+			, SECTION_BUDGET.ACCEPT_SUM_AMOUNT_9 as "acceptSumAmount9.amount"
+			, SECTION_BUDGET.ACCEPT_SUM_AMOUNT_10 as "acceptSumAmount10.amount"
+			, SECTION_BUDGET.ACCEPT_SUM_AMOUNT_11 as "acceptSumAmount11.amount"
+			, SECTION_BUDGET.ACCEPT_SUM_AMOUNT_12 as "acceptSumAmount12.amount"
+        FROM M_SECTION
+        INNER JOIN M_COMPANY
+            ON
+                M_SECTION.COMPANY_CD=M_COMPANY.COMPANY_CD
+                INNER JOIN M_COMPANY_LANG
+                    ON M_COMPANY.COMPANY_CD = M_COMPANY_LANG.COMPANY_CD
+                    AND M_COMPANY.COMPANY_USE_LANGUAGE_IND = M_COMPANY_LANG.LANGUAGE_IND
+                    <!-- ＩＴ２-01476-000 2013/05/30 DEL SBOQD_jiang START -->
+                    <!--AND M_COMPANY.COMPANY_USE_LANGUAGE_IND = '${@fw.security.SecurityUtil@getCompanyUseLanguageIndByEscapeSql()}'-->
+                    <!-- ＩＴ２-01476-000 2013/05/30 DEL SBOQD_jiang END -->
+        LEFT JOIN M_SECTION_LANG
+            ON M_SECTION.COMPANY_CD=M_SECTION_LANG.COMPANY_CD
+            AND M_SECTION.SECTION_CD=M_SECTION_LANG.SECTION_CD
+            AND M_SECTION.VALID_START_DATE = M_SECTION_LANG.VALID_START_DATE
+            AND M_SECTION.VALID_END_DATE = M_SECTION_LANG.VALID_END_DATE
+            AND M_SECTION_LANG.LANGUAGE_IND=M_COMPANY.COMPANY_USE_LANGUAGE_IND
+        LEFT JOIN M_SECTION_PLACE
+            ON M_SECTION_PLACE.SECTION_PLACE_CD = M_SECTION.SECTION_PLACE_CD
+            AND M_SECTION_PLACE.COMPANY_CD = M_SECTION.COMPANY_CD
+        LEFT JOIN M_SECTION_PLACE_LANG
+            ON M_SECTION_PLACE_LANG.SECTION_PLACE_CD = M_SECTION_PLACE.SECTION_PLACE_CD
+             AND M_SECTION_PLACE_LANG.COMPANY_CD = M_SECTION_PLACE.COMPANY_CD
+             AND M_SECTION_PLACE_LANG.LANGUAGE_IND=M_COMPANY.COMPANY_USE_LANGUAGE_IND
+        LEFT JOIN
+        	<include refid="sectionBudget"/>
+        	ON
+        		M_SECTION.COMPANY_CD = SECTION_BUDGET.COMPANY_CD
+        		AND M_SECTION.SECTION_PLACE_CD = SECTION_BUDGET.SECTION_PLACE_CD
+        		AND M_SECTION.SECTION_CD = SECTION_BUDGET.SECTION_CD
+        		AND BUDGET_YEAR = #{fiscalYear}
+        <where>
+            (M_SECTION.SECTION_CD,M_SECTION.COMPANY_CD, NVL(SECTION_BUDGET.SUBJECT_CD, '\')) in
+                <foreach collection="searchCondition.page.keyDomainEntityList" item="keyList"  open="(" separator="," close=")">
+                    (#{keyList.sectionCd},#{keyList.companyCd}, NVL(#{keyList.subjectCd}, '\'))
+                </foreach>
+            <include refid="listKeyIdentityWhereCondition"/>
+        </where>
+        ORDER BY ${searchCondition.columnOrder.columnOrder()}
+    </select>
+
+   <select id="lostFocusSearch" parameterType ="fw.domain.mst.searchcondition.SearchCondition"
+            resultType="String">
+        SELECT
+            M_SECTION_LANG.SECTION_NAME
+        FROM M_SECTION
+        INNER JOIN M_COMPANY
+            ON M_SECTION.COMPANY_CD=M_COMPANY.COMPANY_CD
+            AND M_COMPANY.COMPANY_USE_LANGUAGE_IND = '${@fw.security.SecurityUtil@getCompanyUseLanguageIndByEscapeSql()}'
+        LEFT JOIN M_SECTION_LANG
+            ON M_SECTION.COMPANY_CD=M_SECTION_LANG.COMPANY_CD
+            AND M_SECTION.SECTION_CD=M_SECTION_LANG.SECTION_CD
+            AND M_SECTION.VALID_START_DATE = M_SECTION_LANG.VALID_START_DATE
+            AND M_SECTION.VALID_END_DATE = M_SECTION_LANG.VALID_END_DATE
+            AND M_SECTION_LANG.LANGUAGE_IND =  M_COMPANY.COMPANY_USE_LANGUAGE_IND
+        WHERE
+             M_SECTION.COMPANY_CD = #{companyCd, jdbcType=VARCHAR}
+             AND M_SECTION.SECTION_CD = #{sectionCd, jdbcType=VARCHAR}
+             AND M_SECTION.TERM_FLG = #{searchCondition.termFlg, jdbcType=VARCHAR}
+             AND '${@fw.common.util.AppUtil@getSysDate(@fw.common.util.AppUtil@DATE_SHORT)}' BETWEEN M_SECTION.VALID_START_DATE AND M_SECTION.VALID_END_DATE
+   </select>
+   
+   <sql id="sectionBudget">
+		(SELECT
+					COMPANY_CD
+					, SECTION_PLACE_CD
+					, SECTION_CD
+					, LTRIM(SUBJECT_CD, '　') SUBJECT_CD
+					, BUDGET_YEAR
+					, SUBJECT_NAME
+					, CURRENCY_CD
+					, NVL(BUDGET_AMOUNT_T, 0) BUDGET_AMOUNT_T
+					, NVL(ACCEPT_SUM_AMOUNT_T, 0) ACCEPT_SUM_AMOUNT_T
+					, SEC_TOTAL_CHK_IND
+					, START_MONTH
+					, NVL(DIFF_MAX_AMOUNT, 0) DIFF_MAX_AMOUNT
+					, NVL(BUDGET_AMOUNT_T, 0) - NVL(PUR_REQ_SUM_AMOUNT_T, 0) + NVL(ORDER_DIFF_SUM_AMOUNT_T, 0)  BUDGET_BAL_EST
+					, NVL(BUDGET_AMOUNT_1, 0) BUDGET_AMOUNT_1
+					, NVL(BUDGET_AMOUNT_2, 0) BUDGET_AMOUNT_2
+					, NVL(BUDGET_AMOUNT_3, 0) BUDGET_AMOUNT_3
+					, NVL(BUDGET_AMOUNT_4, 0) BUDGET_AMOUNT_4
+					, NVL(BUDGET_AMOUNT_5, 0) BUDGET_AMOUNT_5
+					, NVL(BUDGET_AMOUNT_6, 0) BUDGET_AMOUNT_6
+					, NVL(BUDGET_AMOUNT_7, 0) BUDGET_AMOUNT_7
+					, NVL(BUDGET_AMOUNT_8, 0) BUDGET_AMOUNT_8
+					, NVL(BUDGET_AMOUNT_9, 0) BUDGET_AMOUNT_9
+					, NVL(BUDGET_AMOUNT_10, 0) BUDGET_AMOUNT_10
+					, NVL(BUDGET_AMOUNT_11, 0) BUDGET_AMOUNT_11
+					, NVL(BUDGET_AMOUNT_12, 0) BUDGET_AMOUNT_12
+					, NVL(ACCEPT_SUM_AMOUNT_1, 0) ACCEPT_SUM_AMOUNT_1
+					, NVL(ACCEPT_SUM_AMOUNT_2, 0) ACCEPT_SUM_AMOUNT_2
+					, NVL(ACCEPT_SUM_AMOUNT_3, 0) ACCEPT_SUM_AMOUNT_3
+					, NVL(ACCEPT_SUM_AMOUNT_4, 0) ACCEPT_SUM_AMOUNT_4
+					, NVL(ACCEPT_SUM_AMOUNT_5, 0) ACCEPT_SUM_AMOUNT_5
+					, NVL(ACCEPT_SUM_AMOUNT_6, 0) ACCEPT_SUM_AMOUNT_6
+					, NVL(ACCEPT_SUM_AMOUNT_7, 0) ACCEPT_SUM_AMOUNT_7
+					, NVL(ACCEPT_SUM_AMOUNT_8, 0) ACCEPT_SUM_AMOUNT_8
+					, NVL(ACCEPT_SUM_AMOUNT_9, 0) ACCEPT_SUM_AMOUNT_9
+					, NVL(ACCEPT_SUM_AMOUNT_10, 0) ACCEPT_SUM_AMOUNT_10
+					, NVL(ACCEPT_SUM_AMOUNT_11, 0) ACCEPT_SUM_AMOUNT_11
+					, NVL(ACCEPT_SUM_AMOUNT_12, 0) ACCEPT_SUM_AMOUNT_12
+				FROM
+				(SELECT
+							COMPANY_CD
+							, SECTION_PLACE_CD
+							, SECTION_CD
+							, SUBJECT_CD
+							, BUDGET_YEAR
+							, SUBJECT_NAME
+							, CURRENCY_CD
+							, SEC_TOTAL_CHK_IND
+							, START_MONTH
+							, DIFF_MAX_AMOUNT
+							, BUDGET_AMOUNT_1
+							, BUDGET_AMOUNT_2
+							, BUDGET_AMOUNT_3
+							, BUDGET_AMOUNT_4
+							, BUDGET_AMOUNT_5
+							, BUDGET_AMOUNT_6
+							, BUDGET_AMOUNT_7
+							, BUDGET_AMOUNT_8
+							, BUDGET_AMOUNT_9
+							, BUDGET_AMOUNT_10
+							, BUDGET_AMOUNT_11
+							, BUDGET_AMOUNT_12
+							, BUDGET_AMOUNT_T
+							, PUR_REQ_SUM_AMOUNT_T
+							, ORDER_DIFF_SUM_AMOUNT_T
+							, ACCEPT_SUM_AMOUNT_1
+							, ACCEPT_SUM_AMOUNT_2
+							, ACCEPT_SUM_AMOUNT_3
+							, ACCEPT_SUM_AMOUNT_4
+							, ACCEPT_SUM_AMOUNT_5
+							, ACCEPT_SUM_AMOUNT_6
+							, ACCEPT_SUM_AMOUNT_7
+							, ACCEPT_SUM_AMOUNT_8
+							, ACCEPT_SUM_AMOUNT_9
+							, ACCEPT_SUM_AMOUNT_10
+							, ACCEPT_SUM_AMOUNT_11
+							, ACCEPT_SUM_AMOUNT_12
+							, ACCEPT_SUM_AMOUNT_T
+							, ORDER_SUM_AMOUNT_T
+						FROM
+							(
+								SELECT
+									T_SECTION_BUDGET.COMPANY_CD
+									, T_SECTION_BUDGET.SECTION_PLACE_CD
+									, T_SECTION_BUDGET.SECTION_CD
+									, T_SECTION_BUDGET.SUBJECT_CD
+									, T_SECTION_BUDGET.BUDGET_YEAR
+									, T_SECTION_BUDGET.SUBJECT_NAME
+									, T_SECTION_BUDGET.CURRENCY_CD
+									, T_SECTION_BUDGET.SEC_TOTAL_CHK_IND
+									, T_SECTION_BUDGET.START_MONTH
+									, T_SECTION_BUDGET.DIFF_MAX_AMOUNT
+									, T_SECTION_BUDGET.BUDGET_AMOUNT_1
+									, T_SECTION_BUDGET.BUDGET_AMOUNT_2
+									, T_SECTION_BUDGET.BUDGET_AMOUNT_3
+									, T_SECTION_BUDGET.BUDGET_AMOUNT_4
+									, T_SECTION_BUDGET.BUDGET_AMOUNT_5
+									, T_SECTION_BUDGET.BUDGET_AMOUNT_6
+									, T_SECTION_BUDGET.BUDGET_AMOUNT_7
+									, T_SECTION_BUDGET.BUDGET_AMOUNT_8
+									, T_SECTION_BUDGET.BUDGET_AMOUNT_9
+									, T_SECTION_BUDGET.BUDGET_AMOUNT_10
+									, T_SECTION_BUDGET.BUDGET_AMOUNT_11
+									, T_SECTION_BUDGET.BUDGET_AMOUNT_12
+									, T_SECTION_BUDGET.BUDGET_AMOUNT_T
+									, T_SECTION_RESULTS.PUR_REQ_SUM_AMOUNT_T
+									, T_SECTION_RESULTS.ORDER_DIFF_SUM_AMOUNT_T
+									, T_SECTION_RESULTS.ACCEPT_SUM_AMOUNT_1
+									, T_SECTION_RESULTS.ACCEPT_SUM_AMOUNT_2
+									, T_SECTION_RESULTS.ACCEPT_SUM_AMOUNT_3
+									, T_SECTION_RESULTS.ACCEPT_SUM_AMOUNT_4
+									, T_SECTION_RESULTS.ACCEPT_SUM_AMOUNT_5
+									, T_SECTION_RESULTS.ACCEPT_SUM_AMOUNT_6
+									, T_SECTION_RESULTS.ACCEPT_SUM_AMOUNT_7
+									, T_SECTION_RESULTS.ACCEPT_SUM_AMOUNT_8
+									, T_SECTION_RESULTS.ACCEPT_SUM_AMOUNT_9
+									, T_SECTION_RESULTS.ACCEPT_SUM_AMOUNT_10
+									, T_SECTION_RESULTS.ACCEPT_SUM_AMOUNT_11
+									, T_SECTION_RESULTS.ACCEPT_SUM_AMOUNT_12
+									, T_SECTION_RESULTS.ACCEPT_SUM_AMOUNT_T
+									, T_SECTION_RESULTS.ORDER_SUM_AMOUNT_T
+								FROM
+									T_SECTION_BUDGET LEFT OUTER JOIN T_SECTION_RESULTS
+									ON
+										T_SECTION_RESULTS.COMPANY_CD = T_SECTION_BUDGET.COMPANY_CD AND
+										T_SECTION_RESULTS.SECTION_PLACE_CD = T_SECTION_BUDGET.SECTION_PLACE_CD AND
+										T_SECTION_RESULTS.SECTION_CD = T_SECTION_BUDGET.SECTION_CD AND
+										T_SECTION_RESULTS.SUBJECT_CD = T_SECTION_BUDGET.SUBJECT_CD AND
+										T_SECTION_RESULTS.BUDGET_YEAR = T_SECTION_BUDGET.BUDGET_YEAR
+								WHERE
+									T_SECTION_BUDGET.SUBJECT_CD <![CDATA[<>]]> '　'
+								UNION ALL
+								SELECT
+									T_SECTION_BUDGET.COMPANY_CD
+									, T_SECTION_BUDGET.SECTION_PLACE_CD
+									, T_SECTION_BUDGET.SECTION_CD
+									, MAX(T_SECTION_BUDGET.SUBJECT_CD)
+									, T_SECTION_BUDGET.BUDGET_YEAR
+									, MAX(T_SECTION_BUDGET.SUBJECT_NAME)
+									, MAX(T_SECTION_BUDGET.CURRENCY_CD)
+									, MAX(T_SECTION_BUDGET.SEC_TOTAL_CHK_IND)
+									, MAX(T_SECTION_BUDGET.START_MONTH)
+									, MAX(T_SECTION_BUDGET.DIFF_MAX_AMOUNT)
+									, MAX(T_SECTION_BUDGET.BUDGET_AMOUNT_1)
+									, MAX(T_SECTION_BUDGET.BUDGET_AMOUNT_2)
+									, MAX(T_SECTION_BUDGET.BUDGET_AMOUNT_3)
+									, MAX(T_SECTION_BUDGET.BUDGET_AMOUNT_4)
+									, MAX(T_SECTION_BUDGET.BUDGET_AMOUNT_5)
+									, MAX(T_SECTION_BUDGET.BUDGET_AMOUNT_6)
+									, MAX(T_SECTION_BUDGET.BUDGET_AMOUNT_7)
+									, MAX(T_SECTION_BUDGET.BUDGET_AMOUNT_8)
+									, MAX(T_SECTION_BUDGET.BUDGET_AMOUNT_9)
+									, MAX(T_SECTION_BUDGET.BUDGET_AMOUNT_10)
+									, MAX(T_SECTION_BUDGET.BUDGET_AMOUNT_11)
+									, MAX(T_SECTION_BUDGET.BUDGET_AMOUNT_12)
+									, MAX(T_SECTION_BUDGET.BUDGET_AMOUNT_T)
+									, SUM(T_SECTION_RESULTS.PUR_REQ_SUM_AMOUNT_T)
+									, SUM(T_SECTION_RESULTS.ORDER_DIFF_SUM_AMOUNT_T)
+									, SUM(T_SECTION_RESULTS.ACCEPT_SUM_AMOUNT_1)
+									, SUM(T_SECTION_RESULTS.ACCEPT_SUM_AMOUNT_2)
+									, SUM(T_SECTION_RESULTS.ACCEPT_SUM_AMOUNT_3)
+									, SUM(T_SECTION_RESULTS.ACCEPT_SUM_AMOUNT_4)
+									, SUM(T_SECTION_RESULTS.ACCEPT_SUM_AMOUNT_5)
+									, SUM(T_SECTION_RESULTS.ACCEPT_SUM_AMOUNT_6)
+									, SUM(T_SECTION_RESULTS.ACCEPT_SUM_AMOUNT_7)
+									, SUM(T_SECTION_RESULTS.ACCEPT_SUM_AMOUNT_8)
+									, SUM(T_SECTION_RESULTS.ACCEPT_SUM_AMOUNT_9)
+									, SUM(T_SECTION_RESULTS.ACCEPT_SUM_AMOUNT_10)
+									, SUM(T_SECTION_RESULTS.ACCEPT_SUM_AMOUNT_11)
+									, SUM(T_SECTION_RESULTS.ACCEPT_SUM_AMOUNT_12)
+									, SUM(T_SECTION_RESULTS.ACCEPT_SUM_AMOUNT_T)
+									, SUM(T_SECTION_RESULTS.ORDER_SUM_AMOUNT_T)
+								FROM
+									T_SECTION_BUDGET
+									LEFT OUTER JOIN
+									T_SECTION_RESULTS
+									ON
+										T_SECTION_RESULTS.COMPANY_CD = T_SECTION_BUDGET.COMPANY_CD AND
+										T_SECTION_RESULTS.SECTION_PLACE_CD = T_SECTION_BUDGET.SECTION_PLACE_CD AND
+										T_SECTION_RESULTS.SECTION_CD = T_SECTION_BUDGET.SECTION_CD AND
+										T_SECTION_RESULTS.BUDGET_YEAR = T_SECTION_BUDGET.BUDGET_YEAR
+								WHERE
+									T_SECTION_BUDGET.SUBJECT_CD = '　'
+								GROUP BY
+									T_SECTION_BUDGET.COMPANY_CD, T_SECTION_BUDGET.SECTION_PLACE_CD, T_SECTION_BUDGET.SECTION_CD, T_SECTION_BUDGET.BUDGET_YEAR
+								UNION ALL
+								SELECT
+									T_SECTION_RESULTS.COMPANY_CD
+									, T_SECTION_RESULTS.SECTION_PLACE_CD
+									, T_SECTION_RESULTS.SECTION_CD
+									, T_SECTION_RESULTS.SUBJECT_CD
+									, T_SECTION_RESULTS.BUDGET_YEAR
+									, T_SECTION_RESULTS.SUBJECT_NAME
+									, T_SECTION_RESULTS.CURRENCY_CD
+									, null
+									, T_SECTION_RESULTS.START_MONTH
+									, 0
+									, 0
+									, 0
+									, 0
+									, 0
+									, 0
+									, 0
+									, 0
+									, 0
+									, 0
+									, 0
+									, 0
+									, 0
+									, 0
+									, T_SECTION_RESULTS.PUR_REQ_SUM_AMOUNT_T
+									, T_SECTION_RESULTS.ORDER_DIFF_SUM_AMOUNT_T
+									, T_SECTION_RESULTS.ACCEPT_SUM_AMOUNT_1
+									, T_SECTION_RESULTS.ACCEPT_SUM_AMOUNT_2
+									, T_SECTION_RESULTS.ACCEPT_SUM_AMOUNT_3
+									, T_SECTION_RESULTS.ACCEPT_SUM_AMOUNT_4
+									, T_SECTION_RESULTS.ACCEPT_SUM_AMOUNT_5
+									, T_SECTION_RESULTS.ACCEPT_SUM_AMOUNT_6
+									, T_SECTION_RESULTS.ACCEPT_SUM_AMOUNT_7
+									, T_SECTION_RESULTS.ACCEPT_SUM_AMOUNT_8
+									, T_SECTION_RESULTS.ACCEPT_SUM_AMOUNT_9
+									, T_SECTION_RESULTS.ACCEPT_SUM_AMOUNT_10
+									, T_SECTION_RESULTS.ACCEPT_SUM_AMOUNT_11
+									, T_SECTION_RESULTS.ACCEPT_SUM_AMOUNT_12
+									, T_SECTION_RESULTS.ACCEPT_SUM_AMOUNT_T
+									, T_SECTION_RESULTS.ORDER_SUM_AMOUNT_T
+								FROM
+									T_SECTION_RESULTS
+								WHERE
+									NOT EXISTS(
+										SELECT *
+										FROM T_SECTION_BUDGET
+										WHERE
+											T_SECTION_RESULTS.COMPANY_CD = T_SECTION_BUDGET.COMPANY_CD AND
+											T_SECTION_RESULTS.SECTION_PLACE_CD = T_SECTION_BUDGET.SECTION_PLACE_CD AND
+											T_SECTION_RESULTS.SECTION_CD = T_SECTION_BUDGET.SECTION_CD AND
+											T_SECTION_RESULTS.SUBJECT_CD = T_SECTION_BUDGET.SUBJECT_CD AND
+											T_SECTION_RESULTS.BUDGET_YEAR = T_SECTION_BUDGET.BUDGET_YEAR
+									)
+									AND
+									NOT EXISTS(
+										SELECT *
+										FROM T_SECTION_BUDGET
+										WHERE
+											T_SECTION_RESULTS.COMPANY_CD = T_SECTION_BUDGET.COMPANY_CD AND
+											T_SECTION_RESULTS.SECTION_PLACE_CD = T_SECTION_BUDGET.SECTION_PLACE_CD AND
+											T_SECTION_RESULTS.SECTION_CD = T_SECTION_BUDGET.SECTION_CD AND
+											T_SECTION_BUDGET.SUBJECT_CD = '　' AND
+											T_SECTION_RESULTS.BUDGET_YEAR = T_SECTION_BUDGET.BUDGET_YEAR
+								   )
+							)
+					   )
+		) SECTION_BUDGET
+   </sql>
+
+</mapper>

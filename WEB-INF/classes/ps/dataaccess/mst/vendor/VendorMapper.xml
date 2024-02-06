@@ -1,0 +1,156 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="ps.dataaccess.mst.vendor.VendorMapper">
+    <select id="listVendor" parameterType="fw.domain.mst.supplier.vendor.VendorSearchCondition"
+        resultType="fw.domain.mst.supplier.vendor.VendorManagement">
+        <include refid="pageHeader"/>
+        SELECT 
+            VENDOR_CD as "vendorIdentify.vendorCd",
+            VENDOR_NAME as "vendorName",
+            LAST_UPD_DATE as "registInfo.lastUpdDate",
+            LAST_UPD_COMPANY_CD as "registInfo.lastUpdCompanyCd",
+            LAST_UPD_SECTION_CD as "registInfo.lastUpdSectionCd",
+            LAST_UPD_USER_ID as "registInfo.lastUpdUserId",
+            REG_DATE as "registInfo.regDate",
+            REG_COMPANY_CD as "registInfo.regCompanyCd",
+            REG_SECTION_CD as "registInfo.regSectionCd",
+            REG_USER_ID as "registInfo.regUserId"
+        FROM M_VENDOR 
+         <where>
+              <if test="@org.apache.commons.lang.StringUtils@isNotBlank(vendorCd)">
+                  AND VENDOR_CD ${@fw.common.util.SearchModeUtil@getSearchSQL("fw.domain.mst.supplier.vendor.VendorSearchCondition","vendorCd")}
+              </if>
+              <if test="@org.apache.commons.lang.StringUtils@isNotBlank(vendorName)">
+                  AND VENDOR_NAME ${@fw.common.util.SearchModeUtil@getSearchSQL("fw.domain.mst.supplier.vendor.VendorSearchCondition","vendorName")}
+              </if>
+        </where> 
+        ORDER BY ${searchCondition.columnOrder.columnOrder()}
+        <include refid="pageRoot"/>
+    </select>
+    <select id="downloadCount" parameterType="fw.domain.mst.supplier.vendor.VendorSearchCondition"
+        resultType="java.lang.Long">
+        SELECT 
+            COUNT(*)
+        FROM M_VENDOR 
+         <where>
+              <if test="@org.apache.commons.lang.StringUtils@isNotBlank(vendorCd)">
+                  AND VENDOR_CD ${@fw.common.util.SearchModeUtil@getSearchSQL("fw.domain.mst.supplier.vendor.VendorSearchCondition","vendorCd")}
+              </if>
+              <if test="@org.apache.commons.lang.StringUtils@isNotBlank(vendorName)">
+                  AND VENDOR_NAME ${@fw.common.util.SearchModeUtil@getSearchSQL("fw.domain.mst.supplier.vendor.VendorSearchCondition","vendorName")}
+              </if>
+        </where> 
+        ORDER BY ${searchCondition.columnOrder.columnOrder()}
+    </select>
+    
+    <!-- SRC-00115-00 include化共通-->
+	<sql id="listKeyIdentityWhereCondition">
+		<if test="@org.apache.commons.lang.StringUtils@isNotBlank(vendorCd)">
+		    AND VENDOR_CD ${@fw.common.util.SearchModeUtil@getSearchSQL("fw.domain.mst.supplier.vendor.VendorSearchCondition","vendorCd")}
+		</if>
+		<if test="@org.apache.commons.lang.StringUtils@isNotBlank(vendorName)">
+		    AND VENDOR_NAME ${@fw.common.util.SearchModeUtil@getSearchSQL("fw.domain.mst.supplier.vendor.VendorSearchCondition","vendorName")}
+		</if>
+	</sql>
+    
+    <select id="listKeyIdentity" parameterType="fw.domain.mst.supplier.vendor.VendorSearchCondition"
+        resultType="fw.domain.mst.supplier.vendor.VendorIdentify">
+        SELECT 
+            VENDOR_CD as "vendorCd"
+        FROM M_VENDOR 
+        <where>
+            <include refid="listKeyIdentityWhereCondition"/>
+        </where> 
+        ORDER BY ${searchCondition.columnOrder.columnOrder()}
+    </select>
+    
+    <select id="listPageItem" 
+        resultType="fw.domain.mst.supplier.vendor.VendorItem">
+            SELECT
+                VENDOR_CD as "vendorIdentify.vendorCd",
+                VENDOR_NAME as "vendorName",
+                LAST_UPD_DATE as "vendorIdentify.lastUpdDate"
+            FROM M_VENDOR 
+            <where> 
+                M_VENDOR.VENDOR_CD in
+                <foreach collection="searchCondition.page.keyDomainEntityList" item="keyList"  open="(" separator="," close=")">  
+                    #{keyList.vendorCd}
+                </foreach>
+                <include refid="listKeyIdentityWhereCondition"/>
+            </where>
+            ORDER BY ${searchCondition.columnOrder.columnOrder()}
+    </select>
+
+    <select id="search" parameterType="fw.domain.mst.supplier.vendor.VendorIdentify" resultType="fw.domain.mst.supplier.vendor.VendorManagement">
+        SELECT
+            VENDOR_CD as "vendorIdentify.vendorCd",
+            VENDOR_NAME as "vendorName",
+            LAST_UPD_DATE as "vendorIdentify.lastUpdDate"
+        FROM M_VENDOR 
+        WHERE
+                VENDOR_CD = #{vendorCd}
+    </select>
+    
+    <select id="searchExclusive" parameterType="fw.domain.mst.supplier.vendor.VendorIdentify" resultType="fw.domain.mst.supplier.vendor.VendorIdentify">
+        SELECT
+            VENDOR_CD as "vendorCd"
+        FROM M_VENDOR 
+        WHERE
+            VENDOR_CD = #{vendorCd}
+            AND LAST_UPD_DATE = #{lastUpdDate}
+    </select>
+    
+    <insert id="insert" parameterType="fw.domain.mst.supplier.vendor.VendorManagement">
+        INSERT INTO M_VENDOR
+        (
+            VENDOR_CD,
+            VENDOR_NAME,
+            LAST_UPD_DATE,
+            LAST_UPD_COMPANY_CD,
+            LAST_UPD_SECTION_CD,
+            LAST_UPD_USER_ID,
+            REG_DATE,
+            REG_COMPANY_CD,
+            REG_SECTION_CD,
+            REG_USER_ID
+        ) VALUES (
+            #{vendorIdentify.vendorCd, jdbcType=VARCHAR},
+            #{vendorName,jdbcType=VARCHAR},
+            #{registInfo.lastUpdDate, jdbcType=VARCHAR},
+            #{registInfo.lastUpdCompanyCd, jdbcType=VARCHAR},
+            #{registInfo.lastUpdSectionCd, jdbcType=VARCHAR},
+            #{registInfo.lastUpdUserId, jdbcType=VARCHAR},
+            #{registInfo.regDate, jdbcType=VARCHAR},
+            #{registInfo.regCompanyCd, jdbcType=VARCHAR},
+            #{registInfo.regSectionCd, jdbcType=VARCHAR},
+            #{registInfo.regUserId, jdbcType=VARCHAR}
+        )
+    </insert>
+
+    <update id="update" parameterType="fw.domain.mst.supplier.vendor.VendorManagement">
+        UPDATE M_VENDOR
+        SET
+            VENDOR_NAME = #{vendorName},
+            LAST_UPD_DATE = #{registInfo.lastUpdDate},
+            LAST_UPD_COMPANY_CD = #{registInfo.lastUpdCompanyCd},
+            LAST_UPD_SECTION_CD = #{registInfo.lastUpdSectionCd},
+            LAST_UPD_USER_ID = #{registInfo.lastUpdUserId}
+        WHERE
+            VENDOR_CD = #{vendorIdentify.vendorCd}
+    </update>
+
+    <delete id="delete" parameterType="fw.domain.mst.supplier.vendor.VendorIdentify">
+        DELETE FROM M_VENDOR
+        WHERE
+            VENDOR_CD = #{vendorCd}
+    </delete>
+    
+    <sql id="pageHeader">
+       SELECT * FROM (
+    </sql>
+    <sql id="pageRoot">
+        ) WHERE  ROWNUM &lt;=${@fw.common.util.PropertiesUtil@getLong("DOWNLOAD_MAXCNT")}
+    </sql>
+</mapper>

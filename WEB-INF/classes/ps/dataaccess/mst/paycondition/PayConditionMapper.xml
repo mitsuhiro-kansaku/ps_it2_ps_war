@@ -1,0 +1,355 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="ps.dataaccess.mst.paycondition.PayConditionMapper">
+
+    <!-- SRC-00115-00 include化共通-->
+    <!-- 支払条件マスタ検索条件 -->
+    <sql id="listKeyIdentityWhereCondition">
+        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(payConditionSearchCondition.companyCd)">
+            AND M_PAY_CONDITION.COMPANY_CD = #{payConditionSearchCondition.companyCd, jdbcType=VARCHAR}
+        </if>
+        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(payConditionSearchCondition.paySite)">
+            AND M_PAY_CONDITION.PAY_SITE = #{payConditionSearchCondition.paySite, jdbcType=VARCHAR}
+        </if>
+        <!-- 強化-00639-000 2013/04/01 ADD SBO_wangzf START -->
+         <if test="@org.apache.commons.lang.StringUtils@isNotBlank(payConditionSearchCondition.payConditionCd)">
+            AND M_PAY_CONDITION.PAY_CONDITION_CD
+            ${@fw.common.util.SearchModeUtil@getSearchSQL("fw.domain.mst.supplier.paycondition.PayConditionSearchCondition","payConditionCd","payConditionSearchCondition")}
+        </if>
+        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(payConditionSearchCondition.payConditionName)">
+            AND (paycondition_lang_company.PAY_CONDITION_NAME 
+            ${@fw.common.util.SearchModeUtil@getSearchSQL("fw.domain.mst.supplier.paycondition.PayConditionSearchCondition","payConditionName","payConditionSearchCondition")}
+             OR paycondition_lang_system.PAY_CONDITION_NAME 
+            ${@fw.common.util.SearchModeUtil@getSearchSQL("fw.domain.mst.supplier.paycondition.PayConditionSearchCondition","payConditionName","payConditionSearchCondition")})
+        </if>
+       <!-- 強化-00639-000 2013/04/01 ADD SBO_wangzf END -->
+       <!-- 強化-00639-000 2013/04/01 DEL SBO_wangzf START -->
+       <!-- <if test="@org.apache.commons.lang.StringUtils@isNotBlank(payConditionSearchCondition.payConditionCd)">
+            AND M_PAY_CONDITION.PAY_CONDITION_CD
+            ${@fw.common.util.SearchModeUtil@getSearchSQL("fw.domain.mst.supplier.paycondition.PayConditionSearchCondition","payConditionSearchCondition.payConditionCd")}
+        </if>
+        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(payConditionSearchCondition.payConditionName)">
+            AND (paycondition_lang_company.PAY_CONDITION_NAME 
+            ${@fw.common.util.SearchModeUtil@getSearchSQL("fw.domain.mst.supplier.paycondition.PayConditionSearchCondition","payConditionSearchCondition.payConditionName")}
+             OR paycondition_lang_system.PAY_CONDITION_NAME 
+            ${@fw.common.util.SearchModeUtil@getSearchSQL("fw.domain.mst.supplier.paycondition.PayConditionSearchCondition","payConditionSearchCondition.payConditionName")})
+        </if>--> 
+        <!-- 強化-00639-000 2013/04/01 DEL SBO_wangzf END -->
+        <if test="@fw.domain.mst.searchcondition.SearchCondition@termFlgIsNotEmpty(payConditionSearchCondition.searchCondition.termFlg)">
+            AND M_PAY_CONDITION.TERM_FLG = #{payConditionSearchCondition.searchCondition.termFlg, jdbcType=VARCHAR}
+        </if>
+    </sql>
+
+    <!-- 支払条件マスタキーリスト -->
+    <select id="listKeyIdentity"
+            resultType="fw.domain.mst.supplier.paycondition.PayConditionIdentify">
+        SELECT M_PAY_CONDITION.COMPANY_CD as "companyCd",
+               M_PAY_CONDITION.PAY_CONDITION_CD as "payConditionCd",
+               CASE WHEN paycondition_lang_company.PAY_CONDITION_NAME is not null then
+                   paycondition_lang_company.PAY_CONDITION_NAME
+               ELSE
+                   paycondition_lang_system.PAY_CONDITION_NAME
+               END AS payConditionName
+          FROM M_PAY_CONDITION 
+          LEFT JOIN M_PAY_CONDITION_LANG paycondition_lang_company
+                 ON M_PAY_CONDITION.COMPANY_CD = paycondition_lang_company.COMPANY_CD
+                AND M_PAY_CONDITION.PAY_CONDITION_CD = paycondition_lang_company.PAY_CONDITION_CD
+                <!-- ＩＴ２-01494-000 20130724 SBO_SOKOU ADD START -->
+                <if test="payConditionSearchCondition.companyCd != 'ALL'">
+                <!-- ＩＴ２-01494-000 20130724 SBO_SOKOU ADD -END- -->
+                AND paycondition_lang_company.LANGUAGE_IND = #{companyUseLangInd}
+                <!-- ＩＴ２-01494-000 20130724 SBO_SOKOU ADD START -->
+                </if>
+                <if test="payConditionSearchCondition.companyCd == 'ALL'">
+                AND paycondition_lang_company.LANGUAGE_IND = '${@fw.security.SecurityUtil@getCompanyUseLanguageIndByEscapeSql()}'
+                </if>
+                <!-- ＩＴ２-01494-000 20130724 SBO_SOKOU ADD -END- -->
+          LEFT JOIN M_PAY_CONDITION_LANG paycondition_lang_system
+                 ON M_PAY_CONDITION.COMPANY_CD = paycondition_lang_system.COMPANY_CD
+                AND M_PAY_CONDITION.PAY_CONDITION_CD = paycondition_lang_system.PAY_CONDITION_CD
+                AND paycondition_lang_system.LANGUAGE_IND = '${@fw.common.util.AppUtil@getSysLanguageByEscapeSql()}'
+        <where>
+            <include refid="listKeyIdentityWhereCondition"/>
+        </where>
+        ORDER BY ${payConditionSearchCondition.searchCondition.columnOrder.columnOrder()}
+    </select>
+
+    <!-- 項目マップ -->
+    <resultMap type="fw.domain.mst.supplier.paycondition.PayConditionItem" id="PayConditionItem_Map">
+        <id column="PAY_CONDITION_CD" property="payConditionIdentify.payConditionCd"/>
+        <id column="LAST_UPD_DATE" property="payConditionIdentify.lastUpdDate"/>
+    </resultMap>
+    <!-- 支払条件マスタ項目リスト -->
+    <!-- 強化-00639-000 2013/04/01 DEL SBO_wangzf START -->
+    <!-- <select id="listPageItem"
+            parameterType="fw.domain.mst.searchcondition.SearchCondition"
+            resultMap="PayConditionItem_Map"> -->
+    <!-- 強化-00639-000 2013/04/01 DEL SBO_wangzf END -->
+    <!-- 強化-00639-000 2013/04/01 ADD SBO_wangzf START -->
+    <select id="listPageItem"
+            resultMap="PayConditionItem_Map">
+    <!--  強化-00639-000 Y2013/04/01 ADD SBO_wangzf END-->
+        SELECT M_PAY_CONDITION.COMPANY_CD as "payConditionIdentify.companyCd",
+               M_PAY_CONDITION.PAY_CONDITION_CD,
+               M_PAY_CONDITION.LAST_UPD_DATE,
+               CASE WHEN paycondition_lang_company.PAY_CONDITION_NAME IS NOT NULL THEN
+                   paycondition_lang_company.PAY_CONDITION_NAME
+               ELSE
+                   paycondition_lang_system.PAY_CONDITION_NAME
+               END AS payConditionName,
+               M_PAY_CONDITION.PAY_SITE as "paySite",
+               M_PAY_CONDITION.PAY_CUTOFF_DAY as "payCutoffDay",
+               M_PAY_CONDITION.PAY_DAY as "payDay",
+               M_PAY_CONDITION.TERM_FLG as "termFlg"
+          FROM M_PAY_CONDITION 
+          LEFT JOIN M_PAY_CONDITION_LANG paycondition_lang_company
+                 ON M_PAY_CONDITION.COMPANY_CD = paycondition_lang_company.COMPANY_CD
+                AND M_PAY_CONDITION.PAY_CONDITION_CD = paycondition_lang_company.PAY_CONDITION_CD
+                <!-- ＩＴ２-01494-000 20130724 SBO_SOKOU ADD START -->
+                <if test="payConditionSearchCondition.companyCd != 'ALL'">
+                <!-- ＩＴ２-01494-000 20130724 SBO_SOKOU ADD -END- -->
+                AND paycondition_lang_company.LANGUAGE_IND = #{companyUseLangInd}--M_COMPANY.COMPANY_USE_LANGUAGE_IND
+                <!-- ＩＴ２-01494-000 20130724 SBO_SOKOU ADD START -->
+                </if>
+                <if test="payConditionSearchCondition.companyCd == 'ALL'">
+                AND paycondition_lang_company.LANGUAGE_IND = '${@fw.security.SecurityUtil@getCompanyUseLanguageIndByEscapeSql()}'
+                </if>
+                <!-- ＩＴ２-01494-000 20130724 SBO_SOKOU ADD -END- -->
+          LEFT JOIN M_PAY_CONDITION_LANG paycondition_lang_system
+                 ON M_PAY_CONDITION.COMPANY_CD = paycondition_lang_system.COMPANY_CD
+                AND M_PAY_CONDITION.PAY_CONDITION_CD = paycondition_lang_system.PAY_CONDITION_CD
+                AND paycondition_lang_system.LANGUAGE_IND = '${@fw.common.util.AppUtil@getSysLanguageByEscapeSql()}'
+        <where>
+                (M_PAY_CONDITION.COMPANY_CD,M_PAY_CONDITION.PAY_CONDITION_CD) IN 
+                <foreach collection="payConditionSearchCondition.searchCondition.page.keyDomainEntityList" item="keyList"  open="(" separator="," close=")">  
+                    (#{keyList.companyCd},#{keyList.payConditionCd})
+                </foreach>
+                <include refid="listKeyIdentityWhereCondition"/>
+        </where>
+         ORDER BY ${payConditionSearchCondition.searchCondition.columnOrder.columnOrder()}
+    </select>
+
+    <select id="listPayConditionItem"
+            parameterType="fw.domain.mst.supplier.paycondition.PayConditionSearchCondition"
+            resultMap="PayConditionItem_Map">
+        SELECT M_PAY_CONDITION.COMPANY_CD as "payConditionIdentify.companyCd",
+               M_PAY_CONDITION.PAY_CONDITION_CD,
+               M_PAY_CONDITION.LAST_UPD_DATE,
+               PAY_CONDITION_NAME as "payConditionName",
+               PAY_SITE as "paySite",
+               TERM_FLG as "termFlg"
+          FROM M_PAY_CONDITION 
+          LEFT JOIN M_PAY_CONDITION_LANG
+                 ON M_PAY_CONDITION.COMPANY_CD = M_PAY_CONDITION_LANG.COMPANY_CD
+                AND M_PAY_CONDITION.PAY_CONDITION_CD = M_PAY_CONDITION_LANG.PAY_CONDITION_CD
+                AND M_PAY_CONDITION_LANG.LANGUAGE_IND = '${@fw.security.SecurityUtil@getCompanyUseLanguageIndByEscapeSql()}'
+         WHERE 
+               <if test="@fw.domain.mst.searchcondition.SearchCondition@termFlgIsNotEmpty(searchCondition.termFlg)">
+                   M_PAY_CONDITION.TERM_FLG = #{searchCondition.termFlg, jdbcType=VARCHAR}
+               </if>
+         ORDER BY ${searchCondition.columnOrder.columnOrder()}
+    </select>
+
+    <resultMap type="fw.domain.mst.supplier.paycondition.PayConditionLanguage" id="PayConditionLanguage_Map">
+        <id column="PAY_CONDITION_CD" property="payConditionIdentify.payConditionCd"/>
+        <id column="LAST_UPD_DATE" property="payConditionIdentify.lastUpdDate"/>
+    </resultMap>
+    <select id="listPayConditionLanguage" parameterType="fw.domain.mst.supplier.paycondition.PayConditionIdentify" resultMap="PayConditionLanguage_Map">
+        SELECT M_PAY_CONDITION_LANG.COMPANY_CD as "payConditionIdentify.companyCd",
+               M_PAY_CONDITION_LANG.PAY_CONDITION_CD,
+               M_PAY_CONDITION_LANG.LAST_UPD_DATE,
+               M_PAY_CONDITION_LANG.LANGUAGE_IND as "languageInd.languageInd",
+               M_PAY_CONDITION_LANG.PAY_CONDITION_NAME as "payConditionName"
+          FROM M_PAY_CONDITION
+          LEFT JOIN M_PAY_CONDITION_LANG 
+                 ON M_PAY_CONDITION_LANG.COMPANY_CD = M_PAY_CONDITION.COMPANY_CD
+                AND M_PAY_CONDITION_LANG.PAY_CONDITION_CD = M_PAY_CONDITION.PAY_CONDITION_CD
+                <if test="companyCd=='ALL'">
+                AND M_PAY_CONDITION_LANG.LANGUAGE_IND != '${@fw.common.util.AppUtil@getSysLanguageByEscapeSql()}'
+                </if>
+            <if test="companyCd!='ALL'">
+            INNER JOIN M_COMPANY
+                    ON M_PAY_CONDITION.COMPANY_CD = M_COMPANY.COMPANY_CD
+                   AND M_PAY_CONDITION_LANG.LANGUAGE_IND != M_COMPANY.COMPANY_USE_LANGUAGE_IND
+            </if>
+            INNER JOIN M_CODE_NAME
+                    ON M_PAY_CONDITION_LANG.LANGUAGE_IND = M_CODE_NAME.CODE_VALUE
+                   AND M_CODE_NAME.CODE_KEY = 'LANGUAGE_IND'
+         WHERE M_PAY_CONDITION_LANG.COMPANY_CD = #{companyCd}
+           AND M_PAY_CONDITION_LANG.PAY_CONDITION_CD =#{payConditionCd}
+         ORDER BY M_CODE_NAME.DSP_ORDER
+    </select>
+
+    <resultMap type="fw.domain.mst.supplier.paycondition.PayConditionManagement" id="PayConditionManagement_Map">
+        <id column="PAY_CONDITION_CD" property="payConditionIdentify.payConditionCd"/>
+        <id column="M_PAY_CONDITION$LAST_UPD_DATE" property="payConditionIdentify.lastUpdDate"/>
+    </resultMap>
+
+    <select id="search"
+            parameterType="fw.domain.mst.supplier.paycondition.PayConditionIdentify"
+            resultMap="PayConditionManagement_Map">
+        SELECT M_PAY_CONDITION.COMPANY_CD as "payConditionIdentify.companyCd",
+               M_PAY_CONDITION.PAY_CONDITION_CD,
+               M_PAY_CONDITION.LAST_UPD_DATE as "M_PAY_CONDITION$LAST_UPD_DATE",
+               M_COMPANY_LANG.COMPANY_NAME as "companySummary.companyName",
+            <if test="companyCd=='ALL'">
+               '${@fw.common.util.AppUtil@getSysLanguageByEscapeSql()}' as "companySummary.languageInd",
+            </if>
+            <if test="companyCd!='ALL'">
+               M_COMPANY.COMPANY_USE_LANGUAGE_IND as "companySummary.languageInd",
+            </if>
+               CASE WHEN paycondition_lang_company.PAY_CONDITION_NAME IS NOT NULL
+                    THEN paycondition_lang_company.PAY_CONDITION_NAME
+               ELSE paycondition_lang_system.PAY_CONDITION_NAME
+                END AS "payConditionName",
+               M_PAY_CONDITION.PAY_SITE as "paySite.paySite",
+               M_PAY_CONDITION.PAY_CUTOFF_DAY as "payCutoffDay",
+               M_PAY_CONDITION.PAY_DAY as "payDay",
+               M_PAY_CONDITION.TERM_FLG as "termFlg",
+               M_PAY_CONDITION.LAST_UPD_DATE as "registInfo.lastUpdDate",
+               M_PAY_CONDITION.LAST_UPD_COMPANY_CD as "registInfo.lastUpdCompanyCd",
+               M_PAY_CONDITION.LAST_UPD_SECTION_CD as "registInfo.lastUpdSectionCd",
+               M_PAY_CONDITION.LAST_UPD_USER_ID as "registInfo.lastUpdUserId",
+               M_PAY_CONDITION.REG_DATE as "registInfo.regDate",
+               M_PAY_CONDITION.REG_COMPANY_CD as "registInfo.regCompanyCd",
+               M_PAY_CONDITION.REG_SECTION_CD as "registInfo.regSectionCd",
+               M_PAY_CONDITION.REG_USER_ID as "registInfo.regUserId"
+          FROM M_PAY_CONDITION
+          LEFT JOIN M_COMPANY
+                 ON M_PAY_CONDITION.COMPANY_CD = M_COMPANY.COMPANY_CD
+          LEFT JOIN M_PAY_CONDITION_LANG paycondition_lang_company
+                 ON paycondition_lang_company.COMPANY_CD = M_PAY_CONDITION.COMPANY_CD
+                AND paycondition_lang_company.PAY_CONDITION_CD = M_PAY_CONDITION.PAY_CONDITION_CD
+                AND paycondition_lang_company.LANGUAGE_IND = M_COMPANY.COMPANY_USE_LANGUAGE_IND
+          LEFT JOIN M_PAY_CONDITION_LANG paycondition_lang_system
+                 ON M_PAY_CONDITION.COMPANY_CD = paycondition_lang_system.COMPANY_CD
+                AND M_PAY_CONDITION.PAY_CONDITION_CD = paycondition_lang_system.PAY_CONDITION_CD
+                AND paycondition_lang_system.LANGUAGE_IND = '${@fw.common.util.AppUtil@getSysLanguageByEscapeSql()}'
+          LEFT JOIN M_COMPANY_LANG
+                 ON M_COMPANY.COMPANY_CD = M_COMPANY_LANG.COMPANY_CD
+                AND M_COMPANY.COMPANY_USE_LANGUAGE_IND = M_COMPANY_LANG.LANGUAGE_IND
+              WHERE M_PAY_CONDITION.COMPANY_CD = #{companyCd}
+                AND M_PAY_CONDITION.PAY_CONDITION_CD = #{payConditionCd}
+    </select>
+
+    <select id="searchExclusive"
+            parameterType="fw.domain.mst.supplier.paycondition.PayConditionIdentify"
+            resultType="fw.domain.mst.supplier.paycondition.PayConditionIdentify">
+        SELECT M_PAY_CONDITION.COMPANY_CD as "companyCd",
+               M_PAY_CONDITION.PAY_CONDITION_CD as "payConditionCd"
+          FROM M_PAY_CONDITION 
+         WHERE M_PAY_CONDITION.COMPANY_CD = #{companyCd}
+           AND M_PAY_CONDITION.PAY_CONDITION_CD = #{payConditionCd}
+           AND M_PAY_CONDITION.LAST_UPD_DATE = #{lastUpdDate}
+    </select>
+
+    <insert id="insert" parameterType="fw.domain.mst.supplier.paycondition.PayConditionManagement">
+        INSERT INTO M_PAY_CONDITION
+        (
+            COMPANY_CD,
+            PAY_CONDITION_CD,
+            PAY_SITE,
+            PAY_CUTOFF_DAY,
+            PAY_DAY,
+            TERM_FLG,
+            LAST_UPD_DATE,
+            LAST_UPD_COMPANY_CD,
+            LAST_UPD_SECTION_CD,
+            LAST_UPD_USER_ID,
+            REG_DATE,
+            REG_COMPANY_CD,
+            REG_SECTION_CD,
+            REG_USER_ID
+        ) VALUES (
+            #{payConditionIdentify.companyCd, jdbcType=VARCHAR},
+            #{payConditionIdentify.payConditionCd, jdbcType=VARCHAR},
+            #{paySite.paySite, jdbcType=VARCHAR},
+            #{payCutoffDay, jdbcType=VARCHAR},
+            #{payDay, jdbcType=VARCHAR},
+            #{termFlg, jdbcType=VARCHAR},
+            #{registInfo.lastUpdDate, jdbcType=VARCHAR},
+            #{registInfo.lastUpdCompanyCd, jdbcType=VARCHAR},
+            #{registInfo.lastUpdSectionCd, jdbcType=VARCHAR},
+            #{registInfo.lastUpdUserId, jdbcType=VARCHAR},
+            #{registInfo.regDate, jdbcType=VARCHAR},
+            #{registInfo.regCompanyCd, jdbcType=VARCHAR},
+            #{registInfo.regSectionCd, jdbcType=VARCHAR},
+            #{registInfo.regUserId, jdbcType=VARCHAR}
+        )
+    </insert>
+
+    <update id="update"
+            parameterType="fw.domain.mst.supplier.paycondition.PayConditionManagement">
+        UPDATE M_PAY_CONDITION
+           SET PAY_SITE = #{paySite.paySite},
+               PAY_CUTOFF_DAY = #{payCutoffDay},
+               PAY_DAY = #{payDay},
+               TERM_FLG = #{termFlg},
+               LAST_UPD_DATE = #{registInfo.lastUpdDate},
+               LAST_UPD_COMPANY_CD = #{registInfo.lastUpdCompanyCd},
+               LAST_UPD_SECTION_CD = #{registInfo.lastUpdSectionCd},
+               LAST_UPD_USER_ID = #{registInfo.lastUpdUserId}
+         WHERE COMPANY_CD = #{payConditionIdentify.companyCd}
+           AND PAY_CONDITION_CD = #{payConditionIdentify.payConditionCd}
+    </update>
+
+    <delete id="delete"
+             parameterType="fw.domain.mst.supplier.paycondition.PayConditionIdentify">
+        DELETE
+          FROM M_PAY_CONDITION
+         WHERE COMPANY_CD = #{companyCd}
+           AND PAY_CONDITION_CD = #{payConditionCd}  
+    </delete>
+
+    <insert id="insertPayConditionLanguage"
+            parameterType="fw.domain.mst.supplier.paycondition.PayConditionLanguage">
+        INSERT INTO M_PAY_CONDITION_LANG
+        (
+            COMPANY_CD,
+            PAY_CONDITION_CD,
+            LANGUAGE_IND,
+            PAY_CONDITION_NAME,
+            LAST_UPD_DATE,
+            LAST_UPD_COMPANY_CD,
+            LAST_UPD_SECTION_CD,
+            LAST_UPD_USER_ID,
+            REG_DATE,
+            REG_COMPANY_CD,
+            REG_SECTION_CD,
+            REG_USER_ID
+        ) VALUES (
+            #{payConditionIdentify.companyCd, jdbcType=VARCHAR},
+            #{payConditionIdentify.payConditionCd, jdbcType=VARCHAR},
+            #{languageInd.languageInd, jdbcType=VARCHAR},
+            #{payConditionName, jdbcType=VARCHAR},
+            #{registInfo.lastUpdDate, jdbcType=VARCHAR},
+            #{registInfo.lastUpdCompanyCd, jdbcType=VARCHAR},
+            #{registInfo.lastUpdSectionCd, jdbcType=VARCHAR},
+            #{registInfo.lastUpdUserId, jdbcType=VARCHAR},
+            #{registInfo.regDate, jdbcType=VARCHAR},
+            #{registInfo.regCompanyCd, jdbcType=VARCHAR},
+            #{registInfo.regSectionCd, jdbcType=VARCHAR},
+            #{registInfo.regUserId, jdbcType=VARCHAR}
+        )
+    </insert>
+
+    <delete id="deletePayConditionLanguage"
+            parameterType="fw.domain.mst.supplier.paycondition.PayConditionIdentify">
+        DELETE
+          FROM M_PAY_CONDITION_LANG
+         WHERE COMPANY_CD = #{companyCd}
+           AND PAY_CONDITION_CD = #{payConditionCd}
+    </delete>
+    
+    <select id="getPayConditionName" parameterType="String" resultType="String">
+        SELECT  
+		    PAY_CONDITION_NAME  
+		FROM M_PAY_CONDITION_LANG
+		WHERE PAY_CONDITION_CD = #{payConditionCd}
+		AND (COMPANY_CD = '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}'
+		            OR COMPANY_CD = '${@fw.common.constant.ApplicationConstant@COMPANY_CD_ALL}')
+		AND  LANGUAGE_IND = #{companyUserLanguageInd}
+    </select>
+</mapper>

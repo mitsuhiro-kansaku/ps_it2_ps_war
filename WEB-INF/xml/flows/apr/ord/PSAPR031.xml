@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<flow xmlns="http://www.springframework.org/schema/webflow"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.springframework.org/schema/webflow
+        http://www.springframework.org/schema/webflow/spring-webflow-2.0.xsd"
+    parent="base">
+    
+    <!-- 注文一括承認 -->
+    <var name="orderPackageApproval" class="fw.domain.slip.order.order.orderapproval.OrderPackageApproval" />
+    <!-- 注文識別情報 -->
+    <var name="orderIdentify" class="fw.domain.slip.order.order.OrderIdentify" />
+
+    <input name="searchCondition" />
+    <input name="isCurrentPageSearch" />
+    <input name="isQuickLink" />
+    
+    <decision-state id="isSearchByKey">
+       <if test="flowScope.isCurrentPageSearch" then="searchByKey" else="searchByCondition" />
+    </decision-state>
+    
+    <action-state id="searchByCondition">
+        <evaluate expression="PSAPR031Service.init(searchCondition)" result="flowScope.itemList" />
+        <transition to="createPackageApproval"/> 
+    </action-state>
+
+    <action-state  id="searchByKey" >
+        <evaluate expression="PSAPR031Service.page(searchCondition)" result="flowScope.itemList" />
+        <transition to="createPackageApproval"/>
+    </action-state>
+    
+    <action-state  id="createPackageApproval" >
+        <evaluate expression="PSAPR031Service.createPackageApproval(itemList)" result="flowScope.orderPackageApproval" />
+        <transition to="PSAPR031"/>
+    </action-state>
+    
+    <!-- 注文承認一覧  -->
+    <view-state id="PSAPR031" model="orderPackageApproval" view="apr/ord/PSAPR031">
+        <transition on="order" to="createPackageApproval" validate="false">
+            <evaluate expression="PSAPR031Service.order(searchCondition)" result="flowScope.itemList" />
+        </transition>
+        <transition on="page" to="createPackageApproval" validate="false">
+            <evaluate expression="PSAPR031Service.page(searchCondition)" result="flowScope.itemList" /> 
+        </transition>
+        <transition on="back" to="home" validate="false" />
+        
+        <!--個別承認 -->
+        <transition on="individualApprovalValidate" validate="false">
+            <set name="orderIdentify.orderSeq" value="requestParameters.orderSeq"/><!-- 注文シーケンス番号 -->
+            <set name="orderIdentify.lastUpdDate" value="requestParameters.lastUpdDate"/><!-- 最終更新日時 -->
+            <set name="flashScope.isShowApproval" value="true"/>
+        </transition>
+        <!--詳細 -->
+        <transition on="detailValidate" validate="false" >
+            <set name="orderIdentify.orderSeq" value="requestParameters.orderSeq"/><!-- 注文シーケンス番号 -->
+            <set name="orderIdentify.lastUpdDate" value="requestParameters.lastUpdDate"/><!-- 最終更新日時 -->
+            <set name="flashScope.isShowDetail" value="true"/>
+        </transition>
+        <!--一括承認 -->
+        <transition on="packageApproval" to="searchByKey" validate="false">
+            <evaluate expression="PSAPR031Service.packageApproval(orderPackageApproval)" />
+            <set name="flashScope.isSuccess" value="true"></set>
+        </transition>
+        
+        <transition on="individualApproval" to="PSAPR032" validate="false"/>
+        <transition on="detail" to="PSORD090" validate="false" />
+        
+    </view-state>
+    
+    <!--個別承認 -->
+    <subflow-state id="PSAPR032" subflow="apr/ord/PSAPR032">
+        <input name="orderIdentify" value="orderIdentify" />
+        <input name="isInitIndividualApr" value="true" />
+        <input name="SessionKey" value="SessionKey" />
+        <input name="searchCondition" value="searchCondition.getSearchCondition()"/>
+    </subflow-state>
+    
+    <!--詳細 -->
+    <subflow-state id="PSORD090" subflow="ord/order/PSORD090TOP">
+        <input name="orderIdentify" value="orderIdentify" />
+    </subflow-state>
+    
+   
+</flow>

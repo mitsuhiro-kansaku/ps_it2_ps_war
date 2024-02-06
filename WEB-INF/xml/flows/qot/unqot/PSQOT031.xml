@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<flow xmlns="http://www.springframework.org/schema/webflow"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.springframework.org/schema/webflow
+        http://www.springframework.org/schema/webflow/spring-webflow-2.0.xsd"
+    parent="base">
+   
+    <var name="identify" class="fw.domain.slip.quot.quotreq.untreatedquotreqlist.Identify" />
+    <var name="identify040" class="fw.domain.slip.quot.quotacqreq.QuotAcqReqIdentify" />
+
+    <input name="patternName" />
+    <input name="searchCondition" />
+    <input name="isCurrentPageSearch" />
+    <input name="urgentInd" />
+    
+    <decision-state id="isSearchByKey">
+       <if test="flowScope.isCurrentPageSearch" then="searchByKey" else="searchByCondition" />
+    </decision-state>
+    
+    <action-state id="searchByCondition">
+        <evaluate expression="PSQOT031Service.init(searchCondition)" result="flowScope.itemList" />
+        <transition to="PSQOT031"/> 
+    </action-state>
+
+    <action-state  id="searchByKey" >
+        <evaluate expression="PSQOT031Service.page(searchCondition)" result="flowScope.itemList" />
+        <transition to="PSQOT031"/>
+    </action-state>
+
+    <view-state id="PSQOT031" model="identify" view="qot/unqot/PSQOT031">
+       <transition on="order" validate="false">
+            <evaluate expression="PSQOT031Service.order(searchCondition)" result="flowScope.itemList"/>
+        </transition>
+        <transition on="page" validate="false">
+             <evaluate expression="PSQOT031Service.page(searchCondition)" result="flowScope.itemList" /> 
+        </transition>
+        <transition on="update" validate="false" to="searchByCondition">
+             <evaluate expression="PSQOT031Service.update(identify)" /> 
+        </transition>
+        <!-- 見積依頼入力 -->
+        <!-- 強化-00852-000 2013/05/28 ADD SBO_pangzhen START -->
+        <transition on="quotReqInputValidate" validate="true">
+            <set name="flashScope.isShowQuotReqInput" value="true"></set>
+        </transition>
+        <!-- 強化-00852-000 2013/05/28 ADD SBO_pangzhen -END- -->
+        <transition on="quotReqInput" to="PSQOT040" validate="false" />
+        <!-- 見積依頼詳細 -->
+        <transition on="detail" to="PSREQ040TOP" validate="false" />
+        <transition on="detailValidate" validate="false">
+            <set name="flashScope.isShowDetail" value="true"></set>
+        </transition>
+        <transition on="back" to="home" validate="false" />
+    </view-state>
+    
+    <!-- 見積依頼入力 -->
+    <subflow-state id="PSQOT040" subflow="qot/est/PSQOT040">
+        <input name="identify" value="identify" />
+        <input name="patternName" value="1" />
+        <input name="isInitIndividualApr" value="true" />
+        <input name="SessionKey" value="SessionKey" />
+    </subflow-state>
+
+    <!-- 見積依頼詳細 -->
+    <subflow-state id="PSREQ040TOP" subflow="req/est/PSREQ040TOP" >
+        <on-entry>
+            <set name="identify040.quotAcqAplSeqNo" value="identify.identify.quotAcqAplSeq"></set>
+        </on-entry>
+        <input name="quotAcqReqIdentify" value="identify040" />
+    </subflow-state>
+</flow>

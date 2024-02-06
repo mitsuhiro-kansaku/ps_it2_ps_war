@@ -1,0 +1,106 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="ps.dataaccess.pay.print.PayPrintMapper">
+
+    <!--支払依頼書発行一覧明細を取得する -->
+        <resultMap type="fw.domain.slip.payreq.payreq.screenpayprint.ScreenPayPrintItem"
+        id="ScreenPayPrintItem_Map">
+    </resultMap>
+    
+    <select id="listPageItem"
+        parameterType="fw.domain.slip.payreq.payreq.screenpayprint.ScreenPayPrintSearchCondition"
+        resultMap="ScreenPayPrintItem_Map">
+        SELECT
+        T_P_PAY.PAY_SEQ as "identify.paySeq",
+        T_P_PAY.PAY_NO as "payNo",
+        T_P_PAY.INPUT_USER_NAME as "issueVousherName",
+        T_P_PAY.PRINT_IND as "issueStatus",
+        T_P_PAY.REQ_DATE as "reqDate.dateOfymd",
+        T_P_PAY.TITLE_NAME as "titleName",
+        T_P_PAY.SUP_CD as "supCd",
+        <!-- 2013.1.10 DEL DAIKO_MUTO
+        T_P_PAY.SUP_NAME as "supName",
+         -->
+        <!-- 2013.1.10 ADD DAIKO_MUTO-->
+        T_P_PAY.SUP_ABBR_NAME as "supName",
+        T_P_PAY.SUP_COMPANY_CD as "supCompanyCd",
+        T_P_PAY.CURRENCY_CD as "currencyCd",
+        T_P_PAY.TOTAL_AMOUNT_IN_TAX as "totalAmountInTax.amount",
+        T_P_PAY.PAY_CONDITION_NAME as "payConditionName",
+        T_P_PAY.REQ_SECTION_CD as "reqSectionCd",
+        T_P_PAY.REQ_SECTION_NAME as "reqSectionName",
+        T_P_PAY.REQ_USER_ID as "reqUserId",
+        T_P_PAY.REQ_USER_NAME as "reqUserName",
+        T_P_PAY.LAST_UPD_DATE as "identify.lastUpdDate",
+        ${@ps.common.util.ItemSettingUtil@getItemSettingSelectSQLDomainAliasNonBinary("T_P_PAY", "payResExtItem")}
+        FROM T_P_PAY
+        <where> 
+            <include refid="listKeyIdentityWhereCondition"/>
+             AND T_P_PAY.PAY_SEQ IN
+	        <foreach collection="searchCondition.page.keyDomainEntityList" item="keyList"
+	            open="(" separator="," close=")">
+	            #{keyList.paySeq, jdbcType=VARCHAR}
+	        </foreach>
+        </where>
+        ORDER BY ${searchCondition.columnOrder.columnOrder()}
+    </select>
+
+    <sql id="listKeyIdentityWhereCondition">
+           ${@ps.common.util.ItemSettingUtil@getItemSettingWhereSQL('19')}
+            AND T_P_PAY.REQ_COMPANY_CD =
+            '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}'
+            AND T_P_PAY.REQ_SECTION_CD IN (${@fw.common.util.AppUtil@getSectionViewRegion()})
+            <if test="@org.apache.commons.lang.StringUtils@equals('0',linkFlg)">
+                AND T_P_PAY.INPUT_USER_ID = '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}'
+            </if>
+            AND T_P_PAY.PAY_STATUS = '11'
+            
+            AND T_P_PAY.NEW_FLG = '1'
+            AND T_P_PAY.DELETE_FLG = '0'
+            <if test="&quot;0&quot; == issueStatus">
+                AND T_P_PAY.PRINT_IND = '0'
+            </if>
+            <if test="&quot;1&quot; == issueStatus">
+                AND T_P_PAY.PRINT_IND = '1'
+            </if>
+            AND EXISTS(
+                SELECT T_P_PAY_DTL.PAY_SEQ
+                FROM T_P_PAY_DTL
+                WHERE T_P_PAY_DTL.PAY_SEQ = T_P_PAY.PAY_SEQ
+                AND T_P_PAY_DTL.DELETE_FLG = '0'
+                <if test="@org.apache.commons.lang.StringUtils@isNotBlank(subjectCd)">
+                    AND T_P_PAY_DTL.SUBJECT_CD = #{subjectCd}
+                </if>
+            )
+    </sql>
+    <!--検索条件で全てキリストを取得する -->
+    <select id="listKeyIdentity"
+        parameterType="fw.domain.slip.payreq.payreq.screenpayprint.ScreenPayPrintSearchCondition"
+        resultType="fw.domain.slip.payreq.payreq.screenpayprint.Identify">
+        SELECT T_P_PAY.PAY_SEQ AS "paySeq"
+        FROM T_P_PAY
+        <where>
+            <include refid="listKeyIdentityWhereCondition"/>
+        </where>
+        ORDER BY ${searchCondition.columnOrder.columnOrder()}
+    </select>
+
+    <!-- 申請の場合、支払依頼書発行依頼を更新 -->
+    <update id="print">
+        UPDATE T_P_PAY
+        SET T_P_PAY.PRINT_IND = '1'
+        ,T_P_PAY.LAST_UPD_DATE = '${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}'
+        ,T_P_PAY.LAST_UPD_COMPANY_CD =
+        '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}'
+        ,T_P_PAY.LAST_UPD_SECTION_CD =
+        '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}'
+        ,T_P_PAY.LAST_UPD_USER_ID = '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}'
+        WHERE T_P_PAY.PAY_SEQ IN 
+        <foreach item="seq" collection="seqList"
+          open="(" separator="," close=")">
+            #{seq}
+        </foreach>
+    </update>
+</mapper>

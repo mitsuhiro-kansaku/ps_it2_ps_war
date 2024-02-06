@@ -1,0 +1,297 @@
+<!doctype html>
+<html LANG="ja">
+<head>
+<META http-equiv="Content-type" content="text/html; charset=UTF-8">
+<title>#customSpringMessage('QUOT_STATUS_LIST')</title><!--見積状況一覧-->
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Content-script-type" CONTENT="text/javascript">
+<link id="CSS_FONT" rel="stylesheet" href="../../include/FontS.css" type="text/css">
+<link rel="stylesheet" href="../../include/Layout.css" type="text/css">
+<link rel="stylesheet" href="../../include/Color.css" type="text/css">
+<link rel="stylesheet" href="../../include/searchbox.css" type="text/css">
+<link rel="stylesheet" href="../../include/ime.css" type="text/css">
+
+<script language="javascript" type="text/javascript" src="../../include/jquery-1.7.2.min.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/common.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/date.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/check.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/searchbox.js"></script>
+<script language="javascript" type="text/javascript"> 
+<!--
+#if("" == "$!quotReqStatus")
+    #set($commonTitle = "#customSpringMessage('QUOT_STATUS_LIST')")
+#else
+    #set($commonTitle = "#customSpringMessage('QUOT_STATUS_LIST')(#customSpringMessage('DELIV_SETTLED'))")
+#end
+document.title ="#jsEscape($commonTitle)";
+
+#set($searchViewStateID='PSREQ060')
+#set($listViewStateID='PSREQ061')
+var pinName="PSREQ060_Pin";
+#parse("./common/common_js.vm")
+
+function onLoad(){
+
+    bodyLoad();
+
+    var alertMessage = "$!alertMessage";
+    if (alertMessage != ""){
+        alert(alertMessage);
+    }
+
+    var errorMsg = "$!errorMessage";
+    if (errorMsg != ""){
+        setErrorMessage("ERRORDIV", errorMsg, "DATAAREA");
+        return;
+    }
+
+    // ダウンロード処理の実施
+    var isDownload = "#jsEscape($!isDownLoadValidate)";
+    if (isDownload == 'true') {
+        iframeChange("${flowExecutionUrl}&_eventId=download","pageid","PSREQ060","HIDDENAREA");
+        return;
+    }
+
+    // 検索処理の実施
+    var isShowList = "#jsEscape($isShowList)";
+    if (isShowList == 'true'){
+        iframeChange("${flowExecutionUrl}&_eventId=search");
+        return;
+    }
+
+    //クイックリンク
+    var linkFlag = "#jsEscape($!quotReqStatus)" == ""? false : true;
+    if(linkFlag){
+        openSearchArea();
+        iframeChange("${flowExecutionUrl}&_eventId=search");
+    }
+}
+
+// 検索
+function execSearch(){
+    getObj("BodyForm").target="_self";
+    buttonDisable();
+    setItemDisabled("itemClassM","itemClassS");
+    getObj('BodyForm').action = "${flowExecutionUrl}&_eventId=validate";
+    getObj('BodyForm').submit();
+}
+
+// ダウンロード
+function doDownload() {
+    getObj("TR_ERROR").style.display = "none";
+    getObj("ERRORDIV").innerHTML="";
+    buttonDisable();
+    setItemDisabled("itemClassM","itemClassS");
+    setTimeout(buttonUsable,1000);
+    getObj("BodyForm").target = "HIDDENAREA";
+    getObj("BodyForm").action = "${flowExecutionUrl}&_eventId=downloadValidate";
+    getObj("BodyForm").submit();
+}
+
+function checkBoxClear() {
+    searchConditionCheckBoxClear("priceReqFlg");
+    searchConditionCheckBoxClear("urgentInd");
+    searchConditionCheckBoxClear("purAplDisplayFlg");
+}
+
+//-->
+</script>
+</head>
+<body topmargin="0" leftmargin="0" marginwidth="0" marginheight="0" align="center" width="100%" height="100%" onload="onLoad();" style="overflow-y:hidden;">
+<form id="BodyForm" name="Body" method="post">
+    #customFormHiddenInput("isClassify" "false")
+    <!-- ＊＊＊＊＊　カレンダーボックス　＊＊＊＊＊ -->
+    <iframe id="CALENDARBOX" class="CALENDARBOX" framespacing="0"scrolling="no" frameborder="0" src="../../sbxCalendar/body.vm"></iframe>
+    <table class="NoBorder" width="100%" height="100%">
+        <tr>
+            <td id="SEARCH_AREA" class="SearchArea"><!-- onLoadで変更 -->
+                #parse("./common/common_title_tran_with_personal_setting.vm")
+                <table width="100%">
+                    <tr id="SEARCH_AREA2">
+                        <td id="Adjust" align="right" valign="top">
+                            <!-- 検索条件入力部 -->
+                            <table class="NoBorder" width="100%">
+                                <tr><td align="left" colspan="4" nowrap>#customSpringMessage('PSREQ060_HEADER_COMMENT')</td></tr>
+                                $!PSREQ060PageCreaterForSearch.build('_td_style_left','class="FontSmallBold" align="right"', '_td_style_right', 'class="FontSmall" align="left"', '_item_style','Small')
+                                #set($isFirstItem = true)
+                                #foreach($!item in $!PSREQ060PageCreaterForSearch.getItemListForBody())
+                                    #set($currentOneRowFlag = $!PSREQ060PageCreaterForSearch.getOneRowFlag($!item))
+                                    #if($isFirstItem)
+                                        $!PSREQ060PageCreaterForSearch.printTRtag()
+                                    #elseif($currentOneRowFlag)
+                                        $!PSREQ060PageCreaterForSearch.printTDtag()
+                                        $!PSREQ060PageCreaterForSearch.printTRtagClose()
+                                        #set($isFirstItem = true)
+                                        $!PSREQ060PageCreaterForSearch.printTRtag()
+                                    #end
+                                    #if($!item.getColumnName()=="T_QUOT_ACQ_APL.QUOT_ACQ_APL_NO")
+                                        $!PSREQ060PageCreaterForSearch.printDefault($!item)
+                                    #elseif($!item.getColumnName()=="T_QUOT_ACQ_APL.QUOT_ACQ_APL_STATUS")
+                                        $!PSREQ060PageCreaterForSearch.printDefault($!item)
+                                    #elseif($!item.getColumnName()=="T_QUOT_ACQ_APL.REQ_DATE")
+                                        $!PSREQ060PageCreaterForSearch.printDefault($!item)
+                                    #elseif($!item.getColumnName()=="T_QUOT_ACQ_APL.QUOT_REQ_RESP_LIMIT_DATE")
+                                        $!PSREQ060PageCreaterForSearch.printDefault($!item)
+                                    #elseif($!item.getColumnName()=="T_QUOT_ACQ_APL.PRICE_REQ_FLG")
+                                        $!PSREQ060PageCreaterForSearch.printDefault($!item)
+                                    #elseif($!item.getColumnName()=="T_QUOT_ACQ_APL.REQ_SECTION_CD")
+                                        $!PSQOT030PageCreaterForSearch.printSpecial('m03_inputSection',$!item,'_termFlag','0')
+                                    #elseif($!item.getColumnName()=="T_QUOT_ACQ_APL.REQ_SECTION_NAME")
+                                        $!PSREQ060PageCreaterForSearch.printDefault($!item)
+                                    #elseif($!item.getColumnName()=="T_QUOT_ACQ_APL.REQ_USER_ID")
+                                        $!PSREQ060PageCreaterForSearch.printSpecial("CLIENT","m13_inputUserForSearch",$!item,"popupPageid","PSREQ060",'_masterCdIme','noIME')
+                                    #elseif($!item.getColumnName()=="T_QUOT_ACQ_APL.REQ_USER_NAME")
+                                        $!PSREQ060PageCreaterForSearch.printDefault($!item)
+                                    #elseif($!item.getColumnName()=="T_QUOT_ACQ_APL.INPUT_USER_ID")
+                                        $!PSREQ060PageCreaterForSearch.printDefault($!item)
+                                    #elseif($!item.getColumnName()=="T_QUOT_ACQ_APL.INPUT_USER_NAME")
+                                        $!PSREQ060PageCreaterForSearch.printDefault($!item)
+                                    #elseif($!item.getColumnName()=="T_QUOT_ACQ_APL.BUYER_USER_ID")
+                                        $!PSREQ060PageCreaterForSearch.printDefault($!item)
+                                    #elseif($!item.getColumnName()=="T_QUOT_ACQ_APL.FOR_BOSS_COMMENT")
+                                        $!PSREQ060PageCreaterForSearch.printDefault($!item)
+                                    #elseif($!item.getColumnName()=="T_QUOT_ACQ_APL.FOR_BUYER_COMMENT")
+                                        $!PSREQ060PageCreaterForSearch.printDefault($!item)
+                                    #elseif($!item.getColumnName()=="T_QUOT_ACQ_APL.FOR_SUPPRIER_COMMENT")
+                                        $!PSREQ060PageCreaterForSearch.printDefault($!item)
+                                    #elseif($!item.getColumnName()=="T_QUOT_ACQ_APL.URGENT_IND")
+                                        $!PSREQ060PageCreaterForSearch.printDefault($!item)
+                                    #elseif($!item.getColumnName()=="T_QUOT_ACQ_APL.TITLE_NAME")
+                                        $!PSREQ060PageCreaterForSearch.printDefault($!item)
+                                    #elseif($!item.getColumnName()=="T_QUOT_ACQ_APL.DELIV_PLACE_CD")
+                                        $!PSREQ060PageCreaterForSearch.printSpecial("m04_inputDelivery",$!item,'popupPageid','PSREQ060','_masterCdIme','noIME')
+                                    #elseif($!item.getColumnName()=="T_QUOT_ACQ_APL.DELIV_PLACE_NAME")
+                                        $!PSREQ060PageCreaterForSearch.printDefault($!item)
+                                    #elseif($!item.getColumnName()=="T_QUOT_ACQ_APL.ITEM_CLASS_L_NAME")
+                                        $!PSREQ060PageCreaterForSearch.printDefault($!item)
+                                    #elseif($!item.getColumnName()=="T_QUOT_ACQ_APL.ITEM_CLASS_M_NAME")
+                                        $!PSREQ060PageCreaterForSearch.printDefault($!item)
+                                    #elseif($!item.getColumnName()=="T_QUOT_ACQ_APL.ITEM_CLASS_S")
+                                        $!PSREQ060PageCreaterForSearch.printSpecial("m14_inputItemKindSelect",$!item,'_termFlag','0','_masterCdIme','noIME','_sectionTypeCode','1') 
+                                    #elseif($!item.getColumnName()=="T_QUOT_ACQ_APL.ITEM_CLASS_S_NAME")
+                                        $!PSREQ060PageCreaterForSearch.printDefault($!item)
+                                    #elseif($!item.getColumnName()=="T_QUOT_ACQ_APL.SUP_CD")
+                                        $!PSREQ060PageCreaterForSearch.printSpecial("m12_inputSupplierCodeOnly",$!item,"popupPageid","PSREQ060",'_masterCdIme','noIME')
+                                    #elseif($!item.getColumnName()=="T_QUOT_ACQ_APL.SUP_ABBR_NAME")
+                                        $!PSREQ060PageCreaterForSearch.printDefault($!item)
+                                    #elseif($!item.getColumnName()=="T_QUOT_ACQ_APL.ATTACH_FILE_SEQ1")
+                                        $!PSREQ060PageCreaterForSearch.printDefault($!item)
+                                    #elseif($!item.getColumnName()=="T_QUOT_ACQ_APL.BUYER_BACK_USER_COMMENTS")
+                                        $!PSREQ060PageCreaterForSearch.printDefault($!item)
+                                    #elseif($!item.getColumnName()=="T_QUOT_ACQ_APL.APP_ROUTE_NO")
+                                        $!PSREQ060PageCreaterForSearch.printDefault($!item)
+                                    #elseif($!item.getColumnName()=="T_QUOT_ACQ_REQUEST.ITEM_CD")
+                                        $!PSREQ060PageCreaterForSearch.printSpecial("m11_inputItemCodeOnly",$!item,"popupPageid","PSREQ060",'_masterCdIme','noIME')
+                                    #elseif($!item.getColumnName()=="T_QUOT_ACQ_REQUEST.ITEM_NAME")
+                                        $!PSREQ060PageCreaterForSearch.printDefault($!item)
+                                    #elseif($!item.getColumnName()=="T_QUOT_ACQ_REQUEST.KATASHIKI")
+                                        $!PSREQ060PageCreaterForSearch.printDefault($!item)
+                                    #elseif($!item.getColumnName()=="T_QUOT_ACQ_REQUEST.MANUFACT_CD")
+                                        $!PSREQ060PageCreaterForSearch.printDefault($!item)
+                                    #elseif($!item.getColumnName()=="T_QUOT_ACQ_REQUEST.REQ_DELIV_DATE")
+                                        $!PSREQ060PageCreaterForSearch.printDefault($!item)
+                                    #elseif($!item.getColumnName()=="T_QUOT_ACQ_REQUEST.CURRENCY_CD")
+                                        $!PSREQ060PageCreaterForSearch.printDefault($!item)
+                                    #elseif($!item.getColumnName()=="T_QUOT_ACQ_REQUEST.QUOT_REQ_VOL")
+                                        $!PSREQ060PageCreaterForSearch.printDefault($!item)
+                                    #elseif($!item.getColumnName()=="T_QUOT_ACQ_REQUEST.UNIT_NAME")
+                                        $!PSREQ060PageCreaterForSearch.printDefault($!item)
+                                    #elseif($!item.getColumnName()=="T_QUOT_ACQ_REQUEST.QUOT_REQ_AMOUNT")
+                                        $!PSREQ060PageCreaterForSearch.printDefault($!item)
+                                    #elseif($!item.getColumnName()=="T_QUOT_ACQ_REQUEST.ATTACH_FILE_SEQ")
+                                        $!PSREQ060PageCreaterForSearch.printDefault($!item)
+                                    #else
+                                        $!PSREQ060PageCreaterForSearch.printDefault($!item)
+                                    #end
+                                    #if($currentOneRowFlag)
+                                        $!PSREQ060PageCreaterForSearch.printTRtagClose()
+                                        #set($isFirstItem = true)
+                                    #else
+                                        #if($isFirstItem)
+                                            #set($isFirstItem = false)
+                                        #else
+                                            $!PSREQ060PageCreaterForSearch.printTRtagClose()
+                                            #set($isFirstItem = true)
+                                        #end
+                                    #end
+                                #end
+                                #if(!$isFirstItem)
+                                    $!PSREQ060PageCreaterForSearch.printTDtag()
+                                    $!PSREQ060PageCreaterForSearch.printTRtagClose()
+                                #end
+                                <tr>
+                                    <td nowrap class="FontSmallBold" align="right">#customSpringMessage('QUOT_REQ_STATUS')<!--見積状況--></td>
+                                    <td nowrap align="left" class="BoxHeaderLeft FontSmall" colspan="4">
+                                        #customFormCheckboxes("searchCondition.quotAcqAplStatusList" $QUOT_ACQ_APL_STATUS "" "class='FontSmall'")
+                                        <input type="hidden" name="_${status.expression}" value="on"/>
+                                        #customFormCheckboxes("searchCondition.quotReqStatusList" $QUOT_REQ_STATUS "" "class='FontSmall'")
+                                        <input type="hidden" name="_${status.expression}" value="on"/>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td nowrap class="FontSmallBold" align="right"></td>
+                                    <td nowrap class="FontSmallBold" align="left">
+                                        #customFormCheckbox("searchCondition.priceReqFlg" "" "1" "")#customSpringMessage('SCREEN_M_PRICE_HOPE')<!--価格マスタ登録希望のみ表示-->
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td nowrap class="FontSmallBold" align="right"></td>
+                                    <td nowrap class="FontSmallBold" align="left">
+                                        #customFormCheckbox("searchCondition.urgentInd" "" "1" "")#customSpringMessage('EMERGENCY_ONLY')<!--緊急のみ表示-->
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td nowrap class="FontSmallBold" align="right"></td>
+                                    <td nowrap class="FontSmallBold" align="left">
+                                        #customFormCheckbox("searchCondition.purAplDisplayFlg" "" "1" "")#customSpringMessage('SEARCH_WITH_REQUESTED') ## 購入依頼済も表示する
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td align="left" colspan="4" nowrap class="FontComment">
+                                        #customSpringMessage("PSREQ060_FOOTER_COMMENT")## ＊:前方一致 / ％:中間一致 / なし:完全一致
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+
+                        <td nowrap class="FontSmallBold" align="right" valign="top">
+                            <br>
+                            <!-- ＊＊＊＊＊　検索実行　＊＊＊＊＊ -->
+                            <input type="button" onclick="javascript:execSearch();" class="LargeButton" value="#customSpringMessage('ACTION_SEARCH')"><!--検索-->
+                            <br>
+                            <br><a href="javascript:clear();searchConditionCheckBoxClearForExt();checkBoxClear();resetItemKindBySession('itemClassL', 'itemClassM', 'itemClassS', '$!searchCondition.itemClassL', '$!searchCondition.itemClassM', '$!searchCondition.itemClassS', '1');" id="clearSearch">#customSpringMessage("ACTION_CLEAR_SEARCH_CRITERIA")<!--検索条件をクリアする--></a>&nbsp;
+                        </td>
+                    </tr>
+                 </table>
+               </td>
+               </tr>
+               <tr>
+                 <td id="UPLOAD_AREA" class="NoBorder" id="UploadArea" style="background-color:#eaeaea;height:35px;border-bottom:1px solid #999999;text-align:left;vertical-align:top;">
+                   #parse("./common/common_download.vm")
+                 </td>
+               </tr>
+               <tr id ="TR_ERROR" style="display:none;">
+                 <td class="error" style="height:0px;">
+                    <div id="ERRORDIV">$!errorMessage</div>
+                 </td>
+               </tr>
+               <tr>
+                 <td class="NoBorder" style="height:auto;">
+                   <iframe id="DATAAREA" name="DATAAREA" framespacing="0" frameborder="0" src="../../layout/default.vm" scrolling="no" frameborder="no" style="position:static;width:100%;border:0px solid #999999;height:100%;z-index:0;"></iframe>
+                 </td>
+               </tr>
+            </table>
+<iframe id="HIDDENAREA" name="HIDDENAREA" framespacing="0" frameborder="0" src="" scrolling="no" frameborder="no" style="display:none"></iframe>
+</form>
+<script type="text/javascript">
+    document.getElementById("clearSearch").onclick = function (){
+        document.getElementById("itemClassL").selectedIndex = 0;
+        document.getElementById("itemClassM").selectedIndex = 0;
+        document.getElementById("itemClassS").selectedIndex = 0;
+        document.getElementById("itemClassM").disabled = true;
+        document.getElementById("itemClassS").disabled = true;
+    }
+</script>
+</body>
+</html>
+

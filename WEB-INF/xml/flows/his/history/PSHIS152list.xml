@@ -1,0 +1,183 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<flow xmlns="http://www.springframework.org/schema/webflow"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.springframework.org/schema/webflow
+        http://www.springframework.org/schema/webflow/spring-webflow-2.0.xsd"
+    parent="base">
+    <var name="historyIdentify" class="fw.domain.slip.businesscommon.history.HistoryIdentify" />
+    <input name="index" />
+    <input name="itemList" />
+    <input name="catalogIdentify" />
+    <input name="everyPurReq" />
+    
+    <on-start>
+        <evaluate expression="PSHIS152Service.init(index,itemList)"
+            result="flowScope.historyDetail" />
+    </on-start>
+    
+    <view-state id="PSHIS152list" view="his/history/PSHIS152list" model="searchCondition">
+        <transition on="order" validate="false">
+            <evaluate expression="PSHIS152Service.order(searchCondition)"
+                result="flowScope.historyDetail" />
+        </transition>
+        <transition on="back" to="home" validate="false" />
+
+        <transition on="change" validate="false">
+            <set name="searchCondition.showSupIfHistory" value="requestParameters.showSupIfHistory"/>
+            <evaluate expression="PSHIS152Service.change(searchCondition)"
+                result="flowScope.historyDetail" />
+        </transition>
+        <!-- 見積取得依頼詳細の場合 -->
+        <transition on="QuotAcqRequest" to="PSREQ040" validate="false">
+            <set name="historyIdentify.historySeq" value="requestParameters.historySeq"></set>
+            <set name="flowScope.isSearchByHistory" value="flowScope.isSearchByHistory"></set>
+        </transition>
+        <!-- 受入詳細の場合 -->
+        <transition on="Receive" to="PSRCV050" validate="false">
+            <set name="historyIdentify.historySeq" value="requestParameters.historySeq"></set>
+            <set name="flowScope.isSearchByHistory" value="flowScope.isSearchByHistory"></set>
+        </transition>
+        <!-- カタログ購入依頼詳細の場合 -->
+        <transition on="PurRequestCatalog" to="PSCAT040" validate="false">
+            <set name="historyIdentify.historySeq" value="requestParameters.historySeq"></set>
+            <set name="flowScope.isSearchByHistory" value="flowScope.isSearchByHistory"></set>
+            <set name="historyIdentify.purReqNo" value="catalogIdentify.purReqNo.purReqNo"></set>
+        </transition>
+        <!-- 検査詳細の場合 -->
+        <transition on="Inspect" to="PSTST050" validate="false">
+            <set name="historyIdentify.historySeq" value="requestParameters.historySeq"></set>
+            <set name="flowScope.isSearchByHistory" value="flowScope.isSearchByHistory"></set>
+        </transition>
+        <!-- 検収詳細の場合 -->
+        <transition on="Acceptance" to="PSACP050" validate="false">
+            <set name="historyIdentify.historySeq" value="requestParameters.historySeq"></set>
+            <set name="flowScope.isSearchByHistory" value="flowScope.isSearchByHistory"></set>
+        </transition>
+        <!-- 注文詳細の場合 -->
+        <transition on="Order" to="PSORD090" validate="false">
+            <set name="historyIdentify.historySeq" value="requestParameters.historySeq"></set>
+            <set name="flowScope.isSearchByHistory" value="flowScope.isSearchByHistory"></set>
+        </transition>
+        <!-- 都度購入依頼詳細の場合 -->
+        <transition on="PurRequest" to="PSPUR040" validate="false">
+            <set name="historyIdentify.historySeq" value="requestParameters.historySeq"></set>
+            <set name="flowScope.isSearchByHistory" value="flowScope.isSearchByHistory"></set>
+            <set name="historyIdentify.purReqNo" value="everyPurReq.purReqNo.purReqNo"></set>
+        </transition>
+        <!-- 見積回答詳細の場合 -->
+        <transition on="QuotResponse" to="PSQOT080" validate="false">
+            <set name="historyIdentify.historySeq" value="requestParameters.historySeq"></set>
+            <set name="flowScope.isSearchByHistory" value="flowScope.isSearchByHistory"></set>
+        </transition>
+        <!-- 見積依頼詳細の場合 -->
+        <transition on="QuotRequest" to="PSQOT020" validate="false">
+            <set name="historyIdentify.historySeq" value="requestParameters.historySeq"></set>
+            <set name="flowScope.isSearchByHistory" value="flowScope.isSearchByHistory"></set>
+        </transition>
+        <!-- 納期回答詳細の場合 -->
+        <transition on="DlvEstAnswer" to="PSDLV021_1" validate="false">
+            <set name="historyIdentify.historySeq" value="requestParameters.historySeq"></set>
+            <set name="flowScope.isSearchByHistory" value="flowScope.isSearchByHistory"></set>
+            <set name="flowScope.isResp" value="true"></set>
+        </transition>
+        <!-- 納期確認詳細の場合 -->
+        <transition on="DlvEstConfirm" to="PSDLV021_2" validate="false">
+            <set name="historyIdentify.historySeq" value="requestParameters.historySeq"></set>
+            <set name="flowScope.isSearchByHistory" value="flowScope.isSearchByHistory"></set>
+            <set name="flowScope.isResp" value="false"></set>
+        </transition>
+    </view-state> 
+    
+    <!-- 見積取得依頼詳細の場合 -->
+    <!-- 2013/01/11 DEL DAIKO_KANEKO
+    <subflow-state id="PSREQ040" subflow="req/est/PSREQ040TOP" >
+     -->
+    <subflow-state id="PSREQ040" subflow="req/est/PSREQ040" > <!-- 2013/01/11 ADD DAIKO_KANEKO -->
+        <input name="historyIdentify" value="historyIdentify" />
+        <input name="isSearchByHistory" value="isSearchByHistory" />
+    </subflow-state>
+    <!-- 受入詳細の場合 -->
+    <!-- 2013.01.10 DEL DAIKO_KANEKO
+    <subflow-state id="PSRCV050" subflow="rcv/rcv/PSRCV050TOP" >
+    -->
+    <!-- 2013.01.10 ADD DAIKO_KANEKO START -->
+    <subflow-state id="PSRCV050" subflow="rcv/rcv/PSRCV050" >
+        <input name="range" value="0"/>
+        <input name="approveFlg" value="1"/>
+    <!-- 2013.01.10 ADD DAIKO_KANEKO -END- -->
+        <input name="historyIdentify" value="historyIdentify" />
+        <input name="isSearchByHistory" value="isSearchByHistory" />
+    </subflow-state>
+    <!-- カタログ購入依頼詳細の場合 -->
+    <subflow-state id="PSCAT040" subflow="cat/catalog/PSCAT040" >
+        <input name="historyIdentify" value="historyIdentify" />
+        <input name="isSearchByHistory" value="isSearchByHistory" />
+    </subflow-state>
+    <!-- 検査詳細の場合 -->
+    <!-- 2013.01.10 DEL DAIKO_KANEKO
+    <subflow-state id="PSTST050" subflow="tst/ins/PSTST050TOP" >
+    -->
+    <!-- 2013.01.10 ADD DAIKO_KANEKO START -->
+    <subflow-state id="PSTST050" subflow="tst/ins/PSTST050" >
+        <input name="range" value="0"/>
+        <input name="approveFlg" value="1"/>
+    <!-- 2013.01.10 ADD DAIKO_KANEKO -END- -->
+        <input name="historyIdentify" value="historyIdentify" />
+        <input name="isSearchByHistory" value="isSearchByHistory" />
+    </subflow-state>
+    <!-- 検収詳細の場合 -->
+    <!-- 2013.01.10 DEL DAIKO_KANEKO
+    <subflow-state id="PSACP050" subflow="acp/acc/PSACP050TOP" >
+    -->
+    <!-- 2013.01.10 ADD DAIKO_KANEKO START -->
+    <subflow-state id="PSACP050" subflow="acp/acc/PSACP050" >
+        <input name="approveFlg" value="1" />
+    <!-- 2013.01.10 ADD DAIKO_KANEKO -END- -->
+        <input name="historyIdentify" value="historyIdentify" />
+        <input name="isSearchByHistory" value="isSearchByHistory" />
+    </subflow-state>
+    <!-- 注文詳細の場合 -->
+    <!-- 2013/01/11 DEL DAIKO_KANEKO
+    <subflow-state id="PSORD090" subflow="ord/order/PSORD090TOP" >
+     -->
+    <subflow-state id="PSORD090" subflow="ord/order/PSORD090" > <!-- 2013/01/11 ADD DAIKO_KANEKO -->
+        <input name="historyIdentify" value="historyIdentify" />
+        <input name="isSearchByHistory" value="isSearchByHistory" />
+    </subflow-state>
+    <!-- 都度購入依頼詳細の場合 -->
+    <!-- 2013/01/11 DEL DAIKO_KANEKO
+    <subflow-state id="PSPUR040" subflow="pur/req/PSPUR040TOP" >
+     -->
+    <subflow-state id="PSPUR040" subflow="pur/req/PSPUR040" > <!-- 2013/01/11 ADD DAIKO_KANEKO -->
+        <input name="historyIdentify" value="historyIdentify" />
+        <input name="isSearchByHistory" value="isSearchByHistory" />
+    </subflow-state>
+    <!-- 見積回答詳細の場合 -->
+    <!-- 2013/01/10 DEL DAIKO_KANEKO
+    <subflow-state id="PSQOT080" subflow="qot/ans/PSQOT080" >
+     -->
+    <subflow-state id="PSQOT080" subflow="qot/ans/PSQOT080_01" > <!-- 2013/01/10 ADD DAIKO_KANEKO -->
+        <input name="historyIdentify" value="historyIdentify" />
+        <input name="isSearchByHistory" value="isSearchByHistory" />
+    </subflow-state>
+    <!-- 見積依頼詳細の場合 -->
+    <!-- 2013/01/11 DEL DAIKO_KANEKO
+    <subflow-state id="PSQOT020" subflow="qot/est/PSQOT020TOP" >
+     -->
+    <subflow-state id="PSQOT020" subflow="qot/est/PSQOT020" > <!-- 2013/01/11 ADD DAIKO_KANEKO -->
+        <input name="historyIdentify" value="historyIdentify" />
+        <input name="isSearchByHistory" value="isSearchByHistory" />
+    </subflow-state>
+    <!-- 納期回答詳細の場合 -->
+    <subflow-state id="PSDLV021_1" subflow="dlv/ans/PSDLV021" >
+        <input name="historyIdentify" value="historyIdentify" />
+        <input name="isSearchByHistory" value="isSearchByHistory" />
+        <input name="isResp" value="flowScope.isResp" />
+    </subflow-state>
+    <!-- 納期確認詳細の場合 -->
+    <subflow-state id="PSDLV021_2" subflow="dlv/ans/PSDLV021" >
+        <input name="historyIdentify" value="historyIdentify" />
+        <input name="isSearchByHistory" value="isSearchByHistory" />
+        <input name="isResp" value="flowScope.isResp" />
+    </subflow-state>
+</flow> 

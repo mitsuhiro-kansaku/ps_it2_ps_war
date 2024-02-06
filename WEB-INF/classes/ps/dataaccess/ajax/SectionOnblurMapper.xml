@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="ps.dataaccess.ajax.SectionOnblurMapper">
+    <sql id="selectSection">
+        SELECT
+            M_SECTION.COMPANY_CD AS "sectionIdentify.companyCd",
+            M_SECTION.SECTION_CD AS "sectionIdentify.sectionCd",
+            M_COMPANY_LANG.COMPANY_NAME AS "companyName",
+            M_SECTION_LANG.SECTION_NAME AS "sectionName",
+            M_SECTION.SECTION_PLACE_CD AS "sectionPlaceCd",
+            M_SECTION_PLACE_LANG.SECTION_PLACE_NAME AS "sectionPlaceName",
+            M_SECTION.LAST_UPD_DATE
+        FROM M_SECTION
+        INNER JOIN M_COMPANY
+            ON 
+                M_SECTION.COMPANY_CD=M_COMPANY.COMPANY_CD
+                INNER JOIN M_COMPANY_LANG
+                    ON M_COMPANY.COMPANY_CD = M_COMPANY_LANG.COMPANY_CD
+                    AND M_COMPANY.COMPANY_USE_LANGUAGE_IND = M_COMPANY_LANG.LANGUAGE_IND
+                    AND M_COMPANY.COMPANY_USE_LANGUAGE_IND = '${@fw.security.SecurityUtil@getCompanyUseLanguageIndByEscapeSql()}'
+        LEFT JOIN M_SECTION_LANG
+            ON M_SECTION.COMPANY_CD=M_SECTION_LANG.COMPANY_CD
+            AND M_SECTION.SECTION_CD=M_SECTION_LANG.SECTION_CD
+            AND M_SECTION.VALID_START_DATE = M_SECTION_LANG.VALID_START_DATE
+            AND M_SECTION.VALID_END_DATE = M_SECTION_LANG.VALID_END_DATE
+            AND M_SECTION_LANG.LANGUAGE_IND=M_COMPANY.COMPANY_USE_LANGUAGE_IND
+        LEFT JOIN M_SECTION_PLACE
+            ON M_SECTION_PLACE.SECTION_PLACE_CD = M_SECTION.SECTION_PLACE_CD
+            AND M_SECTION_PLACE.COMPANY_CD = M_SECTION.COMPANY_CD
+        LEFT JOIN M_SECTION_PLACE_LANG 
+            ON M_SECTION_PLACE_LANG.SECTION_PLACE_CD = M_SECTION_PLACE.SECTION_PLACE_CD
+             AND M_SECTION_PLACE_LANG.COMPANY_CD = M_SECTION_PLACE.COMPANY_CD 
+             AND M_SECTION_PLACE_LANG.LANGUAGE_IND=M_COMPANY.COMPANY_USE_LANGUAGE_IND
+    </sql>
+
+    <select id="getSectionInfoOnBlur"  resultType="fw.domain.mst.organization.section.SectionPopupItem">
+        <include refid="selectSection"/>
+        WHERE
+            M_SECTION.SECTION_CD = #{sectionCd}
+            AND M_SECTION.COMPANY_CD = #{companyCd}
+            AND '${@fw.common.util.AppUtil@getSysDate(@fw.common.util.AppUtil@DATE_SHORT)}' BETWEEN M_SECTION.VALID_START_DATE AND M_SECTION.VALID_END_DATE
+            AND '${@fw.common.util.AppUtil@getSysDate(@fw.common.util.AppUtil@DATE_SHORT)}' BETWEEN M_SECTION_PLACE.VALID_START_DATE AND M_SECTION_PLACE.VALID_END_DATE
+            <!-- 強化-00812-000 2013/05/09 ADD SBO_KANGJW START -->
+            <if test="@org.apache.commons.lang.StringUtils@isNotBlank(loadSectionFlg)">
+            AND M_SECTION.PLANNED_SECTION_FLG = '1'
+            </if>
+            <!-- 強化-00812-000 2013/05/09 ADD SBO_KANGJW END -->
+	        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(termFlag) and termFlag==0">
+	              AND M_SECTION.TERM_FLG = #{termFlag, jdbcType=VARCHAR}
+	              AND M_SECTION_PLACE.TERM_FLG = #{termFlag, jdbcType=VARCHAR}
+	        </if>
+	     ORDER BY M_SECTION.VALID_START_DATE DESC
+    </select>
+    
+    <select id="getSectionInfoOnBlurReorg"  resultType="fw.domain.mst.organization.section.SectionPopupItem">
+        <include refid="selectSection"/>
+        WHERE
+            M_SECTION.SECTION_CD = #{sectionCd}
+            AND M_SECTION.COMPANY_CD = #{companyCd}
+            <if test="@org.apache.commons.lang.StringUtils@isEmpty(validDateFlg)">
+                 AND '${@fw.common.util.AppUtil@getSysDate(@fw.common.util.AppUtil@DATE_SHORT)}' BETWEEN M_SECTION.VALID_START_DATE AND M_SECTION.VALID_END_DATE
+                 AND '${@fw.common.util.AppUtil@getSysDate(@fw.common.util.AppUtil@DATE_SHORT)}' BETWEEN M_SECTION_PLACE.VALID_START_DATE AND M_SECTION_PLACE.VALID_END_DATE
+            </if>
+            <!-- 強化-00812-000 2013/05/09 ADD SBO_KANGJW START -->
+            <if test="@org.apache.commons.lang.StringUtils@isNotBlank(loadSectionFlg)">
+            AND M_SECTION.PLANNED_SECTION_FLG = '1'
+            </if>
+            <!-- 強化-00812-000 2013/05/09 ADD SBO_KANGJW END -->
+            <if test="@org.apache.commons.lang.StringUtils@isNotBlank(termFlag) and termFlag==0">
+                  AND M_SECTION.TERM_FLG = #{termFlag, jdbcType=VARCHAR}
+                  AND M_SECTION_PLACE.TERM_FLG = #{termFlag, jdbcType=VARCHAR}
+            </if>
+         ORDER BY M_SECTION.VALID_START_DATE DESC
+    </select>
+</mapper>

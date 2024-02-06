@@ -1,0 +1,199 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="ps.dataaccess.acp.acppckg.AcpPckgMapper">
+
+    <!-- ====================== PSACP060 検収一括登録一覧  Start =================== -->
+    <!-- 検収一括登録一覧の識別情報を取得 -->
+    <select id="listKeyIdentity"
+        parameterType="fw.domain.slip.receive.acceptance.acppckg.AcceptPackageRegSearchCondition"
+        resultMap="AcceptPackageRegIdentify_Map">
+        SELECT
+            T_RECEIVE_MNG.DELIV_KEY_NO,
+            T_ORDER.ORDER_SEQ
+        <include refid="acceptPackageRegListFrom" />
+        <where>
+            <include refid="acceptPackageRegListWhere"/>
+        </where>
+        ORDER BY ${searchCondition.columnOrder.columnOrder()}
+    </select>
+
+    <!-- 検収一括登録一覧のキーMAP -->
+    <resultMap type="fw.domain.slip.receive.acceptance.acppckg.AcceptPackageRegIdentify" id="AcceptPackageRegIdentify_Map">
+        <id column="DELIV_KEY_NO" property="acceptPackageRegIdentify.delivKeyNo"/>
+        <id column="ORDER_SEQ" property="acceptPackageRegIdentify.orderSeq"/>
+    </resultMap>
+
+    <!-- 検収一括登録一覧の識別情報数を取得 -->
+    <select id="listKeyIdentityCount"
+        parameterType="fw.domain.slip.receive.acceptance.acppckg.AcceptPackageRegSearchCondition"
+        resultType="java.lang.Integer">
+        SELECT COUNT(*)
+        <include refid="acceptPackageRegListFrom" />
+        <where>
+            <include refid="acceptPackageRegListWhere"/>
+        </where>
+    </select>
+
+    <!-- 検収一括登録一覧の明細を取得 -->
+    <select id="listPageItem"
+        parameterType="fw.domain.slip.receive.acceptance.acppckg.AcceptPackageRegSearchCondition"
+        resultMap="acceptPackageRegItem_Map">
+        <include refid="acceptPackageRegListSelect" />
+        <include refid="acceptPackageRegListFrom" />
+        <where>
+            (T_RECEIVE_MNG.DELIV_KEY_NO,T_ORDER.ORDER_SEQ) IN
+            <foreach collection="searchCondition.page.keyDomainEntityList" item="keyList"  open="(" separator="," close=")">
+                (#{keyList.acceptPackageRegIdentify.delivKeyNo},#{keyList.acceptPackageRegIdentify.orderSeq})
+            </foreach>
+            <include refid="acceptPackageRegListWhere"/>
+        </where>
+        ORDER BY ${searchCondition.columnOrder.columnOrder()}
+    </select>
+
+    <!-- 検収一括登録一覧明細MAP -->
+    <resultMap type="fw.domain.slip.receive.acceptance.acppckg.AcceptPackageRegItem" id="acceptPackageRegItem_Map">
+        <id column="IDENTIFY_DELIV_KEY_NO" property="acceptPackageRegIdentify.acceptPackageRegIdentify.delivKeyNo" />
+        <id column="IDENTIFY_LAST_UPD_DATE" property="acceptPackageRegIdentify.lastUpdDate" />
+        <id column="IDENTIFY_ORDER_SEQ" property="acceptPackageRegIdentify.acceptPackageRegIdentify.orderSeq" />
+        <id column="IDENTIFY_ORDER_NO" property="acceptPackageRegIdentify.acceptPackageRegIdentify.orderNo" />
+        <id column="DELIV_KEY_NO" property="delivKeyNo" />
+        <id column="ORDER_FIRST_DATE" property="orderDate.dateOfymd" />
+        <id column="ARRIV_EXP_DATE" property="rcvDate.dateOfymd" />
+        <id column="INSPECT_DATE" property="inspectDate.dateOfymd" />
+        <id column="ORDER_VOL" property="orderVol.vol" />
+        <id column="ORDER_CANCEL_VOL" property="orderCancelVol.vol" />
+        <id column="DELIV_VOL" property="rcvVol.vol" />
+        <id column="INSPECT_PASS_QUANT" property="successVol.vol" />
+        <id column="ACCEPT_VOL" property="acceptVol.vol" />
+        <id column="ORDER_UNIT_PRICE" property="orderUnitPrice.amount" />
+        <id column="ORDER_AMOUNT" property="orderAmount.amount" />
+        <id column="BEFORE_ORDER_AMOUNT" property="beforeOrderAmount.amount" />
+        <id column="ACCEPT_UNIT_PRICE" property="acceptUnitPrice.amount" />
+        <id column="ACCEPT_AMOUNT" property="acceptAmount.amount" />
+        <id column="TAX_RATE" property="taxRate.taxRate" />
+        <id column="TAX_IND" property="taxInd.taxInd" />
+        <id column="ORDER_DELIV_DATE" property="orderDelivDate.dateOfymd" />
+        <id column="EXCLUSIVE_SLIP_NO" property="acceptPackageRegIdentify.acceptPackageRegIdentify.exclusiveSlipId.slipNo" />
+        <id column="EXCLUSIVE_LAST_UPD_DATE" property="acceptPackageRegIdentify.acceptPackageRegIdentify.exclusiveSlipId.lastUpdDate" />
+    </resultMap>
+
+    <!-- 検収一括登録一覧取得SELECT句 -->
+    <sql id="acceptPackageRegListSelect">
+        SELECT
+            T_RECEIVE_MNG.DELIV_KEY_NO AS IDENTIFY_DELIV_KEY_NO,
+            T_RECEIVE_MNG.LAST_UPD_DATE AS IDENTIFY_LAST_UPD_DATE,
+            T_ORDER.ORDER_SEQ AS IDENTIFY_ORDER_SEQ,
+            T_RECEIVE_MNG.ORDER_NO AS IDENTIFY_ORDER_NO,
+            
+            T_RECEIVE_MNG.DELIV_KEY_NO, <!-- 納品キー番号 -->
+            T_ORDER.ORDER_FIRST_DATE, <!-- 注文日 -->
+            T_ARRIVAL.ARRIV_EXP_DATE, <!-- 受入日 -->
+            T_INSPECT.INSPECT_DATE, <!-- 検査日 -->
+            T_ORDER.REQ_TYPE_IND AS reqTypeInd, <!-- 依頼区分 -->
+            T_RECEIVE_MNG.DELIV_STATUS AS status,<!-- 状態 -->
+            T_ORDER.TITLE_NAME AS titleName, <!-- 件名 -->
+            T_ORDER.ITEM_CD AS itemCd, <!-- 品名コード -->
+            T_ORDER.ITEM_NAME AS itemName, <!-- 品名 -->
+            T_ORDER.KATASHIKI AS katashiki, <!-- 型式 -->
+            T_ORDER.MANUFACT_CD AS manufactCd, <!-- メーカーコード -->
+            T_ORDER.MANUFACT_NAME AS manufactName, <!-- メーカー名 -->
+            T_ORDER.SUP_CD AS supCd, <!-- 取引先コード -->
+            T_ORDER.SUP_ABBR_NAME AS supName, <!-- 取引先名 -->
+            T_ORDER.EDI_IND AS ediInd, <!-- EDI転送方法 -->
+            T_ORDER.SUBCON_IND AS subconInd, <!-- 下請事業者 -->
+            T_ORDER.PAY_CONDITION_CD AS payConditionCd, <!-- 支払条件コード -->
+            T_ORDER.PAY_CONDITION_NAME AS payConditionName, <!-- 支払条件名 -->
+            T_ORDER.BUDGET_NO AS budgetNo, <!-- 予算番号 -->
+            T_RINGI_BUDGET_DTL.BUDGET_NAME AS budgetName, <!-- 予算名 -->
+            T_ORDER.ORDER_VOL, <!-- 注文数量 -->
+            T_ORDER.ORDER_CANCEL_VOL, <!-- 打切取消数量 -->  
+            T_ARRIVAL.DELIV_VOL, <!-- 受入数量 -->
+            T_INSPECT.INSPECT_PASS_QUANT, <!-- 合格数量 -->
+            T_ORDER.UNIT_NAME AS unitName,<!-- 単位 -->
+            T_ARRIVAL.DELIV_VOL AS ACCEPT_VOL, <!-- 検収数量 -->
+            T_ARRIVAL.UNIT_NAME AS arrivalUnitName,<!-- 単位（入荷） -->
+            T_ORDER.UNIT_PRICE AS ORDER_UNIT_PRICE, <!-- 注文単価 -->
+            T_ORDER.ORDER_AMOUNT, <!-- 注文金額 -->
+            CASE WHEN T_ORDER.ORDER_AMOUNT IS NULL THEN 0 ELSE T_ORDER.ORDER_AMOUNT END  + 
+            CASE WHEN ORDER_CANCEL_AMOUNT IS NULL THEN 0 ELSE ORDER_CANCEL_AMOUNT END AS BEFORE_ORDER_AMOUNT, <!-- 注文金額＋打切取消金額＝打切前注文金額 -->
+            T_ORDER.CURRENCY_CD AS currencyCd, <!-- 注文.通貨コード -->
+            T_ORDER.UNIT_PRICE AS ACCEPT_UNIT_PRICE, <!-- 検収単価 -->
+            T_ARRIVAL.DELIV_VOL * T_ORDER.UNIT_PRICE AS ACCEPT_AMOUNT, <!-- 検収金額 -->
+            T_ORDER.TAX_RATE, <!-- 税率 -->
+            T_ORDER.TAX_IND, <!-- 課税区分 -->
+            T_ORDER.CONSUMPT_IND AS consumptInd, <!-- 消費税区分 -->
+            T_ORDER.LOAD_SECTION_CD AS loadSectionCd, <!-- 負担部門コード -->
+            T_ORDER.LOAD_SECTION_NAME AS loadSectionName, <!-- 負担部門名 -->
+            T_ORDER.DELIV_PLACE_CD AS delivPlaceCd, <!-- 納入先コード -->
+            T_ORDER.DELIV_PLACE_NAME AS delivPlaceName, <!-- 納入先名 -->
+            T_ORDER.SUBJECT_CD AS subjectCd, <!-- 科目コード -->
+            T_ORDER.SUBJECT_NAME AS subjectName, <!-- 科目名 -->
+            T_ORDER.ORDER_DELIV_DATE, <!-- 注文納期 -->
+            T_ORDER.FOR_SUPPRIER_COMMENT AS supplierComment, <!-- 取引先向けコメント -->
+            T_ORDER.BUYER_COMMENT AS buyerComment, <!-- 発注コメント -->
+            T_ARRIVAL.ARRIV_REMARK AS arrivRemark, <!-- 受入備考 -->
+            T_INSPECT.INSPECT_ACCOUNT AS inspceAccount, <!-- 検査記事 -->
+            T_ORDER.BUYER_USER_ID AS buyerUserId, <!-- 購買担当者コード -->
+            T_ORDER.BUYER_USER_NAME AS buyerUserName, <!-- 購買担当者名 -->
+            T_ORDER.REQ_SECTION_CD AS reqSectionCd, <!-- 依頼部門コード -->
+            T_ORDER.REQ_SECTION_NAME AS reqSectionName, <!-- 依頼部門名 -->
+            T_ORDER.REQ_USER_ID AS reqUserId, <!-- 依頼者コード -->
+            T_ORDER.REQ_USER_NAME AS reqUserName, <!-- 依頼者名 -->
+            T_ORDER.REQ_USER_EXTENSION_NO as extensionNo, <!-- 内線番号 -->
+            T_ORDER.REQ_USER_TEL_NO as externalNo, <!-- 外線番号 -->
+            (SELECT MAIL_ADDR FROM M_B_USER M WHERE M.COMPANY_CD = T_ORDER.REQ_COMPANY_CD AND M.USER_ID = T_ORDER.REQ_USER_ID AND M.TERM_FLG = '0') AS mailAddr, <!-- メールアドレス -->
+            T_ORDER.UNIT_PRICE_IND as unitPriceInd, <!-- 単価区分 -->
+            T_SLIP_MNG.SLIP_NO AS EXCLUSIVE_SLIP_NO,
+            T_SLIP_MNG.LAST_UPD_DATE AS EXCLUSIVE_LAST_UPD_DATE,
+            ${@ps.common.util.ItemSettingUtil@getItemSettingSelectSQLDomainAliasNonBinary("T_ORDER", "orderExtItem")},
+            ${@ps.common.util.ItemSettingUtil@getItemSettingSelectSQLDomainAliasNonBinary("T_ARRIVAL", "arrivalExtItem")}
+    </sql>
+
+    <!-- 検収一括登録一覧取得FROM句 -->
+    <sql id="acceptPackageRegListFrom">
+              FROM T_RECEIVE_MNG <!-- 受入管理 -->
+        INNER JOIN T_ORDER <!-- 注文 -->
+                ON T_ORDER.ORDER_NO = T_RECEIVE_MNG.ORDER_NO
+        INNER JOIN T_ARRIVAL <!-- 入荷 -->
+                ON T_ARRIVAL.ARRIVAL_SEQ = T_RECEIVE_MNG.NEW_ARRIVAL_SEQ
+        INNER JOIN T_SLIP_MNG <!-- 伝票管理 -->
+                ON T_SLIP_MNG.SLIP_NO = T_RECEIVE_MNG.ORDER_NO
+               AND T_SLIP_MNG.DELETE_FLG = '0'
+         LEFT JOIN T_INSPECT <!-- 検査 -->
+                ON T_RECEIVE_MNG.NEW_INSPECT_SEQ = T_INSPECT.INSPECT_SEQ
+               AND T_INSPECT.DELETE_FLG = '0'
+               AND(T_INSPECT.CORRECT_CD = '1'
+                OR T_INSPECT.CORRECT_CD = '2')
+         LEFT JOIN T_RINGI_BUDGET_DTL <!-- 稟議予算明細 -->
+                ON T_RINGI_BUDGET_DTL.COMPANY_CD = T_ORDER.LOAD_COMPANY_CD 
+               AND T_RINGI_BUDGET_DTL.SECTION_PLACE_CD = T_ORDER.LOAD_SECTION_PLACE_CD 
+               AND T_RINGI_BUDGET_DTL.BUDGET_DTL_NO = T_ORDER.BUDGET_NO 
+ 
+    </sql>
+
+    <!-- 検収一括登録一覧取得WHERE句 -->
+    <sql id="acceptPackageRegListWhere">
+        ${@ps.common.util.ItemSettingUtil@getItemSettingWhereSQL()}
+        AND ((T_RECEIVE_MNG.DELIV_STATUS = '2104' AND T_ARRIVAL.INSPECT_IND = '0') OR T_RECEIVE_MNG.DELIV_STATUS IN ('3104'))
+        AND T_RECEIVE_MNG.DELETE_FLG = '0'
+        AND T_ARRIVAL.RB_IND = '0'
+        AND T_ARRIVAL.DELETE_FLG = '0'
+        AND T_ORDER.BUYER_COMPANY_CD = '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}'
+        AND T_ORDER.BUYER_SECTION_CD = '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}'
+        AND T_ORDER.NEW_APP_FLG = '1'
+        AND T_ORDER.DELETE_FLG = '0'
+        <if test="@org.apache.commons.lang.StringUtils@isBlank(reqTypeInd)">
+            AND T_ORDER.REQ_TYPE_IND &lt;&gt; '9'
+        </if>
+        <if test="reqTypeInd == 2">
+            AND T_ORDER.REQ_TYPE_IND IN ('2')
+        </if>
+        <if test="reqTypeInd == 3">
+            AND T_ORDER.REQ_TYPE_IND IN ('3')
+        </if>
+    </sql>
+    <!-- ====================== PSACP060 検収一括登録一覧  End =================== -->
+
+</mapper>

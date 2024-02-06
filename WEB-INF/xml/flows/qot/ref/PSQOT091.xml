@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<flow xmlns="http://www.springframework.org/schema/webflow"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.springframework.org/schema/webflow
+        http://www.springframework.org/schema/webflow/spring-webflow-2.0.xsd"
+    parent="base">
+   
+    <var name="identify" class="fw.domain.slip.quot.quotstatus.purreqstatuslist.reqstatuslist.QuotStatusIdentify" />
+    <var name="identify020" class="fw.domain.slip.quot.quotreq.QuotReqIdentify" />
+    <var name="identify040" class="fw.domain.slip.quot.quotreq.QuotReqIdentify" />
+    <var name="quotReqNo" class="fw.domain.slip.common.identify.QuotReqNo" />
+
+    <input name="patternName" />
+    <input name="searchCondition" />
+    <input name="isCurrentPageSearch" />
+    
+    <decision-state id="isSearchByKey">
+       <if test="flowScope.isCurrentPageSearch" then="searchByKey" else="searchByCondition" />
+    </decision-state>
+    
+    <action-state id="searchByCondition">
+        <evaluate expression="PSQOT091Service.init(searchCondition)"/>
+        <transition to="PSQOT091"/> 
+    </action-state>
+
+    <action-state  id="searchByKey" >
+        <evaluate expression="PSQOT091Service.page(searchCondition)"/>
+        <transition to="PSQOT091"/>
+    </action-state>
+
+    <view-state id="PSQOT091" model="identify" view="qot/ref/PSQOT091">
+       <transition on="order" validate="false">
+            <evaluate expression="PSQOT091Service.order(searchCondition)" />
+        </transition>
+        <transition on="page" validate="false">
+             <evaluate expression="PSQOT091Service.page(searchCondition)" /> 
+        </transition>
+        <!-- 削除 -->
+        <transition on="delete" validate="false" to="searchByKey">
+             <evaluate expression="PSQOT091Service.delete(identify)" /> 
+             <set name="flashScope.isDeleteSuccess" value="true" />
+        </transition>
+        <!-- 申請中止 -->
+        <transition on="applyCancel" validate="false" to="searchByKey">
+             <evaluate expression="PSQOT091Service.applyCancel(identify)" /> 
+             <set name="flashScope.isCancelStopSuccess" value="true" />
+        </transition>
+        <!-- 見積状況 -->
+        <transition on="quoteInfoValidate" validate="false">
+            <set name="flashScope.isShowQuoteInfo" value="true"></set>
+        </transition>
+        <transition on="quoteInfo" to="PSQOT100" validate="false" />
+        <!-- 詳細 -->
+        <transition on="detail" to="PSQOT020TOP" validate="false" />
+        <transition on="detailValidate" validate="false">
+            <set name="flashScope.isShowDetail" value="true"></set>
+        </transition>
+        <!-- 編集 -->
+        <transition on="applyEditValidate" validate="false">
+            <set name="flashScope.isShowApplyEdit" value="true"></set>
+        </transition>
+        <transition on="quotReqEdit" to="PSQOT040Edit" validate="false"/>
+        <!-- 再申請 -->
+        <transition on="applyAgain" to="PSQOT040Again" validate="false" />
+        <transition on="applyAgainValidate" validate="false">
+            <set name="flashScope.isShowApplyAgain" value="true"></set>
+        </transition>
+        <!-- 回答詳細 -->
+        <transition on="answerDetailValidate" validate="false">
+            <set name="flashScope.isShowAnswerDetail" value="true"></set>
+            <set name="quotReqNo.quotReqNo" value="requestParameters.quotReqNo"></set>
+        </transition>
+        <transition on="answerDetail" to="PSQOT080AnsDetail" validate="false" />
+        <transition on="back" to="home" validate="false" />
+    </view-state>
+    
+    <subflow-state id="PSQOT100" subflow="qot/ref/PSQOT100">
+        <input name="quotStatusIdentify" value="identify" />
+        <input name="SessionKey" value="SessionKey" />
+    </subflow-state>
+
+    <subflow-state id="PSQOT020TOP" subflow="qot/est/PSQOT020TOP" >
+        <on-entry>
+            <set name="identify020.quotReqSeqNo.seqNumber" value="identify.quotReqSeq"></set>
+            <set name="identify020.lastUpdDate" value="identify.lastUpdDate"></set>
+        </on-entry>
+        <input name="quotReqIdentify" value="identify020" />
+        <input name="isSearchByAll" value="true"/>
+    </subflow-state>
+
+    <subflow-state id="PSQOT080AnsDetail" subflow="qot/ans/PSQOT080" >
+        <input name="quotReqNo" value="quotReqNo.quotReqNo" />
+        <input name="isSearchByAll" value="true"/>
+    </subflow-state>
+</flow>

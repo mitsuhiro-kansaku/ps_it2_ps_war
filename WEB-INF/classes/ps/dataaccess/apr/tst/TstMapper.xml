@@ -1,0 +1,426 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="ps.dataaccess.apr.tst.TstMapper">
+
+
+     <sql id="listKeyIdentityWhereCondition">
+       ${@ps.common.util.ItemSettingUtil@getItemSettingWhereSQL()}
+       AND T_RECEIVE_MNG.DELETE_FLG = '0'
+       AND T_INSPECT.INSPECT_SEQ=T_APPROVAL.APP_VOUCHER_KEY
+       AND T_APPROVAL.NOW_APP_COMPANY_CD='${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}'
+       <if test="@org.apache.commons.lang.StringUtils@isNotBlank(appUserName)">
+          AND T_APPROVAL.NOW_APP_USER_ID=#{appUserName}
+       </if>
+       <if test="!@org.apache.commons.lang.StringUtils@isNotBlank(appUserName)">
+          AND T_APPROVAL.NOW_APP_USER_ID='${@fw.security.SecurityUtil@getUserIdByEscapeSql()}'
+       </if>
+       AND T_APPROVAL.APP_STATUS_IND IN ('0','1')
+       AND T_INSPECT.INSPECT_STATUS IN ('01', '02')
+    </sql>
+     <resultMap type="fw.domain.slip.receive.inspect.inspectapp.InspectAppIdentify" id="InspectAppIdentify_Map">
+            <result column="DELIV_KEY_NO" property="inspectAppIdentify.delivKeyNo.delivKeyNo"/>
+       </resultMap>
+<!--            検査承認一覧のキーリストを取得       -->
+     <select id="listKeyIdentity" 
+        parameterType="fw.domain.slip.receive.inspect.inspectapp.InspectAppSearchCondition"  resultMap="InspectAppIdentify_Map">
+        SELECT  T_ORDER.ORDER_SEQ AS "inspectAppIdentify.orderSeq",
+                T_RECEIVE_MNG.LAST_UPD_DATE AS "lastUpdDate",
+                  T_RECEIVE_MNG.DELIV_KEY_NO
+        FROM   T_RECEIVE_MNG
+        INNER JOIN  T_ORDER
+        ON     T_RECEIVE_MNG.ORDER_NO=T_ORDER.ORDER_NO
+                AND T_ORDER.DELETE_FLG='0'
+                AND T_ORDER.NEW_APP_FLG ='1'
+        INNER JOIN T_INSPECT
+        ON     T_RECEIVE_MNG.NEW_INSPECT_SEQ=T_INSPECT.INSPECT_SEQ
+                AND T_INSPECT.DELETE_FLG='0'
+        LEFT  JOIN T_ARRIVAL
+        ON     T_RECEIVE_MNG.NEW_ARRIVAL_SEQ=T_ARRIVAL.ARRIVAL_SEQ
+                AND T_ARRIVAL.DELETE_FLG='0'
+        INNER JOIN T_APPROVAL
+        ON     T_RECEIVE_MNG.NEW_INSPECT_SEQ =T_APPROVAL.APP_VOUCHER_KEY
+                AND T_APPROVAL.APP_VOUCHER_IND='4'
+                AND T_APPROVAL.DELETE_FLG='0'
+        <where>
+            <include refid="listKeyIdentityWhereCondition"/>
+        </where>
+        ORDER BY ${searchCondition.columnOrder.columnOrder()}
+      </select>
+        
+<!--               キーリストより、該当ページ目のデータを取得       -->
+            <resultMap type="fw.domain.slip.receive.inspect.inspectapp.InspectAppItem" id="InspectAppItem_Map">
+                 <id column="DELIV_KEY_NO" property="inspectAppIdentify.inspectAppIdentify.delivKeyNo.delivKeyNo"/>
+                 <id column="ORDER_NO" property="inspectAppIdentify.inspectAppIdentify.orderNo"/>
+                 <id column="ORDER_SEQ" property="inspectAppIdentify.inspectAppIdentify.orderSeq"/>
+                <id column="EXCLUSIVE_SLIP_NO" property="inspectAppIdentify.inspectAppIdentify.exclusiveSlipId.slipNo"/>
+                <id column="EXCLUSIVE_LAST_UPD_DATE" property="inspectAppIdentify.inspectAppIdentify.exclusiveSlipId.lastUpdDate"/>
+            </resultMap>
+          <select id="listPageItem" parameterType="fw.domain.slip.receive.inspect.inspectapp.InspectAppSearchCondition" resultMap="InspectAppItem_Map">
+              SELECT T_RECEIVE_MNG.DELIV_KEY_NO,
+                        T_RECEIVE_MNG.LAST_UPD_DATE AS "inspectAppIdentify.lastUpdDate",
+                        T_RECEIVE_MNG.ORDER_NO,
+                        T_ORDER.ORDER_SEQ,
+                        T_APPROVAL.NOW_APP_USER_NAME AS "appUserName",
+                        T_APPROVAL.NEXT_APP_USER_NAME AS "nextAppUserName",
+                        T_INSPECT.CORRECT_CD AS "correctInd",
+                        T_INSPECT.INSPECT_VERSION AS "historyNo",
+                        T_ORDER.ITEM_CD AS "itemCd",
+                        T_ORDER.ITEM_NAME AS "item",
+                        T_INSPECT.INSPECT_DATE AS "inspectDate.dateOfymd",
+                        T_INSPECT.INSPECT_PASS_QUANT AS "successVol.vol",
+                        T_ORDER.UNIT_NAME AS "unit",
+                        T_ARRIVAL.ARRIV_EXP_DATE AS "receiveDate.dateOfymd",
+                        T_ARRIVAL.DELIV_VOL AS "receiveVol.vol",
+                        T_ORDER.SUP_CD AS "supplierCd",
+                        T_ORDER.SUP_ABBR_NAME AS "supplierName",
+                        T_ORDER.DELIV_PLACE_CD AS "delivPlaceCd",
+                        T_ORDER.DELIV_PLACE_NAME AS "delivPlaceName",
+                        T_ORDER.SUBCON_IND AS "subcontract",
+                        T_ORDER.EDI_IND AS "edi",
+                        T_ORDER.ORDER_VOL AS "orderVol.vol",
+                        T_ORDER.ORDER_CANCEL_VOL as "orderCancelVol.vol",
+                        T_ORDER.ORDER_FIRST_DATE AS "orderDate.dateOfymd",
+                        T_ORDER.ORDER_DELIV_DATE AS "delivDate.dateOfymd",
+                        T_INSPECT.INSPECT_SECTION_CD AS "inspectSectionCd",
+                        T_INSPECT.INSPECT_SECTION_NAME AS "inspectSectionName",
+                        T_INSPECT.INSPECT_USER_ID AS "inspectUserId",
+                        T_INSPECT.INSPECT_USER_NAME AS "inspectUserName",
+                        T_INSPECT.RB_IND AS "rbInd",
+                        T_SLIP_MNG.SLIP_NO AS EXCLUSIVE_SLIP_NO,
+                        T_SLIP_MNG.LAST_UPD_DATE AS EXCLUSIVE_LAST_UPD_DATE,
+		                ${@ps.common.util.ItemSettingUtil@getItemSettingSelectSQLDomainAliasNonBinary("T_ORDER","orderExtItem")},
+		                ${@ps.common.util.ItemSettingUtil@getItemSettingSelectSQLDomainAliasNonBinary("T_INSPECT","inspectExtItem")}
+              FROM   T_RECEIVE_MNG
+              INNER JOIN T_ORDER
+              ON     T_RECEIVE_MNG.ORDER_NO=T_ORDER.ORDER_NO
+                       AND T_ORDER.DELETE_FLG='0'
+                       AND T_ORDER.NEW_APP_FLG ='1'
+              INNER JOIN T_INSPECT
+              ON     T_RECEIVE_MNG.NEW_INSPECT_SEQ=T_INSPECT.INSPECT_SEQ
+                      AND T_INSPECT.DELETE_FLG='0'
+              LEFT  JOIN T_ARRIVAL
+              ON     T_RECEIVE_MNG.NEW_ARRIVAL_SEQ=T_ARRIVAL.ARRIVAL_SEQ
+                      AND T_ARRIVAL.DELETE_FLG='0'
+              INNER JOIN T_APPROVAL
+              ON     T_RECEIVE_MNG.NEW_INSPECT_SEQ =T_APPROVAL.APP_VOUCHER_KEY
+                      AND T_APPROVAL.APP_VOUCHER_IND='4'
+                      AND T_APPROVAL.APP_STATUS_IND IN ('0','1')
+                      AND T_APPROVAL.DELETE_FLG='0'
+              LEFT JOIN T_SLIP_MNG
+              ON     T_SLIP_MNG.SLIP_NO = T_ORDER.ORDER_NO
+                      AND T_SLIP_MNG.DELETE_FLG = '0'
+              <where>
+                <include refid="listKeyIdentityWhereCondition"/>
+                AND T_RECEIVE_MNG.DELIV_KEY_NO    IN
+              <foreach collection="searchCondition.page.keyDomainEntityList" item="keyList"  open="(" separator="," close=")">
+                           (#{keyList.inspectAppIdentify.delivKeyNo.delivKeyNo})
+              </foreach>
+              </where>
+              ORDER BY ${searchCondition.columnOrder.columnOrder()}
+            </select>    
+      <resultMap type="fw.domain.slip.receive.inspect.InspectApp" id="InspectApp_Map">
+           <result column="DELIV_KEY_NO" property="inspect.delivKeyNo.delivKeyNo"/>
+           <result column="NEW_INSPECT_SEQ" property="inspect.receiveManagement.newSeqNo.inspect"/>
+           <result column="ORDER_SEQ" property="inspect.receiveManagement.orderNo.orderNo"/>
+           <result column="DELIV_PLACE_CD" property="inspect.order.complement.delivPlace.delivPlaceCd"/>
+           <result column="DELIV_PLACE_NAME" property="inspect.order.complement.delivPlace.delivPlaceName"/>
+           <result column="ITEM_CD" property="inspect.order.accounting.orderItem.item.itemCd"/>
+           <result column="ITEM_NAME" property="inspect.order.accounting.orderItem.item.itemName"/>
+           <result column="ORDER_DELIV_DATE" property="inspect.order.schedule.dlvEst.dlvEst.dateOfymd"/>
+           <result column="ORDER_DATE" property="inspect.order.schedule.orderDate.orderDate.dateOfymd"/>
+           <result column="CURRENCY_CD" property="inspect.order.accounting.orderAmount.amountMng.currency.currencyCd"/>
+           <result column="UNIT_PRICE" property="inspect.order.accounting.orderAmount.unitPrice.amount.amount"/>
+           <result column="ORDER_VOL" property="inspect.order.accounting.orderAmount.orderVolume.orderVol.vol"/>
+           <result column="ORDER_CANCEL_VOL" property="inspect.order.orderCancel.orderCancelVol.vol"/>
+           <result column="ORDER_CANCEL_AMOUNT" property="inspect.order.orderCancel.orderCancelAmount.amount"/>
+           <result column="UNIT_NAME" property="inspect.order.accounting.orderItem.item.unit.unitName"/>
+           <result column="ORDER_AMOUNT" property="inspect.order.accounting.orderAmount.orderAmount.amount"/>
+           <result column="CONSUMPT_AMOUNT" property="inspect.order.accounting.orderAmount.amountMng.consumptAmount.consumptAmount.amount"/>
+           <result column="TOTAL_AMOUNT" property="inspect.order.accounting.orderAmount.amountMng.totalAmount.totalAmount.amount"/>
+           <result column="T_ARRIVAL.TOTAL_AMOUNT" property="inspect.receiveResult.rcvPriceAmount.rcvPriceAmount.amount"/>
+           <result column="SUP_CD" property="inspect.order.supplierFrom.supCd"/>
+           <result column="SUP_ABBR_NAME" property="inspect.order.supplierFrom.supplierName.supplierAbbrName"/>
+           <result column="SUBCON_IND" property="inspect.order.supplierFrom.subcon.subconInd"/>
+           <result column="EDI_IND" property="inspect.order.supplierFrom.ediInd.ediInd"/>
+           <result column="ORDER_NO" property="inspect.order.orderNo.orderNo"/>
+           <result column="UNIT_PRICE_IND" property="inspect.order.status.priceManagement.unitPriceInd"/>
+           <result column="TITLE_NAME" property="inspect.order.titleName.titleName"/>
+           <result column="KATASHIKI" property="inspect.order.accounting.orderItem.item.katashiki"/>
+           <result column="MANUFACT_CD" property="inspect.order.accounting.orderItem.item.manufact.manufactCd"/>
+           <result column="MANUFACT_NAME" property="inspect.order.accounting.orderItem.item.manufact.manufactName"/>
+           <result column="FOR_SUPPRIER_COMMENT" property="inspect.order.orderComment.forSupplierComment.forSupplierComment.comment"/>
+           <result column="RB_IND" property="inspect.rbInd.rbInd"/>
+           <result column="ARRIVAL_SEQ" property="inspect.receiveManagement.appSeqNo.arrival"/>
+           <result column="DELIV_VOL" property="inspect.receiveResult.receiveVol.receiveVol.vol"/>
+           <result column="ARRIV_EXP_DATE" property="inspect.receiveResult.receiveDate.receiveDate.dateOfymd"/>
+           <result column="ARRIV_REMARK" property="inspect.receiveResult.receiveRemark.remark.comment"/>
+           <result column="HAVE_IN_STOCK_FLG" property="inspect.receiveResult.haveInStockFlg.haveInStockFlg"/>
+           <result column="STOCK_COMPANY_CD" property="inspect.receiveResult.stockPlace.company.companyCd"/>
+           <result column="STOCK_SECTION_PLACE_CD" property="inspect.receiveResult.stockPlace.sectionPlace.sectionPlaceCd"/>
+           <result column="STOCK_PLACE_CD" property="inspect.receiveResult.stockPlace.stockPlaceCd"/>
+           <result column="STOCK_PLACE_NAME" property="inspect.receiveResult.stockPlace.stockPlaceName"/>
+           <result column="ARRIV_COMPANY_CD" property="inspect.receiveResult.receiveUser.receiveUser.section.company.companyCd"/>
+           <result column="ARRIV_SECTION_CD" property="inspect.receiveResult.receiveUser.receiveUser.section.sectionCd"/>
+           <result column="ARRIV_SECTION_NAME" property="inspect.receiveResult.receiveUser.receiveUser.section.sectionName"/>
+           <result column="ARRIV_USER_ID" property="inspect.receiveResult.receiveUser.receiveUser.userID"/>
+           <result column="ARRIV_USER_NAME" property="inspect.receiveResult.receiveUser.receiveUser.userName"/>
+           <result column="INSPECT_SEQ" property="inspect.inspectIdentify.inspectSeqNo"/>
+           <result column="LAST_UPD_DATE" property="inspect.inspectIdentify.lastUpdDate"/>
+           <result column="INSPECT_SEQ" property="inspect.inspectSeqNo.seqNo"/>
+           <result column="INSPECT_DATE" property="inspect.inspectResult.inspectDate.inspectDate.dateOfymd"/>
+           <result column="INSPECT_PASS_QUANT" property="inspect.inspectResult.inspectVol.successAmount.vol"/>
+           <result column="INSPECT_ACCOUNT" property="inspect.inspectResult.inspectAccount.comment"/>
+           <result column="INSPECT_COMPANY_CD" property="inspect.inspectResult.inspectUser.user.section.company.companyCd"/>
+           <result column="INSPECT_SECTION_CD" property="inspect.inspectResult.inspectUser.user.section.sectionCd"/>
+           <result column="INSPECT_SECTION_NAME" property="inspect.inspectResult.inspectUser.user.section.sectionName"/>
+           <result column="INSPECT_USER_ID" property="inspect.inspectResult.inspectUser.user.userID"/>
+           <result column="INSPECT_USER_NAME" property="inspect.inspectResult.inspectUser.user.userName"/>
+           <result column="APP_ROUTE_NAME" property="inspect.inspectAppRoute.approute.appRouteName"/>
+           <result column="EXCLUSIVE_SLIP_NO" property="inspect.inspectIdentify.exclusiveSlipId.slipNo"/>
+           <result column="EXCLUSIVE_LAST_UPD_DATE" property="inspect.inspectIdentify.exclusiveSlipId.lastUpdDate"/>
+           <result column="TAX_IND" property="inspect.order.accounting.orderAmount.amountMng.taxCalculationInd.taxInd.taxInd"/>
+
+           <result column="EXT_TXT_1" property="inspect.inspectResult.detailExtItem.extendTxt.extendTxt1"/>
+           <result column="EXT_TXT_2" property="inspect.inspectResult.detailExtItem.extendTxt.extendTxt2"/>
+           <result column="EXT_TXT_3" property="inspect.inspectResult.detailExtItem.extendTxt.extendTxt3"/>
+           <result column="EXT_TXT_4" property="inspect.inspectResult.detailExtItem.extendTxt.extendTxt4"/>
+           <result column="EXT_TXT_5" property="inspect.inspectResult.detailExtItem.extendTxt.extendTxt5"/>
+           <result column="EXT_TXT_6" property="inspect.inspectResult.detailExtItem.extendTxt.extendTxt6"/>
+           <result column="EXT_TXT_7" property="inspect.inspectResult.detailExtItem.extendTxt.extendTxt7"/>
+           <result column="EXT_TXT_8" property="inspect.inspectResult.detailExtItem.extendTxt.extendTxt8"/>
+           <result column="EXT_TXT_9" property="inspect.inspectResult.detailExtItem.extendTxt.extendTxt9"/>
+           <result column="EXT_TXT_10" property="inspect.inspectResult.detailExtItem.extendTxt.extendTxt10"/>
+           <result column="EXT_AREA_1" property="inspect.inspectResult.detailExtItem.extendArea.extendArea1"/>
+           <result column="EXT_AREA_2" property="inspect.inspectResult.detailExtItem.extendArea.extendArea2"/>
+           <result column="EXT_AREA_3" property="inspect.inspectResult.detailExtItem.extendArea.extendArea3"/>
+           <result column="EXT_AREA_4" property="inspect.inspectResult.detailExtItem.extendArea.extendArea4"/>
+           <result column="EXT_AREA_5" property="inspect.inspectResult.detailExtItem.extendArea.extendArea5"/>
+           <result column="EXT_DATE_1" property="inspect.inspectResult.detailExtItem.extendDate.extendDate1.dateOfymd"/>
+           <result column="EXT_DATE_2" property="inspect.inspectResult.detailExtItem.extendDate.extendDate2.dateOfymd"/>
+           <result column="EXT_DATE_3" property="inspect.inspectResult.detailExtItem.extendDate.extendDate3.dateOfymd"/>
+           <result column="EXT_DATE_4" property="inspect.inspectResult.detailExtItem.extendDate.extendDate4.dateOfymd"/>
+           <result column="EXT_DATE_5" property="inspect.inspectResult.detailExtItem.extendDate.extendDate5.dateOfymd"/>
+           <result column="EXT_INT_1" property="inspect.inspectResult.detailExtItem.extendInt.extendInt1.value"/>
+           <result column="EXT_INT_2" property="inspect.inspectResult.detailExtItem.extendInt.extendInt2.value"/>
+           <result column="EXT_INT_3" property="inspect.inspectResult.detailExtItem.extendInt.extendInt3.value"/>
+           <result column="EXT_INT_4" property="inspect.inspectResult.detailExtItem.extendInt.extendInt4.value"/>
+           <result column="EXT_INT_5" property="inspect.inspectResult.detailExtItem.extendInt.extendInt5.value"/>
+           <result column="EXT_INT_6" property="inspect.inspectResult.detailExtItem.extendInt.extendInt6.value"/>
+           <result column="EXT_INT_7" property="inspect.inspectResult.detailExtItem.extendInt.extendInt7.value"/>
+           <result column="EXT_INT_8" property="inspect.inspectResult.detailExtItem.extendInt.extendInt8.value"/>
+           <result column="EXT_INT_9" property="inspect.inspectResult.detailExtItem.extendInt.extendInt9.value"/>
+           <result column="EXT_INT_10" property="inspect.inspectResult.detailExtItem.extendInt.extendInt10.value"/>
+           <result column="EXT_DEC_1" property="inspect.inspectResult.detailExtItem.extendDec.extendDec1.value"/>
+           <result column="EXT_DEC_2" property="inspect.inspectResult.detailExtItem.extendDec.extendDec2.value"/>
+           <result column="EXT_DEC_3" property="inspect.inspectResult.detailExtItem.extendDec.extendDec3.value"/>
+           <result column="EXT_DEC_4" property="inspect.inspectResult.detailExtItem.extendDec.extendDec4.value"/>
+           <result column="EXT_DEC_5" property="inspect.inspectResult.detailExtItem.extendDec.extendDec5.value"/>
+           <result column="EXT_SEL_1" property="inspect.inspectResult.detailExtItem.extendSel.extendSel1"/>
+           <result column="EXT_SEL_2" property="inspect.inspectResult.detailExtItem.extendSel.extendSel2"/>
+           <result column="EXT_SEL_3" property="inspect.inspectResult.detailExtItem.extendSel.extendSel3"/>
+           <result column="EXT_SEL_4" property="inspect.inspectResult.detailExtItem.extendSel.extendSel4"/>
+           <result column="EXT_SEL_5" property="inspect.inspectResult.detailExtItem.extendSel.extendSel5"/>
+           <result column="EXT_SEL_6" property="inspect.inspectResult.detailExtItem.extendSel.extendSel6"/>
+           <result column="EXT_SEL_7" property="inspect.inspectResult.detailExtItem.extendSel.extendSel7"/>
+           <result column="EXT_SEL_8" property="inspect.inspectResult.detailExtItem.extendSel.extendSel8"/>
+           <result column="EXT_SEL_9" property="inspect.inspectResult.detailExtItem.extendSel.extendSel9"/>
+           <result column="EXT_SEL_10" property="inspect.inspectResult.detailExtItem.extendSel.extendSel10"/>
+           <result column="EXT_CHK_1" property="inspect.inspectResult.detailExtItem.extendChk.extendChk1"/>
+           <result column="EXT_CHK_2" property="inspect.inspectResult.detailExtItem.extendChk.extendChk2"/>
+           <result column="EXT_CHK_3" property="inspect.inspectResult.detailExtItem.extendChk.extendChk3"/>
+           <result column="EXT_CHK_4" property="inspect.inspectResult.detailExtItem.extendChk.extendChk4"/>
+           <result column="EXT_CHK_5" property="inspect.inspectResult.detailExtItem.extendChk.extendChk5"/>
+           <result column="EXT_FILE_1" property="inspect.inspectResult.detailExtItem.extendFile.extendFile1.fileName"/>
+           <result column="EXT_FILE_2" property="inspect.inspectResult.detailExtItem.extendFile.extendFile2.fileName"/>
+           <result column="EXT_FILE_3" property="inspect.inspectResult.detailExtItem.extendFile.extendFile3.fileName"/>
+           <result column="EXT_FILE_BINARY_1" property="inspect.inspectResult.detailExtItem.extendFile.extendFile1.binary"/>
+           <result column="EXT_FILE_BINARY_2" property="inspect.inspectResult.detailExtItem.extendFile.extendFile2.binary"/>
+           <result column="EXT_FILE_BINARY_3" property="inspect.inspectResult.detailExtItem.extendFile.extendFile3.binary"/>
+           <result column="EXT_MST_1" property="inspect.inspectResult.detailExtItem.extendMst.extendMst1.mstKey"/>
+           <result column="EXT_MST_2" property="inspect.inspectResult.detailExtItem.extendMst.extendMst2.mstKey"/>
+           <result column="EXT_MST_3" property="inspect.inspectResult.detailExtItem.extendMst.extendMst3.mstKey"/>
+           <result column="EXT_MST_4" property="inspect.inspectResult.detailExtItem.extendMst.extendMst4.mstKey"/>
+           <result column="EXT_MST_5" property="inspect.inspectResult.detailExtItem.extendMst.extendMst5.mstKey"/>
+           <result column="EXT_MST_6" property="inspect.inspectResult.detailExtItem.extendMst.extendMst6.mstKey"/>
+           <result column="EXT_MST_7" property="inspect.inspectResult.detailExtItem.extendMst.extendMst7.mstKey"/>
+           <result column="EXT_MST_8" property="inspect.inspectResult.detailExtItem.extendMst.extendMst8.mstKey"/>
+           <result column="EXT_MST_NAME_1" property="inspect.inspectResult.detailExtItem.extendMst.extendMst1.mstName"/>
+           <result column="EXT_MST_NAME_2" property="inspect.inspectResult.detailExtItem.extendMst.extendMst2.mstName"/>
+           <result column="EXT_MST_NAME_3" property="inspect.inspectResult.detailExtItem.extendMst.extendMst3.mstName"/>
+           <result column="EXT_MST_NAME_4" property="inspect.inspectResult.detailExtItem.extendMst.extendMst4.mstName"/>
+           <result column="EXT_MST_NAME_5" property="inspect.inspectResult.detailExtItem.extendMst.extendMst5.mstName"/>
+           <result column="EXT_MST_NAME_6" property="inspect.inspectResult.detailExtItem.extendMst.extendMst6.mstName"/>
+           <result column="EXT_MST_NAME_7" property="inspect.inspectResult.detailExtItem.extendMst.extendMst7.mstName"/>
+           <result column="EXT_MST_NAME_8" property="inspect.inspectResult.detailExtItem.extendMst.extendMst8.mstName"/>
+    </resultMap>
+    <select id="searchInspectApp" parameterType="fw.domain.slip.receive.inspect.inspectapp.InspectAppIdentify" resultMap="InspectApp_Map">
+    SELECT T_RECEIVE_MNG.DELIV_KEY_NO,
+            T_RECEIVE_MNG.NEW_INSPECT_SEQ,
+            T_RECEIVE_MNG.LAST_UPD_DATE,
+            T_INSPECT.CORRECT_CD "inspect.correctInd.correctInd",
+            T_INSPECT.INSPECT_VERSION "inspect.historyNo.historyNo",
+            T_ORDER.ORDER_SEQ,
+            T_ORDER.DELIV_PLACE_CD,
+            T_ORDER.DELIV_PLACE_NAME,
+            T_ORDER.ITEM_CD,
+            T_ORDER.ITEM_NAME,
+            T_ORDER.ORDER_DELIV_DATE,
+            T_ORDER.CURRENCY_CD,
+            T_ORDER.UNIT_PRICE,
+            T_ORDER.ORDER_VOL,
+            T_ORDER.UNIT_NAME,
+            T_ORDER.ORDER_AMOUNT,
+            T_ORDER.ORDER_CANCEL_VOL,
+            T_ORDER.ORDER_CANCEL_AMOUNT,
+            T_ORDER.CONSUMPT_AMOUNT,
+            T_ORDER.TOTAL_AMOUNT,
+            T_ORDER.ORDER_FIRST_DATE AS "ORDER_DATE",
+            T_ORDER.SUP_CD,
+            T_ORDER.SUP_ABBR_NAME,
+            T_ORDER.SUBCON_IND,
+            T_ORDER.EDI_IND,
+            T_ORDER.UNIT_PRICE_IND,
+            T_ORDER.ORDER_NO,
+            T_ORDER.TITLE_NAME,
+            T_ORDER.KATASHIKI,
+            T_ORDER.MANUFACT_CD,
+            T_ORDER.MANUFACT_NAME,
+            T_ORDER.FOR_SUPPRIER_COMMENT,
+            T_ORDER.TAX_IND,
+            T_ARRIVAL.ARRIVAL_SEQ,
+            T_ARRIVAL.DELIV_VOL,
+            T_ARRIVAL.ARRIV_EXP_DATE,
+            T_ARRIVAL.ARRIV_REMARK,
+            T_ARRIVAL.HAVE_IN_STOCK_FLG,
+            T_ARRIVAL.STOCK_COMPANY_CD,
+            T_ARRIVAL.STOCK_SECTION_PLACE_CD,
+            T_ARRIVAL.STOCK_PLACE_CD,
+            T_ARRIVAL.STOCK_PLACE_NAME,
+            T_ARRIVAL.ARRIV_COMPANY_CD,
+            T_ARRIVAL.ARRIV_SECTION_CD,
+            T_ARRIVAL.ARRIV_SECTION_NAME,
+            T_ARRIVAL.ARRIV_USER_ID,
+            T_ARRIVAL.ARRIV_USER_NAME,
+            T_ARRIVAL.RB_IND,
+            T_ARRIVAL.TOTAL_AMOUNT AS "T_ARRIVAL.TOTAL_AMOUNT",
+            T_INSPECT.INSPECT_SEQ,
+            T_INSPECT.INSPECT_DATE,
+            T_INSPECT.INSPECT_PASS_QUANT,
+            T_INSPECT.INSPECT_ACCOUNT,
+            T_INSPECT.INSPECT_COMPANY_CD,
+            T_INSPECT.INSPECT_SECTION_CD,
+            T_INSPECT.INSPECT_SECTION_NAME,
+            T_INSPECT.INSPECT_USER_ID,
+            T_INSPECT.INSPECT_USER_NAME,
+            T_INSPECT.APP_ROUTE_NAME,
+            T_SLIP_MNG.SLIP_NO AS EXCLUSIVE_SLIP_NO,
+            T_SLIP_MNG.LAST_UPD_DATE AS EXCLUSIVE_LAST_UPD_DATE,
+            ${@ps.common.util.ItemSettingUtil@getItemSettingSelectSQL("T_INSPECT")}
+    FROM T_RECEIVE_MNG
+    LEFT JOIN T_ORDER
+    ON      T_RECEIVE_MNG.ORDER_NO = T_ORDER.ORDER_NO
+            AND T_ORDER.DELETE_FLG = '0'
+            AND T_ORDER.NEW_APP_FLG = '1'
+    LEFT JOIN T_INSPECT
+    ON       
+            T_RECEIVE_MNG.NEW_INSPECT_SEQ = T_INSPECT.INSPECT_SEQ
+            AND T_INSPECT.DELETE_FLG = '0'
+    LEFT JOIN T_ARRIVAL
+    ON      T_RECEIVE_MNG.APP_ARRIVAL_SEQ = T_ARRIVAL.ARRIVAL_SEQ
+            AND T_ARRIVAL.DELETE_FLG = '0'
+    INNER JOIN T_APPROVAL
+    ON      T_RECEIVE_MNG.NEW_INSPECT_SEQ = T_APPROVAL.APP_VOUCHER_KEY
+            AND T_APPROVAL.APP_VOUCHER_IND = '4'
+            AND T_APPROVAL.APP_STATUS_IND IN ('0','1')
+            AND T_APPROVAL.DELETE_FLG = '0'
+    LEFT JOIN T_SLIP_MNG
+    ON      T_SLIP_MNG.SLIP_NO = T_ORDER.ORDER_NO
+            AND T_SLIP_MNG.DELETE_FLG = '0'
+    WHERE   T_RECEIVE_MNG.DELIV_KEY_NO = #{inspectAppIdentify.delivKeyNo.delivKeyNo}
+    </select>
+    <!-- ｢承認｣ボタンをクリックし、且つ訂正区分は新規の場合 --> 
+    <update id="updateReceiveAppForAdd" parameterType="fw.domain.slip.receive.inspect.InspectApp">
+    UPDATE T_RECEIVE_MNG
+    SET     DELIV_STATUS = '3102', <!-- 検査承認中 -->
+            LAST_UPD_DATE = '${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}',
+            LAST_UPD_COMPANY_CD = '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}',
+            LAST_UPD_SECTION_CD = '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}',
+            LAST_UPD_USER_ID = '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}'
+    WHERE DELIV_KEY_NO = #{inspect.delivKeyNo.delivKeyNo}
+    </update>
+    <!-- ｢承認｣ボタンをクリックし、且つ訂正コードが変更・取消の場合 -->
+    <update id="updateReceiveAppForChange" parameterType="fw.domain.slip.receive.inspect.InspectApp" >
+    UPDATE T_RECEIVE_MNG
+    SET     DELIV_STATUS = '3202', <!-- 検査変更・取消承認中 -->
+            LAST_UPD_DATE = '${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}',
+            LAST_UPD_COMPANY_CD = '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}',
+            LAST_UPD_SECTION_CD = '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}',
+            LAST_UPD_USER_ID = '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}'
+    WHERE DELIV_KEY_NO = #{inspect.delivKeyNo.delivKeyNo}
+    </update>
+    <!-- ｢差戻し｣ボタンをクリックし、且つ訂正区分は新規の場合 -->
+    <update  id="updateReceiveSendBackForAdd" parameterType="fw.domain.slip.receive.inspect.InspectApp" > 
+    UPDATE T_RECEIVE_MNG
+    SET     DELIV_STATUS = '3103', <!-- 検査差戻し  -->
+            LAST_UPD_DATE = '${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}',
+            LAST_UPD_COMPANY_CD = '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}',
+            LAST_UPD_SECTION_CD = '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}',
+            LAST_UPD_USER_ID = '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}'
+    WHERE DELIV_KEY_NO = #{inspect.delivKeyNo.delivKeyNo}
+    </update>
+    <!-- ｢差戻し｣ボタンをクリックし、且つ訂正コードが変更・取消の場合 -->
+    <update id="updateReceiveSendBackForChange" parameterType="fw.domain.slip.receive.inspect.InspectApp" >
+    UPDATE T_RECEIVE_MNG
+    SET     DELIV_STATUS = '3203',  <!-- 検査変更・取消差戻し   -->
+            LAST_UPD_DATE = '${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}',
+            LAST_UPD_COMPANY_CD = '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}',
+            LAST_UPD_SECTION_CD = '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}',
+            LAST_UPD_USER_ID = '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}'
+    WHERE DELIV_KEY_NO = #{inspect.delivKeyNo.delivKeyNo}
+    </update>
+    <!--  ｢承認｣ボタンをクリックし、且つ訂正コードが変更、且つ赤データの場合 -->
+     <update id = "updateInspectAppForRedData" parameterType="fw.domain.slip.receive.inspect.InspectApp">
+	    UPDATE  T_INSPECT
+	    SET     INSPECT_STATUS = '02',<!-- 承認中 -->
+	            LAST_UPD_DATE = '${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}',
+	            LAST_UPD_COMPANY_CD = '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}',
+	            LAST_UPD_SECTION_CD = '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}',
+	            LAST_UPD_USER_ID = '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}'
+	    WHERE   RB_SEQ = #{inspect.inspectSeqNo.seqNo}
+    </update>
+    <!--  ｢承認｣ボタンをクリックし、且つ訂正コードが変更、且つ黒データの場合
+                           ｢承認｣ボタンをクリックし、且つ訂正コードが新規、取消の場合 -->
+    <update id = "updateInspectApp" parameterType="fw.domain.slip.receive.inspect.InspectApp">
+    UPDATE T_INSPECT
+    SET     INSPECT_STATUS = '02',<!-- 承認中 -->
+            LAST_UPD_DATE = '${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}',
+            LAST_UPD_COMPANY_CD = '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}',
+            LAST_UPD_SECTION_CD = '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}',
+            LAST_UPD_USER_ID = '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}'
+    WHERE   INSPECT_SEQ = #{inspect.inspectSeqNo.seqNo}
+    </update>
+    
+    <!--  ｢差戻し｣ボタンをクリックし、且つ訂正コードが変更、且つ黒データの場合
+                            ｢差戻し｣ボタンをクリックし、且つ訂正コードが新規、取消の場合-->
+    <update id = "updateInspectSendBack" parameterType="fw.domain.slip.receive.inspect.InspectApp">
+    UPDATE T_INSPECT
+    SET     INSPECT_STATUS = '03',<!-- 差戻し -->
+            LAST_UPD_DATE = '${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}',
+            LAST_UPD_COMPANY_CD = '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}',
+            LAST_UPD_SECTION_CD = '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}',
+            LAST_UPD_USER_ID = '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}'
+    WHERE   INSPECT_SEQ = #{inspect.inspectSeqNo.seqNo}
+    </update>
+    <!--  ｢差戻し｣ボタンをクリックし、且つ訂正コードが変更、且つ赤データの場合 -->
+    <update id="updateInspectSendBackForRedData" parameterType="fw.domain.slip.receive.inspect.InspectApp">
+	    UPDATE T_INSPECT
+	    SET     INSPECT_STATUS = '03',<!-- 差戻し -->
+	            LAST_UPD_DATE = '${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}',
+	            LAST_UPD_COMPANY_CD = '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}',
+	            LAST_UPD_SECTION_CD = '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}',
+	            LAST_UPD_USER_ID = '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}'
+	    WHERE   RB_SEQ = #{inspect.inspectSeqNo.seqNo}
+    </update>
+</mapper>

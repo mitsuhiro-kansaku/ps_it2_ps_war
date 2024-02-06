@@ -1,0 +1,358 @@
+<!doctype html>
+<html LANG="ja">
+<head>
+#if("$!searchCondition.status" == "")
+    #set($commonTitle = "#customSpringMessage('EVERY_PUR_REQ_LIST')")
+#else
+    #set($commonTitle = "#customSpringMessage('EVERY_PUR_REQ_LIST')(#out($!searchCondition.status_PageValue))" )
+#end
+<title>#out($commonTitle)</title> ## 都度購入依頼一覧
+<META http-equiv="Content-type" content="text/html; charset=UTF-8">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Content-script-type" content="text/javascript">
+<link id="CSS_FONT" rel="stylesheet" href="../../include/FontS.css" type="text/css">
+<link id="CSS_CORNERS" rel="stylesheet" href="../../include/Layout.css" type="text/css">
+<link id="CSS_CORNERS" rel="stylesheet" href="../../include/Color.css" type="text/css">
+<script language="javascript" TYPE="text/javascript" src="../../include/common.js"></script>
+<script language="javascript" TYPE="text/javascript" src="../../include/check.js"></script>
+<script language="javascript" TYPE="text/javascript" src="../../include/date.js"></script>
+<script language="javascript" TYPE="text/javascript" src="../../include/tablesort.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/searchbox.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/jquery-1.7.2.min.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/jquery.tablefix.js"></script>
+<script language="javascript" TYPE="text/javascript">
+<!--
+
+#parse("./common/common_js.vm")
+
+function onLoad() {
+    dataLoadHasPage();
+    var isSuccessDelete = '#jsEscape($!isSuccessDelete)';
+    if(isSuccessDelete == 'true'){
+        #set( $param = ["#customSpringMessage('PUR_REQ')"])
+        alert('#customMessageArgs("I003",$param)');
+    }
+    var isSuccess = '#jsEscape($!isSuccess)';
+    if(isSuccess == 'true'){
+        #set( $param = ["#customSpringMessage('PUR_REQ')"])
+        alert('#customMessageArgs("I031",$param)');
+    }
+    var alertMessage = "$!alertMessage";
+    if (alertMessage != ""){
+        ## +++++ 強化-00852-000 2013/05/27 ADD SBO_CHENCHENG START +++++
+        buttonUsableForList(alertMessage);
+        ## +++++ 強化-00852-000 2013/05/27 ADD SBO_CHENCHENG -END- +++++
+        alert(alertMessage);
+    }
+    ## +++++ 強化-00096-000 2013/03/22 ADD SBO_CHENCHENG START +++++
+    var isShowDetail = "#jsEscape($isShowDetail)";
+    if (isShowDetail == 'true'){
+        ## +++++ 強化-00716-000 2013/03/28 MODIFY SBO_SOKOU START +++++
+        ## 800*700 → 800*600
+        poppage('${flowExecutionUrl}&_eventId=detail','DETAIL','800','600');
+        ## +++++ 強化-00716-000 2013/03/28 MODIFY SBO_SOKOU END +++++
+    }
+    ## +++++ 強化-00096-000 2013/03/22 ADD SBO_CHENCHENG -END- +++++
+
+    ## +++++ 強化-00852-000 2013/05/28 ADD SBO_pangzhen START +++++
+    #if ($isShowApplyAgain == 'true')
+        top.iframeChange("${flowExecutionUrl}&_eventId=applyAgain","purAplSeqNo","#jsEscape($!purAplIdentify.purAplSeqNum)","appUnitNo","#jsEscape($!purAplIdentify.purReqNo)","pattern","reApply","SessionKey","#jsEscape($!SessionKey)");
+    #end    
+    #if ($isShowEdit == 'true')
+        top.iframeChange("${flowExecutionUrl}&_eventId=edit","purAplSeqNo","#jsEscape($!purAplIdentify.purAplSeqNum)","appUnitNo","#jsEscape($!purAplIdentify.purReqNo)","pattern","edit");
+    #end
+    ## +++++ 強化-00852-000 2013/05/28 ADD SBO_pangzhen -END- +++++
+}
+
+## ----- 強化-00281-000 2013/03/22 DEL SBO_pangzhen START -----
+## function deleteEveryPurReq(purAplSeqNum, purReqNo, lastUpdDate, lastUpdDateReq){
+## ----- 強化-00281-000 2013/03/22 DEL SBO_pangzhen -END- -----
+## +++++ 強化-00281-000 2013/03/22 ADD SBO_pangzhen START +++++
+function deleteEveryPurReq(purAplSeqNum, purReqNo, lastUpdDate, slipNo, slipMnglastUpdDate){
+## +++++ 強化-00281-000 2013/03/22 ADD SBO_pangzhen -END- +++++
+    #set( $param_delete_1 = "#customSpringMessage('PUR_REQ')")
+    #set( $param_delete_2 = "#customSpringMessage('ACTION_DELETE')")
+    
+    if(!confirm("#customMessageArgs("W001",[$param_delete_1,$param_delete_2])")) {
+       return;
+    }
+    ## +++++ 強化-00041-000 2013/03/22 ADD SBO_wangzf START +++++
+     buttonDisable();
+    ## +++++ 強化-00041-000 2013/03/22 ADD SBO_wangzf END +++++
+    ## ----- 強化-00281-000 2013/03/22 DEL SBO_pangzhen START -----
+    ## iframeChange("${flowExecutionUrl}&_eventId=delete","purAplSeqNum",purAplSeqNum,"purReqNo",purReqNo, "lastUpdDate", lastUpdDate, "lastUpdDateReq", lastUpdDateReq);
+    ## ----- 強化-00281-000 2013/03/22 DEL SBO_pangzhen -END- -----
+    ## +++++ 強化-00281-000 2013/03/22 ADD SBO_pangzhen START +++++
+    iframeChange("${flowExecutionUrl}&_eventId=delete","purAplSeqNum",purAplSeqNum,"purReqNo",purReqNo, "lastUpdDate", lastUpdDate, "exclusiveSlipId.slipNo", slipNo, "exclusiveSlipId.lastUpdDate", slipMnglastUpdDate);
+    ## +++++ 強化-00281-000 2013/03/22 ADD SBO_pangzhen -END- +++++
+}
+
+## ----- 強化-00281-000 2013/03/22 DEL SBO_pangzhen START -----
+## function applyCancel(purAplSeqNum, purReqNo, lastUpdDate, lastUpdDateReq){
+## ----- 強化-00281-000 2013/03/22 DEL SBO_pangzhen -END- -----
+## +++++ 強化-00281-000 2013/03/22 ADD SBO_pangzhen START +++++
+function applyCancel(purAplSeqNum, purReqNo, lastUpdDate, slipNo, slipMnglastUpdDate){
+## +++++ 強化-00281-000 2013/03/22 ADD SBO_pangzhen -END- +++++
+    #set( $param1 = "#customSpringMessage('PUR_REQ')")
+    #set( $param2 = "#customSpringMessage('REQ_STOP')")
+
+    if(!confirm("#customMessageArgs("W001",[$param1,$param2])")) {
+        return;
+    }
+    ## +++++ 強化-00041-000 2013/03/22 ADD SBO_wangzf START +++++
+     buttonDisable();
+    ## +++++ 強化-00041-000 2013/03/22 ADD SBO_wangzf END +++++
+    ## ----- 強化-00281-000 2013/03/22 DEL SBO_pangzhen START -----
+    ## iframeChange("${flowExecutionUrl}&_eventId=applyCancel","purAplSeqNum",purAplSeqNum,"purReqNo",purReqNo,"lastUpdDate", lastUpdDate, "lastUpdDateReq", lastUpdDateReq);
+    ## ----- 強化-00281-000 2013/03/22 DEL SBO_pangzhen -END- -----
+    ## +++++ 強化-00281-000 2013/03/22 ADD SBO_pangzhen START +++++
+    iframeChange("${flowExecutionUrl}&_eventId=applyCancel","purAplSeqNum",purAplSeqNum,"purReqNo",purReqNo,"lastUpdDate", lastUpdDate, "exclusiveSlipId.slipNo", slipNo, "exclusiveSlipId.lastUpdDate", slipMnglastUpdDate);
+    ## +++++ 強化-00281-000 2013/03/22 ADD SBO_pangzhen -END- +++++
+}
+
+## ----- 強化-00281-000 2013/03/22 DEL SBO_pangzhen START -----
+## function openDetail(purAplSeqNum, purReqNo, lastUpdDate, lastUpdDateReq) {
+## ----- 強化-00281-000 2013/03/22 DEL SBO_pangzhen -END- -----
+## +++++ 強化-00281-000 2013/03/22 ADD SBO_pangzhen START +++++
+function openDetail(purAplSeqNum, purReqNo, lastUpdDate) {
+## +++++ 強化-00281-000 2013/03/22 ADD SBO_pangzhen -END- +++++
+
+    ## ----- 強化-00096-000 2013/03/22 DEL SBO_CHENCHENG START -----
+    ## ----- poppage('${flowExecutionUrl}&_eventId=detail&&purAplSeqNum='+purAplSeqNum+'&&purReqNo='+purReqNo+'&&lastUpdDate='+lastUpdDate+'&&lastUpdDateReq='+lastUpdDateReq,'DETAIL','800','700');
+    ## ----- 強化-00096-000 2013/03/22 DEL SBO_CHENCHENG -END- -----
+    ## +++++ 強化-00096-000 2013/03/22 ADD SBO_CHENCHENG START +++++
+    
+    ## ----- 強化-00281-000 2013/03/22 DEL SBO_pangzhen START -----
+    ## iframeChange("${flowExecutionUrl}&_eventId=detailValidate","purAplSeqNum",purAplSeqNum,"purReqNo",purReqNo,"lastUpdDate",lastUpdDate,"lastUpdDateReq",lastUpdDateReq,"HIDDENAREA");
+    ## ----- 強化-00281-000 2013/03/22 DEL SBO_pangzhen -END- -----
+    ## +++++ 強化-00281-000 2013/03/22 ADD SBO_pangzhen START +++++
+    ## ----- 強化-00748-000 2013/03/29 DEL SBO_CHENCHENG START -----
+    ## ----- iframeChange("${flowExecutionUrl}&_eventId=detailValidate","purAplSeqNum",purAplSeqNum,"purReqNo",purReqNo,"lastUpdDate",lastUpdDate,"HIDDENAREA");
+    ## ----- 強化-00748-000 2013/03/29 DEL SBO_CHENCHENG -END- -----
+    ## +++++ 強化-00748-000 2013/03/29 ADD SBO_CHENCHENG START +++++
+    parent.iframeChange("${flowExecutionUrl}&_eventId=detailValidate","purAplSeqNum",purAplSeqNum,"purReqNo",purReqNo,"lastUpdDate",lastUpdDate,"HIDDENAREA");
+    ## +++++ 強化-00748-000 2013/03/29 ADD SBO_CHENCHENG -END- +++++
+    ## +++++ 強化-00281-000 2013/03/22 ADD SBO_pangzhen -END- +++++
+    
+    ## +++++ 強化-00096-000 2013/03/22 ADD SBO_CHENCHENG -END- +++++
+    
+}
+## ----- 強化-00852-000 2013/05/28 DEL SBO_pangzhen START -----
+## function openEveryPurReqInputForEdit(purAplSeqNum, purReqNo) {
+## ----- 強化-00852-000 2013/05/28 DEL SBO_pangzhen -END- -----
+## +++++ 強化-00852-000 2013/05/28 ADD SBO_pangzhen START +++++
+function openEveryPurReqInputForEdit(purAplSeqNum, purReqNo, lastUpdDate) {
+## +++++ 強化-00852-000 2013/05/28 ADD SBO_pangzhen -END- +++++
+    ## +++++ 強化-00041-000 2013/03/22 ADD SBO_wangzf START +++++
+     buttonDisable();
+    ## +++++ 強化-00041-000 2013/03/22 ADD SBO_wangzf END +++++
+    ## ----- 強化-00096-000 2013/03/22 DEL SBO_CHENCHENG START -----
+    ## -----  top.iframeChange("${flowExecutionUrl}&_eventId=everyPurReqInputFromEdit","purAplSeqNo",purAplSeqNum,"appUnitNo",purReqNo,"pattern","edit");
+    ## ----- 強化-00096-000 2013/03/22 DEL SBO_CHENCHENG -END- -----
+    ## +++++ 強化-00096-000 2013/03/22 ADD SBO_CHENCHENG START +++++
+    ## ----- 強化-00852-000 2013/05/28 DEL SBO_pangzhen START -----
+    ## top.iframeChange("${flowExecutionUrl}&_eventId=edit","purAplSeqNo",purAplSeqNum,"appUnitNo",purReqNo,"pattern","edit");
+    ## ----- 強化-00852-000 2013/05/28 DEL SBO_pangzhen -END- -----
+    ## +++++ 強化-00852-000 2013/05/28 ADD SBO_pangzhen START +++++
+    parent.iframeChange("${flowExecutionUrl}&_eventId=editValidate","purAplSeqNum",purAplSeqNum,"purReqNo",purReqNo,"lastUpdDate",lastUpdDate,"HIDDENAREA");
+    ## +++++ 強化-00852-000 2013/05/28 ADD SBO_pangzhen -END- +++++
+    ## +++++ 強化-00096-000 2013/03/22 ADD SBO_CHENCHENG -END- +++++
+}
+## ----- 強化-00852-000 2013/05/28 DEL SBO_pangzhen START -----
+## function openEveryPurReqInputForReApply(purAplSeqNum, purReqNo, lastUpdDate) {
+## ----- 強化-00852-000 2013/05/28 DEL SBO_pangzhen -END- -----
+## +++++ 強化-00852-000 2013/05/28 ADD SBO_pangzhen START +++++
+function openEveryPurReqInputForReApply(purAplSeqNum, purReqNo, lastUpdDate) {
+## +++++ 強化-00852-000 2013/05/28 ADD SBO_pangzhen -END- +++++
+    ## +++++ 強化-00041-000 2013/03/22 ADD SBO_wangzf START +++++
+     buttonDisable();
+    ## +++++ 強化-00041-000 2013/03/22 ADD SBO_wangzf END +++++
+    ## ----- 強化-00096-000 2013/03/22 DEL SBO_CHENCHENG START -----
+    ## ----- top.iframeChange("${flowExecutionUrl}&_eventId=everyPurReqInputFromReApply","purAplSeqNo",purAplSeqNum,"appUnitNo",purReqNo,"pattern","reApply","SessionKey","$!SessionKey");
+    ## ----- 強化-00096-000 2013/03/22 DEL SBO_CHENCHENG -END- -----
+    ## +++++ 強化-00096-000 2013/03/22 ADD SBO_CHENCHENG START +++++
+    ## ----- 強化-00852-000 2013/05/28 DEL SBO_pangzhen START -----
+    ## top.iframeChange("${flowExecutionUrl}&_eventId=applyAgain","purAplSeqNo",purAplSeqNum,"appUnitNo",purReqNo,"pattern","reApply","SessionKey","$!SessionKey");
+    ## ----- 強化-00852-000 2013/05/28 DEL SBO_pangzhen -END- -----
+    ## +++++ 強化-00852-000 2013/05/28 ADD SBO_pangzhen START +++++
+    parent.iframeChange("${flowExecutionUrl}&_eventId=applyAgainValidate","purAplSeqNum",purAplSeqNum,"purReqNo",purReqNo,"lastUpdDate",lastUpdDate,"HIDDENAREA");
+    ## +++++ 強化-00852-000 2013/05/28 ADD SBO_pangzhen -END- +++++
+    ## +++++ 強化-00096-000 2013/03/22 ADD SBO_CHENCHENG -END- +++++
+}
+
+
+//-->
+</script>
+</head>
+<body id="BODY" topmargin="0" leftmargin="0" marginwidth="0" marginheight="0" align="left" onload="onLoad();setTablefix('#TABLE', 1, 3+$!PSPUR031PageCreaterForList.printLockColumn());">
+#if($!errorMessage && $!errorMessage!="")
+<div id="error" name="error" class="error">
+    $!errorMessage
+</div>
+#end
+<table id="TABLE" class="ListArea" width="100%">
+            #if($!itemList.everyPurReqlist.size() > 0)
+            <thead>
+                <tr id="Header">
+                    <th class="BoxHeaderCenter FontSmall">No.<!--No.--></th>
+                    <th class="BoxHeaderCenter FontSmall">#customSpringMessage("DETAIL")<!--詳細--></th>
+                    <th class="BoxHeaderCenter FontSmall">#customSpringMessage("ACTION")</th>##処理
+                    #foreach($!item in $!PSPUR031PageCreaterForList.getItemListForBody())
+                        #set($currentOneColumnFlag = $!PSPUR031PageCreaterForList.getOneColumnFlag($!item))
+                        #if($velocityCount == 0)
+                            $!PSPUR031PageCreaterForList.printTHtag($!item,'class="BoxHeaderCenter FontSmall"')
+                        #elseif($currentOneColumnFlag)
+                            $!PSPUR031PageCreaterForList.printBRtag($!item)
+                        #else
+                            $!PSPUR031PageCreaterForList.printTHtagClose()
+                            $!PSPUR031PageCreaterForList.printTHtag($!item,'class="BoxHeaderCenter FontSmall"')
+                        #end
+                        #if($!item.getColumnName()=="T_PUR_APL.PUR_APL_NO")
+                            $!PSPUR031PageCreaterForList.printHead($!item)
+                        #elseif($!item.getColumnName()=="T_PUR_REQUEST.PUR_REQ_NO")
+                            $!PSPUR031PageCreaterForList.printHead($!item)
+                        #elseif($!item.getColumnName()=="T_PUR_APL.URGENT_IND")
+                            $!PSPUR031PageCreaterForList.printHead($!item)
+                        #elseif($!item.getColumnName()=="T_PUR_APL.INPUT_USER_NAME")
+                            $!PSPUR031PageCreaterForList.printHead($!item)
+                        #elseif($!item.getColumnName()=="T_PUR_APL.PUR_APL_STATUS")
+                            $!PSPUR031PageCreaterForList.printHead($!item)
+                        #elseif($!item.getColumnName()=="T_PUR_APL.PUR_REQ_DATE")
+                            $!PSPUR031PageCreaterForList.printHead($!item)
+                        #elseif($!item.getColumnName()=="T_PUR_APL.TITLE_NAME")
+                            $!PSPUR031PageCreaterForList.printHead($!item)
+                        #elseif($!item.getColumnName()=="T_PUR_APL.ITEM_CLASS_L_NAME")
+                            $!PSPUR031PageCreaterForList.printHead($!item)
+                        #elseif($!item.getColumnName()=="T_PUR_APL.ITEM_CLASS_M_NAME")
+                            $!PSPUR031PageCreaterForList.printHead($!item)
+                        #elseif($!item.getColumnName()=="T_PUR_APL.ITEM_CLASS_S_NAME")
+                            $!PSPUR031PageCreaterForList.printHead($!item)
+                        #elseif($!item.getColumnName()=="T_PUR_REQUEST.CURRENCY_CD")
+                            $!PSPUR031PageCreaterForList.printHead($!item)
+                        #elseif($!item.getColumnName()=="T_PUR_REQUEST.TOTAL_AMOUNT")
+                            $!PSPUR031PageCreaterForList.printHead($!item)
+                        #elseif($!item.getColumnName()=="T_PUR_REQUEST.REQ_DELIV_DATE")
+                            $!PSPUR031PageCreaterForList.printHead($!item)
+                        #elseif($!item.getColumnName()=="T_PUR_APL.HOPE_SUPPLIER_CD")
+                            $!PSPUR031PageCreaterForList.printHead($!item)
+                        #elseif($!item.getColumnName()=="T_PUR_APL.HOPE_SUPPLIER_ABBR_NAME")
+                            $!PSPUR031PageCreaterForList.printHead($!item)
+                        #elseif($!item.getColumnName()=="T_PUR_APL.REQ_SECTION_CD")
+                            $!PSPUR031PageCreaterForList.printHead($!item)
+                        #elseif($!item.getColumnName()=="T_PUR_APL.REQ_SECTION_NAME")
+                            $!PSPUR031PageCreaterForList.printHead($!item)
+                        #elseif($!item.getColumnName()=="T_PUR_APL.REQ_USER_ID")
+                            $!PSPUR031PageCreaterForList.printHead($!item)
+                        #elseif($!item.getColumnName()=="T_PUR_APL.REQ_USER_NAME")
+                            $!PSPUR031PageCreaterForList.printHead($!item)
+                        #else
+                            $!PSPUR031PageCreaterForList.printHead($!item)
+                        #end
+                    #end
+                    $!PSPUR031PageCreaterForList.printTHtagClose()
+                </tr>
+            </thead>
+            #end
+            <tbody>
+            #foreach($!everyPurReqItem in $!itemList.everyPurReqlist)
+                <tr id="Row_$velocityCount" #if($velocityCount % 2 == 0) bgcolor="#dce4ef" #else bgcolor="#ffffff" #end>
+                    <td class="BoxDetailCenter FontList">#set( $index = $velocityCount + 1 )$index</td>
+                    <td class="BoxDetailCenter">
+                        ## ----- 強化-00281-000 2013/03/22 DEL SBO_pangzhen START -----
+                        ## <img id="DetailButton_0" class="Icon" src="../../image/btnDetailDisp.gif" onclick="openDetail('$everyPurReqItem.purAplIdentify.purAplSeqNum','$everyPurReqItem.purAplIdentify.purReqNo','$everyPurReqItem.purAplIdentify.lastUpdDate','$everyPurReqItem.purAplIdentify.lastUpdDateReq')"></td>
+                        ## ----- 強化-00281-000 2013/03/22 DEL SBO_pangzhen -END- -----
+                        ## +++++ 強化-00281-000 2013/03/22 ADD SBO_pangzhen START +++++
+                        <img id="DetailButton_0" class="Icon" src="../../image/btnDetailDisp.gif" onclick="openDetail('#jsEscapeInHTML($everyPurReqItem.purAplIdentify.purAplSeqNum)','#jsEscapeInHTML($everyPurReqItem.purAplIdentify.purReqNo)','#jsEscapeInHTML($everyPurReqItem.purAplIdentify.lastUpdDate)')"></td>
+                        ## +++++ 強化-00281-000 2013/03/22 ADD SBO_pangzhen -END- +++++
+                    <td class="BoxDetailCenter">
+                       #if($!everyPurReqItem.status == "04" || $!everyPurReqItem.purReqStatus == "04")
+                            ## ----- 強化-00852-000 2013/05/28 DEL SBO_pangzhen START -----
+                            ## <input type="button" class="SmallButton" value="#customSpringMessage('ACTION_EDIT')" onclick="openEveryPurReqInputForEdit('$everyPurReqItem.purAplIdentify.purAplSeqNum','$everyPurReqItem.purAplIdentify.purReqNo')"><!--編集-->
+                            ## ----- 強化-00852-000 2013/05/28 DEL SBO_pangzhen -END- -----
+                            ## +++++ 強化-00852-000 2013/05/28 ADD SBO_pangzhen START +++++
+                            <input type="button" class="SmallButton" value="#customSpringMessage('ACTION_EDIT')" onclick="openEveryPurReqInputForEdit('#jsEscapeInHTML($everyPurReqItem.purAplIdentify.purAplSeqNum)','#jsEscapeInHTML($everyPurReqItem.purAplIdentify.purReqNo)','#jsEscapeInHTML($everyPurReqItem.purAplIdentify.lastUpdDate)')"><!--編集-->
+                            ## +++++ 強化-00852-000 2013/05/28 ADD SBO_pangzhen -END- +++++
+                            ## ----- 強化-00281-000 2013/03/22 DEL SBO_pangzhen START -----
+                            ## <input type="button" class="SmallButton" value="#customSpringMessage('ACTION_DELETE')" onclick="deleteEveryPurReq('$everyPurReqItem.purAplIdentify.purAplSeqNum','$everyPurReqItem.purAplIdentify.purReqNo','$everyPurReqItem.purAplIdentify.lastUpdDate','$everyPurReqItem.purAplIdentify.lastUpdDateReq');"><!--削除-->
+                            ## ----- 強化-00281-000 2013/03/22 DEL SBO_pangzhen -END- -----
+                            ## +++++ 強化-00281-000 2013/03/22 ADD SBO_pangzhen START +++++
+                            <input type="button" class="SmallButton" value="#customSpringMessage('ACTION_DELETE')" onclick="deleteEveryPurReq('#jsEscapeInHTML($everyPurReqItem.purAplIdentify.purAplSeqNum)','#jsEscapeInHTML($everyPurReqItem.purAplIdentify.purReqNo)','#jsEscapeInHTML($everyPurReqItem.purAplIdentify.lastUpdDate)','#jsEscapeInHTML($everyPurReqItem.purAplIdentify.exclusiveSlipId.slipNo)','#jsEscapeInHTML($everyPurReqItem.purAplIdentify.exclusiveSlipId.lastUpdDate)');"><!--削除-->
+                            ## +++++ 強化-00281-000 2013/03/22 ADD SBO_pangzhen -END- +++++
+                       #elseif(($!everyPurReqItem.status == "01" || $!everyPurReqItem.status == "03") || ($!everyPurReqItem.purReqStatus == "01" || $!everyPurReqItem.purReqStatus == "03"))
+                            ## ----- 強化-00852-000 2013/05/28 DEL SBO_pangzhen START -----
+                            ## <input type="button" class="SmallButton" value="#customSpringMessage('RE_REQ')" onclick="openEveryPurReqInputForReApply('$everyPurReqItem.purAplIdentify.purAplSeqNum','$everyPurReqItem.purAplIdentify.purReqNo')"><!--再申請-->
+                            ## ----- 強化-00852-000 2013/05/28 DEL SBO_pangzhen -END- -----
+                            ## +++++ 強化-00852-000 2013/05/28 ADD SBO_pangzhen START +++++
+                            <input type="button" class="SmallButton" value="#customSpringMessage('RE_REQ')" onclick="openEveryPurReqInputForReApply('#jsEscapeInHTML($everyPurReqItem.purAplIdentify.purAplSeqNum)','#jsEscapeInHTML($everyPurReqItem.purAplIdentify.purReqNo)','#jsEscapeInHTML($everyPurReqItem.purAplIdentify.lastUpdDate)')"><!--再申請-->
+                            ## +++++ 強化-00852-000 2013/05/28 ADD SBO_pangzhen -END- +++++
+                            ## ----- 強化-00281-000 2013/03/22 DEL SBO_pangzhen START -----
+                            ## <input type="button" class="SmallButton Red" value="#customSpringMessage('REQ_STOP')" onclick="applyCancel('$everyPurReqItem.purAplIdentify.purAplSeqNum','$everyPurReqItem.purAplIdentify.purReqNo','$everyPurReqItem.purAplIdentify.lastUpdDate','$everyPurReqItem.purAplIdentify.lastUpdDateReq')"><!--申請中止 -->
+                            ## ----- 強化-00281-000 2013/03/22 DEL SBO_pangzhen -END- -----
+                            ## +++++ 強化-00281-000 2013/03/22 ADD SBO_pangzhen START +++++
+                            <input type="button" class="SmallButton Red" value="#customSpringMessage('REQ_STOP')" onclick="applyCancel('#jsEscapeInHTML($everyPurReqItem.purAplIdentify.purAplSeqNum)','#jsEscapeInHTML($everyPurReqItem.purAplIdentify.purReqNo)','#jsEscapeInHTML($everyPurReqItem.purAplIdentify.lastUpdDate)','#jsEscapeInHTML($everyPurReqItem.purAplIdentify.exclusiveSlipId.slipNo)','#jsEscapeInHTML($everyPurReqItem.purAplIdentify.exclusiveSlipId.lastUpdDate)')"><!--申請中止 -->
+                            ## +++++ 強化-00281-000 2013/03/22 ADD SBO_pangzhen -END- +++++
+                        #end  
+                    </td>
+                    #foreach($!item in $!PSPUR031PageCreaterForList.getItemListForBody($velocityCount))
+                        #set($currentOneColumnFlag = $!PSPUR031PageCreaterForList.getOneColumnFlag($!item))
+                        #if($velocityCount == 0)
+                            $!PSPUR031PageCreaterForList.printTDtag('class="BoxDetailLeft FontList"')
+                        #elseif(!$currentOneColumnFlag)
+                            $!PSPUR031PageCreaterForList.printTDtagClose()
+                            $!PSPUR031PageCreaterForList.printTDtag('class="BoxDetailLeft FontList"')
+                        #end
+                        #if($!item.getColumnName()=="T_PUR_APL.PUR_APL_NO")
+                            $!PSPUR031PageCreaterForList.printDefault($!item,"_data_style",'class="FontSlipNo"')
+                        #elseif($!item.getColumnName()=="T_PUR_REQUEST.PUR_REQ_NO")
+                            $!PSPUR031PageCreaterForList.printDefault($!item,"_data_style",'class="FontSlipNo"')
+                        #elseif($!item.getColumnName()=="T_PUR_APL.URGENT_IND")
+                            #if ($!everyPurReqItem.urgentInd == '1')
+                                $!PSPUR031PageCreaterForList.printSpecial("s25_codeNameRed", $!item, 'URGENT_IND','',"_data_style",'align="center"','_redValue','1','_boldStyle','"FontList Red"','_needBold','0')
+                            #end
+                        #elseif($!item.getColumnName()=="T_PUR_APL.INPUT_USER_NAME")
+                            $!PSPUR031PageCreaterForList.printDefault($!item)
+                        #elseif($!item.getColumnName()=="T_PUR_APL.PUR_APL_STATUS")
+                            $!PSPUR031PageCreaterForList.printSpecial("s25_codeNameRed", $!item, 'PUR_REQ_STATUS','',"_data_style",'align="center"','_redValue','03','_boldStyle','"FontStatus Red"','_needBold','1')
+                        #elseif($!item.getColumnName()=="T_PUR_APL.PUR_REQ_DATE")
+                            $!PSPUR031PageCreaterForList.printDefault($!item,"_data_style",'align="center"')
+                        #elseif($!item.getColumnName()=="T_PUR_APL.TITLE_NAME")
+                            $!PSPUR031PageCreaterForList.printDefault($!item)
+                        #elseif($!item.getColumnName()=="T_PUR_APL.ITEM_CLASS_L_NAME")
+                            $!PSPUR031PageCreaterForList.printDefault($!item)
+                        #elseif($!item.getColumnName()=="T_PUR_APL.ITEM_CLASS_M_NAME")
+                            $!PSPUR031PageCreaterForList.printDefault($!item)
+                        #elseif($!item.getColumnName()=="T_PUR_APL.ITEM_CLASS_S_NAME")
+                            $!PSPUR031PageCreaterForList.printDefault($!item)
+                        #elseif($!item.getColumnName()=="T_PUR_REQUEST.CURRENCY_CD")
+                            $!PSPUR031PageCreaterForList.printDefault($!item,"_data_style",'align="center"')
+                        #elseif($!item.getColumnName()=="T_PUR_REQUEST.TOTAL_AMOUNT")
+                            $!PSPUR031PageCreaterForList.printSpecial("s27_list_data_currency",$!item,"_data_style",'class="FontCurrSmall" align="right"')
+                        #elseif($!item.getColumnName()=="T_PUR_REQUEST.REQ_DELIV_DATE")
+                            $!PSPUR031PageCreaterForList.printDefault($!item,"_data_style",'align="center"')
+                        #elseif($!item.getColumnName()=="T_PUR_APL.HOPE_SUPPLIER_CD")
+                            $!PSPUR031PageCreaterForList.printDefault($!item,"_data_style",'align="center"')
+                        #elseif($!item.getColumnName()=="T_PUR_APL.HOPE_SUPPLIER_ABBR_NAME")
+                            $!PSPUR031PageCreaterForList.printDefault($!item)
+                        #elseif($!item.getColumnName()=="T_PUR_APL.REQ_SECTION_CD")
+                            $!PSPUR031PageCreaterForList.printDefault($!item,"_data_style",'align="center"')
+                        #elseif($!item.getColumnName()=="T_PUR_APL.REQ_SECTION_NAME")
+                            $!PSPUR031PageCreaterForList.printDefault($!item)
+                        #elseif($!item.getColumnName()=="T_PUR_APL.REQ_USER_ID")
+                            $!PSPUR031PageCreaterForList.printDefault($!item,"_data_style",'align="center"')
+                        #elseif($!item.getColumnName()=="T_PUR_APL.REQ_USER_NAME")
+                            $!PSPUR031PageCreaterForList.printDefault($!item)
+                        #else
+                            $!PSPUR031PageCreaterForList.printDefault($!item)
+                        #end
+                    #end
+                    $!PSPUR031PageCreaterForList.printTDtagClose()
+                </tr>
+            #end
+            </tbody>
+</table>
+<br>
+<table id="WAIT" class="NoBorder" style="display:none;width:100%;"><tr><td style="text-align:center;"><br><br>
+<img src="../../image/wait.gif"><br><span class="FontMini"><br>#customSpringMessage('SEARCH_MESSAGE')</span></td></tr></table>
+</body>
+
+</html>

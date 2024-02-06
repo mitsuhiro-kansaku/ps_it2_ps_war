@@ -1,0 +1,251 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="ps.dataaccess.mst.unit.UnitMapper">
+
+    <!-- SRC-00115-00 include化共通-->
+    <sql id="listKeyIdentityWhereCondition">
+        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(unitCd)">
+            AND M_UNIT_NAME.UNIT_CD ${@fw.common.util.SearchModeUtil@getSearchSQL("fw.domain.mst.material.unit.UnitSearchCondition","unitCd")}
+        </if>
+        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(unitName)">
+            AND UNIT_NAME_LANG.UNIT_NAME ${@fw.common.util.SearchModeUtil@getSearchSQL("fw.domain.mst.material.unit.UnitSearchCondition","unitName")}
+        </if>
+        <if test="@fw.domain.mst.searchcondition.SearchCondition@termFlgIsNotEmpty(searchCondition.termFlg)">
+            AND M_UNIT_NAME.TERM_FLG = #{searchCondition.termFlg, jdbcType=VARCHAR}
+        </if>
+    </sql>
+
+    <select id="listKeyIdentity" parameterType="fw.domain.mst.material.unit.UnitSearchCondition"
+        resultType="fw.domain.mst.material.unit.UnitIdentify">
+        SELECT 
+            M_UNIT_NAME.UNIT_CD as "unitCd",
+            M_UNIT_NAME.LAST_UPD_DATE as "lastUpdDate",
+            CASE
+                  WHEN UNIT_NAME_LANG.UNIT_NAME IS NOT NULL THEN
+                    UNIT_NAME_LANG.UNIT_NAME
+                  ELSE
+                    UNIT_NAME_SYSTEM.UNIT_NAME
+             END AS unitName
+        FROM M_UNIT_NAME 
+            LEFT JOIN M_UNIT_NAME_LANG UNIT_NAME_LANG
+            ON 
+                M_UNIT_NAME.UNIT_CD = UNIT_NAME_LANG.UNIT_CD
+                AND UNIT_NAME_LANG.LANGUAGE_IND = '${@fw.security.SecurityUtil@getCompanyUseLanguageIndByEscapeSql()}'
+            LEFT JOIN M_UNIT_NAME_LANG UNIT_NAME_SYSTEM
+                ON 
+                    M_UNIT_NAME.UNIT_CD = UNIT_NAME_SYSTEM.UNIT_CD
+                    AND UNIT_NAME_SYSTEM.LANGUAGE_IND = '${@fw.common.util.AppUtil@getSysLanguageByEscapeSql()}'
+        <where>
+            <include refid="listKeyIdentityWhereCondition"/>
+        </where>
+        ORDER BY ${searchCondition.columnOrder.columnOrder()}
+    </select>
+    
+    <select id="listPageItem"
+        resultType="fw.domain.mst.material.unit.UnitItem">
+            SELECT
+                M_UNIT_NAME.UNIT_CD as "unitIdentify.unitCd",
+                CASE
+                  WHEN UNIT_NAME_LANG.UNIT_NAME IS NOT NULL THEN
+                    UNIT_NAME_LANG.UNIT_NAME
+                  ELSE
+                    UNIT_NAME_SYSTEM.UNIT_NAME
+                END AS unitName,  
+                M_UNIT_NAME.DSP_ORDER as "dspOrder",   
+                M_UNIT_NAME.TERM_FLG as "termFlg",
+                M_UNIT_NAME.LAST_UPD_DATE as "unitIdentify.lastUpdDate"  
+            FROM M_UNIT_NAME 
+                LEFT JOIN M_UNIT_NAME_LANG UNIT_NAME_LANG
+                ON 
+                    M_UNIT_NAME.UNIT_CD = UNIT_NAME_LANG.UNIT_CD
+                    AND UNIT_NAME_LANG.LANGUAGE_IND = '${@fw.security.SecurityUtil@getCompanyUseLanguageIndByEscapeSql()}'
+                LEFT JOIN M_UNIT_NAME_LANG UNIT_NAME_SYSTEM
+                ON 
+                    M_UNIT_NAME.UNIT_CD = UNIT_NAME_SYSTEM.UNIT_CD
+                    AND UNIT_NAME_SYSTEM.LANGUAGE_IND = '${@fw.common.util.AppUtil@getSysLanguageByEscapeSql()}'
+            <where>
+                M_UNIT_NAME.UNIT_CD in
+                <foreach collection="searchCondition.page.keyDomainEntityList" item="keyList"  open="(" separator="," close=")">  
+                    #{keyList.unitCd}  
+                </foreach>
+                <include refid="listKeyIdentityWhereCondition"/>
+            </where>
+            ORDER BY ${searchCondition.columnOrder.columnOrder()}
+    </select>
+    
+    <!-- 強化-01784-000 2013/06/12 DEL SBO_SOKOU START -->
+    <!-- 
+    <select id="search" parameterType="fw.domain.mst.material.unit.UnitIdentify" resultType="fw.domain.mst.material.unit.UnitManagement">
+      SELECT  M_UNIT_NAME.UNIT_CD as "unitIdentify.unitCd", 
+              CASE
+                WHEN UNIT_NAME_LANG.UNIT_NAME IS NOT NULL THEN
+                    UNIT_NAME_LANG.UNIT_NAME
+                   ELSE
+                    UNIT_NAME_LANG_SYSTEM.UNIT_NAME
+              END AS "unitName",
+              M_UNIT_NAME.TERM_FLG as "termFlg", 
+              M_UNIT_NAME.DSP_ORDER as "dspOrder", 
+              M_UNIT_NAME.LAST_UPD_DATE as "unitIdentify.lastUpdDate",
+              UNIT_NAME_LANG.LANGUAGE_IND as "baseLanguageInd.languageInd"
+       FROM M_UNIT_NAME 
+       LEFT JOIN M_UNIT_NAME_LANG  UNIT_NAME_LANG
+              ON M_UNIT_NAME.UNIT_CD = UNIT_NAME_LANG.UNIT_CD 
+              AND UNIT_NAME_LANG.LANGUAGE_IND = '${@fw.security.SecurityUtil@getCompanyUseLanguageIndByEscapeSql()}'
+       LEFT JOIN M_UNIT_NAME_LANG  UNIT_NAME_LANG_SYSTEM
+              ON M_UNIT_NAME.UNIT_CD = UNIT_NAME_LANG_SYSTEM.UNIT_CD 
+              AND UNIT_NAME_LANG_SYSTEM.LANGUAGE_IND = '${@fw.common.util.AppUtil@getSysLanguageByEscapeSql()}'
+       WHERE 
+           M_UNIT_NAME.UNIT_CD = #{unitCd} 
+    </select>
+    -->
+    <!-- 強化-01784-000 2013/06/12 DEL SBO_SOKOU -END- -->
+    <!-- 強化-01784-000 2013/06/12 ADD SBO_SOKOU START -->
+    <select id="search"
+            parameterType="fw.domain.mst.material.unit.UnitIdentify"
+            resultType="fw.domain.mst.material.unit.UnitManagement">
+        SELECT M_UNIT_NAME.UNIT_CD           AS "unitIdentify.unitCd"
+             , M_UNIT_NAME.TERM_FLG          AS "termFlg"
+             , M_UNIT_NAME.DSP_ORDER         AS "dspOrder"
+             , M_UNIT_NAME.LAST_UPD_DATE     AS "unitIdentify.lastUpdDate"
+             , M_UNIT_NAME_LANG.LANGUAGE_IND AS "baseLanguageInd.languageInd"
+             , M_UNIT_NAME_LANG.UNIT_NAME    AS "unitName"
+          FROM M_UNIT_NAME
+         INNER JOIN M_UNIT_NAME_LANG
+                 ON M_UNIT_NAME.UNIT_CD = M_UNIT_NAME_LANG.UNIT_CD 
+                AND M_UNIT_NAME_LANG.LANGUAGE_IND = '${@fw.common.util.AppUtil@getSysLanguageByEscapeSql()}'
+         WHERE M_UNIT_NAME.UNIT_CD = #{unitCd}
+    </select>
+    <!-- 強化-01784-000 2013/06/12 ADD SBO_SOKOU -END- -->
+    
+    <select id="searchExclusive" parameterType="fw.domain.mst.material.unit.UnitIdentify" resultType="fw.domain.mst.material.unit.UnitIdentify">
+        SELECT
+            M_UNIT_NAME.UNIT_CD as "unitCd"
+        FROM M_UNIT_NAME 
+        WHERE
+            M_UNIT_NAME.UNIT_CD = #{unitCd}
+            AND M_UNIT_NAME.LAST_UPD_DATE = #{lastUpdDate}
+    </select>
+   
+    <!-- 強化-01784-000 2013/06/12 DEL SBO_SOKOU START -->
+    <!-- 
+    <select id="listUnitLanguage" parameterType="fw.domain.mst.material.unit.UnitIdentify" resultType="fw.domain.mst.material.unit.UnitLanguage">
+        SELECT         
+            M_UNIT_NAME_LANG.UNIT_CD as "unitIdentify.unitCd",
+            M_UNIT_NAME_LANG.LANGUAGE_IND as "languageInd.languageInd",
+            M_UNIT_NAME_LANG.UNIT_NAME as "unitName"
+        FROM M_UNIT_NAME_LANG 
+            INNER JOIN M_UNIT_NAME
+            ON 
+                M_UNIT_NAME.UNIT_CD = M_UNIT_NAME_LANG.UNIT_CD
+                AND M_UNIT_NAME_LANG.LANGUAGE_IND != '${@fw.security.SecurityUtil@getCompanyUseLanguageIndByEscapeSql()}'
+            WHERE 
+                M_UNIT_NAME.UNIT_CD = #{unitCd}
+            ORDER BY M_UNIT_NAME_LANG.LANGUAGE_IND
+    </select>
+    -->
+    <!-- 強化-01784-000 2013/06/12 DEL SBO_SOKOU -END- -->
+    <!-- 強化-01784-000 2013/06/12 ADD SBO_SOKOU START -->
+    <select id="listUnitLanguage"
+            parameterType="fw.domain.mst.material.unit.UnitIdentify"
+            resultType="fw.domain.mst.material.unit.UnitLanguage">
+        SELECT M_UNIT_NAME_LANG.UNIT_CD      AS "unitIdentify.unitCd"
+             , M_UNIT_NAME_LANG.LANGUAGE_IND AS "languageInd.languageInd"
+             , M_UNIT_NAME_LANG.UNIT_NAME    AS "unitName"
+          FROM M_UNIT_NAME_LANG
+         INNER JOIN M_UNIT_NAME
+                 ON M_UNIT_NAME.UNIT_CD = M_UNIT_NAME_LANG.UNIT_CD
+                AND M_UNIT_NAME_LANG.LANGUAGE_IND != '${@fw.common.util.AppUtil@getSysLanguageByEscapeSql()}'
+         INNER JOIN M_CODE_NAME
+                 ON M_CODE_NAME.CODE_KEY = 'LANGUAGE_IND'
+                AND M_CODE_NAME.CODE_VALUE = M_UNIT_NAME_LANG.LANGUAGE_IND
+         WHERE M_UNIT_NAME.UNIT_CD = #{unitCd}
+         ORDER BY M_CODE_NAME.DSP_ORDER
+    </select>
+    <!-- 強化-01784-000 2013/06/12 ADD SBO_SOKOU -END- -->
+    
+    <insert id="insert" parameterType="fw.domain.mst.material.unit.UnitManagement">
+        INSERT INTO M_UNIT_NAME
+        (
+            UNIT_CD,
+            TERM_FLG,
+            REG_USER_ID,
+            REG_SECTION_CD,
+            REG_DATE,
+            REG_COMPANY_CD,
+            LAST_UPD_USER_ID,
+            LAST_UPD_SECTION_CD,
+            LAST_UPD_DATE,
+            LAST_UPD_COMPANY_CD,
+            DSP_ORDER
+        ) VALUES (
+            #{unitIdentify.unitCd, jdbcType=VARCHAR},
+            #{termFlg, jdbcType=VARCHAR},
+            #{registInfo.regUserId, jdbcType=VARCHAR},
+            #{registInfo.regSectionCd, jdbcType=VARCHAR},
+            #{registInfo.regDate, jdbcType=VARCHAR},
+            #{registInfo.regCompanyCd, jdbcType=VARCHAR},
+            #{registInfo.lastUpdUserId, jdbcType=VARCHAR},
+            #{registInfo.lastUpdSectionCd, jdbcType=VARCHAR},
+            #{registInfo.lastUpdDate, jdbcType=VARCHAR},
+            #{registInfo.lastUpdCompanyCd, jdbcType=VARCHAR},
+            #{dspOrder, jdbcType=VARCHAR}
+        )
+    </insert>
+
+    <insert id="insertUnitLanguage" parameterType="fw.domain.mst.material.unit.UnitLanguage">
+        INSERT INTO M_UNIT_NAME_LANG
+        (
+            UNIT_CD,
+            LANGUAGE_IND,
+            UNIT_NAME,              
+            LAST_UPD_DATE,
+            LAST_UPD_COMPANY_CD,
+            LAST_UPD_SECTION_CD,
+            LAST_UPD_USER_ID,
+            REG_DATE,
+            REG_SECTION_CD,
+            REG_COMPANY_CD,
+            REG_USER_ID
+        )VALUES(
+            #{unitIdentify.unitCd, jdbcType=VARCHAR},
+            #{languageInd.languageInd, jdbcType=VARCHAR},
+            #{unitName, jdbcType=VARCHAR},
+            #{registInfo.lastUpdDate, jdbcType=VARCHAR},
+			#{registInfo.lastUpdCompanyCd, jdbcType=VARCHAR},
+			#{registInfo.lastUpdSectionCd, jdbcType=VARCHAR},
+			#{registInfo.lastUpdUserId, jdbcType=VARCHAR},
+			#{registInfo.regDate, jdbcType=VARCHAR},
+            #{registInfo.regSectionCd, jdbcType=VARCHAR},
+			#{registInfo.regCompanyCd, jdbcType=VARCHAR},
+			#{registInfo.regUserId, jdbcType=VARCHAR}
+        )
+    </insert>
+
+    <update id="update" parameterType="fw.domain.mst.material.unit.UnitManagement">
+        UPDATE M_UNIT_NAME
+        SET  
+            DSP_ORDER = #{dspOrder},      
+            TERM_FLG = #{termFlg},
+            LAST_UPD_DATE = #{registInfo.lastUpdDate},
+            LAST_UPD_COMPANY_CD = #{registInfo.lastUpdCompanyCd},
+            LAST_UPD_SECTION_CD = #{registInfo.lastUpdSectionCd},
+            LAST_UPD_USER_ID = #{registInfo.lastUpdUserId}        
+        WHERE 
+            UNIT_CD = #{unitIdentify.unitCd,jdbcType=VARCHAR}
+    </update>
+    
+    <delete id="delete" parameterType="fw.domain.mst.material.unit.UnitIdentify">
+        DELETE FROM M_UNIT_NAME
+        WHERE 
+            M_UNIT_NAME.UNIT_CD = #{unitCd}
+    </delete>
+    
+    <delete id="deleteUnitLanguage" parameterType="fw.domain.mst.material.unit.UnitIdentify">
+        DELETE FROM M_UNIT_NAME_LANG
+        WHERE 
+            M_UNIT_NAME_LANG.UNIT_CD = #{unitCd}
+    </delete>
+
+</mapper>

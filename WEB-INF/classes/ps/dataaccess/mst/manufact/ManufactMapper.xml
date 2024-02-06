@@ -1,0 +1,286 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="ps.dataaccess.mst.manufact.ManufactMapper">
+
+	<!-- SRC-00115-00 include化共通-->
+	<sql id="listKeyIdentityWhereCondition">
+        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(manufactCd)">
+               AND M_MANUFACT.MANUFACT_CD ${@fw.common.util.SearchModeUtil@getSearchSQL("fw.domain.mst.material.manufact.ManufactSearchCondition","manufactCd")}
+           </if>
+           <if test="@org.apache.commons.lang.StringUtils@isNotBlank(manufactName)">
+               AND M_MANUFACT_LANG.MANUFACT_NAME ${@fw.common.util.SearchModeUtil@getSearchSQL("fw.domain.mst.material.manufact.ManufactSearchCondition","manufactName")}
+           </if>
+           <if test="@org.apache.commons.lang.StringUtils@isNotBlank(valStartDateFrom.dateOfymd)">
+               AND M_MANUFACT.VALID_START_DATE >= #{valStartDateFrom.dateOfymd}
+           </if>
+           <if test="@org.apache.commons.lang.StringUtils@isNotBlank(valStartDateTo.dateOfymd)">
+               AND M_MANUFACT.VALID_START_DATE &lt;= #{valStartDateTo.dateOfymd}
+           </if>
+           <if test="@org.apache.commons.lang.StringUtils@isNotBlank(valEndDateFrom.dateOfymd)">
+               AND M_MANUFACT.VALID_END_DATE >= #{valEndDateFrom.dateOfymd}
+           </if>
+           <if test="@org.apache.commons.lang.StringUtils@isNotBlank(valEndDateTo.dateOfymd)">
+               AND M_MANUFACT.VALID_END_DATE &lt;= #{valEndDateTo.dateOfymd}
+           </if>
+           <if test="@fw.domain.mst.searchcondition.SearchCondition@termFlgIsNotEmpty(searchCondition.termFlg)">
+               AND M_MANUFACT.TERM_FLG = #{searchCondition.termFlg, jdbcType=VARCHAR}
+           </if>
+	</sql>
+
+   <select id="listKeyIdentity" parameterType="fw.domain.mst.material.manufact.ManufactSearchCondition"
+        resultType="fw.domain.mst.material.manufact.ManufactIdentify">
+        SELECT 
+            M_MANUFACT.MANUFACT_CD as "manufactCd",
+            M_MANUFACT.LAST_UPD_DATE as "registInfo.lastUpdDate",
+            M_MANUFACT.LAST_UPD_COMPANY_CD as "registInfo.lastUpdCompanyCd",
+            M_MANUFACT.LAST_UPD_SECTION_CD as "registInfo.lastUpdSectionCd",
+            M_MANUFACT.LAST_UPD_USER_ID as "registInfo.lastUpdUserId",
+            M_MANUFACT.REG_DATE as "registInfo.regDate",
+            M_MANUFACT.REG_COMPANY_CD as "registInfo.regCompanyCd",
+            M_MANUFACT.REG_SECTION_CD as "registInfo.regSectionCd",
+            M_MANUFACT.REG_USER_ID as "registInfo.regUserId",
+            case
+                 when M_MANUFACT_LANG.MANUFACT_NAME is not null then
+                  M_MANUFACT_LANG.MANUFACT_NAME
+                 else
+                  manufact_lang_system.MANUFACT_NAME
+                end as manufactName
+        FROM M_MANUFACT 
+            LEFT JOIN M_MANUFACT_LANG
+            ON 
+                M_MANUFACT.MANUFACT_CD = M_MANUFACT_LANG.MANUFACT_CD
+                AND M_MANUFACT_LANG.LANGUAGE_IND = '${@fw.security.SecurityUtil@getCompanyUseLanguageIndByEscapeSql()}'
+            LEFT JOIN M_MANUFACT_LANG manufact_lang_system 
+                ON 
+                    M_MANUFACT.MANUFACT_CD = manufact_lang_system.MANUFACT_CD
+                    AND manufact_lang_system.LANGUAGE_IND = '${@fw.common.util.AppUtil@getSysLanguageByEscapeSql()}'
+        <where>
+            <include refid="listKeyIdentityWhereCondition"/>
+        </where> 
+        ORDER BY ${searchCondition.columnOrder.columnOrder()}
+    </select>
+    
+    <select id="listPageItem" parameterType="fw.domain.mst.searchcondition.SearchCondition"
+        resultType="fw.domain.mst.material.manufact.ManufactItem">
+           SELECT
+                M_MANUFACT.MANUFACT_CD AS "manufactIdentify.manufactCd",
+                M_MANUFACT.LAST_UPD_DATE AS "manufactIdentify.lastUpdDate",
+                case
+	             when M_MANUFACT_LANG.MANUFACT_NAME is not null then
+	              M_MANUFACT_LANG.MANUFACT_NAME
+	             else
+	              manufact_lang_system.MANUFACT_NAME
+	            end as manufactName,
+                M_MANUFACT.VALID_START_DATE AS "validStartDate.dateOfymd",
+                M_MANUFACT.VALID_END_DATE AS "validEndDate.dateOfymd",
+                TERM_FLG AS "termFlg"
+            FROM M_MANUFACT 
+                LEFT JOIN M_MANUFACT_LANG
+                ON 
+                    M_MANUFACT.MANUFACT_CD = M_MANUFACT_LANG.MANUFACT_CD
+                    AND M_MANUFACT_LANG.LANGUAGE_IND = '${@fw.security.SecurityUtil@getCompanyUseLanguageIndByEscapeSql()}'
+                LEFT JOIN M_MANUFACT_LANG manufact_lang_system 
+	            ON 
+	                M_MANUFACT.MANUFACT_CD = manufact_lang_system.MANUFACT_CD
+	                AND manufact_lang_system.LANGUAGE_IND = '${@fw.common.util.AppUtil@getSysLanguageByEscapeSql()}'
+            <where> 
+                M_MANUFACT.MANUFACT_CD in 
+                <foreach collection="searchCondition.page.keyDomainEntityList" item="keyList"  open="(" separator="," close=")">  
+                    #{keyList.manufactCd}  
+                </foreach>
+                <include refid="listKeyIdentityWhereCondition"/>
+            </where>
+            ORDER BY ${searchCondition.columnOrder.columnOrder()}
+    </select>
+
+    <!-- 強化-01784-000 2013/06/12 DEL SBO_SOKOU START -->
+    <!-- 
+    <select id="search" parameterType="fw.domain.mst.material.manufact.ManufactIdentify" resultType="fw.domain.mst.material.manufact.ManufactManagement">
+       SELECT
+            M_MANUFACT.MANUFACT_CD as "manufactIdentify.manufactCd",
+            M_MANUFACT_LANG.LANGUAGE_IND as "baseLanguageInd.languageInd",
+            TERM_FLG as "termFlg",
+            case
+               when M_MANUFACT_LANG.MANUFACT_NAME is not null then
+                M_MANUFACT_LANG.MANUFACT_NAME
+               else
+                manufact_lang_system.MANUFACT_NAME
+            end as "manufactName",
+            M_MANUFACT.LAST_UPD_DATE as "manufactIdentify.lastUpdDate",
+            M_MANUFACT.VALID_START_DATE as "val.period.startDate.dateOfymd",
+            M_MANUFACT.VALID_END_DATE as "val.period.endDate.dateOfymd"
+        FROM M_MANUFACT 
+            LEFT JOIN M_MANUFACT_LANG
+            ON 
+                M_MANUFACT.MANUFACT_CD = M_MANUFACT_LANG.MANUFACT_CD
+                AND M_MANUFACT_LANG.LANGUAGE_IND = '${@fw.security.SecurityUtil@getCompanyUseLanguageIndByEscapeSql()}'
+            LEFT JOIN M_MANUFACT_LANG manufact_lang_system 
+            ON 
+                M_MANUFACT.MANUFACT_CD = manufact_lang_system.MANUFACT_CD
+                AND manufact_lang_system.LANGUAGE_IND = '${@fw.common.util.AppUtil@getSysLanguageByEscapeSql()}'        
+        WHERE M_MANUFACT.MANUFACT_CD = #{manufactCd}
+    </select>
+    -->
+    <!-- 強化-01784-000 2013/06/12 DEL SBO_SOKOU -END- -->
+    <!-- 強化-01784-000 2013/06/12 ADD SBO_SOKOU START -->
+    <select id="search"
+            parameterType="fw.domain.mst.material.manufact.ManufactIdentify"
+            resultType="fw.domain.mst.material.manufact.ManufactManagement">
+        SELECT M_MANUFACT.MANUFACT_CD AS "manufactIdentify.manufactCd"
+             , M_MANUFACT.VALID_START_DATE AS "val.period.startDate.dateOfymd"
+             , M_MANUFACT.VALID_END_DATE AS "val.period.endDate.dateOfymd"
+             , M_MANUFACT.TERM_FLG AS "termFlg"
+             , M_MANUFACT.LAST_UPD_DATE AS "manufactIdentify.lastUpdDate"
+             , M_MANUFACT_LANG.LANGUAGE_IND AS "baseLanguageInd.languageInd"
+             , M_MANUFACT_LANG.MANUFACT_NAME AS "manufactName"
+          FROM M_MANUFACT
+         INNER JOIN M_MANUFACT_LANG
+                 ON M_MANUFACT.MANUFACT_CD = M_MANUFACT_LANG.MANUFACT_CD
+                AND M_MANUFACT_LANG.LANGUAGE_IND = '${@fw.common.util.AppUtil@getSysLanguageByEscapeSql()}'
+         WHERE M_MANUFACT.MANUFACT_CD = #{manufactCd}
+    </select>
+    <!-- 強化-01784-000 2013/06/12 ADD SBO_SOKOU -END- -->
+    
+    <select id="searchExclusive" parameterType="fw.domain.mst.material.manufact.ManufactIdentify" resultType="fw.domain.mst.material.manufact.ManufactIdentify">
+        SELECT
+            M_MANUFACT.MANUFACT_CD as "manufactCd"
+        FROM M_MANUFACT 
+        WHERE
+            M_MANUFACT.MANUFACT_CD = #{manufactCd}
+            AND M_MANUFACT.LAST_UPD_DATE = #{lastUpdDate}
+    </select>
+
+    <!-- 強化-01784-000 2013/06/12 DEL SBO_SOKOU START -->
+    <!-- 
+    <select id="listManufactLanguage" parameterType="fw.domain.mst.material.manufact.ManufactIdentify" resultType="fw.domain.mst.material.manufact.ManufactLanguage">
+         SELECT         
+            M_MANUFACT_LANG.MANUFACT_CD as "manufactIdentify.manufactCd",
+            M_MANUFACT_LANG.MANUFACT_NAME as "manufactName",
+            M_MANUFACT_LANG.MANUFACT_CD as "manufactCd",
+            M_MANUFACT_LANG.LANGUAGE_IND as "languageInd.languageInd"
+        FROM M_MANUFACT_LANG 
+            INNER JOIN M_MANUFACT
+            ON 
+               M_MANUFACT_LANG.REG_COMPANY_CD = M_MANUFACT.REG_COMPANY_CD
+               AND M_MANUFACT_LANG.MANUFACT_CD = M_MANUFACT.MANUFACT_CD
+               AND M_MANUFACT.MANUFACT_CD = #{manufactCd}
+            INNER JOIN M_COMPANY
+            ON
+              M_MANUFACT.REG_COMPANY_CD=M_COMPANY.COMPANY_CD
+              AND M_MANUFACT_LANG.REG_COMPANY_CD=M_COMPANY.COMPANY_CD
+              AND M_MANUFACT_LANG.LANGUAGE_IND!=M_COMPANY.COMPANY_USE_LANGUAGE_IND
+             ORDER BY M_MANUFACT_LANG.LANGUAGE_IND  
+    </select>
+    -->
+    <!-- 強化-01784-000 2013/06/12 DEL SBO_SOKOU -END- -->
+    <!-- 強化-01784-000 2013/06/12 ADD SBO_SOKOU START -->
+    <select id="listManufactLanguage"
+            parameterType="fw.domain.mst.material.manufact.ManufactIdentify"
+            resultType="fw.domain.mst.material.manufact.ManufactLanguage">
+        SELECT M_MANUFACT_LANG.MANUFACT_CD   AS "manufactIdentify.manufactCd"
+             , M_MANUFACT_LANG.MANUFACT_NAME AS "manufactName"
+             , M_MANUFACT_LANG.MANUFACT_CD   AS "manufactCd"
+             , M_MANUFACT_LANG.LANGUAGE_IND  AS "languageInd.languageInd"
+          FROM M_MANUFACT_LANG 
+         INNER JOIN M_MANUFACT 
+                 ON M_MANUFACT_LANG.MANUFACT_CD = M_MANUFACT.MANUFACT_CD 
+                AND M_MANUFACT.MANUFACT_CD = #{manufactCd}
+                AND M_MANUFACT_LANG.LANGUAGE_IND != '${@fw.common.util.AppUtil@getSysLanguageByEscapeSql()}'
+         INNER JOIN M_CODE_NAME
+                 ON M_CODE_NAME.CODE_KEY = 'LANGUAGE_IND'
+                AND M_CODE_NAME.CODE_VALUE = M_MANUFACT_LANG.LANGUAGE_IND
+         ORDER BY M_CODE_NAME.DSP_ORDER
+    </select>
+    <!-- 強化-01784-000 2013/06/12 ADD SBO_SOKOU -END- -->
+
+    <insert id="insert" parameterType="fw.domain.mst.material.manufact.ManufactManagement">
+       INSERT INTO M_MANUFACT
+        (
+            MANUFACT_CD,
+            VALID_START_DATE,
+            VALID_END_DATE,
+            TERM_FLG,
+            LAST_UPD_DATE,
+            LAST_UPD_COMPANY_CD,
+            LAST_UPD_SECTION_CD,
+            LAST_UPD_USER_ID,
+            REG_DATE,
+            REG_COMPANY_CD,
+            REG_SECTION_CD,
+            REG_USER_ID
+        ) VALUES (
+            #{manufactIdentify.manufactCd, jdbcType=VARCHAR},
+            '${@fw.common.util.AppUtil@convertDateForValid(val.period.startDate.dateOfymd,@fw.common.util.AppUtil@VALID_START_DATE)}',
+            '${@fw.common.util.AppUtil@convertDateForValid(val.period.endDate.dateOfymd,@fw.common.util.AppUtil@VALID_END_DATE)}',
+            
+            #{termFlg, jdbcType=VARCHAR},
+            #{registInfo.lastUpdDate, jdbcType=VARCHAR},
+            #{registInfo.lastUpdCompanyCd, jdbcType=VARCHAR},
+            #{registInfo.lastUpdSectionCd, jdbcType=VARCHAR},
+            #{registInfo.lastUpdUserId, jdbcType=VARCHAR},
+            #{registInfo.regDate, jdbcType=VARCHAR},
+            #{registInfo.regCompanyCd, jdbcType=VARCHAR},
+            #{registInfo.regSectionCd, jdbcType=VARCHAR},
+            #{registInfo.regUserId, jdbcType=VARCHAR}
+        )
+    </insert>
+
+    <insert id="insertManufactLanguage" parameterType="fw.domain.mst.material.manufact.ManufactLanguage">
+        INSERT INTO M_MANUFACT_LANG
+        (
+            MANUFACT_CD,
+            LANGUAGE_IND,
+            MANUFACT_NAME,
+            LAST_UPD_DATE,
+            LAST_UPD_COMPANY_CD,
+            LAST_UPD_SECTION_CD,
+            LAST_UPD_USER_ID,
+            REG_DATE,
+            REG_COMPANY_CD,
+            REG_SECTION_CD,
+            REG_USER_ID
+        )VALUES(
+            #{manufactIdentify.manufactCd, jdbcType=VARCHAR},
+            #{languageInd.languageInd, jdbcType=VARCHAR},
+            #{manufactName, jdbcType=VARCHAR},
+            #{registInfo.lastUpdDate, jdbcType=VARCHAR},
+            #{registInfo.lastUpdCompanyCd, jdbcType=VARCHAR},
+            #{registInfo.lastUpdSectionCd, jdbcType=VARCHAR},
+            #{registInfo.lastUpdUserId, jdbcType=VARCHAR},
+            #{registInfo.regDate, jdbcType=VARCHAR},
+            #{registInfo.regCompanyCd, jdbcType=VARCHAR},
+            #{registInfo.regSectionCd, jdbcType=VARCHAR},
+            #{registInfo.regUserId, jdbcType=VARCHAR}
+        )
+    </insert>
+
+    <update id="update" parameterType="fw.domain.mst.material.manufact.ManufactManagement">
+        UPDATE M_MANUFACT
+        SET
+            TERM_FLG = #{termFlg},
+            LAST_UPD_DATE = #{registInfo.lastUpdDate},
+            LAST_UPD_COMPANY_CD = #{registInfo.lastUpdCompanyCd},
+            LAST_UPD_SECTION_CD = #{registInfo.lastUpdSectionCd},
+            LAST_UPD_USER_ID = #{registInfo.lastUpdUserId},
+            VALID_START_DATE ='${@fw.common.util.AppUtil@convertDateForValid(val.period.startDate.dateOfymd,@fw.common.util.AppUtil@VALID_START_DATE)}',
+            VALID_END_DATE ='${@fw.common.util.AppUtil@convertDateForValid(val.period.endDate.dateOfymd,@fw.common.util.AppUtil@VALID_END_DATE)}'
+            
+        WHERE 
+            MANUFACT_CD = #{manufactIdentify.manufactCd}
+    </update>
+
+    <delete id="delete" parameterType="fw.domain.mst.material.manufact.ManufactIdentify">
+        DELETE FROM M_MANUFACT
+        WHERE 
+            MANUFACT_CD = #{manufactCd}
+    </delete>
+    
+    <delete id="deleteManufactLanguage" parameterType="fw.domain.mst.material.manufact.ManufactIdentify">
+    DELETE FROM M_MANUFACT_LANG
+        WHERE 
+            MANUFACT_CD = #{manufactCd}
+    </delete>
+
+</mapper>

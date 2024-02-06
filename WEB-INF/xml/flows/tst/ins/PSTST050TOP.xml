@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<flow xmlns="http://www.springframework.org/schema/webflow"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.springframework.org/schema/webflow
+        http://www.springframework.org/schema/webflow/spring-webflow-2.0.xsd"
+    parent="base">
+
+    <var name="acp050Identify" class="fw.domain.slip.receive.acceptance.Identify" /> <!-- 2013.01.09 ADD DAIKO_KANEKO -->
+
+    <!-- 開発用domainの定義 -->
+    <input name="tst050Identify"/>
+    <input name="identify050"/>
+    <input name="identify090"/>
+    <!-- 2013.01.10 DEL DAIKO_KANEKO
+    <input name="isSearchByHistory" />
+    <input name="historyIdentify" />
+    -->
+
+    <!-- 2013.01.09 ADD DAIKO_KANEKO START -->
+    <on-start>
+        <evaluate expression="PSRCV050Service.init(identify050)"
+                    result="flowScope.tabControl" />    <!-- 共通的に受入詳細サービスクラスを使用する -->
+        <set name="flowScope.range" value="0" />
+        <set name="flowScope.approveFlg" value="1" />
+        <set name="acp050Identify.orderNo" value="identify050.orderNo" />
+    </on-start>
+    <!-- 2013.01.09 ADD DAIKO_KANEKO -END- -->
+
+    <view-state id="PSACP050TOP" model="detailItem" view="tst/ins/PSTST050TOP">
+        <transition on="orderDetail" to="PSORD090" validate="false"/>
+	    <transition on="receiveDetail" to="PSRCV050" validate="false"/>
+        <transition on="inspectDetail" to="PSTST050" validate="false"/>
+        <transition on="acceptDetail" to="PSACP050" validate="false"/>
+    </view-state>
+    
+    <subflow-state id="PSORD090" subflow="ord/order/PSORD090">
+        <input name="orderIdentify" value="identify090" />
+    </subflow-state>
+
+    <subflow-state id="PSRCV050" subflow="rcv/rcv/PSRCV050">
+        <input name="identify" value="identify050" />
+        <input name="range" value="0"/>
+         <!--  強化-01262-000 2013/05/07 ADD SBO_wangzf START -->
+        <input name="approveFlg" value="0"/>
+         <!-- 強化-01262-000 2013/05/07 ADD SBO_wangzf START END -->
+         <!--  強化-01262-000 2013/05/07 DEL SBO_wangzf START -->
+         <!-- <input name="approveFlg" value="1"/> -->
+         <!--  強化-01262-000 2013/05/07 DEL SBO_wangzf END -->
+    </subflow-state>
+
+    <subflow-state id="PSTST050" subflow="tst/ins/PSTST050">
+        <input name="identify" value="tst050Identify" />
+        <input name="range" value="0"/>
+        <input name="approveFlg" value="1"/>
+        <!-- 2013.01.10 DEL DAIKO_KANEKO
+        <input name="isSearchByHistory" value="isSearchByHistory" />
+        <input name="historyIdentify" value="historyIdentify" />
+        -->
+    </subflow-state>
+
+    <!-- 2013.01.10 ADD DAIKO_KANEKO START -->
+    <subflow-state id="PSACP050" subflow="acp/acc/PSACP050">
+        <input name="acp050Identify" value="acp050Identify" />
+        <input name="range" value="0"/>
+        <input name="approveFlg" value="0"/>
+    </subflow-state>
+    <!-- 2013.01.10 ADD DAIKO_KANEKO -END- -->
+</flow>

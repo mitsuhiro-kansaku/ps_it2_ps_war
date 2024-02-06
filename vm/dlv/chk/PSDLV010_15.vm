@@ -1,0 +1,314 @@
+<!doctype html>
+<html LANG="ja">
+<head>
+<META http-equiv="Content-type" content="text/html; charset=UTF-8">
+<title>#set($commonTitle = "#customSpringMessage('DELIV_REFE')")#customSpringMessage('DELIV_REFE')</title><!-- 納期照会 -->
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Content-script-type" CONTENT="text/javascript">
+<link id="CSS_FONT" rel="stylesheet" href="../../include/FontS.css" type="text/css">
+<link rel="stylesheet" href="../../include/Layout.css" type="text/css">
+<link rel="stylesheet" href="../../include/Color.css" type="text/css">
+<link rel="stylesheet" href="../../include/searchbox.css" type="text/css">
+<link rel="stylesheet" href="../../include/ime.css" type="text/css">
+<script language="javascript" type="text/javascript" src="../../include/jquery-1.7.2.min.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/common.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/date.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/check.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/searchbox.js"></script>
+<script language="javascript" type="text/javascript">
+<!--
+#if($isBuyer == 'false')
+#set($searchViewStateID='PSDLV010')
+#else
+#set($searchViewStateID='PSDLV015')
+#end
+#if($isBuyer == 'false')
+#set($listViewStateID='PSDLV011')
+#else
+#set($listViewStateID='PSDLV016')
+#end
+var pinName="DlvChk_Pin";
+#if($isBuyer == 'false')
+pinName="PSDLV010_Pin";
+#else
+pinName="PSDLV015_Pin";
+#end
+
+#parse("./common/common_js.vm")
+
+function onLoad() {
+    bodyLoad();
+    var isBuyer = "#jsEscape($!isBuyer)";
+    var delivConfirmInput = "#jsEscape($!delivConfirmInput)";
+    if(getObj('newConfirm')!=null && getObj('print')!=null){
+        if(isBuyer == "false"){
+            getObj('newConfirm').style.display='none';
+            getObj('print').style.display='none';
+        }
+        if(delivConfirmInput == "false"){
+            getObj('newConfirm').style.display='none';
+            getObj('print').style.display='none';
+        }
+    }
+    var alertMessage = "$!alertMessage";
+    if (alertMessage != ""){
+        alert(alertMessage);
+    }
+    var errorMsg = "$!errorMessage";
+    if (errorMsg != ""){
+       setErrorMessage("ERRORDIV", errorMsg, "DATAAREA");
+        return;
+    }
+     var isDownload = "#jsEscape($!isDownLoadValidate)";
+     if (isDownload == 'true') {
+        iframeChange("${flowExecutionUrl}&_eventId=download","pageid","PSDLV011","HIDDENAREA");
+     } else {
+        var isShowList = "#jsEscape($isShowList)";
+        var isQuickLink = "#jsEscape($isQuickLink)";
+        if (isShowList == 'true'){
+            if(isBuyer == "false"){
+                iframeChange("${flowExecutionUrl}&_eventId=search","pageid","PSDLV011");
+            }else{
+                iframeChange("${flowExecutionUrl}&_eventId=search","pageid","PSDLV016");
+            }
+        }else if (isQuickLink == 'true'){
+            iframeChange("${flowExecutionUrl}&_eventId=search","pageid","PSDLV016","quickLink","true");
+        }
+    }
+}
+
+function execSearch(){
+    getObj("BodyForm").target="_self";
+    ## +++++ 強化-00041-000 2013/04/03 ADD SBO_KANGJW START +++++
+    buttonDisable();
+    ## +++++ 強化-00041-000 2013/04/03 ADD SBO_KANGJW END +++++
+    getObj('BodyForm').action = "${flowExecutionUrl}&_eventId=validate";
+    getObj('BodyForm').submit();
+}
+
+function doDownload() {
+    //メッセージは空設定
+    getObj("TR_ERROR").style.display = "none";
+    getObj("ERRORDIV").innerHTML="";
+    //色は空設定
+    buttonDisable();
+    setTimeout(buttonUsable,1000);
+    getObj("BodyForm").target = "HIDDENAREA";
+    getObj("BodyForm").action = "${flowExecutionUrl}&_eventId=downloadValidate";
+    
+    getObj("BodyForm").submit();
+}
+function checkBoxClear() {
+    searchConditionCheckBoxClear("statusList[0]","1");
+    searchConditionCheckBoxClear("statusList[1]","2");
+    #if($isBuyer == 'true')
+    searchConditionCheckBoxClear("newInfo");
+    #end
+    searchConditionCheckBoxClear("delivDiffInd");
+}
+//-->
+</script>
+</head>
+<body topmargin="0" leftmargin="0" marginwidth="0" marginheight="0" align="center" width="100%" height="100%" onload="onLoad();" style="overflow-y:hidden;">
+<form id="BodyForm" name="Body" method="post">
+    <!-- ＊＊＊＊＊　カレンダーボックス　＊＊＊＊＊ -->
+<iframe id="CALENDARBOX" class="CALENDARBOX" framespacing="0"scrolling="no" frameborder="0" src="../../sbxCalendar/body.vm"></iframe>
+<!--検索部テーブル開始-->
+<table class="NoBorder" width="100%" height="100%">
+    <tr>
+        <td id="SEARCH_AREA" class="SearchArea"><!-- onLoadで変更 -->
+            #parse("./common/common_title_tran_with_personal_setting.vm")
+            <table width="100%">
+                <tr id="SEARCH_AREA2">
+                    <td id="Adjust">
+                        <!-- 検索条件入力部 -->
+                        <table class="NoBorder" width="100%">
+                            ## 2013.03.21 ADD DAIKO_WANG
+                            <tr><td align="left" colspan="4" nowrap>#customSpringMessage('PSDLV010_HEADER_COMMENT')</td></tr>
+                            <!--依頼元業務-->
+                            #if($isBuyer == 'false')
+                                $!PSDLV010PageCreaterForSearch.build('_td_style_left','class="FontSmallBold" align="right"', '_td_style_right', 'class="FontSmall" align="left"', '_item_style','Small')
+                                #set($isFirstItem = true)
+                                #foreach($!item in $!PSDLV010PageCreaterForSearch.getItemListForBody())
+                                    #set($currentOneRowFlag = $!PSDLV010PageCreaterForSearch.getOneRowFlag($!item))
+                                    #if($isFirstItem)
+                                        $!PSDLV010PageCreaterForSearch.printTRtag()
+                                    #elseif($currentOneRowFlag)
+                                        $!PSDLV010PageCreaterForSearch.printTDtag()
+                                        $!PSDLV010PageCreaterForSearch.printTRtagClose()
+                                        #set($isFirstItem = true)
+                                        $!PSDLV010PageCreaterForSearch.printTRtag()
+                                    #end
+                                    #if($!item.getColumnName()=="T_ORDER.ORDER_NO")
+                                        $!PSDLV010PageCreaterForSearch.printDefault($!item,"_ime_style",'noIME')
+                                    #elseif($!item.getColumnName()=="T_ORDER.ITEM_CD")
+                                        $!PSDLV010PageCreaterForSearch.printSpecial("m11_inputItemCodeOnly",$!item,'popupPageid','PSDLV010',"_ime_style",'noIME')
+                                    #elseif($!item.getColumnName()=="T_ORDER.ITEM_NAME")
+                                        $!PSDLV010PageCreaterForSearch.printDefault($!item,"_ime_style",'onIME')
+                                    #elseif($!item.getColumnName()=="T_ORDER.TITLE_NAME")
+                                        $!PSDLV010PageCreaterForSearch.printDefault($!item,"_ime_style",'onIME')
+                                    #elseif($!item.getColumnName()=="T_ORDER.SUP_CD")
+                                        $!PSDLV010PageCreaterForSearch.printSpecial("m05_inputSupplier",$!item,"popupPageid","PSDLV010","_masterCdIme",'noIME')
+                                    #elseif($!item.getColumnName()=="T_ORDER.DELIV_PLACE_CD")
+                                        $!PSDLV010PageCreaterForSearch.printSpecial("m04_inputDelivery",$!item,'popupPageid','PSDLV010',"_masterCdIme",'noIME')
+                                    #elseif($!item.getColumnName()=="T_ORDER.REQ_USER_ID")
+                                        $!PSDLV010PageCreaterForSearch.printSpecial("m13_inputUserForSearch",$!item,"popupPageid","PSDLV010","_masterCdIme",'noIME')
+                                    #elseif($!item.getColumnName()=="T_ORDER.ORDER_DELIV_DATE")
+                                        $!PSDLV010PageCreaterForSearch.printDefault($!item,"_ime_style",'noIME')
+                                    #elseif($!item.getColumnName()=="T_DLV_EST_MNG.RESP_LIMIT_DATE")
+                                        $!PSDLV010PageCreaterForSearch.printDefault($!item,"_ime_style",'noIME')
+                                    #elseif($!item.getColumnName()=="T_DLV_EST_DTL.EST_DELIV_DATE")
+                                        $!PSDLV010PageCreaterForSearch.printDefault($!item,"_ime_style",'noIME')
+                                    #else
+                                        $!PSDLV010PageCreaterForSearch.printDefault($!item)
+                                    #end
+                                        
+                                    #if($currentOneRowFlag)
+                                        $!PSDLV010PageCreaterForSearch.printTRtagClose()
+                                        #set($isFirstItem = true)
+                                    #else
+                                        #if($isFirstItem)
+                                            #set($isFirstItem = false)
+                                        #else
+                                            $!PSDLV010PageCreaterForSearch.printTRtagClose()
+                                            #set($isFirstItem = true)
+                                        #end
+                                    #end
+                                #end
+                                #if(!$isFirstItem)
+                                    $!PSDLV010PageCreaterForSearch.printTDtag()
+                                    $!PSDLV010PageCreaterForSearch.printTRtagClose()
+                                #end
+                            #else
+                                $!PSDLV015PageCreaterForSearch.build('_td_style_left','class="FontSmallBold" align="right"', '_td_style_right', 'class="FontSmall" align="left"', '_item_style','Small')
+                                #set($isFirstItem = true)
+                                #foreach($!item in $!PSDLV015PageCreaterForSearch.getItemListForBody())
+                                    #set($currentOneRowFlag = $!PSDLV015PageCreaterForSearch.getOneRowFlag($!item))
+                                    #if($isFirstItem)
+                                        $!PSDLV015PageCreaterForSearch.printTRtag()
+                                    #elseif($currentOneRowFlag)
+                                        $!PSDLV015PageCreaterForSearch.printTDtag()
+                                        $!PSDLV015PageCreaterForSearch.printTRtagClose()
+                                        #set($isFirstItem = true)
+                                        $!PSDLV015PageCreaterForSearch.printTRtag()
+                                    #end
+                                    #if($!item.getColumnName()=="T_DLV_EST_MNG.ORDER_NO")
+                                        $!PSDLV015PageCreaterForSearch.printDefault($!item,"_ime_style",'noIME')
+                                    #elseif($!item.getColumnName()=="T_ORDER.ITEM_CD")
+                                        $!PSDLV015PageCreaterForSearch.printSpecial("m11_inputItemCodeOnly",$!item,'popupPageid','PSDLV015',"_ime_style",'noIME')
+                                    #elseif($!item.getColumnName()=="T_ORDER.ITEM_NAME")
+                                        $!PSDLV015PageCreaterForSearch.printDefault($!item,"_ime_style",'onIME')
+                                    #elseif($!item.getColumnName()=="T_ORDER.TITLE_NAME")
+                                        $!PSDLV015PageCreaterForSearch.printDefault($!item,"_ime_style",'onIME')
+                                    #elseif($!item.getColumnName()=="T_ORDER.SUP_CD")
+                                        $!PSDLV015PageCreaterForSearch.printSpecial("m05_inputSupplier",$!item,"popupPageid","PSDLV015","_masterCdIme",'noIME')
+                                    #elseif($!item.getColumnName()=="T_ORDER.DELIV_PLACE_CD")
+                                        $!PSDLV015PageCreaterForSearch.printSpecial("m04_inputDelivery",$!item,'popupPageid','PSDLV015',"_masterCdIme",'noIME')
+                                    #elseif($!item.getColumnName()=="T_ORDER.REQ_SECTION_CD")
+                                        $!PSDLV015PageCreaterForSearch.printSpecial("m03_inputSection",$!item,'popupPageid','PSDLV015','projectId','reqSection',"_masterCdIme",'noIME')
+                                    #elseif($!item.getColumnName()=="T_ORDER.REQ_USER_ID")
+                                        $!PSDLV015PageCreaterForSearch.printSpecial("m13_inputUserForSearch",$!item,'popupPageid','PSDLV015',"_masterCdIme",'noIME')
+                                    #elseif($!item.getColumnName()=="T_ORDER.ORDER_DELIV_DATE")
+                                        $!PSDLV015PageCreaterForSearch.printDefault($!item,"_ime_style",'noIME')
+                                    #elseif($!item.getColumnName()=="T_DLV_EST_MNG.RESP_LIMIT_DATE")
+                                        $!PSDLV015PageCreaterForSearch.printDefault($!item,"_ime_style",'noIME')
+                                    #elseif($!item.getColumnName()=="T_DLV_EST_MNG.RESP_LIMIT_DATE")
+                                        $!PSDLV015PageCreaterForSearch.printDefault($!item,"_ime_style",'noIME')
+                                    #elseif($!item.getColumnName()=="T_DLV_EST_DTL.EST_DELIV_DATE")
+                                        $!PSDLV015PageCreaterForSearch.printDefault($!item,"_ime_style",'noIME')
+                                    #elseif($!item.getColumnName()=="T_ORDER.BUYER_USER_ID")
+                                        $!PSDLV015PageCreaterForSearch.printSpecial("BUYER_USER_NAME","s19_inputBuyer",$!item,"_authNo","")
+                                    #else
+                                        $!PSDLV015PageCreaterForSearch.printDefault($!item)
+                                    #end
+                                        
+                                    #if($currentOneRowFlag)
+                                        $!PSDLV015PageCreaterForSearch.printTRtagClose()
+                                        #set($isFirstItem = true)
+                                    #else
+                                        #if($isFirstItem)
+                                            #set($isFirstItem = false)
+                                        #else
+                                            $!PSDLV015PageCreaterForSearch.printTRtagClose()
+                                            #set($isFirstItem = true)
+                                        #end
+                                    #end
+                                #end
+                                #if(!$isFirstItem)
+                                    $!PSDLV015PageCreaterForSearch.printTDtag()
+                                    $!PSDLV015PageCreaterForSearch.printTRtagClose()
+                                #end
+                            #end
+                                <tr>
+                                    <td nowrap align="right" class="FontSmallBold">#customSpringMessage('QUOT_RESP_OR_ORDER_DELIV_DATE')</td><!-- 注文納期／回答納期 -->
+                                    <td nowrap class="FontSmall" align="left">
+                                        #springFormInput("searchCondition.estDelivDateOrOrderDelivDateFrom.dateOfymdFormat" 'class="SmallAnk noIME" maxLength="8" size="12" onblur="dateOnBlur(this);" onfocus="dateOnFocus(this);"')
+                                        <img class="Icon" src="../../image/btnCalendar.gif" onclick="initSearchBox(1,getObj('estDelivDateOrOrderDelivDateFrom.dateOfymdFormat'));">
+                                        &nbsp;～&nbsp;
+                                        #springFormInput("searchCondition.estDelivDateOrOrderDelivDateTo.dateOfymdFormat" 'class="SmallAnk noIME" maxLength="8" size="12" onblur="dateOnBlur(this);" onfocus="dateOnFocus(this);"')
+                                        <img class="Icon" src="../../image/btnCalendar.gif" onclick="initSearchBox(1,getObj('estDelivDateOrOrderDelivDateTo.dateOfymdFormat'));">
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td nowrap align="right" class="FontSmallBold">#customSpringMessage('STATUS')</td><!-- 状態 -->
+                                    <td nowrap class="FontSmall " align="left">
+                                        #customFormCheckbox("searchCondition.statusList[0]" "" "1" "")#customSpringMessage('NOTHING_RCV')
+                                        #customFormCheckbox("searchCondition.statusList[1]" "" "2" "")#customSpringMessage('DELIV_SETTLED')
+                                    </td>
+                                    <td nowrap align="right" class="FontSmallBold">#customSpringMessage('DELIV_DIFF_IND')</td><!-- 納期差異 -->
+                                    <td nowrap class="FontSmall" align="left">
+                                        #customFormCheckbox("searchCondition.delivDiffInd" "" "1" "")#customSpringMessage('DELIV_DIFF')<!--納期差異あり -->
+                                    </td>
+                                </tr>
+                                #if($!isBuyer == 'true')
+                                    <tr>
+                                        <td nowrap align="right" class="FontSmallBold">#customSpringMessage('NEW_INFO')</td><!-- 新着 -->
+                                        <td nowrap class="FontSmall " align="left">
+                                            #customFormCheckbox("searchCondition.newInfo" "" "1" "")#customSpringMessage('NEW_INFO_ONLY')<!--新着のみ表示  -->
+                                        </td>
+                                        <td nowrap align="right" class="FontSmallBold"></td>
+                                        <td nowrap class="FontSmallBold" align="left"></td>
+                                    </tr>
+                                #end
+                            <tr>
+                                <td align="left" colspan="4" nowrap class="FontComment">
+                                    #customSpringMessage('PSDLV010_FOOTER_COMMENT') ## ＊:前方一致 / ％:中間一致 / なし:完全一致
+                                </td>
+                            </tr>
+                        </table>
+                    </td>
+                    <td nowrap class="FontSmallBold" align="right" valign="top">
+                        <br>
+                        <br>
+                        <br>
+                        <input type="button" onclick="javascript:execSearch();" class="LargeButton" value="#customSpringMessage('ACTION_SEARCH')"><!-- 検索 -->
+                        <br>
+                        ## +++++ 強化-00928-000 2013/06/24 ADD SBO_lichao START +++++
+                        ##<br><a href="javascript:clear('Adjust');" id="clearSearch">#customSpringMessage('ACTION_CLEAR_SEARCH_CRITERIA')</a><!-- 検索条件をクリアする -->&nbsp;
+                        <br><a href="javascript:clear();searchConditionCheckBoxClearForExt();checkBoxClear();" id="clearSearch">#customSpringMessage('ACTION_CLEAR_SEARCH_CRITERIA')</a><!-- 検索条件をクリアする -->&nbsp;
+                        ## +++++ 強化-00928-000 2013/06/24 ADD SBO_lichao -END- +++++
+                    </td>
+                </tr>
+            </table>
+        </td>
+    </tr>
+        <tr>
+            <td class="UploadArea" class="NoBorder" id="UploadArea" style="border-bottom:1px solid #999999;text-align:left;vertical-align:top;">
+                #parse("./common/newConfirm_print_download.vm")
+            </td>
+        </tr>
+    <tr id ="TR_ERROR" style="display:none;">
+        <td class="error" style="height:0px;">
+             <div id="ERRORDIV">$!errorMessage </div>
+        </td>
+    </tr>
+    <tr>
+        <td class="NoBorder" style="height:auto;">
+            <iframe id="DATAAREA" name="DATAAREA" framespacing="0" frameborder="0" src="../../layout/default.vm" scrolling="no" frameborder="no" style="position:static;width:100%;border:0px solid #999999;height:100%;z-index:0;"></iframe>
+        </td>
+   </tr>
+</table>
+<iframe id="HIDDENAREA" name="HIDDENAREA" framespacing="0" frameborder="0" src="" scrolling="no" frameborder="no" style="display:none"></iframe>
+</form>
+</body>
+</html>

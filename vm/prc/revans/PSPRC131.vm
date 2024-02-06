@@ -1,0 +1,167 @@
+<!doctype html>
+<html LANG="ja">
+<head>
+#if("$!searchCondition.status" == "")
+    #set($commonTitle = "#customSpringMessage('RCV_PRICE_LIST')")
+#else
+    #set($commonTitle = "#customSpringMessage('RCV_PRICE_LIST')(#out($!searchCondition.status_PageValue))")
+#end
+<title>#out($commonTitle)</title> ## 回答価格改定一覧
+<meta http-equiv="Content-type" content="text/html; charset=UTF-8">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Content-script-type" content="text/javascript">
+<link id="CSS_FONT" rel="stylesheet" href="../../include/FontS.css" type="text/css">
+<link rel="stylesheet" href="../../include/Layout.css" type="text/css">
+<link rel="stylesheet" href="../../include/Color.css" type="text/css">
+<link rel="stylesheet" href="../../include/searchbox.css" type="text/css">
+<script language="javascript" type="text/javascript" src="../../include/jquery-1.7.2.min.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/jquery.tablefix.js"></script>
+<script language="javascript" TYPE="text/javascript" src="../../include/common.js"></script>
+<script language="javascript" TYPE="text/javascript" src="../../include/check.js"></script>
+<script language="javascript" TYPE="text/javascript" src="../../include/date.js"></script>
+<script language="javascript" TYPE="text/javascript" src="../../include/tablesort.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/searchbox.js"></script>
+<script language="javascript" TYPE="text/javascript">
+<!--
+#parse("./common/common_js.vm")
+function onLoad() {
+    fillHidden();
+    TableSort.init();
+    dataLoadHasPage();
+    var alertMessage = "$!alertMessage";
+    if (alertMessage != ""){
+        buttonUsableForList(alertMessage);
+        alert(alertMessage);
+    }
+    var isStopSuccess = '#jsEscape($!isStopSuccess)';
+    if(isStopSuccess == 'true'){
+         #set( $respPriceListReg = "#customSpringMessage('RESP_PRICE_LIST_REG')" )
+         alert('#customMessageArgs("I031", [$respPriceListReg])');
+    }
+    var errorMsg = "$!errorMessage";
+    if (errorMsg != ""){
+        return;
+    }
+}
+function fillHidden(){
+    #foreach($!respPriceRevItem in $!itemList.respPriceRevItemList)
+        $("#backAppComments_$velocityCount").val("#jsEscape($!itemList.respPriceRevItemList[$velocityCount].backApp.backAppReason.backReason.comment)");
+        $("#buyerUserCompanyCd_$velocityCount").val("#jsEscape($!itemList.respPriceRevItemList[$velocityCount].backApp.backAppUser.section.company.companyCd)");
+        $("#buyerUserSectionCd_$velocityCount").val("#jsEscape($!itemList.respPriceRevItemList[$velocityCount].backApp.backAppUser.section.sectionCd)");
+        $("#buyerUserId_$velocityCount").val("#jsEscape($!itemList.respPriceRevItemList[$velocityCount].priceReqUserId)");
+    #end
+}
+function openDownload(priceRevSeq) {
+    buttonDisable();
+    setTimeout(buttonUsable,1000);
+    parent.iframeChange("${flowExecutionUrl}&_eventId=download",'priceRevSeq',priceRevSeq,"HIDDENAREA");
+}
+function downloadTemp(priceRevSeq) {
+    parent.iframeChange("${flowExecutionUrl}&_eventId=downloadAttachFile",'priceRevSeq',priceRevSeq,"HIDDENAREA");
+}
+function stop(priceRevSeq, lastUpdDate) {
+    #set( $respPriceListReg = "#customSpringMessage('RESP_PRICE_LIST_REG')" )
+    #set( $action_stop = "#customSpringMessage('ACTION_STOP')" )
+    if( !confirm('#customMessageArgs("W001",[$respPriceListReg,$action_stop])') ) {
+        return;
+    }
+    buttonDisable();
+    parent.iframeChange("${flowExecutionUrl}&_eventId=stop",'priceRevSeq',priceRevSeq,'lastUpdDate',lastUpdDate);
+}
+function openRemand(no) {
+    receipt("2", $("#backAppComments_" + no).val(), $("#buyerUserCompanyCd_" + no).val(), $("#buyerUserSectionCd_" + no).val(), $("#buyerUserId_" + no).val(),"","");
+}
+function receipt(aprDisplayModel,aprRemandComment, companyCd, sectionCd, userId, authNo,backUserShowFlg) {
+    masterSearch('${flowExecutionUrl}&_eventId=receipt', 'appRouteDtl','500', '300');
+    iframeChange("${flowExecutionUrl}&_eventId=receipt", 
+        "aprDisplayModel", aprDisplayModel,
+        "aprRemandComment", aprRemandComment, 
+        "companyCd", companyCd, 
+        "sectionCd", sectionCd,
+        "userId", userId,
+        "authNo", authNo,
+        "backUserShowFlg",backUserShowFlg,
+        "appRouteDtl");
+}
+//popup  return value
+function setApr(reason,userID,userName){
+}
+//-->
+</script>
+</head>
+<body id="BODY" topmargin="0" leftmargin="0" marginwidth="0" marginheight="0" align="left" onload="onLoad();setTablefix('#TABLE', 1, 3);" >
+#if($!errorMessage && $!errorMessage!="")
+<div class="error">
+    $!errorMessage
+</div>
+#end
+<form id="BodyForm" name="Body" method="post" enctype="multipart/form-data">
+#if($!itemList.respPriceRevItemList.size() > 0)
+<table id="TABLE" class="ListArea" WIDTH="100%">
+    <thead>
+        <tr id="Header" style= "position:relative;overflow-y:auto;">
+            <th class="BoxHeaderCenter FontSmall">No.</th><!--No.-->
+            <th class="BoxHeaderCenter FontSmall">#customSpringMessage("ACTION")</th><!--処理-->
+            <th class="BoxHeaderCenter FontSmall">#customSpringMessage("PRICE_SHEET")</th><!--価格改定表-->
+            <th label="case" class="BoxHeaderCenter FontSmall" id="T_PRICE_REV.SUP_CD" onclick="parent.iframeChange('${flowExecutionUrl}&_eventId=order','column','T_PRICE_REV.SUP_CD')">#customSpringMessage("SUP_CD")</th><!--取引先コード-->
+            <th label="case" class="BoxHeaderCenter FontSmall" id="T_PRICE_REV.SUP_ABBR_NAME" onclick="parent.iframeChange('${flowExecutionUrl}&_eventId=order','column','T_PRICE_REV.SUP_ABBR_NAME')">#customSpringMessage("SUP_NAME")</th>## 取引先名
+            <th label="case" class="BoxHeaderCenter FontSmall" id="T_PRICE_REV.PRICE_STATUS" onclick="parent.iframeChange('${flowExecutionUrl}&_eventId=order','column','T_PRICE_REV.PRICE_STATUS')">#customSpringMessage("STATUS")</th><!--状態-->
+            <th label="case" class="BoxHeaderCenter FontSmall" id="T_PRICE_REV.UPD_YM" onclick="parent.iframeChange('${flowExecutionUrl}&_eventId=order','column','T_PRICE_REV.UPD_YM')">#customSpringMessage("NEXT_UPD_YM")</th><!--次回見直時期-->
+            <th label="case" class="BoxHeaderCenter FontSmall" id="T_PRICE_REV.TITLE_NAME" onclick="parent.iframeChange('${flowExecutionUrl}&_eventId=order','column','T_PRICE_REV.TITLE_NAME')">#customSpringMessage("PRC_REV_ANS_UPLOAD_TITLE_NAME")</th><!--回答価格改定件名-->
+            <th label="case" class="BoxHeaderCenter FontSmall" id="T_PRICE_REV.PRICE_RESP_DATE" onclick="parent.iframeChange('${flowExecutionUrl}&_eventId=order','column','T_PRICE_REV.PRICE_RESP_DATE')">#customSpringMessage("PRICE_RESP_DATE")</th><!--価格改定回答日-->
+            <th label="case" class="BoxHeaderCenter FontSmall" id="T_PRICE_REV.PRICE_REQ_USER_ID" onclick="parent.iframeChange('${flowExecutionUrl}&_eventId=order','column','T_PRICE_REV.PRICE_REQ_USER_ID')">#customSpringMessage("BUYER_USER_ID")</th><!--購買担当者コード-->
+            <th label="case" class="BoxHeaderCenter FontSmall" id="T_PRICE_REV.PRICE_REQ_USER_NAME" onclick="parent.iframeChange('${flowExecutionUrl}&_eventId=order','column','T_PRICE_REV.PRICE_REQ_USER_NAME')">#customSpringMessage("BUYER_USER_NAME")</th><!--購買担当者名-->
+            <th class="BoxHeaderCenter FontSmall">#customSpringMessage("ATTACH_FILE")</th><!--添付ファイル-->
+        </tr>
+    </thead>
+    <tbody>
+        #foreach($!respPriceRevItem in $!itemList.respPriceRevItemList)
+            <tr id="Row_$velocityCount" #if($velocityCount % 2 == 0) bgcolor="#dce4ef" #else bgcolor="#ffffff" #end>
+                <td class="BoxDetailCenter FontList">#set( $index = $velocityCount + 1 )$index</td>
+                #if ($!respPriceRevItem.status == '21' || $!respPriceRevItem.status == '22')
+                    <td class="BoxDetailCenter">
+                        <input type="button" class="SmallButton Red" id="CancelButton_$velocityCount" value="#customSpringMessage('ACTION_STOP')" onclick="stop('#jsEscapeInHTML($!respPriceRevItem.respPriceRevIdentify.priceRevSeq)', '#jsEscapeInHTML($!respPriceRevItem.respPriceRevIdentify.lastUpdDate)');"><!--中止-->
+                    </td>
+                #else
+                    <td class="BoxDetailCenter">&nbsp;</td>
+                #end
+                <td class="BoxDetailCenter"><input type="button" class="SmallButton" value="#customSpringMessage('ACTION_DOWNLOAD')" onclick="openDownload(#jsEscapeInHTML($!respPriceRevItem.respPriceRevIdentify.priceRevSeq));"></td><!--ダウンロード-->
+                <td class="BoxDetailCenter FontList">#out($!respPriceRevItem.supCd)</td>
+                <td class="BoxDetailLeft FontList">#out($!respPriceRevItem.supName)</td>
+                <td class="GRAY BoxDetailCenter FontMiniAnkBold" >
+                    <table width="100%">
+                        <tr>
+                            <td valign="top" class="FontList" align="center">
+                            #if ($!respPriceRevItem.status == '22')
+                                <A href="#" onclick="openRemand($velocityCount);">#out($!respPriceRevItem.status_PageValue)</A>
+                                #customFormHiddenInput("backAppComments_$velocityCount" "$!itemList.respPriceRevItemList[$velocityCount].backApp.backAppReason.backReason.comment")
+                                #customFormHiddenInput("buyerUserCompanyCd_$velocityCount" "$!itemList.respPriceRevItemList[$velocityCount].backApp.backAppUser.section.company.companyCd")
+                                #customFormHiddenInput("buyerUserSectionCd_$velocityCount" "$!itemList.respPriceRevItemList[$velocityCount].backApp.backAppUser.section.sectionCd")
+                                #customFormHiddenInput("buyerUserId_$velocityCount" "$!itemList.respPriceRevItemList[$velocityCount].priceReqUserId")
+                            #else
+                                #out($!respPriceRevItem.status_PageValue)
+                            #end
+                            </td>
+                        </tr>
+                    </table>
+                </td>
+                <td class="BoxDetailCenter FontList">#out($!respPriceRevItem.nextUpdateYM.dateOfymFormat)</td>
+                <td class="BoxDetailLeft FontList" id="titleName_$velocityCount" name="titleName_$velocityCount">#out($!respPriceRevItem.titleName)</td>
+                <td class="BoxDetailCenter FontList">#out($!respPriceRevItem.priceRespDate.dateOfymdFormat)</td>
+                <td class="BoxDetailCenter FontList" >#out($!respPriceRevItem.priceReqUserId)</td>
+                <td class="BoxDetailLeft FontList">#out($!respPriceRevItem.priceReqUserName)</td>
+                <td class="BoxDetailLeft FontList"><A href="#" onclick="downloadTemp(#jsEscapeInHTML($!respPriceRevItem.respPriceRevIdentify.priceRevSeq));">#out($!respPriceRevItem.attachFile.fileName)</A></td>
+            </tr>
+        #end
+    </tbody>
+</table>
+#end
+<br>
+<table id="WAIT" class="NoBorder" style="display:none;" width="100%"><tr><td align="center"><br><br>
+<img src="../../image/wait.gif"><br><span class="FontMini"><br>#customSpringMessage('SEARCH_MESSAGE')</span><!-- 問い合わせ中...-->
+<input type="hidden" name="rowno">
+</td></tr>
+</table>
+</form>
+</body>
+</html>

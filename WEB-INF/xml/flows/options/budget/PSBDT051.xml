@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<flow xmlns="http://www.springframework.org/schema/webflow"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.springframework.org/schema/webflow
+        http://www.springframework.org/schema/webflow/spring-webflow-2.0.xsd"
+    parent="base">
+
+    <var name="identify" class="fw.domain.options.budget.ringibudget.RingiBudgetIdentify" />
+
+    <input name="searchCondition" />
+    <input name="isCurrentPageSearch" />
+
+    <decision-state id="isSearchByKey">
+       <if test="flowScope.isCurrentPageSearch" then="searchByKey" else="searchByCondition" />
+    </decision-state>
+
+    <action-state id="searchByCondition">
+        <evaluate expression="PSBDT051Service.init(searchCondition)" result="flowScope.itemList"/>
+        <transition to="PSBDT051"/>
+    </action-state>
+
+    <action-state  id="searchByKey" >
+        <evaluate expression="PSBDT051Service.page(searchCondition)" result="flowScope.itemList"/>
+        <transition to="PSBDT051"/>
+    </action-state>
+
+    <view-state id="PSBDT051" model="identify" view="options/budget/PSBDT051">
+       <transition on="order" validate="false">
+            <evaluate expression="PSBDT051Service.order(searchCondition)" result="flowScope.itemList"/>
+        </transition>
+        <transition on="page" validate="false">
+             <evaluate expression="PSBDT051Service.page(searchCondition)" result="flowScope.itemList"/>
+        </transition>
+        <!-- 選択 -->
+        <transition on="selectValidate" validate="false">
+            <set name="flashScope.isShowSelect" value="true"></set>
+        </transition>
+        <transition on="select" to="PSBDT060Search" validate="false" />
+        <!-- 編集 -->
+        <transition on="editValidate" validate="false">
+            <set name="flashScope.isShowEdit" value="true"></set>
+        </transition>
+        <transition on="edit" to="PSBDT040" validate="false" />
+        <!-- 履歴 -->
+        <transition on="historyValidate" validate="false">
+            <set name="flashScope.isShowHistory" value="true"></set>
+        </transition>
+        <transition on="history" to="PSBDT080Search" validate="false" />
+
+        <transition on="back" to="home" validate="false" />
+    </view-state>
+
+    <subflow-state id="PSBDT040" subflow="options/budget/PSBDT040" >
+        <input name="identify" value="identify" />
+        <input name="isInitIndividualApr" value="true" />
+        <input name="SessionKey" value="SessionKey" />
+        <input name="pattern" value="'edit'" />
+        <input name="from" value="'PSBDT051'" />
+    </subflow-state>
+
+    <subflow-state id="PSBDT060Search" subflow="options/budget/PSBDT060Search" >
+        <input name="ringiBudgetIdentify" value="identify" />
+    </subflow-state>
+
+    <subflow-state id="PSBDT080Search" subflow="options/budget/PSBDT080Search" >
+        <input name="ringiBudgetIdentify" value="identify" />
+    </subflow-state>
+
+</flow>

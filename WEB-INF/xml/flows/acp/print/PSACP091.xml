@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<flow xmlns="http://www.springframework.org/schema/webflow"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.springframework.org/schema/webflow
+        http://www.springframework.org/schema/webflow/spring-webflow-2.0.xsd"
+    parent="base">
+   
+    <var name="acp050Identify" class="fw.domain.slip.receive.acceptance.Identify" />
+    <var name="rcv050Identify" class="fw.domain.slip.common.identify.OrderNo" />
+    <var name="identify090" class="fw.domain.slip.order.order.OrderIdentify" />
+    <!-- 2013.01.10 DEL DAIKO_KANEKO
+    <var name="tst050Identify" class="fw.domain.slip.receive.receive.Identify" />
+    -->
+    <var name="acp090Identify" class="fw.domain.slip.receive.acceptance.acceptancenotice.ScreenAcceptancePrint" />
+
+    <input name="searchCondition" />
+    <input name="isCurrentPageSearch" />
+    
+    <decision-state id="isSearchByKey">
+       <if test="flowScope.isCurrentPageSearch" then="searchByKey" else="searchByCondition" />
+    </decision-state>
+    
+    <action-state id="searchByCondition">
+        <evaluate expression="PSACP091Service.init(searchCondition)" result="flowScope.itemList"/>
+        <transition to="PSACP091"/> 
+    </action-state>
+
+    <action-state  id="searchByKey" >
+        <evaluate expression="PSACP091Service.page(searchCondition)" result="flowScope.itemList"/>
+        <transition to="PSACP091"/>
+    </action-state>
+
+    <view-state id="PSACP091" model="acp090Identify" view="acp/print/PSACP091">
+       <transition on="order" validate="false">
+            <evaluate expression="PSACP091Service.order(searchCondition)" result="flowScope.itemList"/>
+        </transition>
+        <transition on="page" validate="false">
+             <evaluate expression="PSACP091Service.page(searchCondition)" result="flowScope.itemList" /> 
+        </transition>
+        <transition on="detail" to="PSACP050TOP" validate="false" />
+        <transition on="detailValidate" validate="false">
+            <set name="acp050Identify.orderNo" value="requestParameters.orderNo"/>
+            <set name="acp050Identify.lastUpdDate" value="requestParameters.lastUpdDate"/>
+            <set name="rcv050Identify.orderNo" value="requestParameters.orderNo"/>
+            <set name="identify090.orderSeq" value="requestParameters.orderSeq"/>
+            <set name="identify090.lastUpdDate" value="requestParameters.lastUpdDate"/>
+            <!-- 2013.01.10 DEL DAIKO_KANEKO
+            <set name="tst050Identify.orderNo" value="requestParameters.orderNo"/>
+            <set name="tst050Identify.lastUpdDate" value="requestParameters.lastUpdDate"/>
+             -->
+            <set name="flashScope.isShowDetail" value="true"/>
+        </transition>
+        <transition on="acceptModify" to="PSACP020" validate="false">
+            <set name="patternName" value="'Modify'"/>
+        </transition>
+        <transition on="acceptCancel" to="PSACP020" validate="false" >
+            <set name="patternName" value="'Cancel'"/>
+        </transition>
+         <transition on="print" validate="true" to="searchByKey">
+            <evaluate expression="PSACP091Service.print(acp090Identify)" />
+            <set name="flashScope.isSuccess" value="true"></set>
+        </transition>
+        <transition on="back" to="home" validate="false" />
+    </view-state>
+
+    <subflow-state id="PSACP050TOP" subflow="acp/acc/PSACP050TOP" >
+        <!-- 2013.01.10 DEL DAIKO_KANEKO
+        <input name="tst050Identify" value="tst050Identify" /> --> <!-- 検査詳細用 -->
+        <input name="acp050Identify" value="acp050Identify" /><!-- 検収詳細用 -->
+        <input name="identify050" value="rcv050Identify" /><!-- 受入詳細用 -->
+        <input name="identify090" value="identify090" /><!-- 注文詳細用 -->
+        <!-- 2013.01.10 DEL DAIKO_KANEKO
+        <input name="acpRange" value="0"/>
+        <input name="acpApproveFlg" value="1"/>
+        -->
+    </subflow-state>
+    
+    <subflow-state id="PSACP020" subflow="acp/acc/PSACP020" >
+        <on-entry>
+            <set name="acp020Identify.orderSeq" value="requestParameters.orderSeq"></set>
+            <set name="acp020Identify.delivKeyNo" value="requestParameters.delivKeyNo"></set>
+            <set name="acp020Identify.lastUpdDate" value="requestParameters.lastUpdDate"></set>
+        </on-entry>
+        <input name="identify" value="acp020Identify" />
+        <input name="patternName" value="patternName" />
+    </subflow-state>
+</flow>

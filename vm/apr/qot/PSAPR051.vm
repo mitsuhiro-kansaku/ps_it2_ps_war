@@ -1,0 +1,350 @@
+<!doctype html>
+<html LANG="ja">
+<head>
+<title>#customSpringMessage('QUOT_REQ_APP_LIST')</title>
+<meta http-equiv="Content-type" content="text/html; charset=UTF-8">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Content-script-type" content="text/javascript">
+<link id="CSS_FONT" rel="stylesheet" href="../../include/FontS.css" type="text/css">
+<link rel="stylesheet" href="../../include/Layout.css" type="text/css">
+<link rel="stylesheet" href="../../include/searchbox.css" type="text/css">
+<link rel="stylesheet" href="../../include/Color.css" type="text/css">
+<script language="javascript" type="text/javascript" src="../../include/jquery-1.7.2.min.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/jquery.tablefix.js"></script>
+<script language="javascript" TYPE="text/javascript" src="../../include/common.js"></script>
+<script language="javascript" TYPE="text/javascript" src="../../include/check.js"></script>
+<script language="javascript" TYPE="text/javascript" src="../../include/date.js"></script>
+<script language="javascript" TYPE="text/javascript" src="../../include/tablesort.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/searchbox.js"></script>
+<script language="javascript" TYPE="text/javascript">
+#set($searchCondition = $quotReqAppSearchCondition)
+<!--
+#parse("./common/common_js.vm")
+
+function onLoad() {
+    parentButtonEnable();
+    dataLoadHasPage();
+    ## +++++ IT2-01209-000 2013/03/18 ADD SBO_KANGJW START +++++
+    var isSuccess = '#jsEscape($!isSuccess)';
+    ## +++++ IT2-01209-000 2013/03/18 ADD SBO_KANGJW END +++++
+    if(isSuccess == 'true'){
+        ## edit start IT0-00574-000
+        #set( $packapp = "#customSpringMessage('QUOT_REQ')")
+        ## edit end   IT0-00574-000
+        alert('#customMessageArgs("I028",[$packapp])');
+
+    }
+    var alertMessage = "$!alertMessage";
+    if (alertMessage != ""){
+        ## +++++ 強化-00852-000 2013/05/27 ADD SBO_CHENCHENG START +++++
+        buttonUsableForList(alertMessage);
+        ## +++++ 強化-00852-000 2013/05/27 ADD SBO_CHENCHENG -END- +++++
+        alert(alertMessage);
+    }
+    ## +++++ IT2-01209-000 2013/03/18 ADD SBO_KANGJW START +++++
+    var errorMsg = "$!errorMessage";
+    ## +++++ IT2-01209-000 2013/03/18 ADD SBO_KANGJW END +++++
+    if (errorMsg != ""){
+        return;
+    }
+        window.parent.getObj("APPROVALAREA").style.display = "";
+
+        ## +++++ IT2-01209-000 2013/03/18 ADD SBO_KANGJW START +++++
+        var isShowApproval = "#jsEscape($isShowApproval)";
+        ## +++++ IT2-01209-000 2013/03/18 ADD SBO_KANGJW END +++++
+        if (isShowApproval == 'true'){
+               ## +++++ IT2-01209-000 2013/03/18 ADD SBO_KANGJW START +++++
+               top.iframeChange("${flowExecutionUrl}&_eventId=individualApproval");
+               ## +++++ IT2-01209-000 2013/03/18 ADD SBO_KANGJW END +++++
+        }
+        ## +++++ IT2-01209-000 2013/03/18 ADD SBO_KANGJW START +++++
+        var isShowDetail = "#jsEscape($isShowDetail)";
+        ## +++++ IT2-01209-000 2013/03/18 ADD SBO_KANGJW END +++++
+        if (isShowDetail == 'true'){
+               ## +++++ IT2-01209-000 2013/03/18 ADD SBO_KANGJW START +++++
+               poppage("${flowExecutionUrl}&_eventId=detail",'DETAIL','800','700');
+               ## +++++ IT2-01209-000 2013/03/18 ADD SBO_KANGJW END +++++
+        }
+    ## del start IT0-00225-000
+    ## removeLink();
+    ## del end   IT0-00225-000
+
+}
+
+/* 一括承認 */
+function exec() {
+//    parent.getObj("ERRORAREA").src="../../layout/error.vm";
+    var count=0;
+    $("input:[type=checkbox][name^=check_status_]").each(function(){
+        if($(this).prop("checked"))
+            count ++;
+    });
+
+    if (count==0) {
+         #* ----- 2013/02/06 DEL DAIKO_YAMAGUCHI
+        alert('#customMessageArgs("E210", ["#customSpringMessage('QUOT_REQ_APP')"])');
+         *#
+         ## +++++ 2013/02/06 ADD DAIKO_YAMAGUCHI
+         alert("#nothingSelectedMessage()");
+    } else {
+
+        // 確認メッセージ
+        ## edit start IT0-00574-000
+        #set( $packapp = "#customSpringMessage('QUOT_REQ')")
+        #set( $update = "#customSpringMessage('PACKAGE_APP')")
+        ## edit end   IT0-00574-000
+        if( !confirm("#customMessageArgs("W001",[$packapp,$update])") ) {
+            return;
+        }
+        buttonDisable();
+        parentButtonDisable();
+        ## +++++ IT2-01209-000 2013/03/18 ADD SBO_KANGJW START +++++
+        getObj("BodyForm").action="${flowExecutionUrl}&_eventId=packageApproval";
+        ## +++++ IT2-01209-000 2013/03/18 ADD SBO_KANGJW END +++++
+        getObj("BodyForm").submit();
+    }
+}
+
+/* 一括選択 */
+//check /uncheck all
+$(function(){
+    $(document).delegate('#ParentCheck','change',function() {
+        var chk = $(this).prop("checked");
+        var status = "0";
+        $("input:[type=checkbox][name^=check_status_]").prop("checked",chk)
+
+        if(chk){
+            $("tr:[id^=Row_]").css("background-color","#ffff99");
+            status = "1";
+        }else{
+            $("tr:[id^=Row_]").each(function(){
+                var count = $(this).attr("id").substring(4);
+                if (Number(count) % 2 != 0) {
+                    $(this).css("background-color","#ffffff");
+                } else {
+                    $(this).css("background-color","#dce4ef");
+                }
+            });
+        }
+        $("input:[type=hidden][id^=quotReqAppItemList][id$=checkStatus]").val(status);
+    });
+});
+
+// 行チェックボックス選択
+function selectRow(no, obj) {
+    var status = "0";
+    if(no % 2 == 0) {
+        var backgroundColor = "#dce4ef";
+    } else {
+        backgroundColor = "#ffffff";
+    }
+    if( obj.checked ) {
+        backgroundColor = "#ffff99";
+        status = "1";
+    }
+    $("[id=" + 'Row_' + no + "]").css({"backgroundColor":backgroundColor});
+    document.getElementById("quotReqAppItemList[" + no + "].quotReqIdentify.checkStatus").value = status;
+}
+/* 詳細画面をポップアップ */
+function openDetail(seqNumber,lastUpdDate) {
+    ## +++++ IT2-01209-000 2013/03/18 ADD SBO_KANGJW START +++++
+    parent.iframeChange("${flowExecutionUrl}&_eventId=detailValidate","seqNumber",seqNumber,"lastUpdDate",lastUpdDate,"HIDDENAREA");
+    ## +++++ IT2-01209-000 2013/03/18 ADD SBO_KANGJW END +++++
+}
+/* 個別承認画面へ遷移 */
+function openApprovalDetail(seqNumber, lastUpdDate,exclusiveSlipNo,exclusiveLastUpdDate) {
+    buttonDisable();
+    parent.iframeChange("${flowExecutionUrl}&_eventId=individualApprovalValidate",
+               "seqNumber",seqNumber,
+               "lastUpdDate",lastUpdDate,
+               "exclusiveSlipNo",exclusiveSlipNo,
+               "exclusiveLastUpdDate",exclusiveLastUpdDate,
+               "HIDDENAREA");
+}
+
+function removeLink(){
+    var items = document.getElementsByTagName("th");
+    for(var i=0;i<items.length;i++){
+        if(items[i].getAttribute("label") == "case"){
+            var thid = items[i].id;
+            var thname = thid.split(".")[0];
+            if(thname != "T_QUOT_REQUEST"){
+                items[i].removeAttribute("label");
+                items[i].onclick = function(){};
+                items[i].getElementsByTagName("span")[1].style.display = "none";
+                items[i].getElementsByTagName("span")[0].style.color = "#000";
+                items[i].getElementsByTagName("span")[0].style.borderBottomStyle = "none";
+                items[i].getElementsByTagName("span")[0].style.cursor = "default";
+            }
+        }
+    }
+}
+//-->
+</script>
+
+</head>
+<body id="BODY" topmargin="0" leftmargin="0" marginwidth="0" marginheight="0" align="left" onload="onLoad();setTablefix('#TABLEFIX', 1, 4+$!PSAPR051PageCreaterForList.printLockColumn());" style="overflow-x:auto;overflow-y:auto;" >
+#if($!errorMessage && $!errorMessage !="")
+<div class="error">
+    $!errorMessage
+</div>
+#end
+<form id="BodyForm" name="Body" method="post">
+#foreach($!quotReqAppItem in $!{itemList.quotReqAppItemList})
+    #customFormHiddenInput("quotReqAppItemList[$velocityCount].quotReqIdentify.checkStatus" "$!{quotReqAppItem.quotReqIdentify.checkStatus}")
+    #customFormHiddenInput("quotReqAppItemList[$velocityCount].quotReqIdentify.quotReqSeqNo.seqNumber" "$!{quotReqAppItem.quotReqIdentify.quotReqSeqNo.seqNumber}")
+    #customFormHiddenInput("quotReqAppItemList[$velocityCount].quotReqIdentify.lastUpdDate" "$!{quotReqAppItem.quotReqIdentify.lastUpdDate}")
+    #customFormHiddenInput("quotReqAppItemList[$velocityCount].quotTypeInd" "$!{quotReqAppItem.quotTypeInd}")
+    #customFormHiddenInput("quotReqAppItemList[$velocityCount].quotReqIdentify.exclusiveSlipId.slipNo" "$!{quotReqAppItem.quotReqIdentify.exclusiveSlipId.slipNo}")
+    #customFormHiddenInput("quotReqAppItemList[$velocityCount].quotReqIdentify.exclusiveSlipId.lastUpdDate" "$!{quotReqAppItem.quotReqIdentify.exclusiveSlipId.lastUpdDate}")
+#end
+<table id="TABLEFIX" class="ListArea" WIDTH="100%">
+    #if($!itemList.quotReqAppItemList.size() > 0)
+    <thead>
+        <tr id="Header">
+            <th class="BoxHeaderCenter FontSmall">No.</th>
+            <th label="chk" class="BoxHeaderCenter FontSmall">
+                <input id="ParentCheck" name="ParentCheck" type="checkbox" >
+            </th>
+            <th class="BoxHeaderCenter FontSmall">
+                #customSpringMessage("DETAIL")
+            </th>
+            <th class="BoxHeaderCenter FontSmall">
+                #customSpringMessage("INDIVIDUAL_APP")
+            </th>
+            #foreach($!item in $!PSAPR051PageCreaterForList.getItemListForBody())
+                #set($currentOneColumnFlag = $!PSAPR051PageCreaterForList.getOneColumnFlag($!item))
+                #if($velocityCount == 0)
+                    $!PSAPR051PageCreaterForList.printTHtag($!item,'class="BoxHeaderCenter FontSmall"')
+                #elseif($currentOneColumnFlag)
+                    $!PSAPR051PageCreaterForList.printBRtag($!item)
+                #else
+                    $!PSAPR051PageCreaterForList.printTHtagClose()
+                    $!PSAPR051PageCreaterForList.printTHtag($!item,'class="BoxHeaderCenter FontSmall"')
+                #end
+                #if($!item.getColumnName()=="T_QUOT_REQUEST.FOR_SUPPRIER_COMMENT")
+                    $!PSAPR051PageCreaterForList.printHead("COMMENT", $!item)
+                #else
+                    $!PSAPR051PageCreaterForList.printHead($!item)
+                #end
+            #end
+            $!PSAPR051PageCreaterForList.printTHtagClose()
+        </tr>
+    </thead>
+    <tbody>
+        #foreach($!quotReqAppItem in $!itemList.quotReqAppItemList)
+        <tr id="Row_$velocityCount" #if($velocityCount % 2 == 0) bgcolor="#dce4ef" #else bgcolor="#ffffff" #end>
+            <td class="BoxDetailCenter FontList">#set( $no = $velocityCount + 1 )$no</td>
+            <td class="BoxDetailCenter">
+                <input type="checkbox" onclick="selectRow($velocityCount, this)" class="Icon" id="check_status_$velocityCount" name="check_status_$velocityCount">
+            </td>
+            <td class="BoxDetailCenter">
+                <img id="DetailButton_0" class="Icon" src="../../image/btnDetailDisp.gif"  onclick="openDetail('#jsEscapeInHTML(${quotReqAppItem.quotReqIdentify.quotReqSeqNo.seqNumber})','#jsEscapeInHTML($!{quotReqAppItem.quotReqIdentify.lastUpdDate})');">
+            </td>
+            <td class="BoxDetailCenter">
+                <input type="button" class="SmallButton" value="#customSpringMessage("INDIVIDUAL_APP")" onclick="openApprovalDetail('#jsEscapeInHTML(${quotReqAppItem.quotReqIdentify.quotReqSeqNo.seqNumber})', '#jsEscapeInHTML($!{quotReqAppItem.quotReqIdentify.lastUpdDate})','#jsEscapeInHTML($!quotReqAppItem.quotReqIdentify.exclusiveSlipId.slipNo)','#jsEscapeInHTML($!quotReqAppItem.quotReqIdentify.exclusiveSlipId.lastUpdDate)');">
+            </td><!--個別承認 -->
+            #foreach($!item in $!PSAPR051PageCreaterForList.getItemListForBody($velocityCount))
+                    #set($currentOneColumnFlag = $!PSAPR051PageCreaterForList.getOneColumnFlag($!item))
+                    #if($velocityCount == 0)
+                        $!PSAPR051PageCreaterForList.printTDtag('class="BoxDetailLeft FontList"')
+                    #elseif(!$currentOneColumnFlag)
+                        $!PSAPR051PageCreaterForList.printTDtagClose()
+                        $!PSAPR051PageCreaterForList.printTDtag('class="BoxDetailLeft FontList"')
+                    #end
+
+                    #if($!item.getColumnName()=="T_QUOT_REQUEST.QUOT_REQ_NO")
+                        $!PSAPR051PageCreaterForList.printDefault($!item,"_data_style",'class="FontSlipNo" align="center"')
+                    #elseif($!item.getColumnName()=="T_QUOT_REQUEST.REQ_SECTION_NAME")
+                        $!PSAPR051PageCreaterForList.printDefault($!item)
+                    #elseif($!item.getColumnName()=="T_QUOT_REQUEST.REQ_USER_ID")
+                        ##edit start IT0-00476-000
+                        $!PSAPR051PageCreaterForList.printDefault($!item,"_data_style",'align="center"')
+                        ##edit end IT0-00476-000
+                    #elseif($!item.getColumnName()=="T_QUOT_REQUEST.REQ_SECTION_CD")
+                        ##edit start IT0-00476-000
+                        $!PSAPR051PageCreaterForList.printDefault($!item,"_data_style",'align="center"')
+                        ##edit end IT0-00476-000
+                    #elseif($!item.getColumnName()=="T_QUOT_REQUEST.REQ_USER_NAME")
+                        $!PSAPR051PageCreaterForList.printDefault($!item)
+                    #elseif($!item.getColumnName()=="T_QUOT_REQUEST.BUYER_SECTION_CD")
+                        ##edit start IT0-00476-000
+                        $!PSAPR051PageCreaterForList.printDefault($!item,"_data_style",'align="center"')
+                        ##edit end IT0-00476-000
+                    #elseif($!item.getColumnName()=="T_QUOT_REQUEST.QUOT_RESP_LIMIT_DATE")
+                        ##edit start IT0-00476-000
+                        $!PSAPR051PageCreaterForList.printDefault($!item,"_data_style",'align="center"')
+                        ##edit end IT0-00476-000
+                    #elseif($!item.getColumnName()=="T_QUOT_REQUEST.BUYER_SECTION_NAME")
+                        $!PSAPR051PageCreaterForList.printDefault($!item)
+                    #elseif($!item.getColumnName()=="T_QUOT_REQUEST.BUYER_USER_ID")
+                        ##edit start IT0-00476-000
+                        $!PSAPR051PageCreaterForList.printDefault($!item,"_data_style",'align="center"')
+                        ##edit end IT0-00476-000
+                    #elseif($!item.getColumnName()=="T_QUOT_REQUEST.BUYER_USER_NAME")
+                        $!PSAPR051PageCreaterForList.printDefault($!item)
+                    #elseif($!item.getColumnName()=="T_QUOT_REQUEST.FOR_SUPPRIER_COMMENT")
+                        $!PSAPR051PageCreaterForList.printDefault($!item)
+                    #elseif($!item.getColumnName()=="T_ATTACH_MNG.ATTACH_SCOPE")
+                        ## ----- 2013/03/13 DEL DAIKO_TAKEDA
+                        ## $!PSAPR051PageCreaterForList.printDefault("s09_attach", $!item)
+                        ## +++++ 2013/03/13 ADD DAIKO_TAKEDA
+                        $!PSAPR051PageCreaterForList.printSpecial("s09_attach", $!item)
+                    #elseif($!item.getColumnName()=="T_QUOT_REQUEST.TITLE_NAME")
+                        $!PSAPR051PageCreaterForList.printDefault($!item)
+                    #elseif($!item.getColumnName()=="T_QUOT_REQUEST.DELIV_PLACE_CD")
+                        $!PSAPR051PageCreaterForList.printDefault($!item)
+                    #elseif($!item.getColumnName()=="T_QUOT_REQUEST.DELIV_PLACE_NAME")
+                        $!PSAPR051PageCreaterForList.printDefault($!item)
+                    #elseif($!item.getColumnName()=="T_QUOT_REQ_DTL.UNIT_PRICE")
+                        $!PSAPR051PageCreaterForList.printDefault($!item,"_data_style",'class="FontCurrSmall" align="right"')
+                    #elseif($!item.getColumnName()=="T_QUOT_REQ_DTL.QUOT_REQ_AMOUNT")
+                        ##edit start IT0-00476-000
+                        $!PSAPR051PageCreaterForList.printDefault($!item,"_data_style",'class="FontCurrSmall" align="right"')
+                        ##edit end IT0-00476-000
+                    #elseif($!item.getColumnName()=="T_QUOT_REQ_DTL.REQ_DELIV_DATE")
+                        $!PSAPR051PageCreaterForList.printDefault($!item)
+                    #elseif($!item.getColumnName()=="T_QUOT_REQ_DTL.UNIT_NAME")
+                        ##edit start IT0-00476-000
+                        $!PSAPR051PageCreaterForList.printDefault($!item,"_data_style",'align="center"')
+                        ##edit end IT0-00476-000
+                    #elseif($!item.getColumnName()=="T_QUOT_REQ_DTL.ITEM_NAME")
+                        $!PSAPR051PageCreaterForList.printDefault($!item)
+                    #elseif($!item.getColumnName()=="T_QUOT_REQ_DTL.ITEM_CD")
+                        $!PSAPR051PageCreaterForList.printDefault($!item)
+                    #elseif($!item.getColumnName()=="T_QUOT_REQ_DTL.QUOT_REQ_VOL")
+                        ##edit start IT0-00476-000
+                        $!PSAPR051PageCreaterForList.printDefault($!item,"_data_style",'align="right"')
+                        ##edit end IT0-00476-000
+                    #elseif($!item.getColumnName()=="T_QUOT_REQ_DTL.CURRENCY_CD")
+                        ##edit start IT0-00476-000
+                        $!PSAPR051PageCreaterForList.printDefault($!item,"_data_style",'align="center"')
+                        ##edit end IT0-00476-000
+                    #elseif($!item.getColumnName()=="T_QUOT_REQ_SUP.SUP_ABBR_NAME")
+                        $!PSAPR051PageCreaterForList.printDefault($!item)
+                    #elseif($!item.getColumnName()=="T_QUOT_REQ_SUP.SUP_CD")
+                        $!PSAPR051PageCreaterForList.printDefault($!item)
+                    #elseif($!item.getColumnName()=="T_APPROVAL.NOW_APP_USER_NAME")
+                        $!PSAPR051PageCreaterForList.printDefault($!item)
+                    #elseif($!item.getColumnName()=="T_APPROVAL.NEXT_APP_USER_NAME")
+                        $!PSAPR051PageCreaterForList.printDefault($!item)
+                    #else
+                        $!PSAPR051PageCreaterForList.printDefault($!item)
+                    #end
+                #end
+                $!PSAPR051PageCreaterForList.printTDtagClose()
+            </tr>
+       #end
+    </tbody>
+    #end
+</table>
+<br>
+<table id="WAIT" class="NoBorder" style="display:none;" width="100%"><tr><td align="center"><br><br>
+## ＩＴ３-00202-000 2013.07.10 DEL SBO_WANGXM
+##<img src="../../image/wait.gif"><br><span class="FontMini"><br>#customSpringMessage('mst_vendor_vendorList_008')</span></td></tr></table>
+## ＩＴ３-00202-000 2013.07.10 ADD SBO_WANGXM
+<img src="../../image/wait.gif"><br><span class="FontMini"><br>#customSpringMessage('SEARCH_MESSAGE')</span></td></tr></table>
+<input type="hidden" name="rowno">
+</form>
+</body>
+</html>

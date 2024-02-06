@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<flow xmlns="http://www.springframework.org/schema/webflow"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.springframework.org/schema/webflow
+        http://www.springframework.org/schema/webflow/spring-webflow-2.0.xsd"
+    parent="base">
+    <!-- <var name="domain" class="fw.domain.slip.purreq.everypurreq.EveryPurReqApl" />-->
+    <!-- 見積依頼シーケンス番号 -->
+    <input name="quotReqSeqNo"/>
+    <!-- 元となった見積回答の見積回答SEQ -->
+    <input name="quotRespSeqNo"/>
+    <!-- 購入申請シーケンス番号 -->
+    <input name="purAplSeqNo"/>
+    <!-- 承認単位番号 -->
+    <input name="appUnitNo"/>
+    <input name="isInitIndividualApr" />
+    <input name="patternName" />
+    <input name="isFromHome" />
+    <input name="SessionKey" />
+    
+    <decision-state id="isInitIndividualApr">
+        <if test="flowScope.isInitIndividualApr == null or flowScope.isInitIndividualApr" then="initDetail" else="back" />
+    </decision-state>
+ 
+    <action-state id="initDetail">
+       
+      <evaluate expression="PSPUR010Service.init()" result="flowScope.domain" />
+        <transition to="PSPUR010"/> 
+    </action-state>
+
+    <view-state id="PSPUR010" model="domain" view="pur/req/PSPUR010">
+        <transition on="addDetail" validate="false">
+            <evaluate expression="PSPUR010Service.addDetail(domain)" />
+        </transition>
+        <transition on="deleteDetail" validate="false">
+            <evaluate expression="PSPUR010Service.delDetail(domain, requestParameters.detailIndex)" />
+        </transition>
+        <transition on="tempSave" validate="true">
+            <evaluate expression="PSPUR010Service.tempSave(domain)" />
+            <set name="flashScope.isTempSuccess" value="true"></set>
+        </transition>
+        <transition on="apply" validate="true">
+            <evaluate expression="PSPUR010Service.apply(domain)" />
+            <set name="flashScope.isSuccess" value="true"></set>
+        </transition>
+        <transition on="applyAgain" validate="true">
+            <evaluate expression="PSPUR010Service.applyAgain(domain)" />
+            <set name="flashScope.isReSuccess" value="true"></set>
+        </transition>
+        <transition on="reloadAfterTempSaved" validate="false">
+            <evaluate expression="PSPUR010Service.reloadAfterTempSaved(domain)" result="flowScope.domain" />
+        </transition>
+        <transition on="download" validate="false">
+            <evaluate
+                expression="PSPUR010Service.downloadByteFile(domain, requestParameters.seqNo,requestParameters.index, requestParameters.detailindex)" />
+        </transition>
+        <transition on="downloadext" validate="false">
+            <evaluate expression="PSPUR010Service.downloadFileExt()"/>
+        </transition>
+        <transition on="backlist" validate="false" to="backlist">
+        </transition>
+    </view-state>
+    <end-state id="backlist"/>
+</flow>

@@ -1,0 +1,151 @@
+<!doctype html>
+<html LANG="ja">
+<head>
+#if("$!searchCondition.appStatusInd" == "" || "$!searchCondition.appStatusInd" == "ALL")
+    #set($commonTitle = "#customSpringMessage('PRICE_M_PACKAGE_REGISTER')")
+#else
+    #set($commonTitle = "#customSpringMessage('PRICE_M_PACKAGE_REGISTER')(#out($!searchCondition.appStatusInd_PageValue))")
+#end
+<title>#out($commonTitle)</title> ## 価格マスタ一括登録
+<META http-equiv="Content-type" content="text/html; charset=UTF-8">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Content-script-type" CONTENT="text/javascript">
+<link rel="stylesheet" href="../../include/searchbox.css" type="text/css">
+<link id="CSS_FONT" rel="stylesheet" href="../../include/FontS.css" type="text/css">
+<link rel="stylesheet" href="../../include/Layout.css" type="text/css">
+<link rel="stylesheet" href="../../include/Color.css" type="text/css">
+<link rel="stylesheet" href="../../include/ime.css" type="text/css">
+<script language="javascript" type="text/javascript" src="../../include/common.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/check.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/date.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/searchbox.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/jquery-1.7.2.min.js"></script>
+<script language="javascript" type="text/javascript">
+<!--
+var maxSearchHeight = 160;
+var minSearchHeight = 30;
+var pinName="ReqViewSlip_Pin";
+#parse("./common/common_js.vm")
+function onLoad(){
+    setFocusForInput();
+    var isQuickLink = "#jsEscape($!isQuickLink)"
+    top.document.title = document.title;
+    var linkFlag = false;
+    if(isQuickLink != ""){
+        linkFlag = true;
+    }
+    if( getCookie("ReqViewSlip_Pin")=="1" ) {
+        setDisplay("PIN0",false);
+        setDisplay("PIN1",true);
+    } else {
+        setDisplay("PIN0",true);
+        setDisplay("PIN1",false);
+    }
+    var alertMessage = "$!alertMessage";
+    if (alertMessage != ""){
+        alert(alertMessage);
+    }
+    var buyerUserName = "#jsEscape($!buyerUserName)";
+    if (buyerUserName != ""){
+        getObj('buyerUserName').value = buyerUserName;
+        getObj('buyerUserName').focus();
+    }
+    var errorMsg = "$!errorMessage";
+    if (errorMsg != ""){
+        document.getElementById("TR_ERROR").style.display = "";
+        document.getElementById("DATAAREA").contentWindow.document.body.innerText = ""; 
+        return;
+    }else{
+        var isShowList = '#jsEscape($isShowList)';
+        if(isShowList == 'true'){
+            iframeChange("${flowExecutionUrl}&_eventId=search","pageid","PSPRC060");
+            isQuickLink= false;
+        } 
+    }
+    if(isQuickLink){
+       iframeChange("${flowExecutionUrl}&_eventId=search","pageid","PSPRC060");
+    }
+}
+function clearBuyerUserName() {
+        getObj('buyerUserName').value='';
+}
+function execSearch(){
+    getObj('appStatusInd').value ="";  
+    buttonDisable();
+    getObj('BodyForm').action = "${flowExecutionUrl}&_eventId=validate";
+    getObj('BodyForm').submit();
+}
+//-->
+</script>
+</head>
+<body topmargin="0" leftmargin="0" marginwidth="0" marginheight="0" align="center" width="100%" height="100%" onload="onLoad();" style="overflow-y:hidden;">
+<form id="BodyForm" name="Body" action="${flowExecutionUrl}&_eventId=validate" method="post">
+    #customFormHiddenInput("appStatusInd" "$!status")
+    <iframe id="CALENDARBOX" class="CALENDARBOX" framespacing="0"scrolling="no" frameborder="0" src="../../sbxCalendar/body.vm"></iframe>
+    <table class="NoBorder" width="100%" height="100%">
+        <tr>
+            <td id="SEARCH_AREA" class="SearchArea"><!-- onLoadで変更 -->
+                #parse("./common/common_title_nonew.vm")
+                <table width="100%">
+                    <tr id="SEARCH_AREA2">
+                        <td id="Adjust" align="right" valign="top">
+                            <!-- 検索条件入力部 -->
+                            <table class="NoBorder"  width="100%">
+                                <tr><td align="left" colspan="4">#customSpringMessage('PSPRC060_HEADER_COMMENT')</td></tr>
+                                <tr>                                   
+                                   <td nowrap class="FontSmallBold" align="right">#customSpringMessage('PRC_NEW_UPLOAD_TITLE_NAME')<!--新規価格表アップロード件名-->
+                                   <span class="FontComment">％</span>
+                                   </td>
+                                   <td nowrap align="left">
+                                         #springFormInput("searchCondition.titleName" "class='Small onIME' maxLength=30 size=80")
+                                   </td>
+                               </tr>
+                               <tr>
+                                   <td nowrap class="FontSmallBold" align="right">#customSpringMessage('BUYER_USER')<!--購買担当者--></td>
+                                   <td nowrap align="left">
+                                        #springFormInput("searchCondition.buyerUserId" "class='Small noIME' maxlength=12 type='text' size=20 ondblclick='' onchange='clearBuyerUserName();'
+                                            onfocus='this.select();if(nowWarning==this) { closeWarningBox();}' onmouseover='reDrowWbx(this);' value='$!searchCondition.buyerUserId'")
+                                        #springFormInput("searchCondition.buyerUserName" "class='SmallDsp' maxLength='30' size='32' readonly='readonly' tabIndex='-1'" "true" "")
+                                        <img class="Icon" name="UserSearch" src="../../image/btnLupe.gif" onclick="userPopup.setObject(getObj('buyerUserId'),getObj('buyerUserName'));masterSearch('../../src/userPopup/search?pageid=userPopupSearch&popupPageid=PSPRC060','UserSearch','700','500');"/>
+                                   </td>                                    
+                               </tr>
+                              <tr>
+                                   <td nowrap class="FontSmallBold" align="right">#customSpringMessage('REGISTER_DATE')<!--登録日--></td>
+                                   <td nowrap class="FontSmallBold" align="left">
+                                       #springFormInput("searchCondition.registerDateFrom.dateOfymdFormat" "maxLength=8 size=12 class='SmallAnk noIME' onblur='dateOnBlur(this);' onfocus='dateOnFocus(this);' ")
+                                     <img class="Icon" src="../../image/btnCalendar.gif" onclick="initSearchBox(1,getObj('registerDateFrom.dateOfymdFormat'));">
+                                      &nbsp;～&nbsp;
+                                       #springFormInput("searchCondition.registerDateTo.dateOfymdFormat" "maxLength=8 size=12 class='SmallAnk noIME' onblur='dateOnBlur(this);' onfocus='dateOnFocus(this);' ")
+                                     <img class="Icon" src="../../image/btnCalendar.gif" onclick="initSearchBox(1,getObj('registerDateTo.dateOfymdFormat'));">
+                                    </td>
+                               </tr>
+                               <tr>
+                                    <td align="left" colspan="4" nowrap class="FontComment">
+                                        #customSpringMessage("PSPRC060_FOOTER_COMMENT") ## ＊:前方一致 / ％:中間一致 / なし:完全一致
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                        <td nowrap class="FontSmallBold" align="right" valign="top">
+                            <br>
+                            <input type="button" onclick="javascript:execSearch();" class="LargeButton" value="#customSpringMessage('ACTION_SEARCH')"><!--検索-->
+                            <br>
+                            <br><a href="javascript:clear();" id="clearSearch">#customSpringMessage("ACTION_CLEAR_SEARCH_CRITERIA")<!--検索条件をクリアする--></a>&nbsp;
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+        <tr id ="TR_ERROR" style="display:none;"><td class="error" style="height:0px;">
+            $!errorMessage
+        </td></tr>
+        <tr>
+            <td class="NoBorder" style="height:auto;">
+                <iframe id="DATAAREA" name="DATAAREA" framespacing="0" frameborder="0" src="../../layout/default.vm" scrolling="no" frameborder="no" style="position:static;width:100%;border:0px solid #999999;height:100%;z-index:0;"></iframe>
+            </td>
+        </tr>
+    </table>
+<iframe id="HIDDENAREA" name="HIDDENAREA" framespacing="0" frameborder="0" src="" scrolling="no" frameborder="no" style="display:none"></iframe>
+</form>
+</body>
+</html>

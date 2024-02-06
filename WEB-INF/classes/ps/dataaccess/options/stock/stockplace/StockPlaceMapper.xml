@@ -1,0 +1,332 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="ps.dataaccess.options.stock.stockplace.StockPlaceMapper">
+
+    <sql id="listKeyIdentityWhereCondition">
+        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(companyCd)">
+         AND M_STOCK_PLACE.COMPANY_CD = #{companyCd, jdbcType=VARCHAR}
+        </if>
+        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(sectionPlaceCd)">
+         AND M_STOCK_PLACE.SECTION_PLACE_CD = #{sectionPlaceCd, jdbcType=VARCHAR}
+        </if>
+        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(stockPlaceCd)">
+         AND M_STOCK_PLACE.STOCK_PLACE_CD ${@fw.common.util.SearchModeUtil@getSearchSQL("fw.domain.options.stock.stockplace.StockPlaceSearchCondition", "stockPlaceCd")}
+        </if>
+        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(stockPlaceName)">
+         AND M_STOCK_PLACE_LANG.STOCK_PLACE_NAME ${@fw.common.util.SearchModeUtil@getSearchSQL("fw.domain.options.stock.stockplace.StockPlaceSearchCondition", "stockPlaceName")}
+        </if>
+        <if  test="@fw.domain.mst.searchcondition.SearchCondition@termFlgIsNotEmpty(searchCondition.termFlg)">
+         AND M_STOCK_PLACE.TERM_FLG = #{searchCondition.termFlg, jdbcType=VARCHAR}
+        </if>
+    </sql>
+
+    <sql id="listSql">
+      SELECT M_STOCK_PLACE.COMPANY_CD
+           , M_COMPANY_LANG.COMPANY_NAME
+           , M_COMPANY_LANG.LANGUAGE_IND
+           , M_COMPANY.BASE_CURRENCY_CD
+           , M_STOCK_PLACE.SECTION_PLACE_CD
+           , M_SECTION_PLACE_LANG.SECTION_PLACE_NAME
+           , M_STOCK_PLACE.STOCK_PLACE_CD
+           , M_STOCK_PLACE_LANG.STOCK_PLACE_NAME
+           , M_STOCK_PLACE.STOCK_LOCK_FLG
+           , M_STOCK_PLACE.TERM_FLG
+           , M_STOCK_PLACE.LAST_UPD_DATE
+           , M_STOCK_PLACE.LAST_UPD_COMPANY_CD
+           , M_STOCK_PLACE.LAST_UPD_SECTION_CD
+           , M_STOCK_PLACE.LAST_UPD_USER_ID
+           , M_STOCK_PLACE.REG_DATE
+           , M_STOCK_PLACE.REG_COMPANY_CD
+           , M_STOCK_PLACE.REG_SECTION_CD
+           , M_STOCK_PLACE.REG_USER_ID
+        FROM M_STOCK_PLACE
+        LEFT OUTER JOIN M_COMPANY
+          ON M_STOCK_PLACE.COMPANY_CD = M_COMPANY.COMPANY_CD
+        LEFT OUTER JOIN M_COMPANY_LANG
+          ON M_COMPANY.COMPANY_CD = M_COMPANY_LANG.COMPANY_CD
+         AND M_COMPANY_LANG.LANGUAGE_IND =
+        <if test="companyCd!='ALL'">
+             M_COMPANY.COMPANY_USE_LANGUAGE_IND
+        </if>
+        <if test="companyCd=='ALL'">
+             '${@fw.security.SecurityUtil@getCompanyUseLanguageIndByEscapeSql()}'
+        </if>
+        LEFT OUTER JOIN M_SECTION_PLACE_LANG
+          ON M_STOCK_PLACE.COMPANY_CD       = M_SECTION_PLACE_LANG.COMPANY_CD
+         AND M_STOCK_PLACE.SECTION_PLACE_CD = M_SECTION_PLACE_LANG.SECTION_PLACE_CD
+         AND M_COMPANY_LANG.LANGUAGE_IND    = M_SECTION_PLACE_LANG.LANGUAGE_IND
+        LEFT OUTER JOIN M_STOCK_PLACE_LANG
+          ON M_STOCK_PLACE.COMPANY_CD       = M_STOCK_PLACE_LANG.COMPANY_CD
+         AND M_STOCK_PLACE.SECTION_PLACE_CD = M_STOCK_PLACE_LANG.SECTION_PLACE_CD
+         AND M_STOCK_PLACE.STOCK_PLACE_CD   = M_STOCK_PLACE_LANG.STOCK_PLACE_CD
+         AND M_COMPANY_LANG.LANGUAGE_IND    = M_STOCK_PLACE_LANG.LANGUAGE_IND
+    </sql>
+
+    <sql id="downloadSql">
+      SELECT M_STOCK_PLACE.COMPANY_CD
+           , M_STOCK_PLACE.SECTION_PLACE_CD
+           , M_STOCK_PLACE.STOCK_PLACE_CD
+           , M_STOCK_PLACE_LANG.STOCK_PLACE_NAME
+           , M_STOCK_PLACE_LANG.LANGUAGE_IND
+           , M_STOCK_PLACE.TERM_FLG
+        FROM M_STOCK_PLACE
+        LEFT OUTER JOIN M_STOCK_PLACE_LANG
+          ON M_STOCK_PLACE.COMPANY_CD       = M_STOCK_PLACE_LANG.COMPANY_CD
+         AND M_STOCK_PLACE.SECTION_PLACE_CD = M_STOCK_PLACE_LANG.SECTION_PLACE_CD
+         AND M_STOCK_PLACE.STOCK_PLACE_CD   = M_STOCK_PLACE_LANG.STOCK_PLACE_CD
+    </sql>
+
+    <resultMap id="identity_Map" type="fw.domain.options.stock.stockplace.StockPlaceIdentify">
+        <id column="COMPANY_CD"       property="companyCd" />
+        <id column="SECTION_PLACE_CD" property="sectionPlaceCd" />
+        <id column="STOCK_PLACE_CD"   property="stockPlaceCd" />
+        <id column="LAST_UPD_DATE"    property="lastUpdDate" />
+    </resultMap>
+
+    <resultMap id="item_Map" type="fw.domain.options.stock.stockplace.StockPlaceItem">
+        <id column="COMPANY_CD"       property="stockPlaceIdentify.companyCd" />
+        <id column="SECTION_PLACE_CD" property="stockPlaceIdentify.sectionPlaceCd" />
+        <id column="STOCK_PLACE_CD"   property="stockPlaceIdentify.stockPlaceCd" />
+        <id column="LAST_UPD_DATE"    property="stockPlaceIdentify.lastUpdDate" />
+        <id column="SECTION_PLACE_NAME" property="sectionPlaceName" />
+        <id column="STOCK_PLACE_NAME"   property="stockPlaceName" />
+        <id column="TERM_FLG"           property="term.termFlg" />
+    </resultMap>
+
+    <resultMap id="management_Map" type="fw.domain.options.stock.stockplace.StockPlaceManagement">
+        <id column="COMPANY_CD"       property="stockPlaceIdentify.companyCd" />
+        <id column="SECTION_PLACE_CD" property="stockPlaceIdentify.sectionPlaceCd" />
+        <id column="STOCK_PLACE_CD"   property="stockPlaceIdentify.stockPlaceCd" />
+        <id column="LAST_UPD_DATE"    property="stockPlaceIdentify.lastUpdDate" />
+        <id column="COMPANY_CD"         property="companySummary.companyCd" />
+        <id column="COMPANY_NAME"       property="companySummary.companyName" />
+        <id column="LANGUAGE_IND"       property="companySummary.languageInd" />
+        <id column="BASE_CURRENCY_CD"   property="companySummary.currencyCd" />
+        <id column="SECTION_PLACE_NAME" property="sectionPlaceName" />
+        <id column="STOCK_PLACE_NAME"   property="stockPlaceName" />
+        <id column="STOCK_LOCK_FLG"     property="stockLockFlg.stockLockFlg" />
+        <id column="TERM_FLG"           property="term.termFlg" />
+        <id column="LAST_UPD_DATE"       property="registInfo.lastUpdDate" />
+        <id column="LAST_UPD_COMPANY_CD" property="registInfo.lastUpdCompanyCd" />
+        <id column="LAST_UPD_SECTION_CD" property="registInfo.lastUpdSectionCd" />
+        <id column="LAST_UPD_USER_ID"    property="registInfo.lastUpdUserId" />
+        <id column="REG_DATE"       property="registInfo.regDate" />
+        <id column="REG_COMPANY_CD" property="registInfo.regCompanyCd" />
+        <id column="REG_SECTION_CD" property="registInfo.regSectionCd" />
+        <id column="REG_USER_ID"    property="registInfo.regUserId" />
+    </resultMap>
+
+    <resultMap id="download_Map" type="fw.domain.options.stock.stockplace.StockPlaceManagement">
+        <id column="COMPANY_CD"       property="stockPlaceIdentify.companyCd" />
+        <id column="SECTION_PLACE_CD" property="stockPlaceIdentify.sectionPlaceCd" />
+        <id column="STOCK_PLACE_CD"   property="stockPlaceIdentify.stockPlaceCd" />
+        <id column="LAST_UPD_DATE"    property="stockPlaceIdentify.lastUpdDate" />
+        <id column="COMPANY_CD"       property="companySummary.companyCd" />
+        <id column="LANGUAGE_IND"     property="companySummary.languageInd" />
+        <id column="STOCK_PLACE_NAME" property="stockPlaceName" />
+        <id column="STOCK_LOCK_FLG"   property="stockLockFlg.stockLockFlg" />
+        <id column="TERM_FLG"         property="term.termFlg" />
+    </resultMap>
+
+    <select id="listKeyIdentity" parameterType="fw.domain.options.stock.stockplace.StockPlaceSearchCondition" resultMap="identity_Map">
+        <include refid="listSql"/>
+        <where>
+            <include refid="listKeyIdentityWhereCondition"/>
+        </where>
+    ORDER BY ${searchCondition.columnOrder.columnOrder()}
+    </select>
+
+    <select id="listPageItem" parameterType="fw.domain.options.stock.stockplace.StockPlaceSearchCondition" resultMap="item_Map">
+        <include refid="listSql"/>
+        <where>
+            (M_STOCK_PLACE.COMPANY_CD
+           , M_STOCK_PLACE.SECTION_PLACE_CD
+           , M_STOCK_PLACE.STOCK_PLACE_CD) IN
+        <foreach collection="searchCondition.page.keyDomainEntityList" item="keyList" open="(" separator="," close=")">
+            (#{keyList.companyCd, jdbcType=VARCHAR}
+           , #{keyList.sectionPlaceCd, jdbcType=VARCHAR}
+           , #{keyList.stockPlaceCd, jdbcType=VARCHAR})
+        </foreach>
+            <include refid="listKeyIdentityWhereCondition"/>
+        </where>
+    ORDER BY ${searchCondition.columnOrder.columnOrder()}
+    </select>
+
+    <select id="download" parameterType="fw.domain.options.stock.stockplace.StockPlaceSearchCondition" resultMap="download_Map">
+      SELECT * FROM(
+      SELECT *
+        FROM(<include refid="downloadSql"/><where><include refid="listKeyIdentityWhereCondition"/></where>) M_STOCK_PLACE
+    ORDER BY ${searchCondition.columnOrder.columnOrder()}
+      )WHERE ROWNUM &lt;= ${@fw.common.util.PropertiesUtil@getLong("DOWNLOAD_MAXCNT")}
+    </select>
+
+    <select id="downloadCount" parameterType="fw.domain.options.stock.stockplace.StockPlaceSearchCondition" resultType="java.lang.Long">
+      SELECT COUNT(*)
+        FROM(<include refid="downloadSql"/><where><include refid="listKeyIdentityWhereCondition"/></where>)
+    </select>
+
+    <select id="search" parameterType="fw.domain.options.stock.stockplace.StockPlaceIdentify" resultMap="management_Map">
+        <include refid="listSql"/>
+       WHERE M_STOCK_PLACE.COMPANY_CD       = #{companyCd, jdbcType=VARCHAR}
+         AND M_STOCK_PLACE.SECTION_PLACE_CD = #{sectionPlaceCd, jdbcType=VARCHAR}
+         AND M_STOCK_PLACE.STOCK_PLACE_CD   = #{stockPlaceCd, jdbcType=VARCHAR}
+    </select>
+
+    <resultMap id="language_Map" type="fw.domain.options.stock.stockplace.StockPlaceLanguage">
+        <id column="COMPANY_CD"       property="stockPlaceIdentify.companyCd" />
+        <id column="SECTION_PLACE_CD" property="stockPlaceIdentify.sectionPlaceCd" />
+        <id column="STOCK_PLACE_CD"   property="stockPlaceIdentify.stockPlaceCd" />
+        <id column="LANGUAGE_IND"     property="languageInd.languageInd" />
+        <id column="STOCK_PLACE_NAME" property="stockPlaceName" />
+        <id column="LAST_UPD_DATE"       property="registInfo.lastUpdDate" />
+        <id column="LAST_UPD_COMPANY_CD" property="registInfo.lastUpdCompanyCd" />
+        <id column="LAST_UPD_SECTION_CD" property="registInfo.lastUpdSectionCd" />
+        <id column="LAST_UPD_USER_ID"    property="registInfo.lastUpdUserId" />
+        <id column="REG_DATE"       property="registInfo.regDate" />
+        <id column="REG_COMPANY_CD" property="registInfo.regCompanyCd" />
+        <id column="REG_SECTION_CD" property="registInfo.regSectionCd" />
+        <id column="REG_USER_ID"    property="registInfo.regUserId" />
+    </resultMap>
+
+    <select id="listLanguage" parameterType="fw.domain.options.stock.stockplace.StockPlaceIdentify" resultMap="language_Map">
+      SELECT M_STOCK_PLACE.COMPANY_CD
+           , M_STOCK_PLACE.SECTION_PLACE_CD
+           , M_STOCK_PLACE.STOCK_PLACE_CD
+           , M_STOCK_PLACE_LANG.LANGUAGE_IND
+           , M_STOCK_PLACE_LANG.STOCK_PLACE_NAME
+           , M_STOCK_PLACE.LAST_UPD_DATE
+           , M_STOCK_PLACE.LAST_UPD_COMPANY_CD
+           , M_STOCK_PLACE.LAST_UPD_SECTION_CD
+           , M_STOCK_PLACE.LAST_UPD_USER_ID
+           , M_STOCK_PLACE.REG_DATE
+           , M_STOCK_PLACE.REG_COMPANY_CD
+           , M_STOCK_PLACE.REG_SECTION_CD
+           , M_STOCK_PLACE.REG_USER_ID
+        FROM M_STOCK_PLACE
+        LEFT OUTER JOIN M_STOCK_PLACE_LANG
+          ON M_STOCK_PLACE.COMPANY_CD       = M_STOCK_PLACE_LANG.COMPANY_CD
+         AND M_STOCK_PLACE.SECTION_PLACE_CD = M_STOCK_PLACE_LANG.SECTION_PLACE_CD
+         AND M_STOCK_PLACE.STOCK_PLACE_CD   = M_STOCK_PLACE_LANG.STOCK_PLACE_CD
+        <if test="companyCd=='ALL'">
+         AND M_STOCK_PLACE_LANG.LANGUAGE_IND != '${@fw.common.util.AppUtil@getSysLanguageByEscapeSql()}'
+        </if>
+        <if test="companyCd!='ALL'">
+       INNER JOIN M_COMPANY
+          ON M_STOCK_PLACE.COMPANY_CD = M_COMPANY.COMPANY_CD
+         AND M_STOCK_PLACE_LANG.LANGUAGE_IND != M_COMPANY.COMPANY_USE_LANGUAGE_IND
+        </if>
+       INNER JOIN M_CODE_NAME
+          ON M_STOCK_PLACE_LANG.LANGUAGE_IND = M_CODE_NAME.CODE_VALUE
+         AND M_CODE_NAME.CODE_KEY = 'LANGUAGE_IND'
+       WHERE M_STOCK_PLACE.COMPANY_CD       = #{companyCd, jdbcType=VARCHAR}
+         AND M_STOCK_PLACE.SECTION_PLACE_CD = #{sectionPlaceCd, jdbcType=VARCHAR}
+         AND M_STOCK_PLACE.STOCK_PLACE_CD   = #{stockPlaceCd, jdbcType=VARCHAR}
+    ORDER BY M_CODE_NAME.DSP_ORDER
+    </select>
+
+    <insert id="insert" parameterType="fw.domain.options.stock.stockplace.StockPlaceManagement">
+      INSERT INTO M_STOCK_PLACE (
+        COMPANY_CD
+      , SECTION_PLACE_CD
+      , STOCK_PLACE_CD
+      , STOCK_LOCK_FLG
+      , TERM_FLG
+      , LAST_UPD_DATE
+      , LAST_UPD_COMPANY_CD
+      , LAST_UPD_SECTION_CD
+      , LAST_UPD_USER_ID
+      , REG_DATE
+      , REG_COMPANY_CD
+      , REG_SECTION_CD
+      , REG_USER_ID
+      ) VALUES (
+        #{stockPlaceIdentify.companyCd, jdbcType=VARCHAR}
+      , #{stockPlaceIdentify.sectionPlaceCd, jdbcType=VARCHAR}
+      , #{stockPlaceIdentify.stockPlaceCd, jdbcType=VARCHAR}
+      , '0'
+      , #{term.termFlg, jdbcType=VARCHAR}
+      , #{registInfo.lastUpdDate, jdbcType=VARCHAR}
+      , #{registInfo.lastUpdCompanyCd, jdbcType=VARCHAR}
+      , #{registInfo.lastUpdSectionCd, jdbcType=VARCHAR}
+      , #{registInfo.lastUpdUserId, jdbcType=VARCHAR}
+      , #{registInfo.regDate, jdbcType=VARCHAR}
+      , #{registInfo.regCompanyCd, jdbcType=VARCHAR}
+      , #{registInfo.regSectionCd, jdbcType=VARCHAR}
+      , #{registInfo.regUserId, jdbcType=VARCHAR}
+      )
+    </insert>
+
+    <insert id="insertLanguage" parameterType="fw.domain.options.stock.stockplace.StockPlaceLanguage">
+      INSERT INTO M_STOCK_PLACE_LANG (
+        COMPANY_CD
+      , SECTION_PLACE_CD
+      , STOCK_PLACE_CD
+      , LANGUAGE_IND
+      , STOCK_PLACE_NAME
+      , LAST_UPD_DATE
+      , LAST_UPD_COMPANY_CD
+      , LAST_UPD_SECTION_CD
+      , LAST_UPD_USER_ID
+      , REG_DATE
+      , REG_COMPANY_CD
+      , REG_SECTION_CD
+      , REG_USER_ID
+      ) VALUES (
+        #{stockPlaceIdentify.companyCd, jdbcType=VARCHAR}
+      , #{stockPlaceIdentify.sectionPlaceCd, jdbcType=VARCHAR}
+      , #{stockPlaceIdentify.stockPlaceCd, jdbcType=VARCHAR}
+      , #{languageInd.languageInd, jdbcType=VARCHAR}
+      , #{stockPlaceName, jdbcType=VARCHAR}
+      , #{registInfo.lastUpdDate, jdbcType=VARCHAR}
+      , #{registInfo.lastUpdCompanyCd, jdbcType=VARCHAR}
+      , #{registInfo.lastUpdSectionCd, jdbcType=VARCHAR}
+      , #{registInfo.lastUpdUserId, jdbcType=VARCHAR}
+      , #{registInfo.regDate, jdbcType=VARCHAR}
+      , #{registInfo.regCompanyCd, jdbcType=VARCHAR}
+      , #{registInfo.regSectionCd, jdbcType=VARCHAR}
+      , #{registInfo.regUserId, jdbcType=VARCHAR}
+      )
+    </insert>
+
+    <update id="update" parameterType="fw.domain.options.stock.stockplace.StockPlaceManagement">
+      UPDATE M_STOCK_PLACE
+         SET TERM_FLG       = #{term.termFlg, jdbcType=VARCHAR}
+           , LAST_UPD_DATE       = #{registInfo.lastUpdDate, jdbcType=VARCHAR}
+           , LAST_UPD_COMPANY_CD = #{registInfo.lastUpdCompanyCd, jdbcType=VARCHAR}
+           , LAST_UPD_SECTION_CD = #{registInfo.lastUpdSectionCd, jdbcType=VARCHAR}
+           , LAST_UPD_USER_ID    = #{registInfo.lastUpdUserId, jdbcType=VARCHAR}
+       WHERE M_STOCK_PLACE.COMPANY_CD       = #{stockPlaceIdentify.companyCd, jdbcType=VARCHAR}
+         AND M_STOCK_PLACE.SECTION_PLACE_CD = #{stockPlaceIdentify.sectionPlaceCd, jdbcType=VARCHAR}
+         AND M_STOCK_PLACE.STOCK_PLACE_CD   = #{stockPlaceIdentify.stockPlaceCd, jdbcType=VARCHAR}
+    </update>
+
+    <delete id="delete" parameterType="fw.domain.options.stock.stockplace.StockPlaceIdentify">
+      DELETE FROM M_STOCK_PLACE
+       WHERE M_STOCK_PLACE.COMPANY_CD       = #{companyCd, jdbcType=VARCHAR}
+         AND M_STOCK_PLACE.SECTION_PLACE_CD = #{sectionPlaceCd, jdbcType=VARCHAR}
+         AND M_STOCK_PLACE.STOCK_PLACE_CD   = #{stockPlaceCd, jdbcType=VARCHAR}
+    </delete>
+
+    <delete id="deleteLanguage">
+      DELETE FROM M_STOCK_PLACE_LANG
+       WHERE M_STOCK_PLACE_LANG.COMPANY_CD       = #{identify.companyCd, jdbcType=VARCHAR}
+         AND M_STOCK_PLACE_LANG.SECTION_PLACE_CD = #{identify.sectionPlaceCd, jdbcType=VARCHAR}
+         AND M_STOCK_PLACE_LANG.STOCK_PLACE_CD   = #{identify.stockPlaceCd, jdbcType=VARCHAR}
+        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(languageInd)">
+         AND M_STOCK_PLACE_LANG.LANGUAGE_IND     = #{languageInd, jdbcType=VARCHAR}
+        </if>
+    </delete>
+
+    <select id="searchIdentify" parameterType="fw.domain.options.stock.stockplace.StockPlaceIdentify" resultMap="identity_Map">
+      SELECT M_STOCK_PLACE.COMPANY_CD
+           , M_STOCK_PLACE.SECTION_PLACE_CD
+           , M_STOCK_PLACE.STOCK_PLACE_CD
+           , M_STOCK_PLACE.LAST_UPD_DATE
+        FROM M_STOCK_PLACE
+       WHERE M_STOCK_PLACE.COMPANY_CD       = #{companyCd, jdbcType=VARCHAR}
+         AND M_STOCK_PLACE.SECTION_PLACE_CD = #{sectionPlaceCd, jdbcType=VARCHAR}
+         AND M_STOCK_PLACE.STOCK_PLACE_CD   = #{stockPlaceCd, jdbcType=VARCHAR}
+    </select>
+
+</mapper>

@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<flow xmlns="http://www.springframework.org/schema/webflow"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.springframework.org/schema/webflow
+        http://www.springframework.org/schema/webflow/spring-webflow-2.0.xsd"
+    parent="base">
+    <!--見積依頼承認（一覧部） -->
+     
+    <!-- 見積依頼承認一覧 -->
+    <var name="quotReqAppList" class="fw.domain.slip.quot.quotreq.QuotReqAppList" />
+    <!-- 識別情報-->
+    <var name="quotReqIdentify" class="fw.domain.slip.quot.quotreq.QuotReqIdentify" />
+
+    <input name="searchCondition" />
+    <input name="isCurrentPageSearch" />
+    <input name="isQuickLink" />
+
+    <decision-state id="isSearchByKey">
+       <if test="flowScope.isCurrentPageSearch" then="searchByKey" else="searchByCondition" />
+    </decision-state>
+    
+    <action-state id="searchByCondition">
+        <evaluate expression="PSAPR051Service.init(searchCondition)" result="flowScope.itemList" />
+        <transition to="PSAPR051"/> 
+    </action-state>
+
+    <action-state  id="searchByKey" >
+        <evaluate expression="PSAPR051Service.page(searchCondition)" result="flowScope.itemList" />
+        <transition to="PSAPR051"/>
+    </action-state>
+
+    <!-- 見積依頼承認一覧  -->
+    <view-state id="PSAPR051" model="quotReqAppList" view="apr/qot/PSAPR051">
+        <transition on="order" validate="false">
+            <evaluate expression="PSAPR051Service.order(searchCondition)" result="flowScope.itemList"  />
+        </transition>
+        <transition on="page" validate="false">
+             <evaluate expression="PSAPR051Service.page(searchCondition)" result="flowScope.itemList"  /> 
+        </transition>
+        <transition on="back" to="home" validate="false" />
+         
+        <!--個別承認 -->
+        <transition on="individualApprovalValidate"  validate="false">
+        <set name="quotReqIdentify.quotReqSeqNo.seqNumber" value="requestParameters.seqNumber"/>
+        <set name="quotReqIdentify.lastUpdDate" value="requestParameters.lastUpdDate"/>
+        <set name="flashScope.isShowApproval" value="true"/>
+        </transition>
+        <!--詳細 -->
+        <transition on="detailValidate" validate="true">
+        <set name="quotReqIdentify.quotReqSeqNo.seqNumber" value="requestParameters.seqNumber"/>
+        <set name="flashScope.isShowDetail" value="true"/>
+        </transition>
+        <!--一括承認 -->
+        <transition on="packageApproval" to="searchByKey" validate="false">
+            <evaluate expression="PSAPR051Service.packageApproval(quotReqAppList)" />
+            <set name="flashScope.isSuccess" value="true"></set>
+        </transition>
+        
+        
+        <transition on="individualApproval" to="PSAPR052" validate="false"/>
+        <transition on="detail" to="PSQOT020TOP" validate="false" />       
+    </view-state>
+    
+    <!--個別承認 -->
+    <subflow-state id="PSAPR052" subflow="apr/qot/PSAPR052">
+        <input name="quotReqIdentify" value="quotReqIdentify" />
+        <input name="isInitIndividualApr" value="true" />
+        <input name="SessionKey" value="SessionKey" />
+        <input name="searchCondition" value="searchCondition.getSearchCondition()"/>
+    </subflow-state>
+    
+    <!--詳細 -->
+    <subflow-state id="PSQOT020TOP" subflow="qot/est/PSQOT020TOP" >
+        <input name="quotReqIdentify" value="quotReqIdentify" />
+        <input name="isInitIndividualApr" value="true" />
+        <input name="SessionKey" value="SessionKey" />
+    </subflow-state>
+    
+   
+</flow>

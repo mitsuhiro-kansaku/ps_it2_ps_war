@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<flow xmlns="http://www.springframework.org/schema/webflow"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.springframework.org/schema/webflow
+        http://www.springframework.org/schema/webflow/spring-webflow-2.0.xsd"
+    parent="base">
+    
+    <var name="respPriceRevIdentify" class="fw.domain.slip.price.revision.resp.RespPriceRevIdentify" />
+    
+    <input name="searchCondition" />
+    <input name="isCurrentPageSearch" />
+    <input name="isQuickLink" />
+        
+    <decision-state id="isSearchByKey">
+       <if test="flowScope.isCurrentPageSearch" then="searchByKey" else="searchByCondition" />
+    </decision-state>
+    
+    <action-state id="searchByCondition">
+        <evaluate expression="PSPRC131Service.init(searchCondition)" result="flowScope.itemList" />
+        <transition to="PSPRC131"/> 
+    </action-state>
+
+    <action-state  id="searchByKey" >
+        <evaluate expression="PSPRC131Service.page(searchCondition)" result="flowScope.itemList" />
+        <transition to="PSPRC131"/>
+    </action-state>
+     
+    <view-state id="PSPRC131" view="prc/revans/PSPRC131" model="respPriceRevIdentify">
+        <transition on="page" validate="false">
+            <evaluate expression="PSPRC131Service.page(searchCondition)"
+                result="flowScope.itemList" />
+        </transition>
+        <transition on="order" validate="false">
+            <evaluate expression="PSPRC131Service.order(searchCondition)"
+                result="flowScope.itemList" />
+        </transition>
+        <transition on="back" to="home" validate="false" />
+
+        <transition on="stop" validate="false" to="searchByKey">
+	       <evaluate expression="PSPRC131Service.stop()"/>
+	       <set name="flashScope.isStopSuccess" value="true"></set>
+        </transition>
+        <transition on="download" validate="false">
+            <evaluate expression="PSPRC131Service.download()"/>
+        </transition>
+        <transition on="downloadAttachFile" validate="false">
+            <evaluate expression="PSPRC131Service.downloadAttachFile()"/>
+        </transition>
+        <transition on="receipt" to="receipt" validate="false">
+             <!-- ＩＴ３-00116-000　2013/06/19 ADD SBO_KANGJW START -->
+             <evaluate expression="new fw.domain.slip.common.receipt.Remand(requestParameters.aprDisplayModel,requestParameters.aprRemandComment,requestParameters.companyCd,requestParameters.sectionCd,requestParameters.userId,requestParameters.authNo,requestParameters.backUserShowFlg)" result="flowScope.remand"></evaluate>
+            <!-- ＩＴ３-00116-000　2013/06/19 ADD SBO_KANGJW -END- -->
+            <!-- ＩＴ３-00116-000　2013/06/19 DEL SBO_KANGJW START -->
+            <!-- <evaluate expression="new fw.domain.slip.common.receipt.Remand(requestParameters.aprDisplayModel,requestParameters.aprRemandComment,requestParameters.companyCd,requestParameters.sectionCd,requestParameters.userId,requestParameters.authNo)" result="flowScope.remand"></evaluate> -->
+            <!-- ＩＴ３-00116-000　2013/06/19　DEL SBO_KANGJW END -->
+        </transition>
+    </view-state>
+
+    <subflow-state id="receipt" subflow="cmn/apr/PSCMN020">
+       <input name="remand" value="remand" />
+    </subflow-state>
+</flow> 

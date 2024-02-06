@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<flow xmlns="http://www.springframework.org/schema/webflow"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.springframework.org/schema/webflow
+        http://www.springframework.org/schema/webflow/spring-webflow-2.0.xsd"
+    parent="base">
+    
+    <var name="PriceRevTableList" class="fw.domain.slip.price.revision.req.pricerevisionreq.pricerevisionlist.PriceRevTableList" />
+    
+    <input name="searchCondition" />
+    <input name="isCurrentPageSearch" />
+    <input name="isQuickLink" />
+    
+    <decision-state id="isSearchByKey">
+       <if test="flowScope.isCurrentPageSearch" then="searchByKey" else="searchByCondition" />
+    </decision-state>
+    
+    <action-state id="searchByCondition">
+        <evaluate expression="PSPRC091Service.init(searchCondition)" result="flowScope.itemList" />
+        <transition to="PSPRC091"/> 
+    </action-state>
+
+    <action-state  id="searchByKey" >
+        <evaluate expression="PSPRC091Service.page(searchCondition)" result="flowScope.itemList" />
+        <transition to="PSPRC091"/>
+    </action-state>
+     
+    <view-state id="PSPRC091" view="prc/rev/PSPRC091" model="PriceRevTableList">
+        <transition on="page" validate="false">
+            <evaluate expression="PSPRC091Service.page(searchCondition)"
+                result="flowScope.itemList" />
+        </transition>
+        <transition on="order" validate="false">
+            <evaluate expression="PSPRC091Service.order(searchCondition)"
+                result="flowScope.itemList" />
+        </transition>
+        <transition on="back" to="home" validate="false" />
+        <transition on="download" validate="false">
+            <evaluate expression="PSPRC091Service.download()" />
+        </transition>
+        <transition on="delete"  validate="false" to="searchByKey">
+            <evaluate expression="PSPRC091Service.delete()" />
+            <set name="flashScope.isSuccess" value="true"></set>
+        </transition>
+        <!-- 差戻しコメント -->
+        <transition on="receipt" to="receipt" validate="false">
+             <!-- ＩＴ３-00116-000　2013/06/19 ADD SBO_KANGJW START -->
+            <evaluate expression="new fw.domain.slip.common.receipt.Remand(requestParameters.aprDisplayModel,requestParameters.aprRemandComment,requestParameters.companyCd,requestParameters.sectionCd,requestParameters.userId,requestParameters.authNo,requestParameters.backUserShowFlg)" result="flowScope.remand"></evaluate>
+             <!-- ＩＴ３-00116-000　2013/06/19 ADD SBO_KANGJW  END-->
+              <!-- ＩＴ３-00116-000　2013/06/19 DEL SBO_KANGJW START -->
+             <!--<evaluate expression="new fw.domain.slip.common.receipt.Remand(requestParameters.aprDisplayModel,requestParameters.aprRemandComment,requestParameters.companyCd,requestParameters.sectionCd,requestParameters.userId,requestParameters.authNo)" result="flowScope.remand"></evaluate>-->
+             <!-- ＩＴ３-00116-000　2013/06/19 DEL SBO_KANGJW END -->
+<!-- ＩＴ３-00116-000　2013/06/19　DEL SBO_KANGJW END -->
+        </transition>
+    </view-state>
+    
+    <subflow-state id="receipt" subflow="cmn/apr/PSCMN020">
+       <input name="remand" value="remand" />
+    </subflow-state>
+</flow> 

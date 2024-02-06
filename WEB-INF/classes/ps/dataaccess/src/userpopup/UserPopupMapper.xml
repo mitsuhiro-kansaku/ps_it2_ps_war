@@ -1,0 +1,253 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="ps.dataaccess.src.userpopup.UserPopupMapper">
+
+    <sql id="listKeyIdentityWhereCondition">
+        <if test="@org.apache.commons.lang.StringUtils@isEmpty(validDateFlg)">
+            AND '${@fw.common.util.AppUtil@getSysDate()}' BETWEEN M_SECTION.VALID_START_DATE AND M_SECTION.VALID_END_DATE
+            AND '${@fw.common.util.AppUtil@getSysDate()}' BETWEEN M_SECTION_PLACE.VALID_START_DATE AND M_SECTION_PLACE.VALID_END_DATE
+            AND '${@fw.common.util.AppUtil@getSysDate()}' BETWEEN M_USER.VALID_START_DATE AND M_USER.VALID_END_DATE  
+        </if>
+        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(companyCd)">
+            AND M_B_USER.COMPANY_CD = #{companyCd, jdbcType=VARCHAR}
+        </if>      
+        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(sectionCd)">
+            AND M_USER.SECTION_CD ${@fw.common.util.SearchModeUtil@getSearchSQL("fw.domain.mst.userauthority.user.UserPopupSearchCondition","sectionCd")}
+        </if>  
+        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(sectionName)">
+            AND M_SECTION_LANG.SECTION_NAME ${@fw.common.util.SearchModeUtil@getSearchSQL("fw.domain.mst.userauthority.user.UserPopupSearchCondition","sectionName")}
+        </if>
+        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(userId)">
+            AND M_USER.USER_ID ${@fw.common.util.SearchModeUtil@getSearchSQL("fw.domain.mst.userauthority.user.UserPopupSearchCondition","userId")}
+        </if>
+        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(userName)">
+            AND M_B_USER_LANG.USER_NAME ${@fw.common.util.SearchModeUtil@getSearchSQL("fw.domain.mst.userauthority.user.UserPopupSearchCondition","userName")}
+        </if>
+        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(sectionPlaceCd)">
+            AND M_SECTION_PLACE.SECTION_PLACE_CD ${@fw.common.util.SearchModeUtil@getSearchSQL("fw.domain.mst.userauthority.user.UserPopupSearchCondition","sectionPlaceCd")}
+        </if>
+        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(sectionPlaceName)">
+            AND M_SECTION_PLACE_LANG.SECTION_PLACE_NAME ${@fw.common.util.SearchModeUtil@getSearchSQL("fw.domain.mst.userauthority.user.UserPopupSearchCondition","sectionPlaceName")}
+        </if>
+        <if test="@fw.domain.mst.searchcondition.SearchCondition@termFlgIsNotEmpty(searchCondition.termFlg) and  searchCondition.termFlg==0">
+            AND M_USER.TERM_FLG = #{searchCondition.termFlg, jdbcType=VARCHAR}
+            AND M_B_USER.TERM_FLG = #{searchCondition.termFlg, jdbcType=VARCHAR}
+        </if>
+        <if test="userPermissionList.size() > 0">
+            AND M_ROLE_DTL.AUTH_NO IN 
+                <foreach collection="userPermissionList" item="userPermission" open="(" separator="," close=")">
+                    #{userPermission}
+                </foreach>
+            AND M_ROLE_DTL.AUTH_IND = '1'
+        </if>
+    </sql>
+
+    <select id="listKeyIdentity" parameterType ="fw.domain.mst.userauthority.user.UserPopupSearchCondition" resultType="fw.domain.mst.userauthority.user.UserIdentify"> 
+        SELECT 
+            DISTINCT
+            M_USER.USER_ID AS "userId",
+            M_USER.COMPANY_CD AS "companyCd",
+            M_USER.SECTION_CD AS "sectionCd",
+            M_SECTION.SECTION_CD,
+            M_SECTION_LANG.SECTION_NAME,
+            M_B_USER_LANG.USER_NAME,
+            M_USER.OFFICIAL_NAME,
+            M_SECTION_PLACE.SECTION_PLACE_CD,
+            M_SECTION_PLACE_LANG.SECTION_PLACE_NAME
+        FROM M_USER
+        INNER JOIN M_COMPANY
+            ON  M_USER.COMPANY_CD=M_COMPANY.COMPANY_CD
+        LEFT JOIN M_B_USER
+            ON M_USER.USER_ID=M_B_USER.USER_ID
+            AND M_USER.COMPANY_CD=M_B_USER.COMPANY_CD
+        LEFT JOIN M_B_USER_LANG
+            ON M_B_USER.USER_ID=M_B_USER_LANG.USER_ID
+            AND M_B_USER.COMPANY_CD=M_B_USER_LANG.COMPANY_CD
+            AND M_B_USER_LANG.LANGUAGE_IND=M_COMPANY.COMPANY_USE_LANGUAGE_IND
+        LEFT JOIN (SELECT COMPANY_CD,
+                    SECTION_CD,
+                    SECTION_PLACE_CD,
+                    VALID_START_DATE,
+                    VALID_END_DATE,
+                    ROW_NUMBER() OVER (PARTITION BY COMPANY_CD, SECTION_CD ORDER BY VALID_START_DATE DESC) AS NO
+              FROM  M_SECTION WHERE  M_SECTION.VALID_START_DATE &lt;= '${@fw.common.util.AppUtil@getSysDate()}') M_SECTION
+            ON M_USER.COMPANY_CD = M_SECTION.COMPANY_CD
+            AND M_USER.SECTION_CD = M_SECTION.SECTION_CD
+            AND M_SECTION.NO = '1'
+        LEFT JOIN M_SECTION_LANG 
+            ON M_SECTION.SECTION_CD = M_SECTION_LANG.SECTION_CD
+            AND M_USER.COMPANY_CD =  M_SECTION_LANG.COMPANY_CD
+            AND M_SECTION.VALID_START_DATE = M_SECTION_LANG.VALID_START_DATE
+            AND M_SECTION.VALID_END_DATE = M_SECTION_LANG.VALID_END_DATE
+            AND M_SECTION_LANG.LANGUAGE_IND=M_COMPANY.COMPANY_USE_LANGUAGE_IND
+        LEFT JOIN M_SECTION_PLACE
+            ON M_SECTION_PLACE.SECTION_PLACE_CD = M_SECTION.SECTION_PLACE_CD
+            AND M_SECTION_PLACE.COMPANY_CD = M_SECTION.COMPANY_CD
+        LEFT JOIN M_SECTION_PLACE_LANG 
+             ON M_SECTION_PLACE_LANG.SECTION_PLACE_CD = M_SECTION_PLACE.SECTION_PLACE_CD
+             AND M_SECTION_PLACE_LANG.COMPANY_CD = M_SECTION_PLACE.COMPANY_CD 
+             AND M_SECTION_PLACE_LANG.LANGUAGE_IND=M_COMPANY.COMPANY_USE_LANGUAGE_IND
+        LEFT JOIN M_ROLE
+             ON (M_USER.COMPANY_CD = M_ROLE.COMPANY_CD
+             OR M_ROLE.COMPANY_CD = '${@fw.common.constant.ApplicationConstant@COMPANY_CD_ALL}')
+            AND M_USER.ROLE_NO = M_ROLE.ROLE_NO
+            AND M_ROLE.TERM_FLG = '0'
+        <if test="userPermissionList.size() > 0">
+        LEFT JOIN M_ROLE_DTL
+             ON M_ROLE.COMPANY_CD = M_ROLE_DTL.COMPANY_CD
+             AND M_ROLE_DTL.ROLE_NO = M_ROLE.ROLE_NO
+        </if>
+        <where>
+            <include refid="listKeyIdentityWhereCondition"/>
+        </where> 
+        ORDER BY ${searchCondition.columnOrder.columnOrder()}
+    </select>
+    
+    <select id="listPageItem" parameterType ="fw.domain.mst.userauthority.user.UserPopupSearchCondition" 
+            resultType="fw.domain.mst.userauthority.user.UserPopupItem">
+        SELECT DISTINCT
+            M_USER.USER_ID AS "userIdentify.userId",
+            M_USER.COMPANY_CD AS "userIdentify.companyCd",
+            M_USER.SECTION_CD AS "userIdentify.sectionCd",
+            CASE WHEN M_SECTION_LANG.SECTION_NAME IS NOT NULL THEN 
+                M_SECTION_LANG.SECTION_NAME 
+            ELSE 
+                section_lang.SECTION_NAME 
+            END AS "sectionName",
+            CASE WHEN M_SECTION_PLACE.SECTION_PLACE_CD IS NOT NULL THEN 
+                M_SECTION_PLACE.SECTION_PLACE_CD 
+            ELSE 
+                section_place.SECTION_PLACE_CD 
+            END AS "sectionPlaceCd",
+            CASE WHEN M_SECTION_PLACE_LANG.SECTION_PLACE_NAME IS NOT NULL THEN 
+                M_SECTION_PLACE_LANG.SECTION_PLACE_NAME 
+            ELSE 
+                section_place_lang.SECTION_PLACE_NAME 
+            END AS "sectionPlaceName",
+            M_B_USER_LANG.USER_NAME AS "userName",
+            M_USER.OFFICIAL_NAME AS "officialName",
+            M_USER.EXTENSION_NO AS "extensionNo",
+            M_USER.TEL_NO AS "externalNo",
+            M_USER.FAX_NO AS "faxNo",
+            M_B_USER.MAIL_ADDR AS "mailAddr",
+            CASE WHEN M_SECTION.SECTION_CD IS NOT NULL THEN 
+                M_SECTION.SECTION_CD 
+            ELSE 
+                section.SECTION_CD 
+            END AS SECTION_CD,
+            CASE WHEN M_SECTION_LANG.SECTION_NAME IS NOT NULL THEN
+                M_SECTION_LANG.SECTION_NAME
+            ELSE
+                section_lang.SECTION_NAME
+            END AS SECTION_NAME,
+            CASE WHEN M_SECTION_PLACE.SECTION_PLACE_CD IS NOT NULL THEN 
+                M_SECTION_PLACE.SECTION_PLACE_CD 
+            ELSE 
+                section_place.SECTION_PLACE_CD 
+            END AS SECTION_PLACE_CD,
+            CASE WHEN M_SECTION_PLACE_LANG.SECTION_PLACE_NAME IS NOT NULL THEN 
+                M_SECTION_PLACE_LANG.SECTION_PLACE_NAME 
+            ELSE 
+                section_place_lang.SECTION_PLACE_NAME 
+            END AS SECTION_PLACE_NAME
+       FROM M_USER
+        INNER JOIN M_COMPANY
+            ON  M_USER.COMPANY_CD=M_COMPANY.COMPANY_CD
+        LEFT JOIN M_B_USER
+            ON M_USER.USER_ID=M_B_USER.USER_ID
+            AND M_USER.COMPANY_CD=M_B_USER.COMPANY_CD
+        LEFT JOIN M_B_USER_LANG
+            ON M_B_USER.USER_ID=M_B_USER_LANG.USER_ID
+            AND M_B_USER.COMPANY_CD=M_B_USER_LANG.COMPANY_CD
+            AND M_B_USER_LANG.LANGUAGE_IND=M_COMPANY.COMPANY_USE_LANGUAGE_IND
+        LEFT JOIN (SELECT COMPANY_CD,
+                    SECTION_CD,
+                    SECTION_PLACE_CD,
+                    VALID_START_DATE,
+                    VALID_END_DATE,
+                    ROW_NUMBER() OVER (PARTITION BY COMPANY_CD, SECTION_CD ORDER BY VALID_START_DATE DESC) AS NO
+              FROM  M_SECTION WHERE  M_SECTION.VALID_START_DATE &lt;= '${@fw.common.util.AppUtil@getSysDate()}') M_SECTION
+            ON M_USER.COMPANY_CD = M_SECTION.COMPANY_CD
+            AND M_USER.SECTION_CD = M_SECTION.SECTION_CD
+            AND M_SECTION.NO = '1'
+        LEFT JOIN M_SECTION_LANG 
+            ON M_SECTION.SECTION_CD = M_SECTION_LANG.SECTION_CD
+            AND M_USER.COMPANY_CD =  M_SECTION_LANG.COMPANY_CD
+            AND M_SECTION.VALID_START_DATE = M_SECTION_LANG.VALID_START_DATE
+            AND M_SECTION.VALID_END_DATE = M_SECTION_LANG.VALID_END_DATE
+            AND M_SECTION_LANG.LANGUAGE_IND=M_COMPANY.COMPANY_USE_LANGUAGE_IND
+        LEFT JOIN (SELECT COMPANY_CD,
+                    SECTION_CD,
+                    SECTION_PLACE_CD,
+                    VALID_START_DATE,
+                    VALID_END_DATE,
+                    ROW_NUMBER() OVER (PARTITION BY COMPANY_CD, SECTION_CD ORDER BY VALID_START_DATE DESC) AS NO
+              FROM  M_SECTION) section
+            ON M_USER.COMPANY_CD = section.COMPANY_CD
+            AND M_USER.SECTION_CD = section.SECTION_CD
+            AND section.NO = '1'
+        LEFT JOIN M_SECTION_LANG section_lang
+            ON section.SECTION_CD = section_lang.SECTION_CD
+            AND M_USER.COMPANY_CD =  section_lang.COMPANY_CD
+            AND section.VALID_START_DATE = section_lang.VALID_START_DATE
+            AND section.VALID_END_DATE = section_lang.VALID_END_DATE
+            AND section_lang.LANGUAGE_IND=M_COMPANY.COMPANY_USE_LANGUAGE_IND
+        LEFT JOIN M_SECTION_PLACE
+            ON M_SECTION_PLACE.SECTION_PLACE_CD = M_SECTION.SECTION_PLACE_CD
+            AND M_SECTION_PLACE.COMPANY_CD = M_SECTION.COMPANY_CD
+        LEFT JOIN M_SECTION_PLACE section_place
+            ON section_place.SECTION_PLACE_CD = section.SECTION_PLACE_CD 
+            AND section_place.COMPANY_CD = section.COMPANY_CD 
+        LEFT JOIN M_SECTION_PLACE_LANG 
+             ON M_SECTION_PLACE_LANG.SECTION_PLACE_CD = M_SECTION_PLACE.SECTION_PLACE_CD
+             AND M_SECTION_PLACE_LANG.COMPANY_CD = M_SECTION_PLACE.COMPANY_CD 
+             AND M_SECTION_PLACE_LANG.LANGUAGE_IND=M_COMPANY.COMPANY_USE_LANGUAGE_IND
+        LEFT JOIN M_SECTION_PLACE_LANG section_place_lang
+            ON section_place_lang.SECTION_PLACE_CD = section_place.SECTION_PLACE_CD 
+            AND section_place_lang.COMPANY_CD = section_place.COMPANY_CD 
+            AND section_place_lang.LANGUAGE_IND = M_COMPANY.COMPANY_USE_LANGUAGE_IND 
+        LEFT JOIN M_ROLE
+             ON (M_USER.COMPANY_CD = M_ROLE.COMPANY_CD
+             OR M_ROLE.COMPANY_CD = '${@fw.common.constant.ApplicationConstant@COMPANY_CD_ALL}')
+             AND M_USER.ROLE_NO = M_ROLE.ROLE_NO
+             AND M_ROLE.TERM_FLG = '0'
+        LEFT JOIN M_ROLE_DTL
+             ON M_ROLE.COMPANY_CD = M_ROLE_DTL.COMPANY_CD
+             AND M_ROLE_DTL.ROLE_NO = M_ROLE.ROLE_NO
+     <where>
+             (M_USER.USER_ID,M_USER.COMPANY_CD,M_USER.SECTION_CD) in 
+                 <foreach collection="searchCondition.page.keyDomainEntityList" item="keyList"  open="(" separator="," close=")">  
+                    (#{keyList.userId},#{keyList.companyCd},#{keyList.sectionCd}) 
+                 </foreach>
+             <include refid="listKeyIdentityWhereCondition"/>
+     </where>
+        ORDER BY ${searchCondition.columnOrder.columnOrder()}
+    </select>
+
+     <select id="lostFocusSearch" parameterType ="fw.domain.mst.searchcondition.SearchCondition" 
+            resultType="String">
+        SELECT 
+           M_B_USER_LANG.USER_NAME
+        FROM M_USER
+        INNER JOIN M_COMPANY
+            ON M_USER.COMPANY_CD=M_COMPANY.COMPANY_CD
+         LEFT JOIN M_B_USER
+            ON M_USER.USER_ID=M_B_USER.USER_ID
+            AND M_USER.COMPANY_CD=M_B_USER.COMPANY_CD
+         LEFT JOIN M_B_USER_LANG
+           ON M_USER.USER_ID=M_B_USER_LANG.USER_ID
+            AND M_USER.COMPANY_CD=M_B_USER_LANG.COMPANY_CD
+            AND M_B_USER_LANG.LANGUAGE_IND=M_COMPANY.COMPANY_USE_LANGUAGE_IND
+            AND M_COMPANY.COMPANY_USE_LANGUAGE_IND = '${@fw.security.SecurityUtil@getCompanyUseLanguageIndByEscapeSql()}'
+        WHERE
+             M_USER.COMPANY_CD = #{companyCd, jdbcType=VARCHAR}
+             <if test="@org.apache.commons.lang.StringUtils@isNotBlank(sectionCd)">
+               AND M_USER.SECTION_CD = #{sectionCd, jdbcType=VARCHAR}
+             </if>        
+             AND M_USER.USER_ID = #{userId, jdbcType=VARCHAR}
+             AND M_USER.TERM_FLG = #{searchCondition.termFlg, jdbcType=VARCHAR}
+   </select>
+    
+</mapper>

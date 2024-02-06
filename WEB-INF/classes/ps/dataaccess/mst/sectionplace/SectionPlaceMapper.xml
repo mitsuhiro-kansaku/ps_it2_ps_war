@@ -1,0 +1,584 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="ps.dataaccess.mst.sectionplace.SectionPlaceMapper">
+
+    <!-- SRC-00115-00 include化共通-->
+    <sql id="listKeyIdentityWhereCondition">
+        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(companyCd)">
+              AND M_SECTION_PLACE.COMPANY_CD = #{companyCd, jdbcType=VARCHAR}
+        </if>
+        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(sectionPlaceCd)">
+              AND M_SECTION_PLACE.SECTION_PLACE_CD ${@fw.common.util.SearchModeUtil@getSearchSQL("fw.domain.mst.organization.sectionplace.SectionPlaceSearchCondition","sectionPlaceCd")}
+        </if>
+        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(validStartDateFrom.dateOfymd)">
+              AND M_SECTION_PLACE.VALID_START_DATE >= #{validStartDateFrom.dateOfymd}
+        </if>
+        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(validStartDateTo.dateOfymd)">
+            <![CDATA[AND M_SECTION_PLACE.VALID_START_DATE <= #{validStartDateTo.dateOfymd}]]>
+        </if>
+        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(validEndDateFrom.dateOfymd)">
+            AND M_SECTION_PLACE.VALID_END_DATE >= #{validEndDateFrom.dateOfymd}
+        </if>
+        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(validEndDateTo.dateOfymd)">
+            <![CDATA[AND M_SECTION_PLACE.VALID_END_DATE <= #{validEndDateTo.dateOfymd}]]>
+        </if>
+        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(sectionPlaceName)">
+              AND (section_lang_company.SECTION_PLACE_NAME ${@fw.common.util.SearchModeUtil@getSearchSQL("fw.domain.mst.organization.sectionplace.SectionPlaceSearchCondition","sectionPlaceName")}
+              OR section_lang_system.SECTION_PLACE_NAME ${@fw.common.util.SearchModeUtil@getSearchSQL("fw.domain.mst.organization.sectionplace.SectionPlaceSearchCondition","sectionPlaceName")})
+        </if>
+        <if test="@fw.domain.mst.searchcondition.SearchCondition@termFlgIsNotEmpty(searchCondition.termFlg)">
+              AND M_SECTION_PLACE.TERM_FLG = #{searchCondition.termFlg, jdbcType=VARCHAR}
+        </if>
+    </sql>
+    
+    <select id="listKeyIdentity" parameterType ="fw.domain.mst.organization.sectionplace.SectionPlaceSearchCondition" resultType="fw.domain.mst.organization.sectionplace.SectionPlaceIdentify">
+       SELECT 
+            M_SECTION_PLACE.COMPANY_CD AS "companyCd",
+            M_SECTION_PLACE.SECTION_PLACE_CD AS "sectionPlaceCd",
+            CASE
+             WHEN section_lang_company.SECTION_PLACE_NAME IS NOT NULL THEN
+              section_lang_company.SECTION_PLACE_NAME
+             ELSE
+              section_lang_system.SECTION_PLACE_NAME
+             END AS sectionPlaceName,
+            M_SECTION_PLACE.LAST_UPD_DATE AS "lastUpdDate"
+        FROM M_SECTION_PLACE
+        INNER JOIN M_COMPANY
+            ON 
+                M_SECTION_PLACE.COMPANY_CD=M_COMPANY.COMPANY_CD
+        LEFT JOIN M_SECTION_PLACE_LANG section_lang_company
+            ON M_SECTION_PLACE.COMPANY_CD=section_lang_company.COMPANY_CD
+            AND M_SECTION_PLACE.SECTION_PLACE_CD=section_lang_company.SECTION_PLACE_CD
+            AND section_lang_company.LANGUAGE_IND=M_COMPANY.COMPANY_USE_LANGUAGE_IND
+        LEFT JOIN M_SECTION_PLACE_LANG section_lang_system
+            ON M_SECTION_PLACE.COMPANY_CD=section_lang_system.COMPANY_CD
+            AND M_SECTION_PLACE.SECTION_PLACE_CD=section_lang_system.SECTION_PLACE_CD
+            AND section_lang_system.LANGUAGE_IND = '${@fw.common.util.AppUtil@getSysLanguageByEscapeSql()}'
+        <where>
+            <include refid="listKeyIdentityWhereCondition"/>
+        </where> 
+        ORDER BY ${searchCondition.columnOrder.columnOrder()}
+    </select>
+    
+     <resultMap type="fw.domain.mst.organization.sectionplace.SectionPlaceItem"  id="listPageItem">
+        <id column="spi.companyCd" property="sectionPlaceIdentify.companyCd"></id>
+        <id column="spi.sectionPlaceCd" property="sectionPlaceIdentify.sectionPlaceCd"></id>
+         <id column="spi.lastUpdDate" property="sectionPlaceIdentify.lastUpdDate"></id>
+    </resultMap>
+    
+     <select id="listPageItem" parameterType ="fw.domain.mst.searchcondition.SearchCondition" 
+            resultType="fw.domain.mst.organization.sectionplace.SectionPlaceItem" resultMap="listPageItem">
+        SELECT 
+            M_SECTION_PLACE.COMPANY_CD AS "spi.companyCd",
+            M_SECTION_PLACE.SECTION_PLACE_CD AS "spi.sectionPlaceCd",
+            CASE
+             WHEN section_lang_company.SECTION_PLACE_NAME IS NOT NULL THEN
+              section_lang_company.SECTION_PLACE_NAME
+             ELSE
+              section_lang_system.SECTION_PLACE_NAME
+             END AS sectionPlaceName,
+            M_SECTION_PLACE.VALID_START_DATE AS "validStartDate.dateOfymd",
+            M_SECTION_PLACE.VALID_END_DATE AS "validEndDate.dateOfymd",
+            M_SECTION_PLACE.TERM_FLG AS "term.termFlg",
+            M_SECTION_PLACE.LAST_UPD_DATE AS "spi.lastUpdDate"
+        FROM M_SECTION_PLACE
+        INNER JOIN M_COMPANY
+            ON M_SECTION_PLACE.COMPANY_CD=M_COMPANY.COMPANY_CD
+        LEFT JOIN M_SECTION_PLACE_LANG section_lang_company
+            ON M_SECTION_PLACE.COMPANY_CD=section_lang_company.COMPANY_CD
+            AND M_SECTION_PLACE.SECTION_PLACE_CD=section_lang_company.SECTION_PLACE_CD
+            AND section_lang_company.LANGUAGE_IND =  M_COMPANY.COMPANY_USE_LANGUAGE_IND
+        LEFT JOIN M_SECTION_PLACE_LANG section_lang_system
+            ON M_SECTION_PLACE.COMPANY_CD=section_lang_system.COMPANY_CD
+            AND M_SECTION_PLACE.SECTION_PLACE_CD=section_lang_system.SECTION_PLACE_CD
+            AND section_lang_system.LANGUAGE_IND = '${@fw.common.util.AppUtil@getSysLanguageByEscapeSql()}'
+        <where>
+            (M_SECTION_PLACE.COMPANY_CD, M_SECTION_PLACE.SECTION_PLACE_CD) IN
+            <foreach collection="searchCondition.page.keyDomainEntityList" item="keyList"  open="(" separator="," close=")">  
+                (#{keyList.companyCd},#{keyList.sectionPlaceCd})  
+            </foreach>   
+            <include refid="listKeyIdentityWhereCondition"/>
+        </where> 
+        ORDER BY ${searchCondition.columnOrder.columnOrder()}
+    </select>
+    
+    <resultMap type="fw.domain.mst.organization.sectionplace.SectionPlaceItem"  id="listSectionPlaceItem">
+        <id column="spi.companyCd" property="sectionPlaceIdentify.companyCd"></id>
+        <id column="spi.sectionPlaceCd" property="sectionPlaceIdentify.sectionPlaceCd"></id>
+         <id column="spi.lastUpdDate" property="sectionPlaceIdentify.lastUpdDate"></id>
+    </resultMap>
+    
+    <select id="listSectionPlaceItem" parameterType="fw.domain.mst.organization.sectionplace.SectionPlaceSearchCondition"
+        resultMap="listSectionPlaceItem">
+        SELECT 
+            M_SECTION_PLACE.COMPANY_CD AS "spi.companyCd",
+            M_SECTION_PLACE.SECTION_PLACE_CD AS "spi.sectionPlaceCd",
+            M_SECTION_PLACE_LANG.SECTION_PLACE_NAME AS "sectionPlaceName",
+            M_SECTION_PLACE.VALID_START_DATE AS "validStartDate.dateOfymd",
+            M_SECTION_PLACE.VALID_END_DATE AS "validEndDate.dateOfymd",
+            M_SECTION_PLACE.TERM_FLG AS "val.term.termFlg",
+            M_SECTION_PLACE.LAST_UPD_DATE AS "spi.lastUpdDate"
+        FROM M_SECTION_PLACE
+        LEFT JOIN M_SECTION_PLACE_LANG
+            ON M_SECTION_PLACE.COMPANY_CD=M_SECTION_PLACE_LANG.COMPANY_CD
+            AND M_SECTION_PLACE.SECTION_PLACE_CD=M_SECTION_PLACE_LANG.SECTION_PLACE_CD
+        WHERE LANGUAGE_IND = '${@fw.security.SecurityUtil@getCompanyUseLanguageIndByEscapeSql()}'
+              AND M_SECTION_PLACE.Term_Flg = '0'
+              <![CDATA[AND M_SECTION_PLACE.VALID_START_DATE <= '${@fw.common.util.AppUtil@getSysDate()}']]>
+              AND M_SECTION_PLACE.VALID_END_DATE >= '${@fw.common.util.AppUtil@getSysDate()}'
+        ORDER BY M_SECTION_PLACE.COMPANY_CD ASC,
+            M_SECTION_PLACE.SECTION_PLACE_CD ASC
+    </select>
+    
+    <resultMap type="fw.domain.mst.organization.sectionplace.SectionPlaceManagement"  id="search">
+        <id column="spi.companyCd" property="sectionPlaceIdentify.companyCd"></id>
+        <id column="spi.sectionPlaceCd" property="sectionPlaceIdentify.sectionPlaceCd"></id>
+        <id column="spi.validStartDate" property="val.valPd.period.startDate.dateOfymd"></id>
+        <id column="spi.validEndDate" property="val.valPd.period.endDate.dateOfymd"></id>
+    </resultMap>
+    
+    <select id="search" parameterType="fw.domain.mst.organization.sectionplace.SectionPlaceIdentify" 
+                resultType="fw.domain.mst.organization.sectionplace.SectionPlaceManagement" resultMap="search">
+        SELECT 
+            M_SECTION_PLACE.COMPANY_CD AS "spi.companyCd",
+            M_SECTION_PLACE.SECTION_PLACE_CD AS "spi.sectionPlaceCd",
+            M_COMPANY_LANG.COMPANY_NAME as "companySummary.companyName",
+            M_COMPANY.COMPANY_USE_LANGUAGE_IND as "companySummary.languageInd",
+            M_SECTION_PLACE.COUNTRY_CD AS "contact.country.cyCd",
+            M_SECTION_PLACE.ZIP_CD AS "contact.zipCd.zipCd",
+            M_SECTION_PLACE.TEL_NO AS "contact.telNo.telNo",
+            M_SECTION_PLACE.FAX_NO AS "contact.faxNo.faxNo",
+            section_lang_company.ADDRESS1 AS "contact.address1.address",
+            section_lang_company.ADDRESS2 AS "contact.address2.address",
+            M_SECTION_PLACE.VALID_START_DATE AS "spi.validStartDate",
+            M_SECTION_PLACE.VALID_END_DATE AS "spi.validEndDate",
+            M_SECTION_PLACE.TERM_FLG AS "val.term.termFlg",
+            M_SECTION_PLACE.LAST_UPD_DATE AS "lastUpdDate",
+            CASE
+             WHEN section_lang_company.SECTION_PLACE_NAME IS NOT NULL THEN
+              section_lang_company.SECTION_PLACE_NAME
+             ELSE
+              section_lang_system.SECTION_PLACE_NAME
+             END AS "sectionPlaceName",
+            M_SLIP_NO_MNG.SLIP_NO_PREFIX AS "slipNo.noPrefix",
+            M_SLIP_NO_MNG.SLIP_NO_FORMAT AS "slipNo.noFormat",
+            M_SLIP_NO_MNG.NO_NOW_IND AS "slipNo.noNowInd",
+            M_SLIP_NO_MNG.SLIP_NO_SEQ_SIZE AS "slipNo.seqSize",
+            M_SLIP_NO_MNG.SLIP_NO_MIN AS "slipNo.noMin.amount",
+            M_SLIP_NO_MNG.SLIP_NO_MAX AS "slipNo.noMax.amount",
+            M_SLIP_NO_MNG.SLIP_NO_NOW AS "slipNo.noNow.amount",
+            M_PAY_NO_MNG.NO_NOW_IND AS "payNo.noNowInd",
+            M_PAY_NO_MNG.PAY_NO_WEB_PREFIX AS "payNo.noPrefix",
+            M_PAY_NO_MNG.PAY_NO_WEB_FORMAT AS "payNo.noFormat",
+            M_PAY_NO_MNG.PAY_NO_SEQ_SIZE AS "payNo.seqSize",
+            M_PAY_NO_MNG.PAY_NO_MIN AS "payNo.noMin.amount",
+            M_PAY_NO_MNG.PAY_NO_MAX AS "payNo.noMax.amount",
+            M_PAY_NO_MNG.PAY_NO_NOW AS "payNo.noNow.amount"
+        <if test="@fw.common.options.constant.OptionBizIndConstant@isStock()">
+          , M_STRG_SHIP_NO_MNG.NO_NOW_IND AS "strgShipNo.noNowInd",
+            M_STRG_SHIP_NO_MNG.STRG_SHIP_NO_FORMAT AS "strgShipNo.noFormat",
+            M_STRG_SHIP_NO_MNG.STRG_SHIP_NO_PREFIX AS "strgShipNo.noPrefix",
+            M_STRG_SHIP_NO_MNG.STRG_SHIP_NO_SEQ_SIZE AS "strgShipNo.seqSize",
+            M_STRG_SHIP_NO_MNG.STRG_SHIP_NO_MIN AS "strgShipNo.noMin.amount",
+            M_STRG_SHIP_NO_MNG.STRG_SHIP_NO_MAX AS "strgShipNo.noMax.amount",
+            M_STRG_SHIP_NO_MNG.STRG_SHIP_NO_NOW AS "strgShipNo.noNow.amount"
+        </if>
+        FROM M_SECTION_PLACE
+        INNER JOIN M_COMPANY
+            ON M_SECTION_PLACE.COMPANY_CD = M_COMPANY.COMPANY_CD
+        LEFT JOIN M_COMPANY_LANG
+            ON M_COMPANY.COMPANY_CD = M_COMPANY_LANG.COMPANY_CD
+            AND M_COMPANY.COMPANY_USE_LANGUAGE_IND = M_COMPANY_LANG.LANGUAGE_IND
+       LEFT JOIN M_SECTION_PLACE_LANG section_lang_company
+            ON M_SECTION_PLACE.COMPANY_CD=section_lang_company.COMPANY_CD
+            AND M_SECTION_PLACE.SECTION_PLACE_CD=section_lang_company.SECTION_PLACE_CD
+            AND section_lang_company.LANGUAGE_IND = M_COMPANY.COMPANY_USE_LANGUAGE_IND
+       LEFT JOIN M_SECTION_PLACE_LANG section_lang_system
+            ON M_SECTION_PLACE.COMPANY_CD=section_lang_system.COMPANY_CD
+            AND M_SECTION_PLACE.SECTION_PLACE_CD=section_lang_system.SECTION_PLACE_CD
+            AND section_lang_system.LANGUAGE_IND = '${@fw.common.util.AppUtil@getSysLanguageByEscapeSql()}'
+        LEFT JOIN M_SLIP_NO_APPORTIONMENT
+            ON M_SECTION_PLACE.COMPANY_CD=M_SLIP_NO_APPORTIONMENT.COMPANY_CD
+            AND M_SECTION_PLACE.SECTION_PLACE_CD=M_SLIP_NO_APPORTIONMENT.SECTION_PLACE_CD   
+        LEFT JOIN M_SLIP_NO_MNG
+            ON M_SLIP_NO_APPORTIONMENT.SLIP_NO_SEQ = M_SLIP_NO_MNG.SLIP_NO_SEQ
+        LEFT JOIN M_PAY_NO_APPORTIONMENT
+            ON M_SECTION_PLACE.COMPANY_CD=M_PAY_NO_APPORTIONMENT.COMPANY_CD
+            AND M_SECTION_PLACE.SECTION_PLACE_CD=M_PAY_NO_APPORTIONMENT.SECTION_PLACE_CD 
+        LEFT JOIN M_PAY_NO_MNG
+            ON M_PAY_NO_APPORTIONMENT.PAY_NO_SEQ = M_PAY_NO_MNG.PAY_NO_SEQ
+        <if test="@fw.common.options.constant.OptionBizIndConstant@isStock()">
+        LEFT JOIN M_STRG_SHIP_NO_APPORTION
+          ON M_SECTION_PLACE.COMPANY_CD       = M_STRG_SHIP_NO_APPORTION.COMPANY_CD
+         AND M_SECTION_PLACE.SECTION_PLACE_CD = M_STRG_SHIP_NO_APPORTION.SECTION_PLACE_CD 
+        LEFT JOIN M_STRG_SHIP_NO_MNG
+          ON M_STRG_SHIP_NO_APPORTION.STRG_SHIP_NO_SEQ = M_STRG_SHIP_NO_MNG.STRG_SHIP_NO_SEQ
+        </if>
+       WHERE 
+            M_SECTION_PLACE.COMPANY_CD = #{companyCd, jdbcType=VARCHAR}
+            AND M_SECTION_PLACE.SECTION_PLACE_CD = #{sectionPlaceCd, jdbcType=VARCHAR}
+    </select>
+    
+     <select id="searchExclusive" parameterType="fw.domain.mst.organization.sectionplace.SectionPlaceIdentify" resultType="fw.domain.mst.organization.sectionplace.SectionPlaceIdentify">
+         SELECT 
+           COMPANY_CD AS "companyCd",
+           SECTION_PLACE_CD AS "sectionPlaceCd",
+           LAST_UPD_DATE AS "lastUpdDate"
+        FROM M_SECTION_PLACE
+        WHERE COMPANY_CD = #{companyCd, jdbcType=VARCHAR}
+            AND SECTION_PLACE_CD = #{sectionPlaceCd, jdbcType=VARCHAR}
+            AND LAST_UPD_DATE = #{lastUpdDate, jdbcType=VARCHAR}
+     </select>
+     
+      <select id="searchSlipNoMngRownum"  resultType="String">
+           SELECT CASE WHEN MAX(ROWNUM)> 0 THEN MAX(ROWNUM)+1 ELSE 1 END AS "slipNo.noNowInd" 
+           FROM M_SLIP_NO_MNG
+      </select>
+      
+       <select id="searchPayNoMngRownum"  resultType="String">
+            SELECT CASE WHEN MAX(ROWNUM)> 0 THEN MAX(ROWNUM)+1 ELSE 1 END AS "payNo.noNowInd" 
+            FROM M_PAY_NO_MNG
+      </select>
+      
+     <select id="nextSlipNoSeq" resultType="java.lang.Long">
+       SELECT M_SLIP_SEQ.NEXTVAL FROM DUAL
+     </select>
+      
+     <select id="nextPayNoSeq" resultType="java.lang.Long">
+       SELECT M_PAY_SEQ.NEXTVAL FROM DUAL
+     </select>
+
+     <select id="searchSlipNoSeq" parameterType="fw.domain.mst.organization.sectionplace.SectionPlaceManagement" resultType="java.lang.Long">
+       SELECT SLIP_NO_SEQ FROM M_SLIP_NO_MNG
+       WHERE
+          (    SLIP_NO_PREFIX = #{slipNo.noPrefix, jdbcType=VARCHAR}
+           AND SLIP_NO_FORMAT = #{slipNo.noFormat, jdbcType=VARCHAR}
+          ) OR
+          (    SLIP_NO_PREFIX IS NULL
+           AND #{slipNo.noPrefix, jdbcType=VARCHAR} IS NULL
+           AND SLIP_NO_FORMAT = #{slipNo.noFormat, jdbcType=VARCHAR}
+          )
+     </select>
+
+     <select id="searchPayNoSeq" parameterType="fw.domain.mst.organization.sectionplace.SectionPlaceManagement" resultType="java.lang.Long">
+       SELECT PAY_NO_SEQ FROM M_PAY_NO_MNG
+       WHERE
+          (     PAY_NO_WEB_PREFIX = #{payNo.noPrefix, jdbcType=VARCHAR}
+           AND PAY_NO_WEB_FORMAT = #{payNo.noFormat, jdbcType=VARCHAR}
+          ) OR
+          (    PAY_NO_WEB_PREFIX IS NULL
+           AND #{payNo.noPrefix, jdbcType=VARCHAR} IS NULL
+           AND PAY_NO_WEB_FORMAT = #{payNo.noFormat, jdbcType=VARCHAR}
+          )
+     </select>
+
+     <select id="listSectionPlaceLanguage" parameterType="fw.domain.mst.organization.sectionplace.SectionPlaceIdentify" resultType="fw.domain.mst.organization.sectionplace.SectionPlaceLanguage">
+       SELECT 
+          M_SECTION_PLACE_LANG.COMPANY_CD AS "companyCd",
+          M_SECTION_PLACE_LANG.LANGUAGE_IND AS "languageInd.languageInd",
+          M_SECTION_PLACE_LANG.SECTION_PLACE_CD AS "sectionPlaceCd",
+          M_SECTION_PLACE_LANG.SECTION_PLACE_NAME AS "sectionPlaceName",
+          M_SECTION_PLACE_LANG.ADDRESS1 AS "address1",
+          M_SECTION_PLACE_LANG.ADDRESS2 AS "address2"
+        FROM M_SECTION_PLACE_LANG
+        INNER JOIN M_CODE_NAME
+            ON M_SECTION_PLACE_LANG.LANGUAGE_IND = M_CODE_NAME.CODE_VALUE
+            AND CODE_KEY = 'LANGUAGE_IND'
+        INNER JOIN M_COMPANY
+            ON M_COMPANY.COMPANY_CD = M_SECTION_PLACE_LANG.COMPANY_CD
+            AND M_SECTION_PLACE_LANG.LANGUAGE_IND != M_COMPANY.COMPANY_USE_LANGUAGE_IND
+        WHERE M_SECTION_PLACE_LANG.COMPANY_CD = #{companyCd, jdbcType=VARCHAR}
+            AND M_SECTION_PLACE_LANG.SECTION_PLACE_CD = #{sectionPlaceCd, jdbcType=VARCHAR}
+        ORDER BY 
+            M_CODE_NAME.DSP_ORDER
+     </select>
+     
+     <insert id="insertSectionPlace" parameterType="fw.domain.mst.organization.sectionplace.SectionPlaceManagement">
+         INSERT INTO M_SECTION_PLACE
+         (
+            COMPANY_CD,
+            SECTION_PLACE_CD,
+            VALID_START_DATE,
+            VALID_END_DATE,
+            COUNTRY_CD,
+            ZIP_CD,
+            TEL_NO,
+            FAX_NO,
+            TERM_FLG,
+            LAST_UPD_DATE,
+            LAST_UPD_COMPANY_CD,
+            LAST_UPD_SECTION_CD,
+            LAST_UPD_USER_ID,
+            REG_DATE,
+            REG_COMPANY_CD,
+            REG_SECTION_CD,
+            REG_USER_ID
+         ) VALUES (
+            #{sectionPlaceIdentify.companyCd, jdbcType=VARCHAR},
+            #{sectionPlaceIdentify.sectionPlaceCd, jdbcType=VARCHAR},
+            #{val.valPd.period.startDate.validStartDateForDB, jdbcType=VARCHAR},
+            #{val.valPd.period.endDate.validEndDateForDB, jdbcType=VARCHAR},
+            #{contact.country.cyCd, jdbcType=VARCHAR},
+            #{contact.zipCd.zipCd, jdbcType=VARCHAR},
+            #{contact.telNo.telNo, jdbcType=VARCHAR},
+            #{contact.faxNo.faxNo, jdbcType=VARCHAR},
+            #{val.term.termFlg, jdbcType=VARCHAR},
+            #{registInfo.lastUpdDate, jdbcType=VARCHAR},
+            #{registInfo.lastUpdCompanyCd, jdbcType=VARCHAR},
+            #{registInfo.lastUpdSectionCd, jdbcType=VARCHAR},
+            #{registInfo.lastUpdUserId, jdbcType=VARCHAR},
+            #{registInfo.regDate, jdbcType=VARCHAR},
+            #{registInfo.regCompanyCd, jdbcType=VARCHAR},
+            #{registInfo.regSectionCd, jdbcType=VARCHAR},
+            #{registInfo.regUserId, jdbcType=VARCHAR}
+         )
+     </insert>
+     
+     <insert id="insertSectionPlaceLanguage" parameterType="fw.domain.mst.organization.sectionplace.SectionPlaceLanguage">
+         INSERT INTO M_SECTION_PLACE_LANG
+         (
+            COMPANY_CD,
+            SECTION_PLACE_CD,
+            SECTION_PLACE_NAME,
+            LANGUAGE_IND,
+            ADDRESS1,
+            ADDRESS2,
+            LAST_UPD_DATE,
+            LAST_UPD_COMPANY_CD,
+            LAST_UPD_SECTION_CD,
+            LAST_UPD_USER_ID,
+            REG_DATE,
+            REG_COMPANY_CD,
+            REG_SECTION_CD,
+            REG_USER_ID
+         ) VALUES (
+            #{sectionPlaceIdentify.companyCd, jdbcType=VARCHAR},
+            #{sectionPlaceIdentify.sectionPlaceCd, jdbcType=VARCHAR},
+            #{sectionPlaceName, jdbcType=VARCHAR},
+            #{languageInd.languageInd, jdbcType=VARCHAR},
+            #{address1, jdbcType=VARCHAR},
+            #{address2, jdbcType=VARCHAR},
+            #{registInfo.lastUpdDate, jdbcType=VARCHAR},
+            #{registInfo.lastUpdCompanyCd, jdbcType=VARCHAR},
+            #{registInfo.lastUpdSectionCd, jdbcType=VARCHAR},
+            #{registInfo.lastUpdUserId, jdbcType=VARCHAR},
+            #{registInfo.regDate, jdbcType=VARCHAR},
+            #{registInfo.regCompanyCd, jdbcType=VARCHAR},
+            #{registInfo.regSectionCd, jdbcType=VARCHAR},
+            #{registInfo.regUserId, jdbcType=VARCHAR}
+         )
+     </insert>
+     
+     <insert id="insertSlipNoMng" parameterType="fw.domain.mst.organization.sectionplace.SectionPlaceManagement">
+         INSERT INTO M_SLIP_NO_MNG
+         (
+            SLIP_NO_SEQ,
+            NO_NOW_IND,
+            SLIP_NO_PREFIX,
+            SLIP_NO_FORMAT,
+            SLIP_NO_SEQ_SIZE,
+            SLIP_NO_MIN,
+            SLIP_NO_MAX,
+            SLIP_NO_NOW,
+            LAST_UPD_DATE,
+            LAST_UPD_COMPANY_CD,
+            LAST_UPD_SECTION_CD,
+            LAST_UPD_USER_ID,
+            REG_DATE,
+            REG_COMPANY_CD,
+            REG_SECTION_CD,
+            REG_USER_ID
+         ) VALUES (
+            #{slipNo.noSequence},
+            #{slipNo.noNowInd, jdbcType=VARCHAR},
+            #{slipNo.noPrefix, jdbcType=VARCHAR},
+            #{slipNo.noFormat, jdbcType=VARCHAR},
+            #{slipNo.seqSize},
+            #{slipNo.noMin.amount},
+            #{slipNo.noMax.amount},
+            #{slipNo.noNow.amount},
+            #{registInfo.lastUpdDate, jdbcType=VARCHAR},
+            #{registInfo.lastUpdCompanyCd, jdbcType=VARCHAR},
+            #{registInfo.lastUpdSectionCd, jdbcType=VARCHAR},
+            #{registInfo.lastUpdUserId, jdbcType=VARCHAR},
+            #{registInfo.regDate, jdbcType=VARCHAR},
+            #{registInfo.regCompanyCd, jdbcType=VARCHAR},
+            #{registInfo.regSectionCd, jdbcType=VARCHAR},
+            #{registInfo.regUserId, jdbcType=VARCHAR}
+         )
+     </insert>
+     
+     <insert id="insertSlipNoApportionment" parameterType="fw.domain.mst.organization.sectionplace.SectionPlaceManagement">
+         INSERT INTO M_SLIP_NO_APPORTIONMENT
+         (
+            COMPANY_CD,
+            SECTION_PLACE_CD,
+            SLIP_NO_SEQ,
+            LAST_UPD_DATE,
+            LAST_UPD_COMPANY_CD,
+            LAST_UPD_SECTION_CD,
+            LAST_UPD_USER_ID,
+            REG_DATE,
+            REG_COMPANY_CD,
+            REG_SECTION_CD,
+            REG_USER_ID
+         ) VALUES (
+            #{sectionPlaceIdentify.companyCd, jdbcType=VARCHAR},
+            #{sectionPlaceIdentify.sectionPlaceCd, jdbcType=VARCHAR},
+            #{slipNo.noSequence},
+            #{registInfo.lastUpdDate, jdbcType=VARCHAR},
+            #{registInfo.lastUpdCompanyCd, jdbcType=VARCHAR},
+            #{registInfo.lastUpdSectionCd, jdbcType=VARCHAR},
+            #{registInfo.lastUpdUserId, jdbcType=VARCHAR},
+            #{registInfo.regDate, jdbcType=VARCHAR},
+            #{registInfo.regCompanyCd, jdbcType=VARCHAR},
+            #{registInfo.regSectionCd, jdbcType=VARCHAR},
+            #{registInfo.regUserId, jdbcType=VARCHAR}
+         )
+     </insert>
+     
+     <delete id="deleteSlipNoApportionment" parameterType="fw.domain.mst.organization.sectionplace.SectionPlaceManagement">
+         DELETE FROM M_SLIP_NO_APPORTIONMENT
+         WHERE 
+                COMPANY_CD = #{sectionPlaceIdentify.companyCd, jdbcType=VARCHAR}
+            AND SECTION_PLACE_CD = #{sectionPlaceIdentify.sectionPlaceCd, jdbcType=VARCHAR}
+     </delete>
+     
+     <insert id="insertPayNoMng" parameterType="fw.domain.mst.organization.sectionplace.SectionPlaceManagement">
+        INSERT INTO M_PAY_NO_MNG
+        (
+            PAY_NO_SEQ,
+            NO_NOW_IND,
+            PAY_NO_WEB_FORMAT,
+            PAY_NO_WEB_PREFIX,
+            PAY_NO_SEQ_SIZE,
+            PAY_NO_MIN,
+            PAY_NO_MAX,
+            PAY_NO_NOW,
+            LAST_UPD_DATE,
+            LAST_UPD_COMPANY_CD,
+            LAST_UPD_SECTION_CD,
+            LAST_UPD_USER_ID,
+            REG_DATE,
+            REG_COMPANY_CD,
+            REG_SECTION_CD,
+            REG_USER_ID
+        ) VALUES (
+            #{payNo.noSequence},
+            #{payNo.noNowInd, jdbcType=VARCHAR},
+            #{payNo.noFormat, jdbcType=VARCHAR},
+            #{payNo.noPrefix, jdbcType=VARCHAR},
+            #{payNo.seqSize},
+            #{payNo.noMin.amount},
+            #{payNo.noMax.amount},
+            #{payNo.noNow.amount},
+            #{registInfo.lastUpdDate, jdbcType=VARCHAR},
+            #{registInfo.lastUpdCompanyCd, jdbcType=VARCHAR},
+            #{registInfo.lastUpdSectionCd, jdbcType=VARCHAR},
+            #{registInfo.lastUpdUserId, jdbcType=VARCHAR},
+            #{registInfo.regDate, jdbcType=VARCHAR},
+            #{registInfo.regCompanyCd, jdbcType=VARCHAR},
+            #{registInfo.regSectionCd, jdbcType=VARCHAR},
+            #{registInfo.regUserId, jdbcType=VARCHAR}
+           
+        )
+     </insert>
+     
+     <insert id="insertPayNoApportionment" parameterType="fw.domain.mst.organization.sectionplace.SectionPlaceManagement">
+        INSERT INTO M_PAY_NO_APPORTIONMENT
+        (
+            COMPANY_CD,
+            SECTION_PLACE_CD,
+            PAY_NO_SEQ,
+            LAST_UPD_DATE,
+            LAST_UPD_COMPANY_CD,
+            LAST_UPD_SECTION_CD,
+            LAST_UPD_USER_ID,
+            REG_DATE,
+            REG_COMPANY_CD,
+            REG_SECTION_CD,
+            REG_USER_ID
+        ) VALUES (
+            #{sectionPlaceIdentify.companyCd, jdbcType=VARCHAR},
+            #{sectionPlaceIdentify.sectionPlaceCd, jdbcType=VARCHAR},
+            #{payNo.noSequence},
+            #{registInfo.lastUpdDate, jdbcType=VARCHAR},
+            #{registInfo.lastUpdCompanyCd, jdbcType=VARCHAR},
+            #{registInfo.lastUpdSectionCd, jdbcType=VARCHAR},
+            #{registInfo.lastUpdUserId, jdbcType=VARCHAR},
+            #{registInfo.regDate, jdbcType=VARCHAR},
+            #{registInfo.regCompanyCd, jdbcType=VARCHAR},
+            #{registInfo.regSectionCd, jdbcType=VARCHAR},
+            #{registInfo.regUserId, jdbcType=VARCHAR}
+           
+        )
+     </insert>
+     
+     <delete id="deletePayNoApportionment" parameterType="fw.domain.mst.organization.sectionplace.SectionPlaceManagement">
+        DELETE FROM M_PAY_NO_APPORTIONMENT
+        WHERE
+                COMPANY_CD = #{sectionPlaceIdentify.companyCd, jdbcType=VARCHAR}
+            AND SECTION_PLACE_CD = #{sectionPlaceIdentify.sectionPlaceCd, jdbcType=VARCHAR}
+     </delete>
+     
+     <update id="updateSectionPlace" parameterType="fw.domain.mst.organization.sectionplace.SectionPlaceManagement">
+        UPDATE M_SECTION_PLACE 
+        SET
+            VALID_START_DATE = '${@fw.common.util.AppUtil@convertDateForValid(val.valPd.period.startDate.dateOfymd,@fw.common.util.AppUtil@VALID_START_DATE)}',
+            VALID_END_DATE = '${@fw.common.util.AppUtil@convertDateForValid(val.valPd.period.endDate.dateOfymd,@fw.common.util.AppUtil@VALID_END_DATE)}',
+            COUNTRY_CD = #{contact.country.cyCd, jdbcType=VARCHAR},
+            ZIP_CD = #{contact.zipCd.zipCd, jdbcType=VARCHAR},
+            TEL_NO = #{contact.telNo.telNo, jdbcType=VARCHAR},
+            FAX_NO = #{contact.faxNo.faxNo, jdbcType=VARCHAR},
+            TERM_FLG = #{val.term.termFlg, jdbcType=VARCHAR},
+            LAST_UPD_DATE = #{registInfo.lastUpdDate, jdbcType=VARCHAR},
+            LAST_UPD_COMPANY_CD = #{registInfo.lastUpdCompanyCd, jdbcType=VARCHAR},
+            LAST_UPD_SECTION_CD = #{registInfo.lastUpdSectionCd, jdbcType=VARCHAR},
+            LAST_UPD_USER_ID = #{registInfo.lastUpdUserId, jdbcType=VARCHAR}
+        WHERE COMPANY_CD = #{sectionPlaceIdentify.companyCd, jdbcType=VARCHAR}
+            AND SECTION_PLACE_CD = #{sectionPlaceIdentify.sectionPlaceCd, jdbcType=VARCHAR}
+     </update>
+     
+     <delete id="deleteSectionPlace" parameterType="fw.domain.mst.organization.sectionplace.SectionPlaceManagement">
+        DELETE FROM M_SECTION_PLACE
+        WHERE COMPANY_CD = #{sectionPlaceIdentify.companyCd, jdbcType=VARCHAR}
+            AND SECTION_PLACE_CD = #{sectionPlaceIdentify.sectionPlaceCd, jdbcType=VARCHAR}
+     </delete>
+     <delete id="deleteSectionPlaceLanguage" parameterType="fw.domain.mst.organization.sectionplace.SectionPlaceManagement">
+        DELETE FROM M_SECTION_PLACE_LANG
+        WHERE COMPANY_CD = #{sectionPlaceIdentify.companyCd, jdbcType=VARCHAR}
+            AND SECTION_PLACE_CD = #{sectionPlaceIdentify.sectionPlaceCd, jdbcType=VARCHAR}
+     </delete>
+     
+     <select id="searchSectionPlaceName" parameterType="fw.domain.mst.organization.sectionplace.SectionPlaceIdentify" resultType="fw.domain.mst.organization.sectionplace.SectionPlaceManagement">
+        SELECT
+        CASE
+        WHEN section_lang_company.SECTION_PLACE_NAME IS NOT NULL THEN
+        section_lang_company.SECTION_PLACE_NAME
+        ELSE
+        section_lang_system.SECTION_PLACE_NAME
+        END AS "sectionPlaceName"
+        FROM M_SECTION_PLACE
+        LEFT JOIN M_SECTION_PLACE_LANG section_lang_company
+        ON
+        M_SECTION_PLACE.COMPANY_CD = section_lang_company.COMPANY_CD
+        AND M_SECTION_PLACE.SECTION_PLACE_CD = section_lang_company.SECTION_PLACE_CD
+        AND section_lang_company.LANGUAGE_IND = '${@fw.security.SecurityUtil@getCompanyUseLanguageIndByEscapeSql()}'
+        LEFT JOIN M_SECTION_PLACE_LANG section_lang_system
+        ON
+        M_SECTION_PLACE.COMPANY_CD = section_lang_system.COMPANY_CD
+        AND M_SECTION_PLACE.SECTION_PLACE_CD = section_lang_system.SECTION_PLACE_CD
+        AND section_lang_system.LANGUAGE_IND = '${@fw.security.SecurityUtil@getCompanyUseLanguageIndByEscapeSql()}'
+        WHERE M_SECTION_PLACE.COMPANY_CD = #{companyCd, jdbcType=VARCHAR}
+        AND M_SECTION_PLACE.SECTION_PLACE_CD = #{sectionPlaceCd, jdbcType=VARCHAR}
+     </select>
+     
+         <select id="searchSectionCount" parameterType="fw.domain.mst.organization.sectionplace.SectionPlaceIdentify" resultType="int">
+            SELECT COUNT(SECTION_CD) 
+            FROM M_SECTION 
+            WHERE SECTION_PLACE_CD = #{sectionPlaceCd, jdbcType=VARCHAR}
+                 AND COMPANY_CD = #{companyCd, jdbcType=VARCHAR}
+    </select>
+</mapper>

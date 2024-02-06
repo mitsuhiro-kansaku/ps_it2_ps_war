@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<flow xmlns="http://www.springframework.org/schema/webflow"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.springframework.org/schema/webflow
+        http://www.springframework.org/schema/webflow/spring-webflow-2.0.xsd"
+    parent="base">
+
+    <var name="ringiBudgetHistListItemList" class="fw.domain.options.budget.ringibudgethistlist.RingiBudgetHistListItemList" />
+    <var name="ringiBudgetDtlIdentify" class="fw.domain.options.budget.ringibudget.RingiBudgetDtlIdentify" />
+
+    <input name="searchCondition" />
+    <input name="isCurrentPageSearch" />
+
+    <decision-state id="isSearchByKey">
+       <if test="flowScope.isCurrentPageSearch" then="searchByKey" else="searchByCondition" />
+    </decision-state>
+
+    <action-state id="searchByCondition">
+        <evaluate expression="PSBDT060Service.search(searchCondition)" result="flowScope.itemList"/>
+        <transition to="PSBDT060"/>
+    </action-state>
+
+    <action-state  id="searchByKey" >
+        <evaluate expression="PSBDT060Service.page(searchCondition)" result="flowScope.itemList"/>
+        <transition to="PSBDT060"/>
+    </action-state>
+
+    <view-state id="PSBDT060" model="ringiBudgetDtlIdentify" view="options/budget/PSBDT060">
+       <transition on="order" validate="false">
+            <evaluate expression="PSBDT060Service.order(searchCondition)" result="flowScope.itemList"/>
+        </transition>
+        <transition on="page" validate="false">
+             <evaluate expression="PSBDT060Service.page(searchCondition)" result="flowScope.itemList"/>
+        </transition>
+        <!-- 選択 -->
+        <transition on="selectValidate" validate="false">
+            <set name="flashScope.isShowSelect" value="true"></set>
+        </transition>
+        <transition on="select" to="PSBDT070Search" validate="false" />
+    </view-state>
+
+    <subflow-state id="PSBDT070Search" subflow="options/budget/PSBDT070Search" >
+        <input name="ringiBudgetDtlIdentify" value="ringiBudgetDtlIdentify" />
+        <transition on="back" to="PSBDT060Search" />
+    </subflow-state>
+
+    <subflow-state id="PSBDT060Search" subflow="options/budget/PSBDT060Search" >
+    </subflow-state>
+</flow>

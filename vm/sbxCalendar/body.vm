@@ -1,0 +1,334 @@
+<!doctype html>
+<HTML LANG="ja">
+<HEAD>
+<META http-equiv="Content-type" content="text/html; charset=UTF-8">
+<META http-equiv="Pragma" content="no-cache">
+<META http-equiv="Content-script-type" CONTENT="text/javascript">
+<LINK ID="CSS_FONT" REL="stylesheet" HREF="../include/FontS.css" TYPE="text/css">
+<LINK REL="stylesheet" HREF="../include/Layout.css" TYPE="text/css">
+<LINK REL="stylesheet" HREF="../include/searchbox.css" TYPE="text/css">
+<LINK REL="stylesheet" HREF="../include/Color.css" TYPE="text/css">
+<SCRIPT LANGUAGE="javascript" TYPE="text/javascript" SRC="../include/common.js"></SCRIPT>
+<SCRIPT LANGUAGE="javascript" TYPE="text/javascript" SRC="../include/check.js"></SCRIPT>
+<SCRIPT LANGUAGE="javascript" TYPE="text/javascript" SRC="../include/date.js"></SCRIPT>
+<SCRIPT LANGUAGE="javascript" TYPE="text/javascript" SRC="../include/searchbox.js"></SCRIPT>
+<SCRIPT LANGUAGE="javascript" TYPE="text/javascript">
+<!--
+var x,y,sx,sy,ex,ey,DRAGMODE=false;
+
+var wkDate = new Date();
+var thisyear = wkDate.getFullYear();
+var thismonth = wkDate.getMonth();
+var today = wkDate.getDate();
+var todaypointer = null;
+var targetDate;
+var _DATE_SEPARATOR_DISP = "-";
+
+function setToday()
+{
+    setSelectedDate(new Date());
+}
+
+function setSelectedDate(selectedDate)
+{
+    wkDate = selectedDate;
+    thisyear = selectedDate.getFullYear();
+    thismonth = selectedDate.getMonth();
+    today = selectedDate.getDate();
+}
+
+// カレンダー窓を開く
+function openCalendarBox() {
+
+
+    changeFontSize0();
+
+    if( todaypointer ) {
+        todaypointer.style.border = "1px solid black";
+    }
+
+    yyyy = wkDate.getFullYear();
+
+    getObj("YEAR").options.length=3;
+    getObj("YEAR").options[0].value = yyyy-1;
+    getObj("YEAR").options[0].text = yyyy-1;
+    getObj("YEAR").options[1].value = yyyy;
+    getObj("YEAR").options[1].text = yyyy;
+    getObj("YEAR").options[2].value = yyyy+1;
+    getObj("YEAR").options[2].text = yyyy+1;
+    getObj("YEAR").selectedIndex = 1;
+    setText("MONTH",wkDate.getMonth()+1);
+    setText("MONTHNAME",MONTHNAME[wkDate.getMonth()]);
+
+    lastmonth = wkDate.getMonth() - 1;
+    if( lastmonth<0 ) {
+        lastmonth=11;
+    }
+    setText("LASTMONTH",lastmonth+1);
+    setText("LASTMONTHNAME",MONTHNAME[lastmonth].substring(0,3));
+    nextmonth = wkDate.getMonth() + 1;
+    if( nextmonth>11 ) {
+        nextmonth=0;
+    }
+    setText("NEXTMONTH",nextmonth+1);
+    setText("NEXTMONTHNAME",MONTHNAME[nextmonth].substring(0,3));
+
+    parent.setDisplay("CALENDARBOX",true);
+    wkYear = wkDate.getYear();
+    wkFullYear = wkDate.getFullYear();
+    wkMonth = wkDate.getMonth();
+    wkDate.setDate(1);
+
+    wkday = wkDate.getDay()*(-1);
+    mm = wkDate.getMonth()+1;
+    if( mm.toString().length==1 ) {
+        mm = "0"+mm.toString();
+    }
+    firstdate = parseInt(addDate(wkFullYear.toString()+mm+"01".toString(),wkday,"D").substring(6,8));
+    if( wkday==0 ) {
+        wkFlg = true;
+    } else {
+        wkFlg = false;
+    }
+    wkCnt = wkday;
+    for(i=0; i<6; i++) {
+        for(h=0; h<7; h++) {
+            if( !wkFlg ) {
+                if( wkCnt>=0 && firstdate>15 ) {
+                    wkCnt--;
+                    wkFlg = true;
+                } else {
+                    setText("DATE"+i+"_"+h,firstdate++);
+                    getObj("DATE"+i+"_"+h).style.color = "silver"; // この色、下のロジックで判定に使っています。変更時は注意！！
+                }
+                wkCnt++;
+            }
+            if( wkFlg ) {
+                wkCnt++;
+                wkDate.setDate(wkCnt);
+                if( wkDate.getMonth() == wkMonth ) {
+                    getObj("DATE"+i+"_"+h).innerText = wkCnt;
+                    switch( h ) {
+                    case 0:
+                        getObj("DATE"+i+"_"+h).style.color = "Red";
+                        break;
+                    case 6:
+                        getObj("DATE"+i+"_"+h).style.color = "blue";
+                        break;
+                    default:
+                        getObj("DATE"+i+"_"+h).style.color = "black";
+                        break;
+                    }
+                    if( thisyear==wkDate.getFullYear() && thismonth==wkDate.getMonth() && today==wkCnt ) {
+                        todaypointer = getObj("DATE"+i+"_"+h);
+                        todaypointer.style.border = "3px solid orange";
+                
+                    }
+                } else {
+                    firstdate = 1;
+                    getObj("DATE"+i+"_"+h).innerText = firstdate++;
+                    getObj("DATE"+i+"_"+h).style.color = "silver";// この色、下のロジックで判定に使っています。変更時は注意！！
+                    wkFlg = false;
+                }
+            }
+        }
+    }
+    wkDate.setDate(1);
+    wkDate.setMonth(wkMonth);
+    wkDate.setYear(wkYear);
+    wkDate.setFullYear(wkFullYear);
+//    $("testDiv").draggable("enable");
+}
+
+// 検索窓を閉じる
+function closeSearchBox() {
+    window.parent.closeSearchBox();
+}
+
+function selectDate(obj) {
+    if( getText2(obj) == "" ) {
+        return;
+    }
+
+    if( obj.style.color=="silver" ) {
+        if( getText2(obj)<15 ) {
+            wkDate.setMonth(wkDate.getMonth()+1);
+        } else {
+            wkDate.setMonth(wkDate.getMonth()-1);
+        }
+    }
+
+    wkStr = new String(wkDate.getFullYear());
+    result = wkStr + _DATE_SEPARATOR_DISP;
+    wkStr = new String(wkDate.getMonth()+1);
+    if( wkStr.length == 1 ) {
+        wkStr = "0" + wkStr;
+    }
+    result = result + wkStr + _DATE_SEPARATOR_DISP;
+    wkStr = new String(getText2(obj));
+    if( wkStr.length == 1 ) {
+        wkStr = "0" + wkStr;
+    }
+    result = result + wkStr;
+    wkDate.setDate(1);
+    wkDate.setMonth(wkMonth);
+    wkDate.setYear(wkYear);
+    wkDate.setFullYear(wkFullYear);
+    try {
+        targetDate.focus();
+        targetDate.value = result;
+        targetDate.blur();
+        closeSearchBox();
+        window.parent.afterProcCalendar(targetDate);
+    } catch( e ) {
+    }
+}
+// 前の月
+function prevMonth() {
+    wkMonth = wkDate.getMonth();
+    wkMonth--;
+    if( wkMonth<0 ) {
+        wkMonth = 11;
+        wkDate.setFullYear(wkDate.getFullYear()-1);
+    }
+    wkDate.setDate(1);
+    wkDate.setMonth(wkMonth);
+    openCalendarBox();
+}
+// 次の月
+function nextMonth() {
+    wkMonth = wkDate.getMonth();
+    wkMonth++;
+    if( wkMonth>=12 ) {
+        wkMonth = 0;
+        wkDate.setFullYear(wkDate.getFullYear()+1);
+    }
+    wkDate.setDate(1);
+    wkDate.setMonth(wkMonth);
+    openCalendarBox();
+    try {
+        window.parent.afterProc();
+    } catch( e ) {
+    }
+}
+// 年の変更
+function changeYear() {
+    wkDate.setDate(1);
+    wkDate.setFullYear(getObj("YEAR").options[getObj("YEAR").selectedIndex].value)
+    openCalendarBox();
+    try {
+        window.parent.afterProc();
+    } catch( e ) {
+    }
+}
+
+//-->
+</SCRIPT>
+</HEAD>
+<BODY CLASS="Transparent" topmargin="0" leftmargin="0" marginwidth="0" marginheight="0" background:#fff;/>
+<FORM NAME="Body">
+    <TABLE CLASS="NoBorder" STYLE="width:150px;position:absolute;z-index:0;">
+        <TR>
+            <TD id="Triangluar" CLASS="NoBorder" ALIGN="left" style="height:16px;"><img id="triangluar_img_top" CLASS="NoBorder" src="../image/triangular.gif" style="margin-left:20px;margin-right:20px;"></TD>
+        </TR>
+        <TR>
+            <TD CLASS="SearchBox">
+                <TABLE CLASS="NoBorder" WIDTH="100%">
+                    <TR>
+                        <TD STYLE="text-align:left;"></TD>
+                        <TD STYLE="text-align:center;" ROWSPAN="2">
+                            <SELECT ID="YEAR" CLASS="FontMiniAnk" ONCHANGE="changeYear();">
+                            </SELECT>
+                            <BR>
+                            <SPAN ID="MONTH" CLASS="FontBigAnkBold"></SPAN><BR>
+                            <SPAN ID="MONTHNAME" CLASS="FontMini"></SPAN>
+                        </TD>
+                        <TD ID="CLOSE" STYLE="text-align:right;"><IMG STYLE="cursor:pointer;" SRC="../image/btnMiniClose.gif" ONCLICK="closeSearchBox();" ></TD>
+                    </TR>
+                    <TR>
+                        <TD STYLE="text-align:left;cursor:pointer;" ONCLICK="prevMonth();" ONMOUSEOVER="this.style.backgroundColor='lightyellow';" ONMOUSEOUT="this.style.backgroundColor='transparent';">
+                            <IMG ID="PREV" SRC="../image/btnLeft.gif"><BR>
+                            <SPAN ID="LASTMONTH" CLASS="FontMiddleAnkBold_M"></SPAN><BR>
+                            <SPAN ID="LASTMONTHNAME" CLASS="FontMiddleAnkBold_M"></SPAN>
+                        </TD>
+                        <TD STYLE="text-align:right;cursor:pointer;" ONCLICK="nextMonth();" ONMOUSEOVER="this.style.backgroundColor='lightyellow';" ONMOUSEOUT="this.style.backgroundColor='transparent';">
+                            <IMG ID="NEXT" SRC="../image/btnRight.gif"><BR>
+                            <SPAN ID="NEXTMONTH" CLASS="FontMiddleAnkBold_M"></SPAN><BR>
+                            <SPAN ID="NEXTMONTHNAME" CLASS="FontMiddleAnkBold_M"></SPAN>
+                        </TD>
+                    </TR>
+                </TABLE>
+                <TABLE CLASS="NoBorder" WIDTH="100%">
+                    <TR>
+                        <TD CLASS="Calendar1 CalenderTextCenter Red">Sun</TD>
+                        <TD CLASS="Calendar1 CalenderTextCenter">Mon</TD>
+                        <TD CLASS="Calendar1 CalenderTextCenter">Tue</TD>
+                        <TD CLASS="Calendar1 CalenderTextCenter">Wed</TD>
+                        <TD CLASS="Calendar1 CalenderTextCenter">Thu</TD>
+                        <TD CLASS="Calendar1 CalenderTextCenter">Fri</TD>
+                        <TD CLASS="Calendar1 CalenderTextCenter Blue">Sat</TD>
+                    </TR>
+                    <TR>
+                        <TD ID="DATE0_0" CLASS="Calendar2" STYLE="text-align:right;cursor:pointer;color:#FF0000;" ONMOUSEOVER="this.style.backgroundColor='skyblue';" ONMOUSEOUT="this.style.backgroundColor='white';" ONCLICK="selectDate(this);"></TD>
+                        <TD ID="DATE0_1" CLASS="Calendar2" STYLE="text-align:right;cursor:pointer;" ONMOUSEOVER="this.style.backgroundColor='skyblue';" ONMOUSEOUT="this.style.backgroundColor='white';" ONCLICK="selectDate(this);"></TD>
+                        <TD ID="DATE0_2" CLASS="Calendar2" STYLE="text-align:right;cursor:pointer;" ONMOUSEOVER="this.style.backgroundColor='skyblue';" ONMOUSEOUT="this.style.backgroundColor='white';" ONCLICK="selectDate(this);"></TD>
+                        <TD ID="DATE0_3" CLASS="Calendar2" STYLE="text-align:right;cursor:pointer;" ONMOUSEOVER="this.style.backgroundColor='skyblue';" ONMOUSEOUT="this.style.backgroundColor='white';" ONCLICK="selectDate(this);"></TD>
+                        <TD ID="DATE0_4" CLASS="Calendar2" STYLE="text-align:right;cursor:pointer;" ONMOUSEOVER="this.style.backgroundColor='skyblue';" ONMOUSEOUT="this.style.backgroundColor='white';" ONCLICK="selectDate(this);"></TD>
+                        <TD ID="DATE0_5" CLASS="Calendar2" STYLE="text-align:right;cursor:pointer;" ONMOUSEOVER="this.style.backgroundColor='skyblue';" ONMOUSEOUT="this.style.backgroundColor='white';" ONCLICK="selectDate(this);"></TD>
+                        <TD ID="DATE0_6" CLASS="Calendar2" STYLE="text-align:right;cursor:pointer;color:#0000FF;" ONMOUSEOVER="this.style.backgroundColor='skyblue';" ONMOUSEOUT="this.style.backgroundColor='white';" ONCLICK="selectDate(this);"></TD>
+                    </TR>
+                    <TR>
+                        <TD ID="DATE1_0" CLASS="Calendar2" STYLE="text-align:right;cursor:pointer;color:#FF0000;" ONMOUSEOVER="this.style.backgroundColor='skyblue';" ONMOUSEOUT="this.style.backgroundColor='white';" ONCLICK="selectDate(this);"></TD>
+                        <TD ID="DATE1_1" CLASS="Calendar2" STYLE="text-align:right;cursor:pointer;" ONMOUSEOVER="this.style.backgroundColor='skyblue';" ONMOUSEOUT="this.style.backgroundColor='white';" ONCLICK="selectDate(this);"></TD>
+                        <TD ID="DATE1_2" CLASS="Calendar2" STYLE="text-align:right;cursor:pointer;" ONMOUSEOVER="this.style.backgroundColor='skyblue';" ONMOUSEOUT="this.style.backgroundColor='white';" ONCLICK="selectDate(this);"></TD>
+                        <TD ID="DATE1_3" CLASS="Calendar2" STYLE="text-align:right;cursor:pointer;" ONMOUSEOVER="this.style.backgroundColor='skyblue';" ONMOUSEOUT="this.style.backgroundColor='white';" ONCLICK="selectDate(this);"></TD>
+                        <TD ID="DATE1_4" CLASS="Calendar2" STYLE="text-align:right;cursor:pointer;" ONMOUSEOVER="this.style.backgroundColor='skyblue';" ONMOUSEOUT="this.style.backgroundColor='white';" ONCLICK="selectDate(this);"></TD>
+                        <TD ID="DATE1_5" CLASS="Calendar2" STYLE="text-align:right;cursor:pointer;" ONMOUSEOVER="this.style.backgroundColor='skyblue';" ONMOUSEOUT="this.style.backgroundColor='white';" ONCLICK="selectDate(this);"></TD>
+                        <TD ID="DATE1_6" CLASS="Calendar2" STYLE="text-align:right;cursor:pointer;color:#0000FF;" ONMOUSEOVER="this.style.backgroundColor='skyblue';" ONMOUSEOUT="this.style.backgroundColor='white';" ONCLICK="selectDate(this);"></TD>
+                    </TR>
+                    <TR>
+                        <TD ID="DATE2_0" CLASS="Calendar2" STYLE="text-align:right;cursor:pointer;color:#FF0000;" ONMOUSEOVER="this.style.backgroundColor='skyblue';" ONMOUSEOUT="this.style.backgroundColor='white';" ONCLICK="selectDate(this);"></TD>
+                        <TD ID="DATE2_1" CLASS="Calendar2" STYLE="text-align:right;cursor:pointer;" ONMOUSEOVER="this.style.backgroundColor='skyblue';" ONMOUSEOUT="this.style.backgroundColor='white';" ONCLICK="selectDate(this);"></TD>
+                        <TD ID="DATE2_2" CLASS="Calendar2" STYLE="text-align:right;cursor:pointer;" ONMOUSEOVER="this.style.backgroundColor='skyblue';" ONMOUSEOUT="this.style.backgroundColor='white';" ONCLICK="selectDate(this);"></TD>
+                        <TD ID="DATE2_3" CLASS="Calendar2" STYLE="text-align:right;cursor:pointer;" ONMOUSEOVER="this.style.backgroundColor='skyblue';" ONMOUSEOUT="this.style.backgroundColor='white';" ONCLICK="selectDate(this);"></TD>
+                        <TD ID="DATE2_4" CLASS="Calendar2" STYLE="text-align:right;cursor:pointer;" ONMOUSEOVER="this.style.backgroundColor='skyblue';" ONMOUSEOUT="this.style.backgroundColor='white';" ONCLICK="selectDate(this);"></TD>
+                        <TD ID="DATE2_5" CLASS="Calendar2" STYLE="text-align:right;cursor:pointer;" ONMOUSEOVER="this.style.backgroundColor='skyblue';" ONMOUSEOUT="this.style.backgroundColor='white';" ONCLICK="selectDate(this);"></TD>
+                        <TD ID="DATE2_6" CLASS="Calendar2" STYLE="text-align:right;cursor:pointer;color:#0000FF;" ONMOUSEOVER="this.style.backgroundColor='skyblue';" ONMOUSEOUT="this.style.backgroundColor='white';" ONCLICK="selectDate(this);"></TD>
+                    </TR>
+                    <TR>
+                        <TD ID="DATE3_0" CLASS="Calendar2" STYLE="text-align:right;cursor:pointer;color:#FF0000;" ONMOUSEOVER="this.style.backgroundColor='skyblue';" ONMOUSEOUT="this.style.backgroundColor='white';" ONCLICK="selectDate(this);"></TD>
+                        <TD ID="DATE3_1" CLASS="Calendar2" STYLE="text-align:right;cursor:pointer;" ONMOUSEOVER="this.style.backgroundColor='skyblue';" ONMOUSEOUT="this.style.backgroundColor='white';" ONCLICK="selectDate(this);"></TD>
+                        <TD ID="DATE3_2" CLASS="Calendar2" STYLE="text-align:right;cursor:pointer;" ONMOUSEOVER="this.style.backgroundColor='skyblue';" ONMOUSEOUT="this.style.backgroundColor='white';" ONCLICK="selectDate(this);"></TD>
+                        <TD ID="DATE3_3" CLASS="Calendar2" STYLE="text-align:right;cursor:pointer;" ONMOUSEOVER="this.style.backgroundColor='skyblue';" ONMOUSEOUT="this.style.backgroundColor='white';" ONCLICK="selectDate(this);"></TD>
+                        <TD ID="DATE3_4" CLASS="Calendar2" STYLE="text-align:right;cursor:pointer;" ONMOUSEOVER="this.style.backgroundColor='skyblue';" ONMOUSEOUT="this.style.backgroundColor='white';" ONCLICK="selectDate(this);"></TD>
+                        <TD ID="DATE3_5" CLASS="Calendar2" STYLE="text-align:right;cursor:pointer;" ONMOUSEOVER="this.style.backgroundColor='skyblue';" ONMOUSEOUT="this.style.backgroundColor='white';" ONCLICK="selectDate(this);"></TD>
+                        <TD ID="DATE3_6" CLASS="Calendar2" STYLE="text-align:right;cursor:pointer;color:#0000FF;" ONMOUSEOVER="this.style.backgroundColor='skyblue';" ONMOUSEOUT="this.style.backgroundColor='white';" ONCLICK="selectDate(this);"></TD>
+                    </TR>
+                    <TR>
+                        <TD ID="DATE4_0" CLASS="Calendar2" STYLE="text-align:right;cursor:pointer;color:#FF0000;" ONMOUSEOVER="this.style.backgroundColor='skyblue';" ONMOUSEOUT="this.style.backgroundColor='white';" ONCLICK="selectDate(this);"></TD>
+                        <TD ID="DATE4_1" CLASS="Calendar2" STYLE="text-align:right;cursor:pointer;" ONMOUSEOVER="this.style.backgroundColor='skyblue';" ONMOUSEOUT="this.style.backgroundColor='white';" ONCLICK="selectDate(this);"></TD>
+                        <TD ID="DATE4_2" CLASS="Calendar2" STYLE="text-align:right;cursor:pointer;" ONMOUSEOVER="this.style.backgroundColor='skyblue';" ONMOUSEOUT="this.style.backgroundColor='white';" ONCLICK="selectDate(this);"></TD>
+                        <TD ID="DATE4_3" CLASS="Calendar2" STYLE="text-align:right;cursor:pointer;" ONMOUSEOVER="this.style.backgroundColor='skyblue';" ONMOUSEOUT="this.style.backgroundColor='white';" ONCLICK="selectDate(this);"></TD>
+                        <TD ID="DATE4_4" CLASS="Calendar2" STYLE="text-align:right;cursor:pointer;" ONMOUSEOVER="this.style.backgroundColor='skyblue';" ONMOUSEOUT="this.style.backgroundColor='white';" ONCLICK="selectDate(this);"></TD>
+                        <TD ID="DATE4_5" CLASS="Calendar2" STYLE="text-align:right;cursor:pointer;" ONMOUSEOVER="this.style.backgroundColor='skyblue';" ONMOUSEOUT="this.style.backgroundColor='white';" ONCLICK="selectDate(this);"></TD>
+                        <TD ID="DATE4_6" CLASS="Calendar2" STYLE="text-align:right;cursor:pointer;color:#0000FF;" ONMOUSEOVER="this.style.backgroundColor='skyblue';" ONMOUSEOUT="this.style.backgroundColor='white';" ONCLICK="selectDate(this);"></TD>
+                    </TR>
+                    <TR>
+                        <TD ID="DATE5_0" CLASS="Calendar2" STYLE="text-align:right;cursor:pointer;color:#FF0000;" ONMOUSEOVER="this.style.backgroundColor='skyblue';" ONMOUSEOUT="this.style.backgroundColor='white';" ONCLICK="selectDate(this);"></TD>
+                        <TD ID="DATE5_1" CLASS="Calendar2" STYLE="text-align:right;cursor:pointer;" ONMOUSEOVER="this.style.backgroundColor='skyblue';" ONMOUSEOUT="this.style.backgroundColor='white';" ONCLICK="selectDate(this);"></TD>
+                        <TD ID="DATE5_2" CLASS="Calendar2" STYLE="text-align:right;cursor:pointer;" ONMOUSEOVER="this.style.backgroundColor='skyblue';" ONMOUSEOUT="this.style.backgroundColor='white';" ONCLICK="selectDate(this);"></TD>
+                        <TD ID="DATE5_3" CLASS="Calendar2" STYLE="text-align:right;cursor:pointer;" ONMOUSEOVER="this.style.backgroundColor='skyblue';" ONMOUSEOUT="this.style.backgroundColor='white';" ONCLICK="selectDate(this);"></TD>
+                        <TD ID="DATE5_4" CLASS="Calendar2" STYLE="text-align:right;cursor:pointer;" ONMOUSEOVER="this.style.backgroundColor='skyblue';" ONMOUSEOUT="this.style.backgroundColor='white';" ONCLICK="selectDate(this);"></TD>
+                        <TD ID="DATE5_5" CLASS="Calendar2" STYLE="text-align:right;cursor:pointer;" ONMOUSEOVER="this.style.backgroundColor='skyblue';" ONMOUSEOUT="this.style.backgroundColor='white';" ONCLICK="selectDate(this);"></TD>
+                        <TD ID="DATE5_6" CLASS="Calendar2" STYLE="text-align:right;cursor:pointer;color:#0000FF;" ONMOUSEOVER="this.style.backgroundColor='skyblue';" ONMOUSEOUT="this.style.backgroundColor='white';" ONCLICK="selectDate(this);"></TD>
+                    </TR>
+                </TABLE>
+            </TD>
+        </TR>
+        <TR>
+            <TD id="Triangluar_bottom" CLASS="NoBorder" ALIGN="left" style="height:16px;"><img id="triangluar_img_bottom" CLASS="NoBorder" src="../image/triangular_bottom.gif" style="margin-left:20px;margin-right:20px;"></TD>
+        </TR>
+    </TABLE>
+</FORM>
+</BODY>
+</HTML>

@@ -1,0 +1,836 @@
+<!doctype html>
+<HTML LANG="ja">
+<head>
+<title>
+    #if($!{patternName} == 'Input')
+        #customSpringMessage('ACCEPT_INPUT')
+    #elseif($!{patternName} == 'Change')
+        #customSpringMessage('ACCEPT_MODIFY')
+    #elseif($!{patternName} == 'Cancel')
+        #customSpringMessage('ACCEPT_CANCEL')
+    #elseif($!{patternName} == 'Correct')
+        #customSpringMessage('ACCEPT_CORRECT')
+    #end
+</title>
+<meta http-equiv="Content-type" content="text/html; charset=UTF-8">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Content-script-type" content="text/javascript">
+<link id="CSS_FONT" rel="stylesheet" href="../../include/FontS.css" type="text/css">
+<link rel="stylesheet" href="../../include/searchbox.css" type="text/css">
+<link rel="stylesheet" href="../../include/Layout.css" type="text/css">
+<link rel="stylesheet" href="../../include/Color.css" type="text/css">
+<link rel="stylesheet" href="../../include/ime.css" type="text/css">
+<script language="javascript" type="text/javascript" src="../../include/common.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/check.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/date.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/tablesort.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/searchbox.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/jquery-1.7.2.min.js"></script>
+<script language="javascript" type="text/javascript">
+#set($isActiveProfileBudget = "#isActiveProfile('budget')")
+#set($isActiveProfileStock = "#isActiveProfile('stock')")
+#parse("./common/common_js.vm")
+#if($!{patternName} == 'Input')
+    #set($commonTitle = "#customSpringMessage('ACCEPT_INPUT')")
+#elseif($!{patternName} == 'Change')
+    #set($commonTitle = "#customSpringMessage('ACCEPT_MODIFY')")
+#elseif($!{patternName} == 'Cancel')
+    #set($commonTitle = "#customSpringMessage('ACCEPT_CANCEL')")
+#elseif($!{patternName} == 'Correct')
+    #set($commonTitle = "#customSpringMessage('ACCEPT_CORRECT')")
+#end
+var isClickable = false;
+//変更前の負担部門コード
+var sectionCd_x = "";
+// 変更前の科目コード
+var subjectCd_x = "";
+function onLoad() {
+    setFocusForInput();
+    var patternName = "#jsEscape($!{patternName})";
+    top.document.title = "#jsEscape($commonTitle)";
+    setAppRouteByAmount('5',
+                        '#jsEscape($!domain.order.accounting.orderAmount.orderAmount.amount)',
+                        '#jsEscape($!domain.order.accounting.orderAmount.amountMng.currency.currencyCd)');
+    setAppRouteName();
+    var isSuccess = "#jsEscape($!isSuccess)";
+    var alertMessage = "$!alertMessage";
+    #if($!alertMessage.indexOf("E035") != -1)
+        alert("$!alertMessage");
+        isClickable = true;
+        return;
+    #end
+    if (alertMessage != "" && isSuccess == "" && "$!errorMessage" == "") {
+        if (confirm(alertMessage)) {
+            buttonDisable();
+            if (patternName == 'Correct') {
+                getObj("Body").action="${flowExecutionUrl}&_eventId=applyAgain&checkPass=1";
+            } else {
+                getObj("Body").action="${flowExecutionUrl}&_eventId=apply&checkPass=1";
+            }
+            getObj("Body").submit();
+            return;
+        }
+    }
+    if (patternName == "Input") {
+        calculateAmountByAjax();
+    }
+    var errorMsg = "$!errorMessage";
+    if (errorMsg != "") {
+        getObj("TR_ERROR").style.display = "";
+        isClickable = true;
+         return;
+    } 
+    if (isSuccess == "true") {
+        #set( $acceptMsg = "#customSpringMessage('ACCEPT')" )
+        if (patternName == "Cancel") {
+            alert('#customMessageArgs("I035", [$acceptMsg])');
+        } else {
+            alert('#customMessageArgs("I002", [$acceptMsg])');
+        }
+        buttonDisable();
+        iframeChange("${flowExecutionUrl}&_eventId=returnList");
+        return;
+    }
+    
+    isClickable = true;
+}
+/** 申請 **/
+function apply() {
+    if(!isClickable) {
+        return;
+    }
+    #set( $acceptMsg = "#customSpringMessage('ACCEPT')" )
+    #set( $registerMsg = "#customSpringMessage('ACTION_REGISTER')" )
+    #set( $changeMsg = "#customSpringMessage('CHANGE_BUTTON')" )
+    #set( $cancelMsg = "#customSpringMessage('ACTION_CANCEL')" )
+    var patternName = "#jsEscape($!{patternName})";
+    if (patternName == "Input") {
+        if( !confirm('#customMessageArgs("W001", [$acceptMsg, $registerMsg])') ) {
+            return;
+        }
+    } else if (patternName == "Change") {
+        if( !confirm('#customMessageArgs("W001", [$acceptMsg, $changeMsg])') ) {
+            return;
+        }
+    } else if (patternName == "Cancel") {
+        if( !confirm('#customMessageArgs("W001", [$acceptMsg, $cancelMsg])') ) {
+            return;
+        }
+    } else {
+        return;
+    }
+    buttonDisable();
+    getObj("Body").action = "${flowExecutionUrl}&_eventId=apply";
+    getObj("Body").submit();
+}
+/** 再申請 **/
+function applyAgain() {
+    if(!isClickable) {
+        return;
+    }
+    #set( $acceptMsg = "#customSpringMessage('ACCEPT')" )
+    #set( $registerMsg = "#customSpringMessage('ACTION_REGISTER')" )
+    if( !confirm('#customMessageArgs("W001", [$acceptMsg, $registerMsg])') ) {
+        return;
+    }
+    buttonDisable();
+    getObj("Body").action = "${flowExecutionUrl}&_eventId=applyAgain";
+    getObj("Body").submit();
+}
+/** 金額計算メソッド **/
+function calculateAmountByAjax() {
+    var price = getObj("acceptResult.acceptAmount.acceptUnitPrice.amountFormat").value;
+    var vol = getObj("acceptResult.acceptVol.acceptVol.volFormat").value;
+    var taxRate = getObj("amountMng.taxRate.taxRate").value;
+    var currencyCd = '#jsEscape($!{domain.order.accounting.orderAmount.amountMng.currency.currencyCd})';
+    var taxInd = '#jsEscape($!{domain.order.accounting.orderAmount.amountMng.taxCalculationInd.taxInd.taxInd})';
+    $.ajax({
+        type:"POST",
+        async:false,
+        url:"../../buyPriceController/calculateAmount",
+        data:{
+            "price.amountFormat":cleanXss(price),
+            "vol.volFormat":cleanXss(vol),
+            "taxRate.taxRate":cleanXss(taxRate),
+            currencyCd:cleanXss(currencyCd),
+            taxInd:cleanXss(taxInd)
+        },
+        success:function(data){
+            if (getObj('CurrMark4').innerHTML.trim() == "") {
+                getObj('acceptAmount').innerHTML = "#out($!domain.amountMng.currency.currencyMark)" + data.amount.amountFormat;
+                if (getObj('totalAmount') != null) {
+                    getObj('totalAmount').innerHTML = "#out($!domain.amountMng.currency.currencyMark)" + data.totalAmount.amountFormat;
+                }
+            }else {
+                getObj('acceptAmount').innerHTML = data.amount.amountFormat;
+                if (getObj('totalAmount') != null) {
+                    getObj('totalAmount').innerHTML = data.totalAmount.amountFormat;
+                }
+            }
+            getObj('acceptResult.acceptAmount.acceptAmount.amountFormat').value = data.amount.amountFormat;
+            if (getObj('acceptResult.acceptAmount.includingTaxSum.amountFormat') != null) {
+                getObj('acceptResult.acceptAmount.includingTaxSum.amountFormat').value = data.totalAmount.amountFormat;
+            }
+        }
+    });
+}
+/** 負担部門のオンブラーイベント **/
+function sectionOnblur() {
+    // 入力した部門コード
+    var sectionCd = getObj("acceptResult.loadSection.loadSection.sectionCd").value;
+    if(sectionCd == sectionCd_x) {
+        return;
+    } else {
+        sectionCd_x = sectionCd;
+    }    
+    // 負担会社コード
+    var companyCd = "#jsEscape($!{loadCompanyCd})";
+    // 廃止フラグ(0:有効)
+    var termFlag = "0";
+    // 入力した部門コードが空の場合
+    if(sectionCd == "") {
+        getObj("acceptResult.loadSection.loadSection.sectionName").value = "";
+        getObj("acceptResult.loadSection.loadSection.company.companyCd").value = "";
+        getObj("acceptResult.loadSection.loadSection.company.companyAbbrName").value = "";
+        getObj("acceptResult.loadSection.loadSection.sectionPlace.sectionPlaceCd").value = "";
+        getObj("acceptResult.loadSection.loadSection.sectionPlace.sectionPlaceName").value = "";
+    } else {
+        $.ajax({
+            type:"POST",
+            async:false,
+            url:"../../getSectionInfoOnBlur",
+            data:{
+                sectionCd:cleanXss(sectionCd),
+                companyCd:cleanXss(companyCd),
+                termFlag:termFlag
+                ,loadSectionFlg:'1'
+            },
+            success:function(data){
+                // 設定
+                getObj("acceptResult.loadSection.loadSection.sectionName").value = data.sectionName;
+                getObj("acceptResult.loadSection.loadSection.company.companyCd").value = data.sectionIdentify.companyCd;
+                getObj("acceptResult.loadSection.loadSection.company.companyAbbrName").value = data.companyName;
+                getObj("acceptResult.loadSection.loadSection.sectionPlace.sectionPlaceCd").value = data.sectionPlaceCd;
+                getObj("acceptResult.loadSection.loadSection.sectionPlace.sectionPlaceName").value=data.sectionPlaceName;
+            }
+        });
+    }
+}
+
+function sectionCodeGetfocus(obj){
+    sectionCd_x  = obj.value;
+}
+
+/** 科目のオンブラーイベント **/
+function subjectOnblur() {
+    // 入力した科目コード
+    var subjectCd = getObj("acceptResult.subject.subjectCd").value;
+    if(subjectCd == subjectCd_x) {
+        return;
+    } else {
+        subjectCd_x = subjectCd;
+    }
+    // ログインユーザの会社コード
+    var companyCd = "#jsEscape($!{loginUserCompanyCd})";
+    // 廃止フラグ(0:有効)
+    var termFlag = "0";
+    // 入力した科目コードが空の場合
+    if(subjectCd == "") {
+        getObj("acceptResult.subject.subjectName").value = "";
+    } else {
+        $.ajax({
+            type:"POST",
+            async:false,
+            url:"../../getSubjectOnBlur",
+            data:{
+                subjectCd:cleanXss(subjectCd),
+                companyCd:cleanXss(companyCd),
+                termFlag:termFlag
+            },
+            success:function(data){
+                // 科目名
+                getObj("acceptResult.subject.subjectName").value = data.subjectName;
+            }
+        });
+    }
+}
+
+function subjectCodeGetfocus(obj){
+    subjectCd_x  = obj.value;
+}
+var stockPlaceCd_x="";## 変更前の出庫場所コード
+## 「在庫場所」を変更したとき発生します。
+function stockPlaceOnblur(){
+    var companyCdObj=getObj("acceptResult.stockPlace.company.companyCd");
+    var sectionPlaceCdObj=getObj("acceptResult.stockPlace.sectionPlace.sectionPlaceCd");
+    var stockPlaceNameObj=getObj("acceptResult.stockPlace.stockPlaceName");
+    var stockPlaceCd=getObj("acceptResult.stockPlace.stockPlaceCd").value;
+    if(stockPlaceCd==stockPlaceCd_x){
+        return;
+    }else{
+        stockPlaceCd_x=stockPlaceCd;
+    }
+    if(!stockPlaceCd){
+        if(stockPlaceNameObj){ stockPlaceNameObj.value=""; }
+        if(sectionPlaceCdObj){ sectionPlaceCdObj.value=""; }
+    }else{
+        $.ajax({
+            type:"POST",
+            async:false,
+            url:"../../getStockPlaceInfoOnBlur",
+            data:{
+                termFlag:"0",
+                companyCd:cleanXss(companyCdObj.value),
+                sectionPlaceCd:cleanXss(sectionPlaceCdObj.value),
+                stockPlaceCd:cleanXss(stockPlaceCd)
+            },
+            success:function(data){
+                if(stockPlaceNameObj){ stockPlaceNameObj.value=data.stockPlaceName; }
+                if(sectionPlaceCdObj){ sectionPlaceCdObj.value=data.sectionPlaceCd; }
+            }
+        });
+    }
+}
+## 「在庫場所」がフォーカスを受け取ったとき発生します。
+function stockPlaceCdGetfocus(obj){
+    stockPlaceCd_x=obj.value;
+}
+</script>
+</head>
+<body class="CreateArea" onload="onLoad();">
+<form id="Body"  name="Body" method="post" enctype="multipart/form-data">
+## 計上月度
+#customFormHiddenInput("acceptResult.fiscalMonth" "$!domain.acceptResult.fiscalMonth")
+#customFormHiddenInput("acceptResult.acceptDate.originalAcceptDate.dateOfymd" "$!domain.acceptResult.acceptDate.originalAcceptDate.dateOfymd")
+    <table class="HomeBox" align = "center">
+        <tr>
+            <td style="padding:15px,15px,0px,15px">         
+             <iframe id="CALENDARBOX" class="CALENDARBOX" framespacing="0" scrolling="no" frameborder="0" src="../../sbxCalendar/body.vm"></iframe>            
+                <table>
+                    <tr>
+                        <td align="center">
+                            <!-- ＊＊＊＊＊＊＊＊＊＊左サイド＊＊＊＊＊＊＊＊＊＊ -->
+                            <table class="NoBorder" width="98%">
+                                <tr>
+                                    <td>
+                                        <u><img src="../../image/mrkCircle.gif">
+                                            <span id="StepTitle" class="FontStepTitle">
+                                                #if($!{patternName} == 'Input')
+                                                    #customSpringMessage('ACCEPT_INPUT')
+                                                #elseif($!{patternName} == 'Change')
+                                                    #customSpringMessage('ACCEPT_MODIFY')
+                                                #elseif($!{patternName} == 'Cancel')
+                                                    #customSpringMessage('ACCEPT_CANCEL')
+                                                #elseif($!{patternName} == 'Correct')
+                                                    #customSpringMessage('ACCEPT_CORRECT')
+                                                #end
+                                            </span>
+                                        </u>
+                                        <br><br>
+                                        <span id="ReqNo" class="FontSmallBold DarkBlue">#customSpringMessage('PSACP020_HEADER_COMMENT')</span> ## 必要な項目と承認ルートを選択して、申請してください。
+                                    <br><br>
+                                    </td>
+                                    <td align="right" valign="middle" id="Submit1">
+                                        #if($!{patternName} == 'Correct')
+                                            <input type="button" class="LargeButton" value="#customSpringMessage('RE_REQ')" onclick="applyAgain();">
+                                        #else
+                                            <input type="button" class="LargeButton" value="#customSpringMessage('REQ')" onclick="apply();">
+                                        #end
+                                    </td>
+                                </tr>
+                                <tr id ="TR_ERROR" style="display:none;"><td class="error" style="height:0px;">
+                                    $!errorMessage
+                                </td></tr>
+                            </table>
+                            <!-- ＊＊＊＊＊＊＊＊＊＊１番目の四角＊＊＊＊＊＊＊＊＊＊ -->
+                            $!PSACP020PageCreater.build('upd','_tr_style','','_td_style_left','nowrap class="Box1H FontBoxHeader"','_td_style_right','nowrap class="Box1D FontSmallAnk"', '_label_style', 'FontSmallAnk')
+                            <table class="Box1G" width="100%">
+                                <tbody class="Box1G"  ListBorderWidth">
+                                    <tr>
+                                        <td nowrap class="Box1H FontBoxHeader">#customSpringMessage('DELIV_KEY_NO')<!--納品キー番号--></td>
+                                        <td nowrap class="Box1D FontSmallAnk">
+                                            <span class="FontSlipNo">#out($!{domain.identify.delivKeyNo})</span>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td nowrap class="Box1H FontBoxHeader">#customSpringMessage('TITLE_NAME')<!--件名--></td>
+                                        <td nowrap class="Box1D FontSmallAnk">
+                                            #out($!{domain.order.titleName.titleName})
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td nowrap class="Box1H FontBoxHeader">#customSpringMessage('DELIVERY_PLACE')<!--納入先--></td>
+                                        <td nowrap class="Box1D FontSmallAnk">
+                                            #out($!{domain.order.complement.delivPlace.delivPlaceCd})
+                                            #out($!{domain.order.complement.delivPlace.delivPlaceName})
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td nowrap class="Box1H FontBoxHeader">#customSpringMessage('ITEM_CD')<!--品名コード--></td>
+                                        <td nowrap class="Box1D FontSmallAnk">#out($!{domain.order.accounting.orderItem.item.itemCd})</td>
+                                    </tr>
+                                    <tr>
+                                        <td nowrap class="Box1H FontBoxHeader">#customSpringMessage('ITEM_NAME')<!--品名--></td>
+                                        <td nowrap class="Box1D FontSmallAnk">#out($!{domain.order.accounting.orderItem.item.itemName})</td>
+                                    </tr>
+                                    <tr>
+                                        <td nowrap class="Box1H FontBoxHeader">#customSpringMessage('KATASHIKI')<!--型式--></td>
+                                        <td nowrap class="Box1D FontSmallAnk">#out($!{domain.order.accounting.orderItem.item.katashiki})</td>
+                                    </tr>
+                                    <tr>
+                                        <td nowrap class="Box1H FontBoxHeader">#customSpringMessage('MANUFACT')<!--メーカー--></td>
+                                        <td nowrap class="Box1D FontSmallAnk">
+                                            #out($!{domain.order.accounting.orderItem.item.manufact.manufactCd})
+                                            #out($!{domain.order.accounting.orderItem.item.manufact.manufactName})
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td nowrap class="Box1H FontBoxHeader">#customSpringMessage('ORDER_DATE')<!--注文日--></td>
+                                        <td nowrap class="Box1D FontSmallAnk">#out($!{domain.order.schedule.orderDate.orderDate.dateOfymdFormat})</td>
+                                    </tr>
+                                    <tr>
+                                        <td nowrap class="Box1H FontBoxHeader">#customSpringMessage('DELIV_DATE')<!--納期--></td>
+                                        <td nowrap class="Box1D FontSmallAnk">#out($!{domain.order.schedule.dlvEst.dlvEst.dateOfymdFormat})</td>
+                                    </tr>
+                                    <tr>
+                                        <td nowrap class="Box1H FontBoxHeader">#customSpringMessage('CURRENCY_CD')<!--通貨コード--></td>
+                                        <td nowrap class="Box1D FontSmallAnk">#out($!{domain.order.accounting.orderAmount.amountMng.currency.currencyCd})</td>
+                                    </tr>
+                                    <tr>
+                                        <td nowrap class="Box1H FontBoxHeader">#customSpringMessage('UNIT_PRICE')<!--単価--></td>
+                                        <td nowrap class="Box1D ">
+                                            <span class="FontCurrSmall FontBigAnkBold">
+                                                #out($!{domain.order.accounting.orderAmount.amountMng.currency.currencyMark})&nbsp;
+                                                #out($!{domain.order.accounting.orderAmount.unitPrice.amount.amountFormat})
+                                            </span>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td nowrap class="Box1H FontBoxHeader">#customSpringMessage('ORDER_VOL')<!--注文数量--></td>
+                                        <td nowrap class="Box1D">
+                                            <table width="100%">
+                                                <tr>
+                                                    <td nowrap class="FontSmallAnk">
+                                                        #out($!domain.order.originVol.volFormat)
+                                                        &nbsp;
+                                                        #out($!domain.order.accounting.orderItem.item.unit.unitName)
+                                                    </td>
+                                                    #if( $!domain.order.orderCancel.orderCancelVol.vol != "" && $!domain.order.orderCancel.orderCancelVol.vol != "0" )
+                                                    <td nowrap class="FontSmallAnk" align="right">
+                                                        #customSpringMessage("ORDER_CANCEL_VOL")&nbsp;&nbsp;
+                                                        #out($!domain.order.orderCancel.orderCancelVol.volFormat)
+                                                        &nbsp;
+                                                        #out($!domain.order.accounting.orderItem.item.unit.unitName)
+                                                    </td>
+                                                    #end
+                                    </tr>
+                                            </table>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td nowrap class="Box1H FontBoxHeader">#customSpringMessage('ORDER_AMOUNT')<!--注文金額--></td>
+                                        <td nowrap class="Box1D">
+                                            <table width="100%">
+                                                <tr>
+                                                    <td class="FontCurrSmall">
+                                                        #out($!domain.order.accounting.orderAmount.amountMng.currency.currencyMark)
+                                                        #out($!domain.order.originAmount.amountFormat)
+                                                    </td>
+                                                    #if( $!domain.order.orderCancel.orderCancelAmount.amount != "" && $!domain.order.orderCancel.orderCancelAmount.amount != "0" )
+                                                    <td class="FontCurrSmall" align="right" nowrap>
+                                                        <span class="FontSmall">#customSpringMessage("ORDER_CANCEL_AMOUNT")</span>&nbsp;&nbsp;
+                                                        #out($!domain.order.accounting.orderAmount.amountMng.currency.currencyMark)
+                                                        #out($!domain.order.orderCancel.orderCancelAmount.amountFormat)
+                                                    </td>
+                                                    #end
+                                    </tr>
+                                            </table>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td nowrap class="Box1H FontBoxHeader">#customSpringMessage('TAX_IND')<!--課税区分--></td>
+                                        <td nowrap class="Box1D FontSmallAnk">
+                                            #if($!{patternName} == 'Input')
+                                                #out($!{domain.order.accounting.orderAmount.amountMng.taxCalculationInd.taxInd.taxInd_PageValue})
+                                            #else
+                                                #out($!{domain.amountMng.taxCalculationInd.taxInd.taxInd_PageValue})
+                                            #end
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td nowrap class="Box1H FontBoxHeader">#customSpringMessage('PAY_CONDITION_CD')<!--支払い条件コード--></td>
+                                        <td nowrap class="Box1D FontSmallAnk">#out($!{domain.order.payConditionItem.payConditionIdentify.payConditionCd})</td>
+                                    </tr>
+                                    <tr>
+                                        <td nowrap class="Box1H FontBoxHeader">#customSpringMessage('PAY_CONDITION_NAME')<!--支払い条件名--></td>
+                                        <td nowrap class="Box1D FontSmallAnk">#out($!{domain.order.payConditionItem.payConditionName})</td>
+                                    </tr>
+
+                                    <tr>
+                                        <td nowrap class="Box1H FontBoxHeader">#customSpringMessage('SUPPLIER')<!--取引先--></td>
+                                        <td nowrap class="Box1D FontSmallAnk">
+                                            #out($!{domain.order.supplierFrom.supCd})&nbsp;
+                                            <span class="FontSmallBold">#out($!{domain.order.supplierFrom.supplierName.supplierAbbrName})</span>&nbsp;
+                                            #if ($!domain.order.supplierFrom.subcon.subconInd == '1')
+                                                <span class="FontSubcon Subcon">#out($!domain.order.supplierFrom.subcon.subconInd_PageValue)</span>
+                                            #end
+                                            #if ($!domain.order.supplierFrom.ediInd.ediInd != '')
+                                                <span class="FontSmallAnk">#out($!domain.order.supplierFrom.ediInd.ediInd_PageValue)</span>
+                                            #end
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td nowrap class="Box1H FontBoxHeader">#customSpringMessage('FOR_SUPPRIER_COMMENT')<!--取引先向けコメント--></td>
+                                        <td nowrap class="Box1D FontSmallAnk">#out($!{domain.order.orderComment.forSupplierComment.forSupplierComment.comment})</td>
+                                    </tr>
+                                    #foreach($!item in $!PSACP020PageCreater.getItemListById("extend"))
+                                        #if($!{patternName} == 'Cancel')
+                                            $!PSACP020PageCreater.printDefaultForCancelForDispPos(1, $!item)
+                                        #else
+                                            $!PSACP020PageCreater.PageDefaultForDispPos(1, $!item)
+                                        #end
+                                    #end
+                                </tbody>
+                                </table>
+                                <br>
+                               <table class="Box1G" width="100%">
+                                <tbody class="Box1H FontBoxHeader ListBorderWidth">
+                                    <tr>
+                                        <td nowrap class="Box1H FontBoxHeader">#customSpringMessage('RCV_DATE')<!--受入日--></td>
+                                        <td nowrap class="Box1D FontSmallAnk">#out($!{domain.receiveResult.receiveDate.receiveDate.dateOfymdFormat})</td>
+                                    </tr>
+                                    <tr>
+                                        <td nowrap class="Box1H FontBoxHeader">#customSpringMessage('RCV_AMOUNT')<!--受入数量--></td>
+                                        <td nowrap class="Box1D FontSmallAnk">
+                                            <span>#out($!{domain.receiveResult.receiveVol.receiveVol.volFormat})</span>
+                                            <span class="FontSmall">&nbsp;#out($!{domain.receiveResult.receiveVol.unit.unitName})</span>
+                                        </td>
+                                    </tr>
+                                #if($isActiveProfileStock == "true")## 在庫オプション
+                                    <tr>
+                                        <td nowrap class="Box1H FontBoxHeader">#customSpringMessage('HAVE_IN_STOCK_FLG')<!--在庫対象--></td>
+                                        <td nowrap class="Box1D FontSmallAnk">
+                                            #out($!{domain.receiveResult.haveInStockFlg.haveInStockFlg_PageValue})
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td nowrap class="Box1H FontBoxHeader">#customSpringMessage('STOCK_PLACE')<!--在庫場所--></td>
+                                        <td nowrap class="Box1D FontSmallAnk">
+                                            #out($!{domain.receiveResult.stockPlace.stockPlaceCd})
+                                            #out($!{domain.receiveResult.stockPlace.stockPlaceName})
+                                        </td>
+                                    </tr>
+                                #end
+                                    <tr>
+                                        <td nowrap class="Box1H FontBoxHeader">#customSpringMessage('RCV_REMARK')<!--受入備考--></td>
+                                        <td class="Box1D FontSmallAnk">
+                                            #out($!{domain.receiveResult.receiveRemark.remark.comment})
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td class="Box1H FontBoxHeader" WIDTH="20%">#customSpringMessage('RCV_USER')<!--受入担当者--></td>
+                                        <td class="Box1D FontSmallAnk">
+                                           #if($!{domain.receiveResult.receiveUser.receiveUser.userName}!="")
+                                            <table class="NoBorder">
+                                                <tr>
+                                                    <td valign="top" rowspan="2"><img class="Mark" src="../../image/mrkHuman.gif"></td>
+                                                    <td rowspan="2">
+                                                        <table class="NoBorder">
+                                                            <tr>
+                                                                <td class="FontSmallAnk">
+                                                                    <span class="FontSmall">
+                                                                        #out($!{domain.receiveResult.receiveUser.receiveUser.section.sectionCd})
+                                                                        #out($!{domain.receiveResult.receiveUser.receiveUser.section.sectionName})
+                                                                     </span>
+                                                                </td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td class="FontSmallAnk" nowrap>
+                                                                 #out($!{domain.receiveResult.receiveUser.receiveUser.userID})&nbsp;
+                                                                 <span class="FontUserName"><b class="FontUserName">#out($!{domain.receiveResult.receiveUser.receiveUser.userName})</b></span>
+                                                                </td>
+                                                            </tr>
+                                                        </table>
+                                                    </td>
+                                                    <td><img class="Mark" src="../../image/mrkTel.gif"></td>
+                                                    <td class="FontMini" nowrap>
+                                                        #customSpringMessage('EXTENSION_NO')<!--内線番号：--><span class="FontSmallAnk">#out($!{domain.receiveResult.receiveUser.receiveUser.extNo.extensionNo})</span>&nbsp;&nbsp;
+                                                        #customSpringMessage('EXTERNAL_NO')<!--外線番号：--><span class="FontSmallAnk">#out($!{domain.receiveResult.receiveUser.receiveUser.externalNo.externalNo})</span>
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <td><img class="Mark" src="../../image/mrkMail.gif"></td>
+                                                    <td class="FontMiniAnkBold" nowrap>
+                                                        <span class="FontMiniAnk">
+                                                            <A HREF='mailto:#out($!{domain.receiveResult.receiveUser.receiveUser.userName})<#out($!{domain.receiveResult.receiveUser.receiveUser.mailAddr.mail})>'>#out($!{domain.receiveResult.receiveUser.receiveUser.mailAddr.mail})</A>
+                                                        </span>
+                                                    </td>
+                                                    <td align="right" valign="bottom"></td>
+                                                </tr>
+                                            </table>
+                                           #end
+                                        </td>
+                                    </tr>
+                                    #foreach($!item in $!PSACP020PageCreater.getItemListById("extend"))
+                                        #if($!{patternName} == 'Cancel')
+                                            $!PSACP020PageCreater.printDefaultForCancelForDispPos(2, $!item)
+                                        #else
+                                            $!PSACP020PageCreater.PageDefaultForDispPos(2, $!item)
+                                        #end
+                                    #end
+                                </tbody>
+                               </table>
+                                #if($!domain.inspectResult.inspectDate.inspectDate.dateOfymd!="")
+                               <br>
+                               <table class="Box1G" width="100%">
+                                <tbody class="Box1H FontBoxHeader ListBorderWidth">
+                                    <tr>
+                                        <td nowrap class="Box1H FontBoxHeader">#customSpringMessage('INSPECT_DATE')<!--検査日--></td>
+                                        <td nowrap class="Box1D FontSmallAnk">#out($!{domain.inspectResult.inspectDate.inspectDate.dateOfymdFormat})</td>
+                                    </tr>
+                                    <tr>
+                                        <td nowrap class="Box1H FontBoxHeader">#customSpringMessage('SUCCESS_AMOUNT')<!--合格数量--></td>
+                                        <td nowrap class="Box1D FontSmallAnk">
+                                            <span class="">#out($!{domain.inspectResult.inspectVol.successAmount.volFormat})</span>
+                                            
+                                            <span class="FontSmall">&nbsp;#out($!{domain.inspectResult.inspectVol.unit.unitName})</span>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td nowrap class="Box1H FontBoxHeader">#customSpringMessage('INSPECT_ACCOUNT')<!--検査記事--></td>
+                                        <td nowrap class="Box1D FontSmallAnk">#out($!{domain.inspectResult.inspectAccount.comment})</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="Box1H FontBoxHeader" WIDTH="20%">#customSpringMessage('INSPECTION_USER')<!--検査担当者--></td>
+                                        <td class="Box1D FontSmallAnk">
+                                           #if($!{domain.inspectResult.inspectUser.user.userName}!="")
+                                            <table class="NoBorder">
+                                                <tr>
+                                                    <td valign="top" rowspan="2"><img class="Mark" src="../../image/mrkHuman.gif"></td>
+                                                    <td rowspan="2">
+                                                        <table class="NoBorder">
+                                                            <tr>
+                                                                <td class="FontSmallAnk">
+                                                                    <span class="FontSmall">
+                                                                        #out($!{domain.inspectResult.inspectUser.user.section.sectionCd})
+                                                                        #out($!{domain.inspectResult.inspectUser.user.section.sectionName})
+                                                                    </span>
+                                                                </td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td class="FontSmallAnk" nowrap>
+                                                                    #out($!{domain.inspectResult.inspectUser.user.userID})&nbsp;
+                                                                    <span class="FontUserName"><b class="FontUserName">#out($!{domain.inspectResult.inspectUser.user.userName})</b></span>
+                                                                </td>
+                                                            </tr>
+                                                        </table>
+                                                    </td>
+                                                    <td><img class="Mark" src="../../image/mrkTel.gif"></td>
+                                                    <td class="FontMini" nowrap>
+                                                        #customSpringMessage('EXTENSION_NO')<!--内線番号：--><span class="FontSmallAnk">#out($!{domain.inspectResult.inspectUser.user.extNo.extensionNo})</span>&nbsp;&nbsp;
+                                                        #customSpringMessage('EXTERNAL_NO')<!--外線番号：--><span class="FontSmallAnk">#out($!{domain.inspectResult.inspectUser.user.externalNo.externalNo})</span>
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <td><img class="Mark" src="../../image/mrkMail.gif"></td>
+                                                    <td class="FontMiniAnkBold" nowrap>
+                                                        <span class="FontMiniAnk">
+                                                            <A HREF='mailto:#out($!{domain.inspectResult.inspectUser.user.userName})<#out($!{domain.inspectResult.inspectUser.user.mailAddr.mail})>'>#out($!{domain.inspectResult.inspectUser.user.mailAddr.mail})</A>
+                                                        </span>
+                                                    </td>
+                                                    <td align="right" valign="bottom"></td>
+                                                </tr>
+                                            </table>
+                                           #end
+                                        </td>
+                                    </tr>
+                                    #foreach($!item in $!PSACP020PageCreater.getItemListById("extend"))
+                                        #if($!{patternName} == 'Cancel')
+                                            $!PSACP020PageCreater.printDefaultForCancelForDispPos(3, $!item)
+                                        #else
+                                            $!PSACP020PageCreater.PageDefaultForDispPos(3, $!item)
+                                        #end
+                                    #end
+                                </tbody>
+                               </table>
+                                #end
+                               <br>
+                               <table class="Box1G" width="100%">
+                                <tbody class="Box1H FontBoxHeader ListBorderWidth">
+                                    #if($!{patternName} == 'Cancel')
+                                        #foreach($!item in $!PSACP020PageCreater.getItemListForBody())
+                                            #if($!item.getColumnName()=="T_ACCEPTANCE.LOAD_SECTION_CD")
+                                                $!PSACP020PageCreater.printSpecial('m16_showSection',$!item)
+                                            #elseif($!item.getColumnName()=="T_ACCEPTANCE.SUBJECT_CD")
+                                                $!PSACP020PageCreater.printSpecial('m19_showSubject',$!item)
+                                            #elseif($!item.getColumnName()=="T_ACCEPTANCE.BUDGET_NO")
+                                                $!PSACP020PageCreater.printSpecial('s00_label',$!item)
+                                            #elseif($!item.getColumnName()=="T_ACCEPTANCE.ACCEPT_DATE")
+                                                $!PSACP020PageCreater.printDefault($!item,'_item_style','SmallAnk noIME')
+                                            #elseif($!item.getColumnName()=="T_ACCEPTANCE.UNIT_PRICE")
+                                                $!PSACP020PageCreater.printSpecial('s24_currency',$!item,'_item_style','id="acceptAmount" class="FontBigAnkBold"')
+                                            #elseif($!item.getColumnName()=="T_ACCEPTANCE.ACCEPT_VOL")
+                                                $!PSACP020PageCreater.printSpecial('s16_showVol',$!item)
+                                            #elseif($!item.getColumnName()=="T_ACCEPTANCE.ACCEPT_AMOUNT")
+                                                $!PSACP020PageCreater.printSpecial('s24_currency',$!item,'_item_style','id="acceptAmount" class="FontBigAnkBold"')
+                                            #elseif($!item.getColumnName()=="T_ACCEPTANCE.TAX_RATE")
+                                                $!PSACP020PageCreater.printSpecial('s43_showPercentage',$!item)
+                                            #elseif($!item.getColumnName()=="T_ACCEPTANCE.TOTAL_AMOUNT")
+                                                $!PSACP020PageCreater.printSpecial('s24_currency',$!item,'_item_style','id="totalAmount" class="FontBigAnkBold"', 'isNotChangeable', 'notChangeable')
+                                            #elseif($!item.getColumnName()=="T_ACCEPTANCE.ACCEPT_USER_ID")
+                                                $!PSACP020PageCreater.printSpecial("ACCEPT_USER",'m15_showUser',$!item)
+                                            #elseif($!item.getColumnName()=="T_ACCEPTANCE.HAVE_IN_STOCK_FLG")
+                                              #if($isActiveProfileStock == "true")## 在庫オプション
+                                                $!PSACP020PageCreater.printSpecial("s00_label", $!item,
+                                                    '_page_value', 'true'
+                                                )
+                                              #end
+                                            #elseif($!item.getColumnName()=="T_ACCEPTANCE.STOCK_PLACE_CD")
+                                              #if($isActiveProfileStock == "true")## 在庫オプション
+                                                $!PSACP020PageCreater.printSpecial("STOCK_PLACE", "m36_showStockPlace", $!item)
+                                              #end
+                                            #elseif($!item.getColumnName()=="T_ACCEPTANCE.APP_ROUTE_NO")
+                                            #else
+                                                $!PSACP020PageCreater.printDefaultForCancelForDispPos(4, $!item)
+                                            #end
+                                        #end
+                                        <script language="javascript" type="text/javascript">
+                                        function downloadExt(filename, file) {
+                                            iframeChange("${flowExecutionUrl}&_eventId=downloadext", 'filename', filename, 'file', file);
+                                        }
+                                        </script>
+                                    #else
+                                        #foreach($!item in $!PSACP020PageCreater.getItemListForBody())
+                                            #if($!item.getColumnName()=="T_ACCEPTANCE.LOAD_SECTION_CD")
+                                                $!PSACP020PageCreater.printSpecial('m03_inputSection',$!item,'_masterCdIme','noIME','popupPageid','PSACP020','_event','onblur="sectionOnblur();" onfocus="sectionCodeGetfocus(this);"')                                                
+                                            #elseif($!item.getColumnName()=="T_ACCEPTANCE.SUBJECT_CD")
+                                                $!PSACP020PageCreater.printSpecial('m07_inputSubject',$!item,'popupPageid','PSACP020','_masterCdIme','noIME','_event','onblur="subjectOnblur();" onfocus="subjectCodeGetfocus(this);"')
+                                                
+                                            #elseif($!item.getColumnName()=="T_ACCEPTANCE.BUDGET_NO")
+                                                #if($isActiveProfileBudget == "true")
+                                                    #if($!{patternName} == 'Input')
+                                                        #if($!item.itemDefinitionDetail.inputMethod.regFlg.regFlg=='1')
+                                                            $!PSACP020PageCreater.printSpecial('s00_label',$!item)
+                                                        #elseif($!item.itemDefinitionDetail.inputMethod.regFlg.regFlg=='2')
+                                                            $!PSACP020PageCreater.printSpecial("BG01_input_BudgetNo",$!item,'popupPageid','PSACP020')
+                                                        #end
+                                                    #elseif($!{patternName} == 'Change')
+                                                        #if($!item.itemDefinitionDetail.inputMethod.updFlg.updFlg=='1')
+                                                            $!PSACP020PageCreater.printSpecial('s00_label',$!item)
+                                                        #elseif($!item.itemDefinitionDetail.inputMethod.updFlg.updFlg=='2')
+                                                            $!PSACP020PageCreater.printSpecial("BG01_input_BudgetNo",$!item,'popupPageid','PSACP020')
+                                                        #end
+                                                    #elseif($!{patternName} == 'Cancel')
+                                                        $!PSACP020PageCreater.printSpecial('s00_label',$!item)
+                                                    #elseif($!{patternName} == 'Correct')
+                                                        #if($!item.itemDefinitionDetail.inputMethod.updFlg.updFlg=='1')
+                                                            $!PSACP020PageCreater.printSpecial('s00_label',$!item)
+                                                        #elseif($!item.itemDefinitionDetail.inputMethod.updFlg.updFlg=='2')
+                                                            $!PSACP020PageCreater.printSpecial("BG01_input_BudgetNo",$!item,'popupPageid','PSACP020')
+                                                        #end
+                                                    #end
+                                                #else
+                                                    $!PSACP020PageCreater.printDefault($!item,'_td_style_right','nowrap class="Box1D"','_item_style','SmallAnk noIME')
+                                                #end
+                                            #elseif($!item.getColumnName()=="T_ACCEPTANCE.ACCEPT_DATE")
+                                                $!PSACP020PageCreater.printDefault($!item,'_item_style','SmallAnk noIME')
+                                            #elseif($!item.getColumnName()=="T_ACCEPTANCE.UNIT_PRICE")
+                                                $!PSACP020PageCreater.printSpecial('s02_currency',$!item,'_event','onblur="editVal(this); calculateAmountByAjax();" onfocus="deleteComma(this);"')
+                                            #elseif($!item.getColumnName()=="T_ACCEPTANCE.ACCEPT_VOL")
+                                                $!PSACP020PageCreater.printSpecial('s21_volUnit',$!item,'_event','onblur="editVal(this); calculateAmountByAjax();" onfocus="deleteComma(this);"')
+                                            #elseif($!item.getColumnName()=="T_ACCEPTANCE.ACCEPT_AMOUNT")
+                                                $!PSACP020PageCreater.printSpecial('s24_currency',$!item,'_item_style','id="acceptAmount" class="FontBigAnkBold"')
+                                            #elseif($!item.getColumnName()=="T_ACCEPTANCE.TAX_RATE")
+                                                #if($!{domain.order.accounting.orderAmount.amountMng.taxCalculationInd.taxInd.isTaxableTransactionOrValueAddedTaxRelief()})
+                                                    $!PSACP020PageCreater.printSpecial('s42_inputTaxRate',$!item, '_event','onChange="calculateAmountByAjax();"','_taxInd',$!{domain.order.accounting.orderAmount.amountMng.taxCalculationInd.taxInd.taxInd})
+                                                #else
+                                                    $!PSACP020PageCreater.printSpecial('s42_inputTaxRate',$!item, '_event','disabled=disabled')
+                                                #end
+                                            #elseif($!item.getColumnName()=="T_ACCEPTANCE.TOTAL_AMOUNT")
+                                                $!PSACP020PageCreater.printSpecial('s24_currency',$!item,'_item_style','id="totalAmount" class="FontBigAnkBold"', 'isNotChangeable', 'notChangeable')
+                                            #elseif($!item.getColumnName()=="T_ACCEPTANCE.ACCEPT_USER_ID")
+                                                #if($!{patternName} != 'Input')
+                                                    $!PSACP020PageCreater.printSpecial("ACCEPT_USER",'m15_showUser',$!item)
+                                                #end
+                                            #elseif($!item.getColumnName()=="T_ACCEPTANCE.HAVE_IN_STOCK_FLG")
+                                              #if($isActiveProfileStock == "true")## 在庫オプション
+                                                #if($!domain.order.accounting.orderItem.item.itemCd != '')
+                                                    $!PSACP020PageCreater.printSpecial('s31_checkbox', $!item
+                                                        , '_elementcd', 'HAVE_IN_STOCK'
+                                                        , '_td_style_right', 'class="Box1D FontSmallAnk"'
+                                                    )
+                                                #else
+                                                    $!PSACP020PageCreater.printSpecial("s00_label", $!item,
+                                                        '_page_value' ,'true'
+                                                    )
+                                                #end
+                                              #end
+                                            #elseif($!item.getColumnName()=="T_ACCEPTANCE.STOCK_PLACE_CD")
+                                              #if($isActiveProfileStock == "true")## 在庫オプション
+                                                #if($!domain.order.accounting.orderItem.item.itemCd != '')
+                                                  #if($!domain.acceptResult.stockPlace.sectionPlace.sectionPlaceCd == '')
+                                                    $!PSACP020PageCreater.printSpecial("STOCK_PLACE", "m35_inputStockPlace", $!item
+                                                        , 'popupPageid','PSACP020'
+                                                        , '_masterCdIme', 'noIME'
+                                                        , '_referenceRangeFlg', '1'
+                                                        , '_event', 'onblur="stockPlaceOnblur();" onfocus="stockPlaceCdGetfocus(this);"'
+                                                    )
+                                                  #else
+                                                    $!PSACP020PageCreater.printSpecial("STOCK_PLACE", "m35_inputStockPlace", $!item
+                                                        , 'popupPageid','PSACP020'
+                                                        , '_masterCdIme', 'noIME'
+                                                        , '_referenceRangeFlg', '2'
+                                                        , '_event', 'onblur="stockPlaceOnblur();" onfocus="stockPlaceCdGetfocus(this);"'
+                                                    )
+                                                  #end
+                                                  #customFormHiddenInput("acceptResult.stockPlace.company.companyCd" "$!domain.acceptResult.stockPlace.company.companyCd")
+                                                  #customFormHiddenInput("acceptResult.stockPlace.sectionPlace.sectionPlaceCd" "$!domain.acceptResult.stockPlace.sectionPlace.sectionPlaceCd")
+                                                #else
+                                                    $!PSACP020PageCreater.printSpecial("m36_showStockPlace", $!item)
+                                                #end
+                                              #end
+                                            #elseif($!item.getColumnName()=="T_ACCEPTANCE.APP_ROUTE_NO")
+                                            #else
+                                                $!PSACP020PageCreater.PageDefaultForDispPos(4, $!item)
+                                            #end
+                                        #end
+                                    #end
+                                </tbody>
+                            </table>
+                            <br>
+                               <table class="Box1G" width="100%">
+                                <tbody class="Box1H FontBoxHeader ListBorderWidth">
+                                        #foreach($!item in $!PSACP020PageCreater.getItemListForBody())
+                                            #if($!item.getColumnName()=="T_ACCEPTANCE.APP_ROUTE_NO")
+                                                $!PSACP020PageCreater.printSpecial('m02_inputAppRoute',$!item,'_voucherType','5','_item_style','class="Small" onchange="setAppRouteName();setShowButton();"','_companyCd',$!loginUserCompanyCd,'_sectionCd',$!loginUserSectionCd,'_currentAppRoute',"$!domain.acceptAppRoute.approute.appRouteNo")
+                                            #end
+                                        #end
+                                </tbody>
+                            </table>
+                            <br>
+                               <table class="NoBorder" width="100%">
+                                <tr>
+                                    <td align="left" valign="top">
+                                        #customSpringMessage('PSACP020_FOOTER_COMMENT') ## ※印の項目は、必須入力です。
+                                    </td>
+                                    <td align="right" valign="middle" id="Submit3">
+                                        #if($!{patternName} == 'Correct')
+                                            <input type="button" class="LargeButton" value="#customSpringMessage('RE_REQ')" onclick="applyAgain();">
+                                        #else
+                                            <input type="button" class="LargeButton" value="#customSpringMessage('REQ')" onclick="apply();">
+                                        #end
+                                    </td>
+                                </tr>
+                            </table>
+
+                        </td>
+                    </tr>
+                </table>
+ 
+            </td>
+        </tr>
+     </table>
+     </div>
+</form>
+</body>
+</html>

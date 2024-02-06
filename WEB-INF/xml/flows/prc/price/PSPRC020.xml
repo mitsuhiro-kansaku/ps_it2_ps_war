@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<flow xmlns="http://www.springframework.org/schema/webflow"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.springframework.org/schema/webflow
+        http://www.springframework.org/schema/webflow/spring-webflow-2.0.xsd"
+    parent="base">
+    
+    <var name="domain" class="fw.domain.slip.price.register.purprice.BuyerPrice" />
+    
+    <input name="priceIdentify" />
+    <input name="patternName" />
+    <input name="quotReqSeq" />
+    <input name="quotSupplierLineNo" />
+    <input name="quotRespSeq" />
+    <input name="quotReqDtlNo" />
+    <input name="SessionKey" />
+    
+    <on-start>
+        <evaluate expression="PSPRC020Service.init(priceIdentify, patternName, quotReqSeq, quotSupplierLineNo, quotRespSeq, quotReqDtlNo)"
+            result="flowScope.domain" />
+    </on-start>
+    
+    <view-state id="PSPRC020" view="prc/price/PSPRC020" model="domain">
+        <transition on="apply" validate="true">
+             <evaluate expression="PSPRC020Service.apply(domain)" />
+             <set name="flashScope.isSuccess" value="true"></set>
+        </transition>
+        <transition on="downloadGreenFile" validate="false">
+            <evaluate expression="PSPRC020Service.downloadGreenFile(domain)" />
+        </transition>
+        <transition on="downloadImgFile" validate="false">
+            <evaluate expression="PSPRC020Service.downloadImgFile(domain)" />
+        </transition>
+        <transition on="new" to="itemInsert" validate="false" />
+    </view-state> 
+
+    <subflow-state id="itemInsert" subflow="mst/item/insert">
+        <input name="isFromPrice" value="true" />
+        <input name="priceDomain" value="flowScope.domain" />
+        <transition on="back" to="PSPRC020">
+            <set name="flashScope.isFromItem" value="true" />
+        </transition>
+    </subflow-state>
+</flow> 

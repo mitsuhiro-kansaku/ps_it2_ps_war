@@ -1,0 +1,1670 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="ps.dataaccess.common.autoorder.AutoOrderMapper">
+
+    <select id="searchReqTyoe" resultType="hashmap">
+        SELECT T_PUR_APL.REQ_TYPE_IND,
+               T_PUR_APL.PUR_APL_SEQ,
+               T_PUR_APL.DELIV_PLACE_COMPANY_CD,
+               T_PUR_APL.DELIV_PLACE_CD,
+               T_PUR_REQUEST.PUR_REQ_SEQ,
+               T_PUR_REQUEST.PUR_REQ_NO,
+               T_PUR_REQUEST.SUP_CD,
+               T_PUR_REQUEST.REQ_AMOUNT,
+               T_PUR_REQUEST.CURRENCY_CD,
+               T_PUR_REQUEST.PRICE_REG_FLG,
+               T_PUR_REQUEST.SUP_COMPANY_CD,
+               T_PUR_REQUEST.BUYER_COMPANY_CD,
+               T_PUR_REQUEST.BUYER_SECTION_CD,
+               T_PUR_REQUEST.BUYER_USER_ID
+          FROM T_PUR_REQUEST
+        INNER JOIN T_PUR_APL
+                ON T_PUR_APL.PUR_APL_SEQ = T_PUR_REQUEST.PUR_APL_SEQ
+        WHERE T_PUR_REQUEST.PUR_REQ_SEQ = #{purReqSeq}
+    </select>
+    
+       <select id="searchReq"  parameterType="java.util.Map"  resultType="hashmap">
+        SELECT T_PUR_REQUEST.PUR_REQ_SEQ,
+               T_PUR_APL.PUR_APL_SEQ,
+               T_PUR_REQUEST.PUR_REQ_NO,
+               T_PUR_REQUEST.SUP_CD,
+               T_PUR_REQUEST.PUR_REQ_CNV_AMOUNT,
+               T_PUR_REQUEST.PRICE_REG_FLG,
+               T_PUR_REQUEST.AUTO_ORDER_FLG,
+               T_PUR_REQUEST.SUP_COMPANY_CD,
+               T_PUR_REQUEST.BUYER_COMPANY_CD,
+               T_PUR_REQUEST.BUYER_SECTION_CD,
+               T_PUR_REQUEST.BUYER_USER_ID,
+               M_COMPANY.COMPANY_USE_LANGUAGE_IND
+         FROM  T_PUR_REQUEST
+         INNER JOIN T_PUR_APL
+                 ON T_PUR_REQUEST.PUR_APL_SEQ = T_PUR_APL.PUR_APL_SEQ
+          LEFT JOIN M_COMPANY
+                 ON T_PUR_APL.REQ_COMPANY_CD = M_COMPANY.COMPANY_CD
+        WHERE T_PUR_REQUEST.PUR_REQ_NO = #{key1}
+          AND T_PUR_REQUEST.NEW_FLG = '1'
+    </select>
+    
+    <update id="updateBuyerUserToNull" parameterType="String">
+        UPDATE T_PUR_REQUEST SET
+            BUYER_USER_ID = NULL,
+            BUYER_USER_NAME = NULL
+        WHERE
+            T_PUR_REQUEST.PUR_REQ_SEQ = #{purReqSeq}
+    </update>
+    
+    <select id="searchAutoAmount" resultType="String">
+        SELECT COND_VALUE
+          FROM M_COND
+         WHERE COND_KEY = 'AUTO_ORD_DIV_AMOUNT'
+    </select>
+    
+    <select id="searchAutoFlg" resultType="String">
+        SELECT M_PUR_PRICE.PIECE_FLG
+          FROM T_PUR_REQUEST
+        INNER JOIN M_PUR_PRICE
+                ON M_PUR_PRICE.BUYER_COMPANY_CD = T_PUR_REQUEST.BUYER_COMPANY_CD
+               AND M_PUR_PRICE.BUYER_SECTION_CD = T_PUR_REQUEST.BUYER_SECTION_CD
+               AND M_PUR_PRICE.ITEM_CD = T_PUR_REQUEST.ITEM_CD
+               AND M_PUR_PRICE.SUP_CD = T_PUR_REQUEST.SUP_CD
+               AND M_PUR_PRICE.VALID_START_DATE &lt;= ${@fw.common.util.AppUtil@getSysDate()}
+               AND M_PUR_PRICE.VALID_END_DATE &gt;= ${@fw.common.util.AppUtil@getSysDate()}
+         WHERE T_PUR_REQUEST.PUR_REQ_SEQ = #{purReqSeq}  
+    </select>
+    
+    <select id="searchAutoFlgForBatch" resultType="String">
+        SELECT M_PUR_PRICE.PIECE_FLG
+          FROM T_PUR_REQUEST
+        INNER JOIN M_PUR_PRICE
+                ON M_PUR_PRICE.BUYER_COMPANY_CD = T_PUR_REQUEST.BUYER_COMPANY_CD
+               AND M_PUR_PRICE.BUYER_SECTION_CD = T_PUR_REQUEST.BUYER_SECTION_CD
+               AND M_PUR_PRICE.ITEM_CD = T_PUR_REQUEST.ITEM_CD
+               AND M_PUR_PRICE.SUP_CD = T_PUR_REQUEST.SUP_CD
+               AND M_PUR_PRICE.VALID_START_DATE &lt;= #{sysDate}  
+               AND M_PUR_PRICE.VALID_END_DATE &gt;= #{sysDate}  
+         WHERE T_PUR_REQUEST.PUR_REQ_SEQ = #{purReqSeq}  
+    </select>
+
+    <select id="searchOrderFaxInd" resultType="hashmap">
+         SELECT M_SUPPLIER.ORDER_FAX_IND,
+                M_SUPPLIER.EDI_IND,
+                M_SUPPLIER.BASE_LANGUAGE_IND
+           FROM T_PUR_REQUEST
+          INNER JOIN M_SUPPLIER
+                  ON (M_SUPPLIER.COMPANY_CD = T_PUR_REQUEST.SUP_COMPANY_CD
+                  OR M_SUPPLIER.COMPANY_CD = '${@fw.common.constant.ApplicationConstant@COMPANY_CD_ALL}')
+                 AND M_SUPPLIER.SUP_CD = T_PUR_REQUEST.SUP_CD
+          WHERE T_PUR_REQUEST.PUR_REQ_SEQ = #{purReqSeq}
+    </select>
+
+    <insert id="insertOrder">
+        INSERT INTO T_ORDER(
+                ORDER_SEQ,
+                ORDER_NO,
+                ORDER_VERSION,
+                ORDER_STATUS,
+                INFO_CD,
+                REQ_TYPE_IND,
+                CORRECT_CD,
+                PRE_SEQ,
+                NEW_FLG,
+                NEW_APP_FLG,
+                PUR_REQ_DATE,
+                ORDER_INPUT_DATE,
+                ORDER_DATE,
+                ORDER_FIRST_DATE,
+                PUR_REQ_NO,
+                QUOT_REQ_NO,
+                QUOT_REQ_DTL_NO,
+                REQ_COMPANY_CD,
+                REQ_COMPANY_NAME,
+                REQ_SECTION_PLACE_CD,
+                REQ_SECTION_PLACE_NAME,
+                REQ_SECTION_CD,
+                REQ_SECTION_NAME,
+                REQ_USER_ID,
+                REQ_USER_NAME,
+                REQ_USER_EXTENSION_NO,
+                REQ_USER_TEL_NO,
+                REQ_USER_MAIL_ADDR,
+                BUYER_COMPANY_CD,
+                BUYER_COMPANY_NAME,
+                BUYER_SECTION_PLACE_CD,
+                BUYER_SECTION_PLACE_NAME,
+                BUYER_SECTION_CD,
+                BUYER_SECTION_NAME,
+                BUYER_USER_ID,
+                BUYER_USER_NAME,
+                BUYER_USER_EXTENSION_NO,
+                BUYER_USER_TEL_NO,
+                BUYER_USER_MAIL_ADDR,
+                BUYER_COMMENT,
+                FOR_SUPPRIER_COMMENT,
+                TITLE_NAME,
+                LOAD_COMPANY_CD,
+                LOAD_COMPANY_NAME,
+                LOAD_SECTION_PLACE_CD,
+                LOAD_SECTION_PLACE_NAME,
+                LOAD_SECTION_CD,
+                LOAD_SECTION_NAME,
+                RECIVE_COMPANY_CD,
+                RECIVE_COMPANY_NAME,
+                RECIVE_SECTION_PLACE_CD,
+                RECIVE_SECTION_PLACE_NAME,
+                RECIVE_SECTION_CD,
+                RECIVE_SECTION_NAME,
+                INSPECT_IND,
+                ITEM_CLASS_COMPANY_CD,
+                ITEM_CLASS_L,
+                ITEM_CLASS_L_NAME,
+                ITEM_CLASS_M,
+                ITEM_CLASS_M_NAME,
+                ITEM_CLASS_S,
+                ITEM_CLASS_S_NAME,
+                ITEM_COMPANY_CD,
+                ITEM_CD,
+                ITEM_NAME,
+                KATASHIKI,
+                MANUFACT_CD,
+                MANUFACT_NAME,
+                SUBJECT_COMPANY_CD,
+                SUBJECT_CD,
+                SUBJECT_NAME,
+                SUP_COMPANY_CD,
+                SUP_CD,
+                SUP_NAME,
+                SUP_ABBR_NAME,
+                SUP_ZIP_CD,
+                SUP_ADDRESS1,
+                SUP_ADDRESS2,
+                SUP_TEL_NO,
+                SUP_FAX_NO,
+                SUBCON_IND,
+                EDI_IND,
+                VENDOR_CD,
+                BUDGET_NO,
+                ORDER_DELIV_DATE,
+                DELIV_PLACE_COMPANY_CD,
+                DELIV_PLACE_CD,
+                DELIV_PLACE_NAME,
+                DELIV_PLACE_ZIP_CD,
+                DELIV_PLACE_ADDRESS1,
+                DELIV_PLACE_ADDRESS2,
+                DELIV_PLACE_NAME_INB,
+                DELIV_PLACE_TEL_NO,
+                DELIV_PLACE_FAX_NO,
+                DELIV_PLACE_COMPANY_NAME,
+                DELIV_PLACE_CONTACT_NAME,
+                CURRENCY_CD,
+                TAX_IND,
+                CONSUMPT_IND,
+                TAX_RATE,
+                ORDER_VOL,
+                UNIT_CD,
+                UNIT_NAME,
+                UNIT_PRICE,
+                ORDER_AMOUNT,
+                CONSUMPT_AMOUNT,
+                TOTAL_AMOUNT,
+                ORDER_CANCEL_VOL,
+                ORDER_CANCEL_AMOUNT,
+                UNIT_PRICE_IND,
+                PRICE_UNDEC_REASON,
+                PRICE_DEC_DATE,
+                ORDER_CNV_CURRENCY_CD,
+                ORDER_CNV_RATE,
+                ORDER_CNV_AMOUNT,
+                EST_DELIV_FLG,
+                AUTO_TERMINATE_FLG,
+                SUP_CONFIRM_FLG,
+                PRICE_DEC_FLG,
+                ATTACH_FILE_SEQ1,
+                ATTACH_FILE_SEQ2,
+                ATTACH_FILE_SEQ3,
+                APP_ROUTE_NO,
+                APP_ROUTE_NAME,
+                SEND_IND,
+                RECEIPT_NUMBER,
+                PRINT_IND,
+                FAX_SEND_IND,
+                FAX_RECEIPT_NUMBER,
+                BI_OUT_IND,
+                DYN_SEND_IND,
+                DYN_RECEIPT_NUMBER,
+                DELETE_FLG,
+                AUTO_DELETE_FLG,
+                AUTO_DELETE_DATE,
+                PAY_CONDITION_COMPANY_CD,
+                PAY_CONDITION_CD,
+                PAY_CONDITION_NAME,
+                EXT_TXT_1,
+                EXT_TXT_2,
+                EXT_TXT_3,
+                EXT_TXT_4,
+                EXT_TXT_5,
+                EXT_TXT_6,
+                EXT_TXT_7,
+                EXT_TXT_8,
+                EXT_TXT_9,
+                EXT_TXT_10,
+                EXT_AREA_1,
+                EXT_AREA_2,
+                EXT_AREA_3,
+                EXT_AREA_4,
+                EXT_AREA_5,
+                EXT_DATE_1,
+                EXT_DATE_2,
+                EXT_DATE_3,
+                EXT_DATE_4,
+                EXT_DATE_5,
+                EXT_INT_1,
+                EXT_INT_2,
+                EXT_INT_3,
+                EXT_INT_4,
+                EXT_INT_5,
+                EXT_INT_6,
+                EXT_INT_7,
+                EXT_INT_8,
+                EXT_INT_9,
+                EXT_INT_10,
+                EXT_DEC_1,
+                EXT_DEC_2,
+                EXT_DEC_3,
+                EXT_DEC_4,
+                EXT_DEC_5,
+                EXT_SEL_1,
+                EXT_SEL_2,
+                EXT_SEL_3,
+                EXT_SEL_4,
+                EXT_SEL_5,
+                EXT_SEL_6,
+                EXT_SEL_7,
+                EXT_SEL_8,
+                EXT_SEL_9,
+                EXT_SEL_10,
+                EXT_CHK_1,
+                EXT_CHK_2,
+                EXT_CHK_3,
+                EXT_CHK_4,
+                EXT_CHK_5,
+                EXT_FILE_1,
+                EXT_FILE_2,
+                EXT_FILE_3,
+                EXT_FILE_BINARY_1,
+                EXT_FILE_BINARY_2,
+                EXT_FILE_BINARY_3,
+                EXT_MST_1,
+                EXT_MST_2,
+                EXT_MST_3,
+                EXT_MST_4,
+                EXT_MST_5,
+                EXT_MST_6,
+                EXT_MST_7,
+                EXT_MST_8,
+                EXT_MST_NAME_1,
+                EXT_MST_NAME_2,
+                EXT_MST_NAME_3,
+                EXT_MST_NAME_4,
+                EXT_MST_NAME_5,
+                EXT_MST_NAME_6,
+                EXT_MST_NAME_7,
+                EXT_MST_NAME_8,
+                LAST_UPD_DATE,
+                LAST_UPD_COMPANY_CD,
+                LAST_UPD_SECTION_CD,
+                LAST_UPD_USER_ID,
+                REG_DATE,
+                REG_COMPANY_CD,
+                REG_SECTION_CD,
+                REG_USER_ID
+            )
+        SELECT #{seq},
+               T_PUR_REQUEST.PUR_REQ_NO,
+               '1',
+               '05',
+               '0502',
+               T_PUR_APL.REQ_TYPE_IND,
+               '1',
+               '',
+               '1',
+               '1',
+               T_PUR_APL.PUR_REQ_DATE,
+               '${@fw.common.util.AppUtil@getSysDate()}',
+               '',
+               '${@fw.common.util.AppUtil@getSysDate()}',
+               T_PUR_REQUEST.PUR_REQ_NO,
+               T_PUR_APL.QUOT_REQ_NO,
+               T_PUR_REQUEST.PUR_REQ_NO,
+               T_PUR_APL.REQ_COMPANY_CD,
+               T_PUR_APL.REQ_COMPANY_NAME,
+               T_PUR_APL.REQ_SECTION_PLACE_CD,
+               T_PUR_APL.REQ_SECTION_PLACE_NAME,
+               T_PUR_APL.REQ_SECTION_CD,
+               T_PUR_APL.REQ_SECTION_NAME,
+               T_PUR_APL.REQ_USER_ID,
+               T_PUR_APL.REQ_USER_NAME,
+               T_PUR_APL.REQ_USER_EXTENSION_NO,
+               T_PUR_APL.REQ_USER_TEL_NO,
+               M_B_USER_REQ.MAIL_ADDR,
+               T_PUR_REQUEST.BUYER_COMPANY_CD,
+               T_PUR_REQUEST.BUYER_COMPANY_NAME,
+               T_PUR_REQUEST.BUYER_SECTION_PLACE_CD,
+               T_PUR_REQUEST.BUYER_SECTION_PLACE_NAME,
+               T_PUR_REQUEST.BUYER_SECTION_CD,
+               T_PUR_REQUEST.BUYER_SECTION_NAME,
+               T_PUR_REQUEST.BUYER_USER_ID,
+               T_PUR_REQUEST.BUYER_USER_NAME,
+               M_USER.EXTENSION_NO,
+               M_USER.TEL_NO,
+               M_B_USER_BUYER.MAIL_ADDR,
+               '',
+               T_PUR_APL.FOR_SUPPRIER_COMMENT,
+               T_PUR_APL.TITLE_NAME,
+               T_PUR_APL.LOAD_COMPANY_CD,
+               T_PUR_APL.LOAD_COMPANY_NAME,
+               T_PUR_APL.LOAD_SECTION_PLACE_CD,
+               T_PUR_APL.LOAD_SECTION_PLACE_NAME,
+               T_PUR_APL.LOAD_SECTION_CD,
+               T_PUR_APL.LOAD_SECTION_NAME,
+               T_PUR_REQUEST.RECEIVE_COMPANY_CD,
+               T_PUR_REQUEST.RECEIVE_COMPANY_NAME,
+               T_PUR_REQUEST.RECEIVE_SECTION_PLACE_CD,
+               T_PUR_REQUEST.RECEIVE_SECTION_PLACE_NAME,
+               T_PUR_REQUEST.RECEIVE_SECTION_CD,
+               T_PUR_REQUEST.RECEIVE_SECTION_NAME,
+               T_PUR_REQUEST.INSPECT_IND,
+               T_PUR_REQUEST.ITEM_CLASS_COMPANY_CD,
+               T_PUR_REQUEST.ITEM_CLASS_L,
+               T_PUR_REQUEST.ITEM_CLASS_L_NAME,
+               T_PUR_REQUEST.ITEM_CLASS_M,
+               T_PUR_REQUEST.ITEM_CLASS_M_NAME,
+               T_PUR_REQUEST.ITEM_CLASS_S,
+               T_PUR_REQUEST.ITEM_CLASS_S_NAME,
+               T_PUR_REQUEST.ITEM_COMPANY_CD,
+               T_PUR_REQUEST.ITEM_CD,
+               T_PUR_REQUEST.ITEM_NAME,
+               T_PUR_REQUEST.KATASHIKI,
+               T_PUR_REQUEST.MANUFACT_CD,
+               T_PUR_REQUEST.MANUFACT_NAME,
+               T_PUR_REQUEST.SUBJECT_COMPANY_CD,
+               T_PUR_REQUEST.SUBJECT_CD,
+               T_PUR_REQUEST.SUBJECT_NAME,
+               T_PUR_REQUEST.SUP_COMPANY_CD,
+               T_PUR_REQUEST.SUP_CD,
+               T_PUR_REQUEST.SUP_NAME,
+               T_PUR_REQUEST.SUP_ABBR_NAME,
+               M_SUPPLIER.ZIP_CD,
+               M_SUPPLIER_LANG.ADDRESS1,
+               M_SUPPLIER_LANG.ADDRESS2,
+               M_SUPPLIER.TEL_NO,
+               M_SUPPLIER.FAX_NO,
+               M_SUPPLIER.SUBCON_IND,
+               M_SUPPLIER.EDI_IND,
+               M_SUPPLIER.VENDOR_CD,
+               T_PUR_APL.BUDGET_NO,
+               T_PUR_REQUEST.REQ_DELIV_DATE,
+               T_PUR_APL.DELIV_PLACE_COMPANY_CD,
+               T_PUR_APL.DELIV_PLACE_CD,
+               T_PUR_APL.DELIV_PLACE_NAME,
+               M_DELIVERY_PLACE.ZIP_CD,
+               M_DELIVERY_PLACE_LANG.ADDRESS1,
+               M_DELIVERY_PLACE_LANG.ADDRESS2,
+               M_DELIVERY_PLACE_LANG.DELIV_PLACE_NAME_INB,
+               M_DELIVERY_PLACE.TEL_NO,
+               M_DELIVERY_PLACE.FAX_NO,
+               M_DELIVERY_PLACE_LANG.DELIV_PLACE_COMPANY_NAME,
+               M_DELIVERY_PLACE_LANG.CONTACT_NAME,
+               T_PUR_REQUEST.CURRENCY_CD,
+               T_PUR_REQUEST.TAX_IND,
+               T_PUR_REQUEST.CONSUMPT_IND,
+               T_PUR_REQUEST.TAX_RATE,
+               T_PUR_REQUEST.REQ_VOL,
+               T_PUR_REQUEST.UNIT_CD,
+               T_PUR_REQUEST.UNIT_NAME,
+               T_PUR_REQUEST.UNIT_PRICE,
+               T_PUR_REQUEST.REQ_AMOUNT,
+               T_PUR_REQUEST.CONSUMPT_AMOUNT,
+               T_PUR_REQUEST.TOTAL_AMOUNT,
+               '',
+               '',
+               '1',
+               '',
+               '',
+               '${@fw.security.SecurityUtil@getCurrencyCdByEscapeSql()}',
+               CASE WHEN M_RATE.RATE IS NOT NULL THEN M_RATE.RATE ELSE 1 END,
+               #{amount},
+               '0',
+               #{setAutoFlg},
+               '0',
+               '0',
+               T_PUR_APL.ATTACH_FILE_SEQ1,
+               T_PUR_APL.ATTACH_FILE_SEQ2,
+               T_PUR_REQUEST.ATTACH_FILE_SEQ,
+               '',
+               '',
+               #{edi},
+               '',
+               '0',
+               #{faxInd},
+               '',
+               '0',
+               #{dynSendInd.sendInd},
+               '',
+               '0',
+               '0',
+               '',
+               CASE 
+               WHEN M_PAY_CONDITION_LANG.PAY_CONDITION_CD IS NULL THEN NULL
+               ELSE '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}' 
+               END,
+               M_PAY_CONDITION_LANG.PAY_CONDITION_CD,
+               M_PAY_CONDITION_LANG.PAY_CONDITION_NAME,
+               '',
+               '',
+               '',
+               '',
+               '',
+               '',
+               '',
+               '',
+               '',
+               '',
+               '',
+               '',
+               '',
+               '',
+               '',
+               '',
+               '',
+               '',
+               '',
+               '',
+               '',
+               '',
+               '',
+               '',
+               '',
+               '',
+               '',
+               '',
+               '',
+               '',
+               '',
+               '',
+               '',
+               '',
+               '',
+               '',
+               '',
+               '',
+               '',
+               '',
+               '',
+               '',
+               '',
+               '',
+               '',
+               '',
+               '',
+               '',
+               '',
+               '',
+               '',
+               '',
+               '',
+               '',
+               '',
+               '',
+               '',
+               '',
+               '',
+               '',
+               '',
+               '',
+               '',
+               '',
+               '',
+               '',
+               '',
+               '',
+               '',
+               '',
+               '',
+               '',
+               '${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}',
+               '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}',
+               '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}',
+               '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}',
+               '${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}',
+               '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}',
+               '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}',
+               '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}'  
+        FROM T_PUR_REQUEST
+        INNER JOIN T_PUR_APL
+                ON T_PUR_APL.PUR_APL_SEQ = T_PUR_REQUEST.PUR_APL_SEQ
+        LEFT JOIN M_B_USER M_B_USER_REQ
+                ON M_B_USER_REQ.COMPANY_CD = T_PUR_APL.REQ_COMPANY_CD
+               AND M_B_USER_REQ.USER_ID = T_PUR_APL.REQ_USER_ID
+        LEFT JOIN M_B_USER M_B_USER_BUYER
+                ON M_B_USER_BUYER.COMPANY_CD = T_PUR_REQUEST.BUYER_COMPANY_CD
+               AND M_B_USER_BUYER.USER_ID = T_PUR_REQUEST.BUYER_USER_ID
+        INNER JOIN M_USER
+                ON M_USER.COMPANY_CD = T_PUR_REQUEST.BUYER_COMPANY_CD
+               AND M_USER.SECTION_CD = T_PUR_REQUEST.BUYER_SECTION_CD
+               AND M_USER.USER_ID = T_PUR_REQUEST.BUYER_USER_ID
+        INNER JOIN M_SUPPLIER
+                ON (M_SUPPLIER.COMPANY_CD = T_PUR_REQUEST.SUP_COMPANY_CD
+                OR M_SUPPLIER.COMPANY_CD = '${@fw.common.constant.ApplicationConstant@COMPANY_CD_ALL}')
+               AND M_SUPPLIER.SUP_CD = T_PUR_REQUEST.SUP_CD
+        INNER JOIN M_SUPPLIER_LANG
+                ON (M_SUPPLIER_LANG.COMPANY_CD = T_PUR_REQUEST.SUP_COMPANY_CD
+                OR M_SUPPLIER_LANG.COMPANY_CD = '${@fw.common.constant.ApplicationConstant@COMPANY_CD_ALL}')
+               AND M_SUPPLIER_LANG.SUP_CD = T_PUR_REQUEST.SUP_CD
+               AND M_SUPPLIER_LANG.LANGUAGE_IND = '${@fw.security.SecurityUtil@getCompanyUseLanguageIndByEscapeSql()}'
+        LEFT JOIN M_RATE
+                ON M_RATE.ORG_CURRENCY_CD = T_PUR_REQUEST.CURRENCY_CD
+               AND (M_RATE.COMPANY_CD = '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}'
+                OR M_RATE.COMPANY_CD = '${@fw.common.constant.ApplicationConstant@COMPANY_CD_ALL}')
+               AND M_RATE.CNV_CURRENCY_CD = '${@fw.security.SecurityUtil@getCurrencyCdByEscapeSql()}'
+               AND M_RATE.RATE_START_DATE &lt;= ${@fw.common.util.AppUtil@getSysDate()}
+               AND M_RATE.RATE_END_DATE &gt;= ${@fw.common.util.AppUtil@getSysDate()}
+        INNER JOIN M_DELIVERY_PLACE
+                ON M_DELIVERY_PLACE.COMPANY_CD = T_PUR_APL.DELIV_PLACE_COMPANY_CD
+               AND M_DELIVERY_PLACE.DELIV_PLACE_CD = T_PUR_APL.DELIV_PLACE_CD
+               AND M_DELIVERY_PLACE.VALID_START_DATE &lt;= ${@fw.common.util.AppUtil@getSysDate()}
+               AND M_DELIVERY_PLACE.VALID_END_DATE &gt;= ${@fw.common.util.AppUtil@getSysDate()}
+        INNER JOIN M_DELIVERY_PLACE_LANG
+                ON M_DELIVERY_PLACE_LANG.COMPANY_CD = T_PUR_APL.DELIV_PLACE_COMPANY_CD
+               AND M_DELIVERY_PLACE_LANG.DELIV_PLACE_CD = T_PUR_APL.DELIV_PLACE_CD
+               AND M_DELIVERY_PLACE_LANG.VALID_START_DATE = M_DELIVERY_PLACE.VALID_START_DATE
+               AND M_DELIVERY_PLACE_LANG.VALID_END_DATE = M_DELIVERY_PLACE.VALID_END_DATE
+               AND M_DELIVERY_PLACE_LANG.LANGUAGE_IND = '${@fw.security.SecurityUtil@getCompanyUseLanguageIndByEscapeSql()}'
+        LEFT JOIN M_PAY_CONDITION_LANG
+            ON M_PAY_CONDITION_LANG.COMPANY_CD = M_SUPPLIER.COMPANY_CD
+            AND M_PAY_CONDITION_LANG.PAY_CONDITION_CD = M_SUPPLIER.PAY_CONDITION_CD
+            AND M_PAY_CONDITION_LANG.LANGUAGE_IND = '${@fw.security.SecurityUtil@getCompanyUseLanguageIndByEscapeSql()}'                    
+        WHERE T_PUR_REQUEST.PUR_REQ_SEQ = #{purReqSeq}
+    </insert>
+    
+       <insert id="insertOrderForBatch">
+        INSERT INTO T_ORDER(
+                ORDER_SEQ,
+                ORDER_NO,
+                ORDER_VERSION,
+                ORDER_STATUS,
+                INFO_CD,
+                REQ_TYPE_IND,
+                CORRECT_CD,
+                PRE_SEQ,
+                NEW_FLG,
+                NEW_APP_FLG,
+                PUR_REQ_DATE,
+                ORDER_INPUT_DATE,
+                ORDER_DATE,
+                ORDER_FIRST_DATE,
+                PUR_REQ_NO,
+                QUOT_REQ_NO,
+                QUOT_REQ_DTL_NO,
+                REQ_COMPANY_CD,
+                REQ_COMPANY_NAME,
+                REQ_SECTION_PLACE_CD,
+                REQ_SECTION_PLACE_NAME,
+                REQ_SECTION_CD,
+                REQ_SECTION_NAME,
+                REQ_USER_ID,
+                REQ_USER_NAME,
+                REQ_USER_EXTENSION_NO,
+                REQ_USER_TEL_NO,
+                REQ_USER_MAIL_ADDR,
+                BUYER_COMPANY_CD,
+                BUYER_COMPANY_NAME,
+                BUYER_SECTION_PLACE_CD,
+                BUYER_SECTION_PLACE_NAME,
+                BUYER_SECTION_CD,
+                BUYER_SECTION_NAME,
+                BUYER_USER_ID,
+                BUYER_USER_NAME,
+                BUYER_USER_EXTENSION_NO,
+                BUYER_USER_TEL_NO,
+                BUYER_USER_MAIL_ADDR,
+                BUYER_COMMENT,
+                FOR_SUPPRIER_COMMENT,
+                TITLE_NAME,
+                LOAD_COMPANY_CD,
+                LOAD_COMPANY_NAME,
+                LOAD_SECTION_PLACE_CD,
+                LOAD_SECTION_PLACE_NAME,
+                LOAD_SECTION_CD,
+                LOAD_SECTION_NAME,
+                RECIVE_COMPANY_CD,
+                RECIVE_COMPANY_NAME,
+                RECIVE_SECTION_PLACE_CD,
+                RECIVE_SECTION_PLACE_NAME,
+                RECIVE_SECTION_CD,
+                RECIVE_SECTION_NAME,
+                INSPECT_IND,
+                ITEM_CLASS_COMPANY_CD,
+                ITEM_CLASS_L,
+                ITEM_CLASS_L_NAME,
+                ITEM_CLASS_M,
+                ITEM_CLASS_M_NAME,
+                ITEM_CLASS_S,
+                ITEM_CLASS_S_NAME,
+                ITEM_COMPANY_CD,
+                ITEM_CD,
+                ITEM_NAME,
+                KATASHIKI,
+                MANUFACT_CD,
+                MANUFACT_NAME,
+                SUBJECT_COMPANY_CD,
+                SUBJECT_CD,
+                SUBJECT_NAME,
+                SUP_COMPANY_CD,
+                SUP_CD,
+                SUP_NAME,
+                SUP_ABBR_NAME,
+                SUP_ZIP_CD,
+                SUP_ADDRESS1,
+                SUP_ADDRESS2,
+                SUP_TEL_NO,
+                SUP_FAX_NO,
+                SUBCON_IND,
+                EDI_IND,
+                VENDOR_CD,
+                BUDGET_NO,
+                ORDER_DELIV_DATE,
+                DELIV_PLACE_COMPANY_CD,
+                DELIV_PLACE_CD,
+                DELIV_PLACE_NAME,
+                DELIV_PLACE_ZIP_CD,
+                DELIV_PLACE_ADDRESS1,
+                DELIV_PLACE_ADDRESS2,
+                DELIV_PLACE_NAME_INB,
+                DELIV_PLACE_TEL_NO,
+                DELIV_PLACE_FAX_NO,
+                DELIV_PLACE_COMPANY_NAME,
+                DELIV_PLACE_CONTACT_NAME,
+                CURRENCY_CD,
+                TAX_IND,
+                CONSUMPT_IND,
+                TAX_RATE,
+                ORDER_VOL,
+                UNIT_CD,
+                UNIT_NAME,
+                UNIT_PRICE,
+                ORDER_AMOUNT,
+                CONSUMPT_AMOUNT,
+                TOTAL_AMOUNT,
+                ORDER_CANCEL_VOL,
+                ORDER_CANCEL_AMOUNT,
+                UNIT_PRICE_IND,
+                PRICE_UNDEC_REASON,
+                PRICE_DEC_DATE,
+                ORDER_CNV_CURRENCY_CD,
+                ORDER_CNV_RATE,
+                ORDER_CNV_AMOUNT,
+                EST_DELIV_FLG,
+                AUTO_TERMINATE_FLG,
+                SUP_CONFIRM_FLG,
+                PRICE_DEC_FLG,
+                ATTACH_FILE_SEQ1,
+                ATTACH_FILE_SEQ2,
+                ATTACH_FILE_SEQ3,
+                APP_ROUTE_NO,
+                APP_ROUTE_NAME,
+                SEND_IND,
+                RECEIPT_NUMBER,
+                PRINT_IND,
+                FAX_SEND_IND,
+                FAX_RECEIPT_NUMBER,
+                BI_OUT_IND,
+                DYN_SEND_IND,
+                DYN_RECEIPT_NUMBER,
+                DELETE_FLG,
+                AUTO_DELETE_FLG,
+                AUTO_DELETE_DATE,
+                PAY_CONDITION_COMPANY_CD,
+                PAY_CONDITION_CD,
+                PAY_CONDITION_NAME,
+                EXT_TXT_1,
+                EXT_TXT_2,
+                EXT_TXT_3,
+                EXT_TXT_4,
+                EXT_TXT_5,
+                EXT_TXT_6,
+                EXT_TXT_7,
+                EXT_TXT_8,
+                EXT_TXT_9,
+                EXT_TXT_10,
+                EXT_AREA_1,
+                EXT_AREA_2,
+                EXT_AREA_3,
+                EXT_AREA_4,
+                EXT_AREA_5,
+                EXT_DATE_1,
+                EXT_DATE_2,
+                EXT_DATE_3,
+                EXT_DATE_4,
+                EXT_DATE_5,
+                EXT_INT_1,
+                EXT_INT_2,
+                EXT_INT_3,
+                EXT_INT_4,
+                EXT_INT_5,
+                EXT_INT_6,
+                EXT_INT_7,
+                EXT_INT_8,
+                EXT_INT_9,
+                EXT_INT_10,
+                EXT_DEC_1,
+                EXT_DEC_2,
+                EXT_DEC_3,
+                EXT_DEC_4,
+                EXT_DEC_5,
+                EXT_SEL_1,
+                EXT_SEL_2,
+                EXT_SEL_3,
+                EXT_SEL_4,
+                EXT_SEL_5,
+                EXT_SEL_6,
+                EXT_SEL_7,
+                EXT_SEL_8,
+                EXT_SEL_9,
+                EXT_SEL_10,
+                EXT_CHK_1,
+                EXT_CHK_2,
+                EXT_CHK_3,
+                EXT_CHK_4,
+                EXT_CHK_5,
+                EXT_FILE_1,
+                EXT_FILE_2,
+                EXT_FILE_3,
+                EXT_FILE_BINARY_1,
+                EXT_FILE_BINARY_2,
+                EXT_FILE_BINARY_3,
+                EXT_MST_1,
+                EXT_MST_2,
+                EXT_MST_3,
+                EXT_MST_4,
+                EXT_MST_5,
+                EXT_MST_6,
+                EXT_MST_7,
+                EXT_MST_8,
+                EXT_MST_NAME_1,
+                EXT_MST_NAME_2,
+                EXT_MST_NAME_3,
+                EXT_MST_NAME_4,
+                EXT_MST_NAME_5,
+                EXT_MST_NAME_6,
+                EXT_MST_NAME_7,
+                EXT_MST_NAME_8,
+                LAST_UPD_DATE,
+                LAST_UPD_COMPANY_CD,
+                LAST_UPD_SECTION_CD,
+                LAST_UPD_USER_ID,
+                REG_DATE,
+                REG_COMPANY_CD,
+                REG_SECTION_CD,
+                REG_USER_ID
+            )
+        SELECT #{seq},
+               T_PUR_REQUEST.PUR_REQ_NO,
+               '1',
+               '05',
+               '0502',
+               T_PUR_APL.REQ_TYPE_IND,
+               '1',
+               '',
+               '1',
+               '1',
+               T_PUR_APL.PUR_REQ_DATE,
+               #{sysDate},
+               '',
+               #{sysDate},
+               T_PUR_REQUEST.PUR_REQ_NO,
+               T_PUR_APL.QUOT_REQ_NO,
+               T_PUR_REQUEST.PUR_REQ_NO,
+               T_PUR_APL.REQ_COMPANY_CD,
+               T_PUR_APL.REQ_COMPANY_NAME,
+               T_PUR_APL.REQ_SECTION_PLACE_CD,
+               T_PUR_APL.REQ_SECTION_PLACE_NAME,
+               T_PUR_APL.REQ_SECTION_CD,
+               T_PUR_APL.REQ_SECTION_NAME,
+               T_PUR_APL.REQ_USER_ID,
+               T_PUR_APL.REQ_USER_NAME,
+               T_PUR_APL.REQ_USER_EXTENSION_NO,
+               T_PUR_APL.REQ_USER_TEL_NO,
+               M_B_USER_REQ.MAIL_ADDR,
+               T_PUR_REQUEST.BUYER_COMPANY_CD,
+               T_PUR_REQUEST.BUYER_COMPANY_NAME,
+               T_PUR_REQUEST.BUYER_SECTION_PLACE_CD,
+               T_PUR_REQUEST.BUYER_SECTION_PLACE_NAME,
+               T_PUR_REQUEST.BUYER_SECTION_CD,
+               T_PUR_REQUEST.BUYER_SECTION_NAME,
+               T_PUR_REQUEST.BUYER_USER_ID,
+               T_PUR_REQUEST.BUYER_USER_NAME,
+               M_USER.EXTENSION_NO,
+               M_USER.TEL_NO,
+               M_B_USER_BUYER.MAIL_ADDR,
+               '',
+               T_PUR_APL.FOR_SUPPRIER_COMMENT,
+               T_PUR_APL.TITLE_NAME,
+               T_PUR_APL.LOAD_COMPANY_CD,
+               T_PUR_APL.LOAD_COMPANY_NAME,
+               T_PUR_APL.LOAD_SECTION_PLACE_CD,
+               T_PUR_APL.LOAD_SECTION_PLACE_NAME,
+               T_PUR_APL.LOAD_SECTION_CD,
+               T_PUR_APL.LOAD_SECTION_NAME,
+               T_PUR_REQUEST.RECEIVE_COMPANY_CD,
+               T_PUR_REQUEST.RECEIVE_COMPANY_NAME,
+               T_PUR_REQUEST.RECEIVE_SECTION_PLACE_CD,
+               T_PUR_REQUEST.RECEIVE_SECTION_PLACE_NAME,
+               T_PUR_REQUEST.RECEIVE_SECTION_CD,
+               T_PUR_REQUEST.RECEIVE_SECTION_NAME,
+               T_PUR_REQUEST.INSPECT_IND,
+               T_PUR_REQUEST.ITEM_CLASS_COMPANY_CD,
+               T_PUR_REQUEST.ITEM_CLASS_L,
+               T_PUR_REQUEST.ITEM_CLASS_L_NAME,
+               T_PUR_REQUEST.ITEM_CLASS_M,
+               T_PUR_REQUEST.ITEM_CLASS_M_NAME,
+               T_PUR_REQUEST.ITEM_CLASS_S,
+               T_PUR_REQUEST.ITEM_CLASS_S_NAME,
+               T_PUR_REQUEST.ITEM_COMPANY_CD,
+               T_PUR_REQUEST.ITEM_CD,
+               T_PUR_REQUEST.ITEM_NAME,
+               T_PUR_REQUEST.KATASHIKI,
+               T_PUR_REQUEST.MANUFACT_CD,
+               T_PUR_REQUEST.MANUFACT_NAME,
+               T_PUR_REQUEST.SUBJECT_COMPANY_CD,
+               T_PUR_REQUEST.SUBJECT_CD,
+               T_PUR_REQUEST.SUBJECT_NAME,
+               T_PUR_REQUEST.SUP_COMPANY_CD,
+               T_PUR_REQUEST.SUP_CD,
+               T_PUR_REQUEST.SUP_NAME,
+               T_PUR_REQUEST.SUP_ABBR_NAME,
+               M_SUPPLIER.ZIP_CD,
+               M_SUPPLIER_LANG.ADDRESS1,
+               M_SUPPLIER_LANG.ADDRESS2,
+               M_SUPPLIER.TEL_NO,
+               M_SUPPLIER.FAX_NO,
+               M_SUPPLIER.SUBCON_IND,
+               M_SUPPLIER.EDI_IND,
+               M_SUPPLIER.VENDOR_CD,
+               T_PUR_APL.BUDGET_NO,
+               T_PUR_REQUEST.REQ_DELIV_DATE,
+               T_PUR_APL.DELIV_PLACE_COMPANY_CD,
+               T_PUR_APL.DELIV_PLACE_CD,
+               T_PUR_APL.DELIV_PLACE_NAME,
+               M_DELIVERY_PLACE.ZIP_CD,
+               M_DELIVERY_PLACE_LANG.ADDRESS1,
+               M_DELIVERY_PLACE_LANG.ADDRESS2,
+               M_DELIVERY_PLACE_LANG.DELIV_PLACE_NAME_INB,
+               M_DELIVERY_PLACE.TEL_NO,
+               M_DELIVERY_PLACE.FAX_NO,
+               M_DELIVERY_PLACE_LANG.DELIV_PLACE_COMPANY_NAME,
+               M_DELIVERY_PLACE_LANG.CONTACT_NAME,
+               T_PUR_REQUEST.CURRENCY_CD,
+               T_PUR_REQUEST.TAX_IND,
+               T_PUR_REQUEST.CONSUMPT_IND,
+               T_PUR_REQUEST.TAX_RATE,
+               T_PUR_REQUEST.REQ_VOL,
+               T_PUR_REQUEST.UNIT_CD,
+               T_PUR_REQUEST.UNIT_NAME,
+               T_PUR_REQUEST.UNIT_PRICE,
+               T_PUR_REQUEST.REQ_AMOUNT,
+               T_PUR_REQUEST.CONSUMPT_AMOUNT,
+               T_PUR_REQUEST.TOTAL_AMOUNT,
+               '',
+               '',
+               '1',
+               '',
+               '',
+               T_PUR_REQUEST.PUR_REQ_CNV_CURRENCY_CD,
+               T_PUR_REQUEST.PUR_REQ_CNV_RATE,
+               T_PUR_REQUEST.PUR_REQ_CNV_AMOUNT,
+               '0',
+               #{setAutoFlg},
+               '0',
+               '0',
+               T_PUR_APL.ATTACH_FILE_SEQ1,
+               T_PUR_APL.ATTACH_FILE_SEQ2,
+               T_PUR_REQUEST.ATTACH_FILE_SEQ,
+               '',
+               '',
+               #{edi},
+               '',
+               '0',
+               #{faxInd},
+               '',
+               '0',
+               #{dynSendInd.sendInd},
+               '',
+               '0',
+               '0',
+               '',
+               CASE 
+               WHEN M_PAY_CONDITION_LANG.PAY_CONDITION_CD IS NULL THEN NULL
+               ELSE T_PUR_APL.REQ_COMPANY_CD 
+               END,
+               M_PAY_CONDITION_LANG.PAY_CONDITION_CD,
+               M_PAY_CONDITION_LANG.PAY_CONDITION_NAME,
+               '',
+               '',
+               '',
+               '',
+               '',
+               '',
+               '',
+               '',
+               '',
+               '',
+               '',
+               '',
+               '',
+               '',
+               '',
+               '',
+               '',
+               '',
+               '',
+               '',
+               '',
+               '',
+               '',
+               '',
+               '',
+               '',
+               '',
+               '',
+               '',
+               '',
+               '',
+               '',
+               '',
+               '',
+               '',
+               '',
+               '',
+               '',
+               '',
+               '',
+               '',
+               '',
+               '',
+               '',
+               '',
+               '',
+               '',
+               '',
+               '',
+               '',
+               '',
+               '',
+               '',
+               '',
+               '',
+               '',
+               '',
+               '',
+               '',
+               '',
+               '',
+               '',
+               '',
+               '',
+               '',
+               '',
+               '',
+               '',
+               '',
+               '',
+               '',
+               '',
+                #{sysDateLong},
+               'batch',
+               'batch',
+               'batch',
+               #{sysDateLong},
+               'batch',
+               'batch',
+               'batch'  
+        FROM T_PUR_REQUEST
+        INNER JOIN T_PUR_APL
+                ON T_PUR_APL.PUR_APL_SEQ = T_PUR_REQUEST.PUR_APL_SEQ
+        LEFT JOIN M_B_USER M_B_USER_REQ
+                ON M_B_USER_REQ.COMPANY_CD = T_PUR_APL.REQ_COMPANY_CD
+               AND M_B_USER_REQ.USER_ID = T_PUR_APL.REQ_USER_ID
+        LEFT JOIN M_B_USER M_B_USER_BUYER
+                ON M_B_USER_BUYER.COMPANY_CD = T_PUR_REQUEST.BUYER_COMPANY_CD
+               AND M_B_USER_BUYER.USER_ID = T_PUR_REQUEST.BUYER_USER_ID
+        LEFT JOIN M_USER
+                ON M_USER.COMPANY_CD = T_PUR_REQUEST.BUYER_COMPANY_CD
+               AND M_USER.SECTION_CD = T_PUR_REQUEST.BUYER_SECTION_CD
+               AND M_USER.USER_ID = T_PUR_REQUEST.BUYER_USER_ID
+        LEFT JOIN M_SUPPLIER
+                ON (M_SUPPLIER.COMPANY_CD = T_PUR_REQUEST.SUP_COMPANY_CD
+                OR M_SUPPLIER.COMPANY_CD = '${@fw.common.constant.ApplicationConstant@COMPANY_CD_ALL}')
+               AND M_SUPPLIER.SUP_CD = T_PUR_REQUEST.SUP_CD
+        LEFT JOIN M_SUPPLIER_LANG
+                ON (M_SUPPLIER_LANG.COMPANY_CD = T_PUR_REQUEST.SUP_COMPANY_CD
+                OR M_SUPPLIER_LANG.COMPANY_CD = '${@fw.common.constant.ApplicationConstant@COMPANY_CD_ALL}')
+               AND M_SUPPLIER_LANG.SUP_CD = T_PUR_REQUEST.SUP_CD
+               AND M_SUPPLIER_LANG.LANGUAGE_IND = #{useLanInd}
+        LEFT JOIN M_DELIVERY_PLACE
+                ON M_DELIVERY_PLACE.COMPANY_CD = T_PUR_APL.DELIV_PLACE_COMPANY_CD
+               AND M_DELIVERY_PLACE.DELIV_PLACE_CD = T_PUR_APL.DELIV_PLACE_CD
+               AND M_DELIVERY_PLACE.VALID_START_DATE &lt;= #{sysDate}
+               AND M_DELIVERY_PLACE.VALID_END_DATE &gt;= #{sysDate}
+        LEFT JOIN M_DELIVERY_PLACE_LANG
+                ON M_DELIVERY_PLACE_LANG.COMPANY_CD = T_PUR_APL.DELIV_PLACE_COMPANY_CD
+               AND M_DELIVERY_PLACE_LANG.DELIV_PLACE_CD = T_PUR_APL.DELIV_PLACE_CD
+               AND M_DELIVERY_PLACE_LANG.VALID_START_DATE = M_DELIVERY_PLACE.VALID_START_DATE
+               AND M_DELIVERY_PLACE_LANG.VALID_END_DATE = M_DELIVERY_PLACE.VALID_END_DATE
+               AND M_DELIVERY_PLACE_LANG.LANGUAGE_IND = #{useLanInd}
+        LEFT JOIN M_PAY_CONDITION_LANG
+                ON M_PAY_CONDITION_LANG.COMPANY_CD = M_SUPPLIER.COMPANY_CD
+               AND M_PAY_CONDITION_LANG.PAY_CONDITION_CD = M_SUPPLIER.PAY_CONDITION_CD
+               AND M_PAY_CONDITION_LANG.LANGUAGE_IND = #{useLanInd}                   
+        WHERE T_PUR_REQUEST.PUR_REQ_SEQ = #{purReqSeq}
+    </insert>
+    
+    <insert id="orderSupLngInsert" parameterType="fw.domain.slip.order.order.Order">
+        INSERT INTO  T_ORDER_SUP_LNG
+                (ORDER_SEQ,
+                SUP_LANGUAGE_IND,
+                REQ_COMPANY_NAME,
+                REQ_SECTION_PLACE_NAME,
+                REQ_SECTION_NAME,
+                REQ_USER_NAME,
+                BUYER_COMPANY_NAME,
+                BUYER_SECTION_PLACE_NAME,
+                BUYER_SECTION_NAME,
+                BUYER_USER_NAME,
+                DELIV_PLACE_ADDRESS1,
+                DELIV_PLACE_ADDRESS2,
+                DELIV_PLACE_NAME_INB,
+                DELIV_PLACE_COMPANY_NAME,
+                DELIV_PLACE_CONTACT_NAME,
+                LOAD_COMPANY_NAME,
+                LOAD_SECTION_PLACE_NAME,
+                LOAD_SECTION_NAME,
+                ITEM_CLASS_L_NAME,
+                ITEM_CLASS_M_NAME,
+                ITEM_CLASS_S_NAME,
+                ITEM_NAME,
+                MANUFACT_NAME,
+                SUBJECT_NAME,
+                SUP_NAME,
+                SUP_ABBR_NAME,
+                DELIV_PLACE_NAME,
+                UNIT_NAME,
+                PAY_CONDITION_NAME,
+                AUTO_DELETE_FLG,
+                AUTO_DELETE_DATE,
+                LAST_UPD_DATE,
+                LAST_UPD_COMPANY_CD,
+                LAST_UPD_SECTION_CD,
+                LAST_UPD_USER_ID,
+                REG_DATE,
+                REG_COMPANY_CD,
+                REG_SECTION_CD,
+                REG_USER_ID
+            ) 
+        VALUES
+            (#{orderIdentify.orderSeq},<!-- 注文シーケンス番号 -->
+             #{supplierFrom.languageInd.languageInd},<!-- 取引先言語区分 -->
+             #{user.reqUser.reqUser.section.company.companyName},<!-- 依頼元会社名 -->
+             #{user.reqUser.reqUser.section.sectionPlace.sectionPlaceName},<!-- 依頼元事業所名 -->
+             #{user.reqUser.reqUser.section.sectionName},<!-- 依頼元部門名 -->
+             #{user.reqUser.reqUser.userName},<!-- 依頼元担当者名 -->
+             #{user.buyUser.buyUser.section.company.companyName},<!-- 購買会社名 -->
+             #{user.buyUser.buyUser.section.sectionPlace.sectionPlaceName},<!-- 購買事業所名 -->
+             #{user.buyUser.buyUser.section.sectionName},<!-- 購買部門名 -->
+             #{user.buyUser.buyUser.userName},<!-- 購買担当者名 -->
+             #{complement.delivPlace.contact.address1.address},<!-- 納入先住所１ -->
+             #{complement.delivPlace.contact.address2.address},<!-- 納入先住所２ -->
+             #{complement.delivPlace.delivPlaceNameInb},<!-- 構内配送先 -->
+             #{complement.delivPlace.delivPlaceCompanyName},<!-- 納入先会社名 -->
+             #{complement.delivPlace.delivPlaceContactName},<!-- 納入先担当者名 -->
+             #{user.loadSection.loadSection.company.companyName},<!-- 負担会社名 -->
+             #{user.loadSection.loadSection.sectionPlace.sectionPlaceName},<!-- 負担事業所名 -->
+             #{user.loadSection.loadSection.sectionName},<!-- 負担部門名 -->
+             #{accounting.orderItem.itemKind.itemClassLName},<!-- 大分類名 -->
+             #{accounting.orderItem.itemKind.itemClassMName},<!-- 中分類名 -->
+             #{accounting.orderItem.itemKind.itemClassSName},<!-- 小分類名 -->
+             #{accounting.orderItem.item.itemName},<!-- 品名 -->
+             #{accounting.orderItem.item.manufact.manufactName},<!-- メーカー名 -->
+             #{accounting.subject.subjectName},<!-- 科目名 -->
+             #{supplierFrom.supplierName.supplierName},<!-- 取引先名 -->
+             #{supplierFrom.supplierName.supplierAbbrName},<!-- 取引先名（略称） -->
+             #{complement.delivPlace.delivPlaceName},<!-- 納入先名 -->
+             #{accounting.orderItem.item.unit.unitName},<!-- 単位名 -->
+             #{payConditionItem.payConditionName},<!-- 支払条件名 -->
+             '0',
+             '',
+             '${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}',
+             '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}',
+             '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}',
+             '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}',
+             '${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}',
+             '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}',
+             '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}',
+             '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}' )
+    </insert>
+    
+       <insert id="orderSupLngInsertForBatch" parameterType="fw.domain.slip.order.order.Order">
+        INSERT INTO  T_ORDER_SUP_LNG
+                (ORDER_SEQ,
+                SUP_LANGUAGE_IND,
+                REQ_COMPANY_NAME,
+                REQ_SECTION_PLACE_NAME,
+                REQ_SECTION_NAME,
+                REQ_USER_NAME,
+                BUYER_COMPANY_NAME,
+                BUYER_SECTION_PLACE_NAME,
+                BUYER_SECTION_NAME,
+                BUYER_USER_NAME,
+                DELIV_PLACE_ADDRESS1,
+                DELIV_PLACE_ADDRESS2,
+                DELIV_PLACE_NAME_INB,
+                DELIV_PLACE_COMPANY_NAME,
+                DELIV_PLACE_CONTACT_NAME,
+                LOAD_COMPANY_NAME,
+                LOAD_SECTION_PLACE_NAME,
+                LOAD_SECTION_NAME,
+                ITEM_CLASS_L_NAME,
+                ITEM_CLASS_M_NAME,
+                ITEM_CLASS_S_NAME,
+                ITEM_NAME,
+                MANUFACT_NAME,
+                SUBJECT_NAME,
+                SUP_NAME,
+                SUP_ABBR_NAME,
+                DELIV_PLACE_NAME,
+                UNIT_NAME,
+                PAY_CONDITION_NAME,
+                AUTO_DELETE_FLG,
+                AUTO_DELETE_DATE,
+                LAST_UPD_DATE,
+                LAST_UPD_COMPANY_CD,
+                LAST_UPD_SECTION_CD,
+                LAST_UPD_USER_ID,
+                REG_DATE,
+                REG_COMPANY_CD,
+                REG_SECTION_CD,
+                REG_USER_ID
+            ) 
+        VALUES
+            (#{orderIdentify.orderSeq},<!-- 注文シーケンス番号 -->
+             #{supplierFrom.languageInd.languageInd},<!-- 取引先言語区分 -->
+             #{user.reqUser.reqUser.section.company.companyName},<!-- 依頼元会社名 -->
+             #{user.reqUser.reqUser.section.sectionPlace.sectionPlaceName},<!-- 依頼元事業所名 -->
+             #{user.reqUser.reqUser.section.sectionName},<!-- 依頼元部門名 -->
+             #{user.reqUser.reqUser.userName},<!-- 依頼元担当者名 -->
+             #{user.buyUser.buyUser.section.company.companyName},<!-- 購買会社名 -->
+             #{user.buyUser.buyUser.section.sectionPlace.sectionPlaceName},<!-- 購買事業所名 -->
+             #{user.buyUser.buyUser.section.sectionName},<!-- 購買部門名 -->
+             #{user.buyUser.buyUser.userName},<!-- 購買担当者名 -->
+             #{complement.delivPlace.contact.address1.address},<!-- 納入先住所１ -->
+             #{complement.delivPlace.contact.address2.address},<!-- 納入先住所２ -->
+             #{complement.delivPlace.delivPlaceNameInb},<!-- 構内配送先 -->
+             #{complement.delivPlace.delivPlaceCompanyName},<!-- 納入先会社名 -->
+             #{complement.delivPlace.delivPlaceContactName},<!-- 納入先担当者名 -->
+             #{user.loadSection.loadSection.company.companyName},<!-- 負担会社名 -->
+             #{user.loadSection.loadSection.sectionPlace.sectionPlaceName},<!-- 負担事業所名 -->
+             #{user.loadSection.loadSection.sectionName},<!-- 負担部門名 -->
+             #{accounting.orderItem.itemKind.itemClassLName},<!-- 大分類名 -->
+             #{accounting.orderItem.itemKind.itemClassMName},<!-- 中分類名 -->
+             #{accounting.orderItem.itemKind.itemClassSName},<!-- 小分類名 -->
+             #{accounting.orderItem.item.itemName},<!-- 品名 -->
+             #{accounting.orderItem.item.manufact.manufactName},<!-- メーカー名 -->
+             #{accounting.subject.subjectName},<!-- 科目名 -->
+             #{supplierFrom.supplierName.supplierName},<!-- 取引先名 -->
+             #{supplierFrom.supplierName.supplierAbbrName},<!-- 取引先名（略称） -->
+             #{complement.delivPlace.delivPlaceName},<!-- 納入先名 -->
+             #{accounting.orderItem.item.unit.unitName},<!-- 単位名 -->
+             #{payConditionItem.payConditionName},<!-- 支払条件名 -->
+             '0',
+             '',
+             #{orderIdentify.lastUpdDate},
+             'batch',
+             'batch',
+             'batch',
+             #{orderIdentify.lastUpdDate},
+             'batch',
+             'batch',
+             'batch' )
+    </insert>
+
+    <insert id="orderSupLngInsertFromOrder">
+        INSERT INTO T_ORDER_SUP_LNG
+				(ORDER_SEQ,
+				SUP_LANGUAGE_IND,
+				REQ_COMPANY_NAME,
+				REQ_SECTION_PLACE_NAME,
+				REQ_SECTION_NAME,
+				REQ_USER_NAME,
+				BUYER_COMPANY_NAME,
+				BUYER_SECTION_PLACE_NAME,
+				BUYER_SECTION_NAME,
+				BUYER_USER_NAME,
+				DELIV_PLACE_ADDRESS1,
+				DELIV_PLACE_ADDRESS2,
+				DELIV_PLACE_NAME_INB,
+                DELIV_PLACE_COMPANY_NAME,
+                DELIV_PLACE_CONTACT_NAME,
+				LOAD_COMPANY_NAME,
+				LOAD_SECTION_PLACE_NAME,
+				LOAD_SECTION_NAME,
+				ITEM_CLASS_L_NAME,
+				ITEM_CLASS_M_NAME,
+				ITEM_CLASS_S_NAME,
+				ITEM_NAME,
+				MANUFACT_NAME,
+				SUBJECT_NAME,
+				SUP_NAME,
+				SUP_ABBR_NAME,
+				DELIV_PLACE_NAME,
+				UNIT_NAME,
+				PAY_CONDITION_NAME,
+				AUTO_DELETE_FLG,
+				AUTO_DELETE_DATE,
+				LAST_UPD_DATE,
+				LAST_UPD_COMPANY_CD,
+				LAST_UPD_SECTION_CD,
+				LAST_UPD_USER_ID,
+				REG_DATE,
+				REG_COMPANY_CD,
+				REG_SECTION_CD,
+				REG_USER_ID)
+        SELECT
+                ORDER_SEQ,
+                #{supplierLanguageInd},
+                REQ_COMPANY_NAME,
+                REQ_SECTION_PLACE_NAME,
+                REQ_SECTION_NAME,
+                REQ_USER_NAME,
+                BUYER_COMPANY_NAME,
+                BUYER_SECTION_PLACE_NAME,
+                BUYER_SECTION_NAME,
+                BUYER_USER_NAME,
+                DELIV_PLACE_ADDRESS1,
+                DELIV_PLACE_ADDRESS2,
+                DELIV_PLACE_NAME_INB,
+                DELIV_PLACE_COMPANY_NAME,
+                DELIV_PLACE_CONTACT_NAME,
+                LOAD_COMPANY_NAME,
+                LOAD_SECTION_PLACE_NAME,
+                LOAD_SECTION_NAME,
+                ITEM_CLASS_L_NAME,
+                ITEM_CLASS_M_NAME,
+                ITEM_CLASS_S_NAME,
+                ITEM_NAME,
+                MANUFACT_NAME,
+                SUBJECT_NAME,
+                SUP_NAME,
+                SUP_ABBR_NAME,
+                DELIV_PLACE_NAME,
+                UNIT_NAME,
+                PAY_CONDITION_NAME,
+                '0',
+                '',
+                '${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}',
+                '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}',
+                '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}',
+                '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}',
+                '${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}',
+                '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}',
+                '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}',
+                '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}'
+        FROM
+            T_ORDER
+        WHERE
+            ORDER_SEQ = #{orderSeq}
+    </insert>
+
+    <insert id="orderSupLngInsertFromOrderForBatch">
+        INSERT INTO T_ORDER_SUP_LNG
+				(ORDER_SEQ,
+				SUP_LANGUAGE_IND,
+				REQ_COMPANY_NAME,
+				REQ_SECTION_PLACE_NAME,
+				REQ_SECTION_NAME,
+				REQ_USER_NAME,
+				BUYER_COMPANY_NAME,
+				BUYER_SECTION_PLACE_NAME,
+				BUYER_SECTION_NAME,
+				BUYER_USER_NAME,
+				DELIV_PLACE_ADDRESS1,
+				DELIV_PLACE_ADDRESS2,
+				DELIV_PLACE_NAME_INB,
+                DELIV_PLACE_COMPANY_NAME,
+                DELIV_PLACE_CONTACT_NAME,
+				LOAD_COMPANY_NAME,
+				LOAD_SECTION_PLACE_NAME,
+				LOAD_SECTION_NAME,
+				ITEM_CLASS_L_NAME,
+				ITEM_CLASS_M_NAME,
+				ITEM_CLASS_S_NAME,
+				ITEM_NAME,
+				MANUFACT_NAME,
+				SUBJECT_NAME,
+				SUP_NAME,
+				SUP_ABBR_NAME,
+				DELIV_PLACE_NAME,
+				UNIT_NAME,
+				PAY_CONDITION_NAME,
+				AUTO_DELETE_FLG,
+				AUTO_DELETE_DATE,
+				LAST_UPD_DATE,
+				LAST_UPD_COMPANY_CD,
+				LAST_UPD_SECTION_CD,
+				LAST_UPD_USER_ID,
+				REG_DATE,
+				REG_COMPANY_CD,
+				REG_SECTION_CD,
+				REG_USER_ID)
+		SELECT
+                ORDER_SEQ,
+                #{supplierLanguageInd},
+                REQ_COMPANY_NAME,
+                REQ_SECTION_PLACE_NAME,
+                REQ_SECTION_NAME,
+                REQ_USER_NAME,
+                BUYER_COMPANY_NAME,
+                BUYER_SECTION_PLACE_NAME,
+                BUYER_SECTION_NAME,
+                BUYER_USER_NAME,
+                DELIV_PLACE_ADDRESS1,
+                DELIV_PLACE_ADDRESS2,
+                DELIV_PLACE_NAME_INB,
+                DELIV_PLACE_COMPANY_NAME,
+                DELIV_PLACE_CONTACT_NAME,
+                LOAD_COMPANY_NAME,
+                LOAD_SECTION_PLACE_NAME,
+                LOAD_SECTION_NAME,
+                ITEM_CLASS_L_NAME,
+                ITEM_CLASS_M_NAME,
+                ITEM_CLASS_S_NAME,
+                ITEM_NAME,
+                MANUFACT_NAME,
+                SUBJECT_NAME,
+                SUP_NAME,
+                SUP_ABBR_NAME,
+                DELIV_PLACE_NAME,
+                UNIT_NAME,
+                PAY_CONDITION_NAME,
+                '0',
+                '',
+                #{lastUpdDate},
+                'batch',
+                'batch',
+                'batch',
+                #{lastUpdDate},
+                'batch',
+                'batch',
+                'batch' 
+        FROM
+            T_ORDER
+        WHERE
+            ORDER_SEQ = #{orderSeq}
+    </insert>
+
+    <resultMap type="fw.domain.slip.order.order.Order" id="Order_Map">
+        <id column="SUP_COMPANY_CD" property="supplierFrom.supCompanyCd"/><!-- 取引先会社コード -->
+        <id column="SUP_CD" property="supplierFrom.supCd"/><!-- 取引先コード -->
+        <id column="SUP_NAME" property="supplierFrom.supplierName.supplierName"/><!-- 取引先名 -->
+        <id column="SUP_ABBR_NAME" property="supplierFrom.supplierName.supplierAbbrName"/><!-- 取引先名 略称-->
+        <id column="REQ_COMPANY_CD" property="user.reqUser.reqUser.section.company.companyCd"/> <!-- 依頼元会社コード -->
+        <id column="REQ_COMPANY_NAME" property="user.reqUser.reqUser.section.company.companyName"/> <!-- 依頼元会社名 -->
+        <id column="REQ_SECTION_PLACE_CD" property="user.reqUser.reqUser.section.sectionPlace.sectionPlaceCd"/> <!-- 依頼元事業所コード -->
+        <id column="REQ_SECTION_PLACE_NAME" property="user.reqUser.reqUser.section.sectionPlace.sectionPlaceName"/> <!-- 依頼元事業所名-->
+        <id column="REQ_SECTION_CD" property="user.reqUser.reqUser.section.sectionCd"/> <!-- 依頼元部門コード -->
+        <id column="REQ_SECTION_NAME" property="user.reqUser.reqUser.section.sectionName"/> <!-- 依頼元部門名 -->
+        <id column="REQ_USER_ID" property="user.reqUser.reqUser.userID"/><!-- 依頼元担当者ID -->
+        <id column="REQ_USER_NAME" property="user.reqUser.reqUser.userName"/><!-- 依頼元担当者名 -->
+        <id column="BUYER_COMPANY_CD" property="user.buyUser.buyUser.section.company.companyCd"/> <!-- 購買者会社コード -->
+        <id column="BUYER_COMPANY_NAME" property="user.buyUser.buyUser.section.company.companyName"/> <!-- 購買者会社名 -->
+        <id column="BUYER_SECTION_PLACE_CD" property="user.buyUser.buyUser.section.sectionPlace.sectionPlaceCd"/> <!-- 購買者事業所コード -->
+        <id column="BUYER_SECTION_PLACE_NAME" property="user.buyUser.buyUser.section.sectionPlace.sectionPlaceName"/> <!-- 購買者事業所名-->
+        <id column="BUYER_SECTION_CD" property="user.buyUser.buyUser.section.sectionCd"/> <!-- 購買者部門コード -->
+        <id column="BUYER_SECTION_NAME" property="user.buyUser.buyUser.section.sectionName"/> <!-- 購買者部門名 -->
+        <id column="BUYER_USER_ID" property="user.buyUser.buyUser.userID"/><!-- 購買者担当者ID -->
+        <id column="BUYER_USER_NAME" property="user.buyUser.buyUser.userName"/><!-- 購買者担当者名 -->
+        <id column="DELIV_PLACE_COMPANY_CD" property="complement.delivPlace.delivPlaceCompanyCd"/><!-- 納入先会社コード -->
+        <id column="DELIV_PLACE_CD" property="complement.delivPlace.delivPlaceCd"/><!-- 納入先コード -->
+        <id column="DELIV_PLACE_NAME" property="complement.delivPlace.delivPlaceName"/><!-- 納入先名 -->
+        <id column="ADDRESS1" property="complement.delivPlace.contact.address1.address"/><!-- 納入先住所１ -->
+        <id column="ADDRESS2" property="complement.delivPlace.contact.address2.address"/><!-- 納入先住所２ -->
+        <id column="DELIV_PLACE_NAME_INB" property="complement.delivPlace.delivPlaceNameInb"/><!-- 構内配送先-->
+        <id column="DELIV_PLACE_COMPANY_NAME" property="complement.delivPlace.delivPlaceCompanyName"/><!-- 納入先会社名 -->
+        <id column="CONTACT_NAME" property="complement.delivPlace.delivPlaceContactName"/><!-- 納入先担当者名 -->
+        <id column="LOAD_COMPANY_CD" property="user.loadSection.loadSection.company.companyCd"/><!-- 負担会社コード -->
+        <id column="LOAD_COMPANY_NAME" property="user.loadSection.loadSection.company.companyName"/><!-- 負担会社名-->
+        <id column="LOAD_SECTION_PLACE_CD" property="user.loadSection.loadSection.sectionPlace.sectionPlaceCd"/><!-- 負担事業所コード -->
+        <id column="LOAD_SECTION_PLACE_NAME" property="user.loadSection.loadSection.sectionPlace.sectionPlaceName"/><!-- 負担事業所名-->
+        <id column="LOAD_SECTION_CD" property="user.loadSection.loadSection.sectionCd"/><!-- 負担部門コード -->
+        <id column="LOAD_SECTION_NAME" property="user.loadSection.loadSection.sectionName"/><!-- 負担部門名 -->
+        <id column="ITEM_CLASS_COMPANY_CD" property="accounting.orderItem.itemKind.itemClassCompanyCd"/><!-- 品種会社コード -->
+        <id column="ITEM_CLASS_L" property="accounting.orderItem.itemKind.itemClassL"/><!-- 大分類コード -->
+        <id column="ITEM_CLASS_L_NAME" property="accounting.orderItem.itemKind.itemClassLName"/><!-- 大分類名 -->
+        <id column="ITEM_CLASS_M" property="accounting.orderItem.itemKind.itemClassM"/><!-- 中分類コード -->
+        <id column="ITEM_CLASS_M_NAME" property="accounting.orderItem.itemKind.itemClassMName"/><!-- 中分類名 -->
+        <id column="ITEM_CLASS_S" property="accounting.orderItem.itemKind.itemClassS"/><!-- 小分類コード -->
+        <id column="ITEM_CLASS_S_NAME" property="accounting.orderItem.itemKind.itemClassSName"/><!-- 小分類名 -->
+        <id column="ITEM_COMPANY_CD" property="accounting.orderItem.item.itemCompanyCd"/><!-- 品名会社コード -->
+        <id column="ITEM_CD" property="accounting.orderItem.item.itemCd"/><!-- 品名コード -->
+        <id column="ITEM_NAME" property="accounting.orderItem.item.itemName"/><!-- 品名 -->
+        <id column="MANUFACT_CD" property="accounting.orderItem.item.manufact.manufactCd"/><!-- メーカーコード -->
+        <id column="MANUFACT_NAME" property="accounting.orderItem.item.manufact.manufactName"/><!-- メーカー名 -->
+        <id column="UNIT_CD" property="accounting.orderItem.item.unit.unitCd"/><!-- 単位コード -->
+        <id column="UNIT_NAME" property="accounting.orderItem.item.unit.unitName"/><!-- 単位名 -->
+        <id column="SUBJECT_COMPANY_CD" property="accounting.subject.subjectCompanyCd"/><!-- 科目会社コード -->
+        <id column="SUBJECT_CD" property="accounting.subject.subjectCd"/><!-- 科目コード -->
+        <id column="SUBJECT_NAME" property="accounting.subject.subjectName"/><!-- 科目名 -->
+        <id column="PAY_CONDITION_CD" property="payConditionItem.payConditionIdentify.payConditionCd"/><!-- 支払条件コード -->
+        <id column="PAY_CONDITION_NAME" property="payConditionItem.payConditionName"/><!-- 支払条件名 -->
+    </resultMap>
+    <select id="orderSupLng" resultMap="Order_Map">
+        SELECT
+               T_PUR_REQUEST.SUP_CD,
+               T_PUR_REQUEST.SUP_COMPANY_CD,
+               T_PUR_APL.REQ_COMPANY_CD,
+               T_PUR_APL.REQ_SECTION_PLACE_CD,
+               T_PUR_APL.REQ_SECTION_CD,
+               T_PUR_APL.REQ_USER_ID,
+               T_PUR_REQUEST.BUYER_COMPANY_CD,
+               T_PUR_REQUEST.BUYER_SECTION_PLACE_CD,
+               T_PUR_REQUEST.BUYER_SECTION_CD,
+               T_PUR_REQUEST.BUYER_USER_ID,
+               T_PUR_APL.DELIV_PLACE_COMPANY_CD,
+               T_PUR_APL.DELIV_PLACE_CD,
+               T_PUR_APL.LOAD_COMPANY_CD,
+               T_PUR_APL.LOAD_SECTION_PLACE_CD,
+               T_PUR_APL.LOAD_SECTION_CD,
+               T_PUR_REQUEST.ITEM_CLASS_COMPANY_CD,
+               T_PUR_REQUEST.ITEM_CLASS_L,
+               T_PUR_REQUEST.ITEM_CLASS_M,
+               T_PUR_REQUEST.ITEM_CLASS_S,
+               T_PUR_REQUEST.ITEM_COMPANY_CD,
+               T_PUR_REQUEST.ITEM_CD,
+               T_PUR_REQUEST.ITEM_NAME,
+               T_PUR_REQUEST.MANUFACT_CD,
+               T_PUR_REQUEST.MANUFACT_NAME,
+               T_PUR_REQUEST.UNIT_CD,
+               T_PUR_REQUEST.SUBJECT_COMPANY_CD,
+               T_PUR_REQUEST.SUBJECT_CD,
+               M_SUPPLIER.PAY_CONDITION_CD
+        FROM T_PUR_REQUEST
+        INNER JOIN T_PUR_APL
+               ON T_PUR_APL.PUR_APL_SEQ = T_PUR_REQUEST.PUR_APL_SEQ
+        LEFT JOIN M_SUPPLIER
+                ON (M_SUPPLIER.COMPANY_CD = T_PUR_REQUEST.SUP_COMPANY_CD
+                OR M_SUPPLIER.COMPANY_CD = '${@fw.common.constant.ApplicationConstant@COMPANY_CD_ALL}')
+               AND M_SUPPLIER.SUP_CD = T_PUR_REQUEST.SUP_CD            
+        WHERE T_PUR_REQUEST.PUR_REQ_SEQ = #{purReqSeq}
+    </select>
+    <select id="orderSupLngForBatch" resultMap="Order_Map">
+        SELECT
+               T_PUR_REQUEST.SUP_CD,
+               T_PUR_REQUEST.SUP_COMPANY_CD,
+               M_SUPPLIER_LANG.SUP_NAME,
+               M_SUPPLIER_LANG.SUP_ABBR_NAME,
+               T_PUR_APL.REQ_COMPANY_CD,
+               REQ_COMPANY.COMPANY_NAME AS REQ_COMPANY_NAME,
+               T_PUR_APL.REQ_SECTION_PLACE_CD,
+               REQ_SECTION_PLACE.SECTION_PLACE_NAME AS REQ_SECTION_PLACE_NAME,
+               T_PUR_APL.REQ_SECTION_CD,
+               REQ_SECTION.SECTION_NAME AS REQ_SECTION_NAME,
+               T_PUR_APL.REQ_USER_ID,
+               REQ_USER.USER_NAME AS REQ_USER_NAME,
+               T_PUR_REQUEST.BUYER_COMPANY_CD,
+               BUYER_COMPANY.COMPANY_NAME AS BUYER_COMPANY_NAME,
+               T_PUR_REQUEST.BUYER_SECTION_PLACE_CD,
+               BUYER_SECTION_PLACE.SECTION_PLACE_NAME AS BUYER_SECTION_PLACE_NAME,
+               T_PUR_REQUEST.BUYER_SECTION_CD,
+               BUYER_SECTION.SECTION_NAME AS BUYER_SECTION_NAME,
+               T_PUR_REQUEST.BUYER_USER_ID,
+               BUYER_USER.USER_NAME AS BUYER_USER_NAME,
+               T_PUR_APL.DELIV_PLACE_COMPANY_CD,
+               T_PUR_APL.DELIV_PLACE_CD,
+               M_DELIVERY_PLACE_LANG.DELIV_PLACE_NAME,
+               M_DELIVERY_PLACE_LANG.ADDRESS1,
+               M_DELIVERY_PLACE_LANG.ADDRESS2,
+               M_DELIVERY_PLACE_LANG.DELIV_PLACE_NAME_INB,
+               M_DELIVERY_PLACE_LANG.DELIV_PLACE_COMPANY_NAME,
+               M_DELIVERY_PLACE_LANG.CONTACT_NAME,
+               T_PUR_APL.LOAD_COMPANY_CD,
+               LOAD_COMPANY.COMPANY_NAME AS LOAD_COMPANY_NAME,
+               T_PUR_APL.LOAD_SECTION_PLACE_CD,
+               LOAD_SECTION_PLACE.SECTION_PLACE_NAME AS LOAD_SECTION_PLACE_NAME,
+               T_PUR_APL.LOAD_SECTION_CD,
+               LOAD_SECTION.SECTION_NAME AS LOAD_SECTION_NAME,
+               T_PUR_REQUEST.ITEM_CLASS_COMPANY_CD,
+               T_PUR_REQUEST.ITEM_CLASS_L,
+               L.ITEM_CLASS_NAME AS ITEM_CLASS_L_NAME,
+               T_PUR_REQUEST.ITEM_CLASS_M,
+               M.ITEM_CLASS_NAME AS ITEM_CLASS_M_NAME,
+               T_PUR_REQUEST.ITEM_CLASS_S,
+               S.ITEM_CLASS_NAME AS ITEM_CLASS_S_NAME,
+               T_PUR_REQUEST.ITEM_COMPANY_CD,
+               T_PUR_REQUEST.ITEM_CD,
+               CASE
+                   WHEN M_ITEM_LANG.ITEM_NAME IS NOT NULL THEN M_ITEM_LANG.ITEM_NAME
+                   ELSE T_PUR_REQUEST.ITEM_NAME
+               END AS ITEM_NAME,
+               T_PUR_REQUEST.MANUFACT_CD,
+               M_MANUFACT_LANG.MANUFACT_NAME,
+               T_PUR_REQUEST.UNIT_CD,
+               M_UNIT_NAME_LANG.UNIT_NAME,
+               T_PUR_REQUEST.SUBJECT_COMPANY_CD,
+               T_PUR_REQUEST.SUBJECT_CD,
+               M_SUBJECT_LANG.SUBJECT_NAME,
+               M_SUPPLIER.PAY_CONDITION_CD,
+               M_PAY_CONDITION_LANG.PAY_CONDITION_NAME
+              FROM T_PUR_REQUEST
+        INNER JOIN T_PUR_APL
+                ON T_PUR_APL.PUR_APL_SEQ = T_PUR_REQUEST.PUR_APL_SEQ
+         LEFT JOIN M_SUPPLIER_LANG
+                ON (T_PUR_REQUEST.SUP_COMPANY_CD = M_SUPPLIER_LANG.COMPANY_CD
+                OR M_SUPPLIER_LANG.COMPANY_CD = '${@fw.common.constant.ApplicationConstant@COMPANY_CD_ALL}')
+               AND T_PUR_REQUEST.SUP_CD = M_SUPPLIER_LANG.SUP_CD
+               AND M_SUPPLIER_LANG.LANGUAGE_IND = #{supLangInd}
+         LEFT JOIN M_COMPANY_LANG REQ_COMPANY
+                ON T_PUR_APL.REQ_COMPANY_CD = REQ_COMPANY.COMPANY_CD
+               AND REQ_COMPANY.LANGUAGE_IND = #{supLangInd}
+         LEFT JOIN M_SECTION_PLACE_LANG REQ_SECTION_PLACE
+                ON T_PUR_APL.REQ_COMPANY_CD = REQ_SECTION_PLACE.COMPANY_CD
+               AND T_PUR_APL.REQ_SECTION_PLACE_CD = REQ_SECTION_PLACE.SECTION_PLACE_CD
+               AND REQ_SECTION_PLACE.LANGUAGE_IND = #{supLangInd}
+         LEFT JOIN M_SECTION_LANG REQ_SECTION
+                ON T_PUR_APL.REQ_COMPANY_CD = REQ_SECTION.COMPANY_CD
+               AND T_PUR_APL.REQ_SECTION_CD = REQ_SECTION.SECTION_CD
+               AND REQ_SECTION.VALID_START_DATE &lt;= #{sysDate}
+               AND REQ_SECTION.VALID_END_DATE &gt;= #{sysDate}
+               AND REQ_SECTION.LANGUAGE_IND = #{supLangInd}
+         LEFT JOIN M_B_USER_LANG REQ_USER
+                ON T_PUR_APL.REQ_COMPANY_CD = REQ_USER.COMPANY_CD
+               AND T_PUR_APL.REQ_USER_ID = REQ_USER.USER_ID
+               AND REQ_USER.LANGUAGE_IND = #{supLangInd}
+         LEFT JOIN M_COMPANY_LANG BUYER_COMPANY
+                ON T_PUR_REQUEST.BUYER_COMPANY_CD = BUYER_COMPANY.COMPANY_CD
+               AND BUYER_COMPANY.LANGUAGE_IND = #{supLangInd}
+         LEFT JOIN M_SECTION_PLACE_LANG BUYER_SECTION_PLACE
+                ON T_PUR_REQUEST.BUYER_COMPANY_CD = BUYER_SECTION_PLACE.COMPANY_CD
+               AND T_PUR_REQUEST.BUYER_SECTION_PLACE_CD = BUYER_SECTION_PLACE.SECTION_PLACE_CD
+               AND BUYER_SECTION_PLACE.LANGUAGE_IND = #{supLangInd}
+         LEFT JOIN M_SECTION_LANG BUYER_SECTION
+                ON T_PUR_REQUEST.BUYER_COMPANY_CD = BUYER_SECTION.COMPANY_CD
+               AND T_PUR_REQUEST.BUYER_SECTION_CD = BUYER_SECTION.SECTION_CD
+               AND BUYER_SECTION.VALID_START_DATE &lt;= #{sysDate}
+               AND BUYER_SECTION.VALID_END_DATE &gt;= #{sysDate}
+               AND BUYER_SECTION.LANGUAGE_IND = #{supLangInd}
+         LEFT JOIN M_B_USER_LANG BUYER_USER
+                ON T_PUR_REQUEST.BUYER_COMPANY_CD = BUYER_USER.COMPANY_CD
+               AND T_PUR_REQUEST.BUYER_USER_ID = BUYER_USER.USER_ID
+               AND BUYER_USER.LANGUAGE_IND = #{supLangInd}
+         LEFT JOIN M_DELIVERY_PLACE_LANG
+                ON M_DELIVERY_PLACE_LANG.COMPANY_CD = T_PUR_APL.DELIV_PLACE_COMPANY_CD
+               AND M_DELIVERY_PLACE_LANG.DELIV_PLACE_CD = T_PUR_APL.DELIV_PLACE_CD
+               AND M_DELIVERY_PLACE_LANG.VALID_START_DATE &lt;= #{sysDate}
+               AND M_DELIVERY_PLACE_LANG.VALID_END_DATE &gt;= #{sysDate}
+               AND M_DELIVERY_PLACE_LANG.LANGUAGE_IND = #{supLangInd}
+         LEFT JOIN M_COMPANY_LANG LOAD_COMPANY
+                ON T_PUR_APL.LOAD_COMPANY_CD = LOAD_COMPANY.COMPANY_CD
+               AND LOAD_COMPANY.LANGUAGE_IND = #{supLangInd}
+         LEFT JOIN M_SECTION_PLACE_LANG LOAD_SECTION_PLACE
+                ON T_PUR_APL.LOAD_COMPANY_CD = LOAD_SECTION_PLACE.COMPANY_CD
+               AND T_PUR_APL.LOAD_SECTION_PLACE_CD = LOAD_SECTION_PLACE.SECTION_PLACE_CD
+               AND LOAD_SECTION_PLACE.LANGUAGE_IND = #{supLangInd}
+         LEFT JOIN M_SECTION_LANG LOAD_SECTION
+                ON T_PUR_APL.LOAD_COMPANY_CD = LOAD_SECTION.COMPANY_CD
+               AND T_PUR_APL.LOAD_SECTION_CD = LOAD_SECTION.SECTION_CD
+               AND LOAD_SECTION.VALID_START_DATE &lt;= #{sysDate}
+               AND LOAD_SECTION.VALID_END_DATE &gt;= #{sysDate}
+               AND LOAD_SECTION.LANGUAGE_IND = #{supLangInd}
+         LEFT JOIN M_ITEM_KIND_LANG L
+                ON T_PUR_REQUEST.ITEM_CLASS_L = L.ITEM_CLASS_L
+               AND L.ITEM_CLASS_M = ' '
+               AND L.ITEM_CLASS_S = ' '
+               AND L.LANGUAGE_IND = #{supLangInd}
+         LEFT JOIN M_ITEM_KIND_LANG M
+                ON T_PUR_REQUEST.ITEM_CLASS_L = M.ITEM_CLASS_L
+               AND T_PUR_REQUEST.ITEM_CLASS_M = M.ITEM_CLASS_M
+               AND M.ITEM_CLASS_S = ' '
+               AND M.LANGUAGE_IND = #{supLangInd}
+         LEFT JOIN M_ITEM_KIND_LANG S
+                ON T_PUR_REQUEST.ITEM_CLASS_L = S.ITEM_CLASS_L
+               AND T_PUR_REQUEST.ITEM_CLASS_M = S.ITEM_CLASS_M
+               AND T_PUR_REQUEST.ITEM_CLASS_S = S.ITEM_CLASS_S
+               AND S.ITEM_CLASS_S != ' '
+               AND S.LANGUAGE_IND = #{supLangInd}
+         LEFT JOIN M_ITEM_LANG
+                ON (T_PUR_REQUEST.ITEM_COMPANY_CD = M_ITEM_LANG.COMPANY_CD
+                OR M_ITEM_LANG.COMPANY_CD = '${@fw.common.constant.ApplicationConstant@COMPANY_CD_ALL}')
+               AND T_PUR_REQUEST.ITEM_CD = M_ITEM_LANG.ITEM_CD
+               AND M_ITEM_LANG.LANGUAGE_IND = #{supLangInd}
+         LEFT JOIN M_SUBJECT_LANG
+                ON (T_PUR_REQUEST.SUBJECT_COMPANY_CD = M_SUBJECT_LANG.COMPANY_CD
+                OR M_SUBJECT_LANG.COMPANY_CD = '${@fw.common.constant.ApplicationConstant@COMPANY_CD_ALL}')
+               AND T_PUR_REQUEST.SUBJECT_CD = M_SUBJECT_LANG.SUBJECT_CD
+               AND M_SUBJECT_LANG.LANGUAGE_IND = #{supLangInd}
+         LEFT JOIN M_MANUFACT_LANG
+                ON T_PUR_REQUEST.MANUFACT_CD = M_MANUFACT_LANG.MANUFACT_CD
+               AND M_MANUFACT_LANG.LANGUAGE_IND = #{supLangInd}
+         LEFT JOIN M_UNIT_NAME_LANG
+                ON T_PUR_REQUEST.UNIT_CD = M_UNIT_NAME_LANG.UNIT_CD
+               AND M_UNIT_NAME_LANG.LANGUAGE_IND = #{supLangInd}
+         LEFT JOIN M_SUPPLIER
+                ON (M_SUPPLIER.COMPANY_CD = T_PUR_REQUEST.SUP_COMPANY_CD
+                OR M_SUPPLIER.COMPANY_CD = '${@fw.common.constant.ApplicationConstant@COMPANY_CD_ALL}')
+               AND M_SUPPLIER.SUP_CD = T_PUR_REQUEST.SUP_CD
+         LEFT JOIN M_PAY_CONDITION_LANG
+	            ON M_PAY_CONDITION_LANG.COMPANY_CD = M_SUPPLIER.COMPANY_CD
+	            AND M_PAY_CONDITION_LANG.PAY_CONDITION_CD = M_SUPPLIER.PAY_CONDITION_CD
+	            AND M_PAY_CONDITION_LANG.LANGUAGE_IND = #{supLangInd}
+        WHERE T_PUR_REQUEST.PUR_REQ_SEQ = #{purReqSeq}
+    </select>
+</mapper>

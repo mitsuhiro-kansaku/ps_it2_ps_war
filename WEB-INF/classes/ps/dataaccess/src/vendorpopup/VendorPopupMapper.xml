@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="ps.dataaccess.src.vendorpopup.VendorPopupMapper">
+
+    <!-- SRC-00115-00 include化共通-->
+    <sql id="listKeyIdentityWhereCondition">
+        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(vendorCd)">
+            AND VENDOR_CD ${@fw.common.util.SearchModeUtil@getSearchSQL("fw.domain.mst.supplier.vendor.VendorPopupSearchCondition","vendorCd")}
+        </if>
+        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(vendorName)">
+            AND VENDOR_NAME ${@fw.common.util.SearchModeUtil@getSearchSQL("fw.domain.mst.supplier.vendor.VendorPopupSearchCondition","vendorName")}
+        </if>
+    </sql>
+
+    <select id="listKeyIdentity" parameterType="fw.domain.mst.supplier.vendor.VendorPopupSearchCondition" resultType="fw.domain.mst.supplier.vendor.VendorIdentify">
+        SELECT 
+            VENDOR_CD as "vendorCd"
+        FROM M_VENDOR 
+         <where>
+              <include refid="listKeyIdentityWhereCondition"/>
+        </where> 
+        ORDER BY ${searchCondition.columnOrder.columnOrder()}
+    </select>
+
+    <select id="listPageItem" parameterType="fw.domain.mst.supplier.vendor.VendorPopupSearchCondition" resultType="fw.domain.mst.supplier.vendor.VendorPopupItem">
+        SELECT
+            VENDOR_CD as "vendorIdentify.vendorCd",
+            VENDOR_NAME as "vendorName",
+            LAST_UPD_DATE as "vendorIdentify.lastUpdDate"
+        FROM M_VENDOR 
+        <where>
+            M_VENDOR.VENDOR_CD in
+            <foreach collection="searchCondition.page.keyDomainEntityList" item="keyList"  open="(" separator="," close=")">  
+                #{keyList.vendorCd}
+            </foreach>
+            <include refid="listKeyIdentityWhereCondition"/>
+        </where>
+        ORDER BY ${searchCondition.columnOrder.columnOrder()}
+    </select>
+
+    <select id="lostFocusSearch" parameterType ="fw.domain.mst.searchcondition.SearchCondition" resultType="String">
+        SELECT 
+            M_VENDOR.VENDOR_NAME
+        FROM M_VENDOR
+        WHERE
+            M_VENDOR.VENDOR_CD = #{vendorCd, jdbcType=VARCHAR}
+    </select>
+</mapper>

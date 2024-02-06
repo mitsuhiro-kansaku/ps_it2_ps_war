@@ -1,0 +1,600 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="ps.dataaccess.apr.ord.OrdMapper">
+
+    <sql id="listKeyIdentitySearchWhereCondition">
+       ${@ps.common.util.ItemSettingUtil@getItemSettingWhereSQL()}
+           AND T_ORDER.NEW_FLG = '1'
+           AND T_ORDER.DELETE_FLG = '0'
+           AND T_APPROVAL.APP_VOUCHER_IND = '2'
+           AND T_APPROVAL.APP_STATUS_IND IN (0,1)
+           AND NOW_APP_COMPANY_CD = '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}'
+          <!--  承認者名 -->
+          <if test="@org.apache.commons.lang.StringUtils@isNotBlank(appUserId)">
+                  AND NOW_APP_USER_ID = #{appUserId, jdbcType=VARCHAR}
+          </if>
+          <if test="@org.apache.commons.lang.StringUtils@isBlank(appUserId)">
+                  AND NOW_APP_USER_ID = '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}'
+          </if>
+          <!-- 依頼区分 -->
+          <if test="reqTypeInd!='' ">
+                AND T_ORDER.REQ_TYPE_IND IN
+                      (#{reqTypeInd, jdbcType=VARCHAR})
+          </if>
+          <!-- 情報区分コード -->
+          <if test="@org.apache.commons.lang.StringUtils@isNotBlank(infoCd)">
+                  AND T_ORDER.INFO_CD IN
+              <if test="infoCd=='' ">
+                      ('0502','0503','0504','0505')
+              </if>
+              <if test="infoCd!='' ">
+                      (#{infoCd, jdbcType=VARCHAR})
+              </if>
+          </if>
+       
+    </sql>
+    <!-- 検索条件で全てキリストを取得する -->
+    <select id="listKeyIdentitySearch" 
+        parameterType="fw.domain.slip.order.order.orderapproval.OrderApprovalSearchCondition"
+        resultType="fw.domain.slip.order.order.OrderIdentify">
+      SELECT T_ORDER.ORDER_SEQ AS "orderSeq"
+           , T_ORDER.LAST_UPD_DATE AS "lastUpdDate"
+        FROM T_ORDER
+       INNER JOIN T_APPROVAL
+          ON T_ORDER.ORDER_SEQ = T_APPROVAL.APP_VOUCHER_KEY
+         AND T_APPROVAL.DELETE_FLG = '0'
+       INNER JOIN T_SLIP_MNG
+          ON T_ORDER.ORDER_NO = T_SLIP_MNG.SLIP_NO
+         AND T_SLIP_MNG.DELETE_FLG = '0'
+       INNER JOIN T_PUR_REQUEST
+          ON T_ORDER.PUR_REQ_NO = T_PUR_REQUEST.PUR_REQ_NO
+         AND T_PUR_REQUEST.NEW_FLG = '1'
+         AND T_PUR_REQUEST.DELETE_FLG = '0'
+       INNER JOIN T_PUR_APL
+          ON T_PUR_REQUEST.PUR_APL_SEQ = T_PUR_APL.PUR_APL_SEQ
+        LEFT JOIN
+            (SELECT T_QUOT_REQUEST.QUOT_REQ_NO
+               FROM T_QUOT_REQUEST
+              WHERE T_QUOT_REQUEST.NEW_FLG = '1'
+                AND T_QUOT_REQUEST.QUOT_REQ_STATUS IN ('05','06','07','21')
+                AND T_QUOT_REQUEST.DELETE_FLG = '0') T_QUOT_REQUEST
+          ON (T_PUR_APL.PUR_APL_NO = T_QUOT_REQUEST.QUOT_REQ_NO
+          OR T_SLIP_MNG.SLIP_NO = T_QUOT_REQUEST.QUOT_REQ_NO)
+        <where>
+            <include refid="listKeyIdentitySearchWhereCondition"/>
+        </where>
+ORDER BY ${searchCondition.columnOrder.columnOrder()}
+    </select>
+    
+    <!--  注文承認一覧明細を取得する -->
+      <resultMap type="fw.domain.slip.order.order.orderapproval.OrderApprovalItem"
+         id="OrderApprovalItem_Map">
+        <id column="ORDER_CANCEL_VOL" property="orderCancel.orderCancelVol.vol"/>
+        <id column="ORDER_CANCEL_AMOUNT" property="orderCancel.orderCancelAmount.amount"/>
+        <id column="CURRENCY_CD" property="orderCancel.orderCancelAmount.currencyCd"/>
+        <id column="EXCLUSIVE_SLIP_NO" property="orderIdentify.exclusiveSlipId.slipNo"/>
+        <id column="EXCLUSIVE_LAST_UPD_DATE" property="orderIdentify.exclusiveSlipId.lastUpdDate"/>
+     </resultMap>
+    <select id="listPageItem" 
+                parameterType="fw.domain.slip.order.order.orderapproval.OrderApprovalSearchCondition"
+        resultMap="OrderApprovalItem_Map">
+            SELECT 
+              T_ORDER.ORDER_SEQ AS "orderIdentify.orderSeq",
+              T_ORDER.ORDER_NO AS "orderNo",
+              T_SLIP_MNG.APL_NO AS "aplNo", 
+              T_ORDER.REQ_TYPE_IND AS "reqTypeInd",
+              T_ORDER.INFO_CD AS "infoCd",
+              T_ORDER.ORDER_INPUT_DATE AS "orderInputDate.dateOfymd",
+              T_ORDER.ORDER_FIRST_DATE AS "orderFirstDate.dateOfymd",
+              T_ORDER.ITEM_CD AS "itemCd",
+              T_ORDER.ITEM_NAME AS "itemName",
+              T_ORDER.SUP_CD AS "supCd",
+              T_ORDER.SUP_ABBR_NAME AS "supName",
+              T_ORDER.CURRENCY_CD AS "currencyCd",
+              T_ORDER.ORDER_VOL AS "orderVol.vol",
+              T_ORDER.UNIT_NAME AS "unitCd",
+              T_ORDER.UNIT_PRICE AS "orderUnit.amount",
+              T_ORDER.ORDER_AMOUNT AS "orderAmount.amount",
+              T_ORDER.ORDER_CANCEL_VOL,
+              T_ORDER.ORDER_CANCEL_AMOUNT,
+              T_ORDER.CURRENCY_CD,
+              T_ORDER.ORDER_DELIV_DATE AS "orderDelivDate.dateOfymd",
+              T_ORDER.SUBJECT_CD AS "subjectCd",
+              T_ORDER.SUBJECT_NAME AS "subjectName",
+              T_ORDER.REQ_SECTION_CD AS "reqSectionCd",
+              T_ORDER.REQ_SECTION_NAME AS "reqSectionName",
+              T_ORDER.REQ_USER_ID AS "reqUserCd",
+              T_ORDER.REQ_USER_NAME AS "reqUserName",
+              T_ORDER.BUYER_SECTION_CD AS "buyerSectionCd",
+              T_ORDER.BUYER_SECTION_NAME AS "buyerSectionName",
+              T_ORDER.BUYER_USER_ID AS "buyerUserId",
+              T_ORDER.BUYER_USER_NAME AS "buyerUserName",
+              T_APPROVAL.NOW_APP_USER_NAME AS "appUserName",
+              T_APPROVAL.NEXT_APP_USER_NAME AS "nextAppUserName",
+              T_ORDER.ORDER_VERSION AS "orderVersion",    
+              T_ORDER.TAX_IND AS "taxInd",
+              T_ORDER.CONSUMPT_AMOUNT AS "consumptAmount",
+              T_ORDER.SEND_IND AS "sendInd",
+              T_ORDER.PRINT_IND AS "printInd",
+              T_ORDER.FAX_SEND_IND AS "faxSendInd",
+              T_ORDER.BI_OUT_IND AS "biOutInd",
+              T_ORDER.LAST_UPD_DATE AS "orderIdentify.lastUpdDate",
+              T_ORDER.ORDER_STATUS AS "orderIdentify.checkStatus",
+              T_ORDER.TITLE_NAME AS "titleName",
+              T_QUOT_REQUEST.QUOT_REQ_NO AS "quotReqNo",
+              T_ORDER.PAY_CONDITION_NAME AS "payConditionName",
+              T_SLIP_MNG.SLIP_NO AS EXCLUSIVE_SLIP_NO,
+              T_SLIP_MNG.LAST_UPD_DATE AS EXCLUSIVE_LAST_UPD_DATE,
+               ${@ps.common.util.ItemSettingUtil@getItemSettingSelectSQLDomainAliasNonBinary("T_ORDER","orderExtItem")}
+        FROM T_ORDER
+       INNER JOIN T_APPROVAL
+          ON T_ORDER.ORDER_SEQ = T_APPROVAL.APP_VOUCHER_KEY
+         AND T_APPROVAL.DELETE_FLG = '0'
+       INNER JOIN T_SLIP_MNG
+          ON T_ORDER.ORDER_NO = T_SLIP_MNG.SLIP_NO
+         AND T_SLIP_MNG.DELETE_FLG = '0'
+       INNER JOIN T_PUR_REQUEST
+          ON T_ORDER.PUR_REQ_NO = T_PUR_REQUEST.PUR_REQ_NO
+         AND T_PUR_REQUEST.NEW_FLG = '1'
+         AND T_PUR_REQUEST.DELETE_FLG = '0'
+       INNER JOIN T_PUR_APL
+          ON T_PUR_REQUEST.PUR_APL_SEQ = T_PUR_APL.PUR_APL_SEQ
+        LEFT JOIN
+            (SELECT T_QUOT_REQUEST.QUOT_REQ_NO
+               FROM T_QUOT_REQUEST
+              WHERE T_QUOT_REQUEST.NEW_FLG = '1'
+                AND T_QUOT_REQUEST.QUOT_REQ_STATUS IN ('05','06','07','21')
+                AND T_QUOT_REQUEST.DELETE_FLG = '0') T_QUOT_REQUEST
+          ON (T_PUR_APL.PUR_APL_NO = T_QUOT_REQUEST.QUOT_REQ_NO
+          OR T_SLIP_MNG.SLIP_NO = T_QUOT_REQUEST.QUOT_REQ_NO)
+        <where>
+            <include refid="listKeyIdentitySearchWhereCondition"/>
+             AND T_ORDER.ORDER_SEQ IN
+            <foreach collection="searchCondition.page.keyDomainEntityList" item="keyList"  open="(" separator="," close=")">  
+                #{keyList.orderSeq, jdbcType=VARCHAR}
+            </foreach>
+        </where>
+ORDER BY ${searchCondition.columnOrder.columnOrder()}
+    </select>
+
+    <resultMap type="fw.domain.slip.order.order.OrderApproval" id="OrderApproval_Map">
+        <id column="INFORMATIONIND" property="order.informationInd.informationInd"/>
+        <id column="ORDERFIRSTDATE" property="order.schedule.orderDate.orderFirstDate.dateOfymd"/>
+        <id column="PUR_REQ_DATE" property="order.schedule.reqDate.reqDate.dateOfymd"/>
+        <id column="ORDERNO" property="order.orderManagement.orderNo.orderNo"/>
+        <id column="REQ_TYPE_IND" property="order.reqInd.reqInd"/>
+        <id column="TITLENAME" property="order.orderManagement.titleName.titleName"/>
+        <id column="ITEMCLASSLNAME" property="order.accounting.orderItem.itemKind.itemClassLName"/>
+        <id column="ITEMCLASSMNAME" property="order.accounting.orderItem.itemKind.itemClassMName"/>
+        <id column="ITEMCLASSSNAME" property="order.accounting.orderItem.itemKind.itemClassSName"/>
+        <id column="ITEMCD" property="order.accounting.orderItem.item.itemCd"/>
+        <id column="ITEMNAME" property="order.accounting.orderItem.item.itemName"/>
+        <id column="DELIVPLACECD" property="order.complement.delivPlace.delivPlaceCd"/>
+        <id column="DELIVPLACENAME" property="order.complement.delivPlace.delivPlaceName"/>
+        <id column="MANUFACTCD" property="order.accounting.orderItem.item.manufact.manufactCd"/>
+        <id column="MANUFACTNAME" property="order.accounting.orderItem.item.manufact.manufactName"/>
+        <id column="SUPPLIERABBRNAME" property="order.supplierFrom.supplierName.supplierAbbrName"/>
+        <id column="SUBCON_IND" property="order.supplierFrom.subcon.subconInd"/>
+        <id column="EDI_IND" property="order.supplierFrom.ediInd.ediInd"/>
+        <id column="SUBJECTCD" property="order.accounting.subject.subjectCd"/>
+        <id column="SUBJECTNAME" property="order.accounting.subject.subjectName"/>
+        <id column="DLVEST.DATEOFYMD" property="order.schedule.dlvEst.dlvEst.dateOfymd"/>
+        <id column="CURRENCYCD" property="order.accounting.orderAmount.amountMng.currency.currencyCd"/>
+        <id column="UNITPRICE.AMOUNT" property="order.accounting.orderAmount.unitPrice.amount.amount"/>
+        <id column="UNITPRICEIND" property="order.status.priceManagement.unitPriceInd"/>
+        <id column="ORDERVOL.VOL" property="order.accounting.orderAmount.orderVolume.orderVol.vol"/>
+        <id column="ORDER_CANCEL_VOL" property="order.orderCancel.orderCancelVol.vol"/>
+        <id column="ORDER_CANCEL_AMOUNT" property="order.orderCancel.orderCancelAmount.amount"/>
+        <id column="RECEIVED_VOL" property="order.accounting.orderAmount.orderVolume.receivedVol.vol"/>
+        <id column="UNITCD" property="order.accounting.orderItem.item.unit.unitCd"/>
+        <id column="UNITNAME" property="order.accounting.orderItem.item.unit.unitName"/>
+        <id column="ORDERAMOUNT.AMOUNT" property="order.accounting.orderAmount.orderAmount.amount"/>
+        <id column="TAXIND" property="order.accounting.orderAmount.amountMng.taxCalculationInd.taxInd.taxInd"/>
+        <id column="TAXRATE" property="order.accounting.orderAmount.taxRate.taxRate"/>
+        <id column="CONSUMPTIND" property="order.accounting.orderAmount.amountMng.taxCalculationInd.consumptInd.consumptInd"/>
+        <id column="FORSUPPLIERCOMMENT.COMMENT" property="order.orderComment.forSupplierComment.forSupplierComment.comment"/>
+        <id column="PUR_REQ_NO" property="order.orderManagement.slipOriginNo.purReqNo.purReqNo"/>
+        <id column="REQ_CURRENCY_CD" property="order.requestAccount.unitPrice.currencyCd"/>
+        <id column="REQ_UNIT_PRICE" property="order.requestAccount.unitPrice.amount"/>
+        <id column="REQ_VOL" property="order.requestAccount.requestVol.vol"/>
+        <id column="REQ_UNIT_NAME" property="order.requestAccount.unitName"/>
+        <id column="REQ_CURRENCY_CD" property="order.requestAccount.requestAmount.currencyCd"/>
+        <id column="REQ_AMOUNT" property="order.requestAccount.requestAmount.amount"/>
+        <id column="PRICE_REG_FLG" property="order.condition.priceRegFlg"/>
+        <id column="FILENAME1" property="order.complement.rangeByAttachFile1.attachFile.fileName"/>
+        <id column="FILENAME2" property="order.complement.rangeByAttachFile2.attachFile.fileName"/>
+        <id column="FILENAME3" property="order.complement.rangeByAttachFile3.attachFile.fileName"/>
+        <id column="ATTACHRANGE1" property="order.complement.rangeByAttachFile1.attachRange.attachRange"/>
+        <id column="ATTACHRANGE2" property="order.complement.rangeByAttachFile2.attachRange.attachRange"/>
+        <id column="ATTACHRANGE3" property="order.complement.rangeByAttachFile3.attachRange.attachRange"/>
+        <id column="RANGEBYATTACHFILE1.SEQNO" property="order.complement.rangeByAttachFile1.attachFile.seqNo"/>
+        <id column="RANGEBYATTACHFILE2.SEQNO" property="order.complement.rangeByAttachFile2.attachFile.seqNo"/>
+        <id column="RANGEBYATTACHFILE3.SEQNO" property="order.complement.rangeByAttachFile3.attachFile.seqNo"/>
+        <id column="BUYUSER.COMPANYCD" property="order.user.buyUser.buyUser.section.company.companyCd"/>
+        <id column="BUYUSER.SECTIONCD" property="order.user.buyUser.buyUser.section.sectionCd"/>
+        <id column="BUYUSER.SECTIONNAME" property="order.user.buyUser.buyUser.section.sectionName"/>
+        <id column="BUYUSER.EXTENSIONNO" property="order.user.buyUser.buyUser.extNo.extensionNo"/>
+        <id column="BUYUSER.EXTERNALNO" property="order.user.buyUser.buyUser.externalNo.externalNo"/>
+        <id column="BUYUSER.USERID" property="order.user.buyUser.buyUser.userID"/>
+        <id column="BUYUSER.USERNAME" property="order.user.buyUser.buyUser.userName"/>
+        <id column="REQUSER.COMPANYCD" property="order.user.reqUser.reqUser.section.company.companyCd"/>
+        <id column="REQUSER.SECTIONPLACECD" property="order.user.reqUser.reqUser.section.sectionPlace.sectionPlaceCd"/>
+        <id column="REQUSER.SECTIONCD" property="order.user.reqUser.reqUser.section.sectionCd"/>
+        <id column="REQUSER.SECTIONNAME" property="order.user.reqUser.reqUser.section.sectionName"/>
+        <id column="REQUSER.EXTENSIONNO" property="order.user.reqUser.reqUser.extNo.extensionNo"/>
+        <id column="REQUSER.EXTERNALNO" property="order.user.reqUser.reqUser.externalNo.externalNo"/>
+        <id column="REQUSER.USERID" property="order.user.reqUser.reqUser.userID"/>
+        <id column="REQUSER.USERNAME" property="order.user.reqUser.reqUser.userName"/>
+        <id column="REQUSER.MAIL" property="order.user.reqUser.reqUser.mailAddr.mail"/>
+        <id column="APPROUTENO" property="order.approute.appRouteNo"/>
+        <id column="APPROUTENAME" property="order.approute.appRouteName"/>
+        <id column="APPROUTEVOUCHERIND" property="order.appManagement.approuteVoucherInd.approuteVoucherInd"/>
+        <id column="LAST_UPD_DATE" property="order.orderIdentify.lastUpdDate"/>
+        <id column="RECEIVE_STATUS_IND" property="order.status.receiveManagementStatus.receiveManagementStatus"/>
+        <id column="SEND_IND" property="order.status.dataInd.supSend.sendInd.sendInd"/>
+        <id column="PRINT_IND" property="order.status.dataInd.printInd.printInd.sendInd"/>
+        <id column="FAX_SEND_IND" property="order.status.dataInd.supSend.faxSendInd.sendInd"/>
+        <id column="BI_OUT_IND" property="order.status.dataInd.supSend.biOutind.sendInd"/>
+        <id column="DYN_SEND_IND" property="order.status.dataInd.supSend.dynSendInd.sendInd"/>
+        <id column="LOAD_COMPANY_CD" property="order.user.loadSection.loadSection.company.companyCd"/><!-- 負担会社コード -->
+        <id column="LOAD_SECTION_PLACE_CD" property="order.user.loadSection.loadSection.sectionPlace.sectionPlaceCd"/><!-- 負担事業所コード -->
+        <id column="LOAD_SECTION_CD" property="order.user.loadSection.loadSection.sectionCd"/>
+        <id column="LOAD_SECTION_NAME" property="order.user.loadSection.loadSection.sectionName"/>
+        <id column="KATASHIKI" property="order.accounting.orderItem.item.katashiki"/>
+        <id column="INSPECT_IND" property="order.condition.inspectInd.inspectInd"/>
+        <id column="PRICE_UNDEC_REASON" property="order.status.priceManagement.priceUndecReason.comment"/>
+        <id column="PRICE_DEC_DATE" property="order.status.priceManagement.priceDecDate.dateOfymd"/>
+        <id column="BUDGET_NO" property="order.complement.budgetNumber.budgetNumber" />
+        <id column="BUDGET_NAME" property="order.complement.budgetNumber.titleName.titleName" />
+        <id column="BUYER_COMMENT" property="order.orderComment.buyerComment.comment.comment" />
+        <id column="FORBUYERCOMMENT.COMMENT" property="order.orderComment.forBuyerComment.forBuyerComment.comment"/>
+        <id column="T_ORDER$CORRECTCD" property="order.correctInd.correctInd"/>
+        <id column="QUOT_RESP_SEQ" property="order.quotRespIdentify.quotRespSeqNo"/><!-- 見積回答シーケンス番号 -->
+        <id column="QUOT_ADO_STATUS" property="order.status.quotAdoStatus.status"/><!-- 見積採否ステータス -->
+        <id column="PAY_CONDITION_NAME" property="order.payConditionItem.payConditionName"/><!-- 支払条件名 -->
+        <id column="ORDER_STATUS" property="order.status.orderStatus.orderStatus"/>
+        <id column="EXCLUSIVE_SLIP_NO" property="order.orderIdentify.exclusiveSlipId.slipNo"/>
+        <id column="EXCLUSIVE_LAST_UPD_DATE" property="order.orderIdentify.exclusiveSlipId.lastUpdDate"/>
+        <id column="EXT_TXT_1" property="order.detailExtItem.extendTxt.extendTxt1"/>
+        <id column="EXT_TXT_2" property="order.detailExtItem.extendTxt.extendTxt2"/>
+        <id column="EXT_TXT_3" property="order.detailExtItem.extendTxt.extendTxt3"/>
+        <id column="EXT_TXT_4" property="order.detailExtItem.extendTxt.extendTxt4"/>
+        <id column="EXT_TXT_5" property="order.detailExtItem.extendTxt.extendTxt5"/>
+        <id column="EXT_TXT_6" property="order.detailExtItem.extendTxt.extendTxt6"/>
+        <id column="EXT_TXT_7" property="order.detailExtItem.extendTxt.extendTxt7"/>
+        <id column="EXT_TXT_8" property="order.detailExtItem.extendTxt.extendTxt8"/>
+        <id column="EXT_TXT_9" property="order.detailExtItem.extendTxt.extendTxt9"/>
+        <id column="EXT_TXT_10" property="order.detailExtItem.extendTxt.extendTxt10"/>
+        <id column="EXT_AREA_1" property="order.detailExtItem.extendArea.extendArea1"/>
+        <id column="EXT_AREA_2" property="order.detailExtItem.extendArea.extendArea2"/>
+        <id column="EXT_AREA_3" property="order.detailExtItem.extendArea.extendArea3"/>
+        <id column="EXT_AREA_4" property="order.detailExtItem.extendArea.extendArea4"/>
+        <id column="EXT_AREA_5" property="order.detailExtItem.extendArea.extendArea5"/>
+        <id column="EXT_DATE_1" property="order.detailExtItem.extendDate.extendDate1.dateOfymd"/>
+        <id column="EXT_DATE_2" property="order.detailExtItem.extendDate.extendDate2.dateOfymd"/>
+        <id column="EXT_DATE_3" property="order.detailExtItem.extendDate.extendDate3.dateOfymd"/>
+        <id column="EXT_DATE_4" property="order.detailExtItem.extendDate.extendDate4.dateOfymd"/>
+        <id column="EXT_DATE_5" property="order.detailExtItem.extendDate.extendDate5.dateOfymd"/>
+        <id column="EXT_INT_1" property="order.detailExtItem.extendInt.extendInt1.value"/>
+        <id column="EXT_INT_2" property="order.detailExtItem.extendInt.extendInt2.value"/>
+        <id column="EXT_INT_3" property="order.detailExtItem.extendInt.extendInt3.value"/>
+        <id column="EXT_INT_4" property="order.detailExtItem.extendInt.extendInt4.value"/>
+        <id column="EXT_INT_5" property="order.detailExtItem.extendInt.extendInt5.value"/>
+        <id column="EXT_INT_6" property="order.detailExtItem.extendInt.extendInt6.value"/>
+        <id column="EXT_INT_7" property="order.detailExtItem.extendInt.extendInt7.value"/>
+        <id column="EXT_INT_8" property="order.detailExtItem.extendInt.extendInt8.value"/>
+        <id column="EXT_INT_9" property="order.detailExtItem.extendInt.extendInt9.value"/>
+        <id column="EXT_INT_10" property="order.detailExtItem.extendInt.extendInt10.value"/>
+        <id column="EXT_DEC_1" property="order.detailExtItem.extendDec.extendDec1.value"/>
+        <id column="EXT_DEC_2" property="order.detailExtItem.extendDec.extendDec2.value"/>
+        <id column="EXT_DEC_3" property="order.detailExtItem.extendDec.extendDec3.value"/>
+        <id column="EXT_DEC_4" property="order.detailExtItem.extendDec.extendDec4.value"/>
+        <id column="EXT_DEC_5" property="order.detailExtItem.extendDec.extendDec5.value"/>
+        <id column="EXT_SEL_1" property="order.detailExtItem.extendSel.extendSel1"/>
+        <id column="EXT_SEL_2" property="order.detailExtItem.extendSel.extendSel2"/>
+        <id column="EXT_SEL_3" property="order.detailExtItem.extendSel.extendSel3"/>
+        <id column="EXT_SEL_4" property="order.detailExtItem.extendSel.extendSel4"/>
+        <id column="EXT_SEL_5" property="order.detailExtItem.extendSel.extendSel5"/>
+        <id column="EXT_SEL_6" property="order.detailExtItem.extendSel.extendSel6"/>
+        <id column="EXT_SEL_7" property="order.detailExtItem.extendSel.extendSel7"/>
+        <id column="EXT_SEL_8" property="order.detailExtItem.extendSel.extendSel8"/>
+        <id column="EXT_SEL_9" property="order.detailExtItem.extendSel.extendSel9"/>
+        <id column="EXT_SEL_10" property="order.detailExtItem.extendSel.extendSel10"/>
+        <id column="EXT_CHK_1" property="order.detailExtItem.extendChk.extendChk1"/>
+        <id column="EXT_CHK_2" property="order.detailExtItem.extendChk.extendChk2"/>
+        <id column="EXT_CHK_3" property="order.detailExtItem.extendChk.extendChk3"/>
+        <id column="EXT_CHK_4" property="order.detailExtItem.extendChk.extendChk4"/>
+        <id column="EXT_CHK_5" property="order.detailExtItem.extendChk.extendChk5"/>
+        <id column="EXT_FILE_1" property="order.detailExtItem.extendFile.extendFile1.fileName"/>
+        <id column="EXT_FILE_2" property="order.detailExtItem.extendFile.extendFile2.fileName"/>
+        <id column="EXT_FILE_3" property="order.detailExtItem.extendFile.extendFile3.fileName"/>
+        <id column="EXT_FILE_BINARY_1" property="order.detailExtItem.extendFile.extendFile1.binary"/>
+        <id column="EXT_FILE_BINARY_2" property="order.detailExtItem.extendFile.extendFile2.binary"/>
+        <id column="EXT_FILE_BINARY_3" property="order.detailExtItem.extendFile.extendFile3.binary"/>
+        <id column="EXT_MST_1" property="order.detailExtItem.extendMst.extendMst1.mstKey"/>
+        <id column="EXT_MST_2" property="order.detailExtItem.extendMst.extendMst2.mstKey"/>
+        <id column="EXT_MST_3" property="order.detailExtItem.extendMst.extendMst3.mstKey"/>
+        <id column="EXT_MST_4" property="order.detailExtItem.extendMst.extendMst4.mstKey"/>
+        <id column="EXT_MST_5" property="order.detailExtItem.extendMst.extendMst5.mstKey"/>
+        <id column="EXT_MST_6" property="order.detailExtItem.extendMst.extendMst6.mstKey"/>
+        <id column="EXT_MST_7" property="order.detailExtItem.extendMst.extendMst7.mstKey"/>
+        <id column="EXT_MST_8" property="order.detailExtItem.extendMst.extendMst8.mstKey"/>
+        <id column="EXT_MST_NAME_1" property="order.detailExtItem.extendMst.extendMst1.mstName"/>
+        <id column="EXT_MST_NAME_2" property="order.detailExtItem.extendMst.extendMst2.mstName"/>
+        <id column="EXT_MST_NAME_3" property="order.detailExtItem.extendMst.extendMst3.mstName"/>
+        <id column="EXT_MST_NAME_4" property="order.detailExtItem.extendMst.extendMst4.mstName"/>
+        <id column="EXT_MST_NAME_5" property="order.detailExtItem.extendMst.extendMst5.mstName"/>
+        <id column="EXT_MST_NAME_6" property="order.detailExtItem.extendMst.extendMst6.mstName"/>
+        <id column="EXT_MST_NAME_7" property="order.detailExtItem.extendMst.extendMst7.mstName"/>
+        <id column="EXT_MST_NAME_8" property="order.detailExtItem.extendMst.extendMst8.mstName"/>
+    </resultMap>
+
+   <!--注文承認一覧 -->
+    <select id="search" 
+           parameterType="fw.domain.slip.order.order.OrderIdentify"
+           resultMap="OrderApproval_Map">
+      SELECT T_ORDER.INFO_CD AS "INFORMATIONIND"
+           , T_ORDER.PRICE_DEC_FLG AS "order.priceDecFlg"
+           , T_SLIP_MNG.APL_NO AS "order.orderNo.orderNo"
+           , T_ORDER.CORRECT_CD AS "T_ORDER$CORRECTCD"
+           , T_SLIP_MNG.RECEIVE_STATUS_IND
+           , T_ORDER.TITLE_NAME AS "TITLENAME"
+           , T_ORDER.ORDER_FIRST_DATE AS "ORDERFIRSTDATE"
+           , T_ORDER.PUR_REQ_DATE AS "PUR_REQ_DATE"
+           , T_ORDER.ORDER_NO AS "ORDERNO"
+           , T_ORDER.REQ_TYPE_IND
+           , T_ORDER.ITEM_CLASS_L_NAME AS "ITEMCLASSLNAME"
+           , T_ORDER.ITEM_CLASS_M_NAME AS "ITEMCLASSMNAME"
+           , T_ORDER.ITEM_CLASS_S_NAME AS "ITEMCLASSSNAME"
+           , T_ORDER.ITEM_NAME AS "ITEMNAME"
+           , T_ORDER.ITEM_CD AS "ITEMCD"
+           , T_ORDER.DELIV_PLACE_CD AS "DELIVPLACECD"
+           , T_ORDER.DELIV_PLACE_NAME AS "DELIVPLACENAME"
+           , T_ORDER.MANUFACT_CD AS "MANUFACTCD"
+           , T_ORDER.MANUFACT_NAME AS "MANUFACTNAME"
+           , T_ORDER.SUP_CD AS "order.supplierFrom.supCd"
+           , T_ORDER.SUBCON_IND
+           , T_ORDER.EDI_IND
+           , T_ORDER.SUP_ABBR_NAME AS "SUPPLIERABBRNAME"
+           , T_ORDER.SUBJECT_CD AS "SUBJECTCD"
+           , T_ORDER.SUBJECT_NAME AS "SUBJECTNAME"
+           , T_ORDER.ORDER_DELIV_DATE AS "DLVEST.DATEOFYMD"
+           , T_ORDER.CURRENCY_CD AS "CURRENCYCD"
+           , T_ORDER.UNIT_PRICE AS "UNITPRICE.AMOUNT"
+           , T_ORDER.UNIT_PRICE_IND AS "UNITPRICEIND"
+           , T_ORDER.ORDER_VOL AS "ORDERVOL.VOL"
+           , T_ORDER.ORDER_CANCEL_VOL
+           , CASE WHEN T_RECEIVE_MNG.DELIV_VOL IS NULL THEN 0 ELSE T_RECEIVE_MNG.DELIV_VOL END AS "RECEIVED_VOL"
+           , T_ORDER.UNIT_CD AS "UNITCD"
+           , T_ORDER.UNIT_NAME AS "UNITNAME"
+           , T_ORDER.ORDER_AMOUNT AS "ORDERAMOUNT.AMOUNT"
+           , T_ORDER.ORDER_CANCEL_AMOUNT
+           , T_ORDER.TAX_IND AS "TAXIND"
+           , T_ORDER.TAX_RATE AS "TAXRATE"
+           , T_ORDER.CONSUMPT_IND AS "CONSUMPTIND"
+           , T_ORDER.FOR_SUPPRIER_COMMENT AS "FORSUPPLIERCOMMENT.COMMENT"
+           , T_PUR_APL.FOR_BUYER_COMMENT AS "FORBUYERCOMMENT.COMMENT"
+           , T_PUR_REQUEST.PUR_REQ_NO
+           , T_PUR_REQUEST.CURRENCY_CD AS REQ_CURRENCY_CD
+           , T_PUR_REQUEST.UNIT_PRICE AS REQ_UNIT_PRICE
+           , T_PUR_REQUEST.REQ_VOL
+           , T_PUR_REQUEST.UNIT_NAME AS REQ_UNIT_NAME
+           , T_PUR_REQUEST.REQ_AMOUNT
+           , T_PUR_REQUEST.PRICE_REG_FLG
+           , T_ORDER.SEND_IND
+           , T_ORDER.PRINT_IND
+           , T_ORDER.FAX_SEND_IND
+           , T_ORDER.BI_OUT_IND
+           , T_ORDER.DYN_SEND_IND
+           , T_ATTACH_MNG_A.ATTACH_FILE_NAME AS "FILENAME1"
+           , T_ATTACH_MNG_A.ATTACH_SCOPE AS "ATTACHRANGE1"
+           , T_ATTACH_MNG_B.ATTACH_FILE_NAME AS "FILENAME2"
+           , T_ATTACH_MNG_B.ATTACH_SCOPE AS "ATTACHRANGE2"
+           , T_ATTACH_MNG_C.ATTACH_FILE_NAME AS "FILENAME3"
+           , T_ORDER.ATTACH_FILE_SEQ1 AS "RANGEBYATTACHFILE1.SEQNO"
+           , T_ORDER.ATTACH_FILE_SEQ2 AS "RANGEBYATTACHFILE2.SEQNO"
+           , T_ORDER.ATTACH_FILE_SEQ3 AS "RANGEBYATTACHFILE3.SEQNO"
+           , T_ATTACH_MNG_C.ATTACH_SCOPE AS "ATTACHRANGE3"
+           , T_ORDER.BUYER_COMPANY_CD AS "BUYUSER.COMPANYCD"
+           , T_ORDER.BUYER_SECTION_CD AS "BUYUSER.SECTIONCD"
+           , T_ORDER.BUYER_SECTION_NAME AS "BUYUSER.SECTIONNAME"
+           , T_ORDER.BUYER_USER_EXTENSION_NO AS "BUYUSER.EXTENSIONNO"
+           , T_ORDER.BUYER_USER_TEL_NO AS "BUYUSER.EXTERNALNO"
+           , T_ORDER.BUYER_USER_ID AS "BUYUSER.USERID"
+           , T_ORDER.BUYER_USER_NAME AS "BUYUSER.USERNAME"
+           , T_ORDER.REQ_COMPANY_CD AS "REQUSER.COMPANYCD"
+           , T_ORDER.REQ_SECTION_PLACE_CD AS "REQUSER.SECTIONPLACECD"
+           , T_ORDER.REQ_SECTION_CD AS "REQUSER.SECTIONCD"
+           , T_ORDER.REQ_SECTION_NAME AS "REQUSER.SECTIONNAME"
+           , T_ORDER.REQ_USER_EXTENSION_NO AS "REQUSER.EXTENSIONNO"
+           , T_ORDER.REQ_USER_TEL_NO AS "REQUSER.EXTERNALNO"
+           , T_ORDER.REQ_USER_ID AS "REQUSER.USERID"
+           , T_ORDER.REQ_USER_NAME AS "REQUSER.USERNAME"
+           , T_ORDER.APP_ROUTE_NO AS "APPROUTENO"
+           , T_ORDER.APP_ROUTE_NAME AS "APPROUTENAME"
+           , T_ORDER.LOAD_COMPANY_CD AS "LOAD_COMPANY_CD"
+           , T_ORDER.LOAD_SECTION_PLACE_CD AS "LOAD_SECTION_PLACE_CD"
+           , T_ORDER.LOAD_SECTION_CD AS "LOAD_SECTION_CD"
+           , T_ORDER.LOAD_SECTION_NAME AS "LOAD_SECTION_NAME"
+           , T_ORDER.KATASHIKI AS "KATASHIKI"
+           , T_ORDER.INSPECT_IND AS "INSPECT_IND"
+           , T_ORDER.PRICE_UNDEC_REASON AS "PRICE_UNDEC_REASON"
+           , T_ORDER.PRICE_DEC_DATE AS "PRICE_DEC_DATE"
+           , T_ORDER.BUDGET_NO AS "BUDGET_NO"
+           , T_RINGI_BUDGET_DTL.BUDGET_NAME AS "BUDGET_NAME"
+           , T_ORDER.BUYER_COMMENT AS "BUYER_COMMENT"
+           , T_APPROVAL.APP_STATUS_IND AS "APPROUTEVOUCHERIND"
+           , T_PUR_APL.QUOT_RESP_SEQ
+           , T_QUOT_REQUEST.QUOT_ADO_STATUS
+           , T_ORDER.ORDER_VERSION AS "order.historyNo.historyNo"
+           , T_ORDER.ORDER_SEQ AS "order.orderIdentify.orderSeq"
+           , T_ORDER.PRE_SEQ AS "order.orderIdentify.preSeq"
+           , T_ORDER.LAST_UPD_DATE
+           , T_ORDER.PAY_CONDITION_NAME
+           , T_ORDER.ORDER_STATUS
+           , T_SLIP_MNG.SLIP_NO AS EXCLUSIVE_SLIP_NO
+           , T_SLIP_MNG.LAST_UPD_DATE AS EXCLUSIVE_LAST_UPD_DATE
+           , ${@ps.common.util.ItemSettingUtil@getItemSettingSelectSQL("T_ORDER")}
+        FROM T_ORDER
+        LEFT JOIN T_ATTACH_MNG T_ATTACH_MNG_A
+          ON T_ORDER.ATTACH_FILE_SEQ1 = T_ATTACH_MNG_A.ATTACH_FILE_SEQ
+         AND T_ATTACH_MNG_A.DELETE_FLG = '0'
+        LEFT JOIN T_ATTACH_MNG T_ATTACH_MNG_B
+          ON T_ORDER.ATTACH_FILE_SEQ2 = T_ATTACH_MNG_B.ATTACH_FILE_SEQ
+         AND T_ATTACH_MNG_B.DELETE_FLG = '0'
+        LEFT JOIN T_ATTACH_MNG T_ATTACH_MNG_C
+          ON T_ORDER.ATTACH_FILE_SEQ3 = T_ATTACH_MNG_C.ATTACH_FILE_SEQ
+         AND T_ATTACH_MNG_C.DELETE_FLG = '0'
+        LEFT JOIN T_APPROVAL
+          ON T_ORDER.ORDER_SEQ = T_APPROVAL.APP_VOUCHER_KEY
+         AND T_APPROVAL.DELETE_FLG = '0'
+         AND T_APPROVAL.APP_VOUCHER_IND = '2'
+       INNER JOIN T_SLIP_MNG
+          ON T_ORDER.ORDER_NO = T_SLIP_MNG.SLIP_NO
+         AND T_SLIP_MNG.DELETE_FLG = '0' 
+        LEFT JOIN T_PUR_REQUEST
+          ON T_PUR_REQUEST.PUR_REQ_NO = T_ORDER.PUR_REQ_NO
+         AND T_PUR_REQUEST.DELETE_FLG = '0'
+         AND T_PUR_REQUEST.NEW_FLG = '1'
+        LEFT JOIN T_PUR_APL
+          ON T_PUR_REQUEST.PUR_APL_SEQ = T_PUR_APL.PUR_APL_SEQ
+         AND T_PUR_APL.DELETE_FLG = '0'
+         AND T_PUR_APL.NEW_FLG ='1' 
+        LEFT JOIN T_QUOT_REQUEST
+          ON (T_PUR_REQUEST.PUR_APL_NO = T_QUOT_REQUEST.QUOT_REQ_NO
+          OR T_PUR_REQUEST.PUR_REQ_NO = T_QUOT_REQUEST.QUOT_REQ_NO) 
+         AND T_QUOT_REQUEST.NEW_FLG = '1'
+         AND T_QUOT_REQUEST.NEW_APP_FLG = '1'
+         AND T_QUOT_REQUEST.DELETE_FLG = '0'
+        LEFT JOIN
+            (SELECT SUM(T_RECEIVE_MNG.DELIV_VOL) AS DELIV_VOL
+                  , T_RECEIVE_MNG.ORDER_NO
+               FROM T_RECEIVE_MNG
+              WHERE T_RECEIVE_MNG.DELETE_FLG = '0'
+           GROUP BY T_RECEIVE_MNG.ORDER_NO) T_RECEIVE_MNG
+          ON T_ORDER.ORDER_NO = T_RECEIVE_MNG.ORDER_NO
+        LEFT JOIN T_RINGI_BUDGET_DTL
+          ON T_RINGI_BUDGET_DTL.COMPANY_CD = T_ORDER.LOAD_COMPANY_CD
+         AND T_RINGI_BUDGET_DTL.SECTION_PLACE_CD = T_ORDER.LOAD_SECTION_PLACE_CD
+         AND T_RINGI_BUDGET_DTL.BUDGET_DTL_NO = T_ORDER.BUDGET_NO
+       WHERE T_ORDER.DELETE_FLG = '0'
+        <if test="@org.apache.commons.lang.StringUtils@isBlank(isPreFlag)">
+         AND T_ORDER.NEW_FLG = '1'
+        </if>
+         AND T_ORDER.ORDER_SEQ = #{orderSeq, jdbcType=VARCHAR}
+    </select>
+   
+     <!-- 注文最終承認以外更新 -->
+    <update id="update" parameterType="fw.domain.slip.order.order.OrderApproval">
+        UPDATE T_ORDER
+        SET 
+          ORDER_STATUS = '02', 
+          LAST_UPD_DATE = '${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}',
+          LAST_UPD_COMPANY_CD = '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}',
+          LAST_UPD_SECTION_CD = '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}',
+          LAST_UPD_USER_ID = '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}'
+        WHERE ORDER_SEQ=  #{order.orderIdentify.orderSeq, jdbcType=VARCHAR}
+    </update>
+    
+    <!-- 初回注文日も更新 -->
+    <update id="updateLastAppWithFirstDate" parameterType="fw.domain.slip.order.order.OrderApproval">
+        UPDATE T_ORDER
+        SET 
+              <if test="order.informationInd.informationInd=='0502' || order.informationInd.informationInd=='0503'">
+              ORDER_STATUS = '05', 
+              </if>
+              <if test="order.informationInd.informationInd=='0504'">
+              ORDER_STATUS = '10', 
+              </if>
+              <if test="order.informationInd.informationInd=='0505'">
+              ORDER_STATUS = '20', 
+              </if>
+              <if test="order.informationInd.firmPurchaseOrder">
+                ORDER_DATE = NULL, 
+              </if>
+              <if test="!order.informationInd.firmPurchaseOrder">
+                ORDER_DATE = '${@fw.common.util.AppUtil@getSysDate()}',
+              </if>
+              ORDER_FIRST_DATE = '${@fw.common.util.AppUtil@getSysDate()}',
+              NEW_APP_FLG = '1',
+              TAX_RATE = #{order.accounting.orderAmount.taxRate.taxRate, jdbcType=VARCHAR},
+              CONSUMPT_AMOUNT = #{order.accounting.orderAmount.amountMng.consumptAmount.consumptAmount.amount, jdbcType=VARCHAR}, 
+              TOTAL_AMOUNT = #{order.accounting.orderAmount.amountMng.totalAmount.totalAmount.amount, jdbcType=VARCHAR}, 
+              SEND_IND = #{order.status.dataInd.supSend.sendInd.sendInd}, 
+              PRINT_IND = #{order.status.dataInd.printInd.printInd.sendInd} ,
+              FAX_SEND_IND = #{order.status.dataInd.supSend.faxSendInd.sendInd},
+              BI_OUT_IND = #{order.status.dataInd.supSend.biOutind.sendInd},
+              DYN_SEND_IND = #{order.status.dataInd.supSend.dynSendInd.sendInd},
+              LAST_UPD_DATE = '${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}',
+              LAST_UPD_COMPANY_CD = '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}',
+              LAST_UPD_SECTION_CD = '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}',
+              LAST_UPD_USER_ID = '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}'
+        WHERE
+              ORDER_SEQ = #{order.orderIdentify.orderSeq, jdbcType=VARCHAR}
+    </update>
+    
+    <!-- 承認済みデータ -->
+    <update id="updateLastApp" parameterType="fw.domain.slip.order.order.OrderApproval">
+        UPDATE T_ORDER 
+        SET 
+          <if test="order.informationInd.informationInd=='0502' || order.informationInd.informationInd=='0503'">
+          ORDER_STATUS = '05', 
+          </if>
+          <if test="order.informationInd.informationInd=='0504'">
+          ORDER_STATUS = '10', 
+          </if>
+          <if test="order.informationInd.informationInd=='0505'">
+          ORDER_STATUS = '20', 
+          </if>
+          <if test="order.informationInd.firmPurchaseOrder">
+            ORDER_DATE = NULL, 
+          </if>
+          <if test="!order.informationInd.firmPurchaseOrder">
+            ORDER_DATE = '${@fw.common.util.AppUtil@getSysDate()}',
+          </if>
+          NEW_APP_FLG = '1', 
+          TAX_RATE = #{order.accounting.orderAmount.taxRate.taxRate, jdbcType=VARCHAR},
+          CONSUMPT_AMOUNT = #{order.accounting.orderAmount.amountMng.consumptAmount.consumptAmount.amount, jdbcType=VARCHAR}, 
+          TOTAL_AMOUNT = #{order.accounting.orderAmount.amountMng.totalAmount.totalAmount.amount, jdbcType=VARCHAR}, 
+          SEND_IND = #{order.status.dataInd.supSend.sendInd.sendInd}, 
+          PRINT_IND = #{order.status.dataInd.printInd.printInd.sendInd} ,
+          FAX_SEND_IND = #{order.status.dataInd.supSend.faxSendInd.sendInd},
+          BI_OUT_IND = #{order.status.dataInd.supSend.biOutind.sendInd},
+          DYN_SEND_IND = #{order.status.dataInd.supSend.dynSendInd.sendInd},
+          LAST_UPD_DATE = '${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}',
+          LAST_UPD_COMPANY_CD = '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}',
+          LAST_UPD_SECTION_CD = '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}',
+          LAST_UPD_USER_ID = '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}'
+        WHERE
+          ORDER_SEQ=  #{order.orderIdentify.orderSeq, jdbcType=VARCHAR}
+    </update>
+    
+    <!-- 変更前の承認済みデータ -->
+     <update id="updateWhenNewAppFlgIsOne" parameterType="fw.domain.slip.order.order.OrderApproval">
+         UPDATE T_ORDER 
+         SET  
+          NEW_APP_FLG = '0',    
+          LAST_UPD_DATE = '${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}',
+          LAST_UPD_COMPANY_CD = '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}',
+          LAST_UPD_SECTION_CD = '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}',
+          LAST_UPD_USER_ID = '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}'
+        WHERE
+          ORDER_NO=  #{order.orderManagement.orderNo.orderNo, jdbcType=VARCHAR}
+          AND NEW_APP_FLG = '1'    
+     </update>
+     
+     <!-- 差戻し -->
+     <update id="sendBack" parameterType="fw.domain.slip.order.order.OrderApproval">
+        UPDATE T_ORDER 
+        SET 
+          ORDER_STATUS = '03', 
+          LAST_UPD_DATE = '${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}',
+          LAST_UPD_COMPANY_CD = '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}',
+          LAST_UPD_SECTION_CD = '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}',
+          LAST_UPD_USER_ID = '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}'
+        WHERE ORDER_SEQ=  #{order.orderIdentify.orderSeq, jdbcType=VARCHAR}
+    </update>
+    
+</mapper>

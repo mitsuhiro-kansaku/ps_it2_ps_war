@@ -1,0 +1,633 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="ps.dataaccess.apr.prc.PrcMapper">
+
+    <!-- 強化-00180-000 2013/03/13 MODIFY SBO_SOKOU START -->
+    <!--検索条件で全てキリストを取得する-->
+    <sql id="listKeyIdentityWhereCondition">
+       <if test="@org.apache.commons.lang.StringUtils@isEmpty(appUserId)">
+           AND T_APPROVAL.NOW_APP_USER_ID = '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}'
+       </if>
+       <if test="@org.apache.commons.lang.StringUtils@isNotEmpty(appUserId)">
+           AND T_APPROVAL.NOW_APP_USER_ID = #{appUserId}
+      </if>
+      <if test="@org.apache.commons.lang.StringUtils@isNotBlank(itemClassL)">
+          AND M_ITEM.ITEM_CLASS_L = #{itemClassL, jdbcType=VARCHAR}
+      </if>
+      <if test="@org.apache.commons.lang.StringUtils@isNotBlank(itemClassM)">
+          AND M_ITEM.ITEM_CLASS_M = #{itemClassM, jdbcType=VARCHAR}
+      </if>
+      <if test="@org.apache.commons.lang.StringUtils@isNotBlank(itemClassS)">
+          AND M_ITEM.ITEM_CLASS_S = #{itemClassS, jdbcType=VARCHAR}
+      </if>
+      <if test="@org.apache.commons.lang.StringUtils@isNotBlank(itemCd)">
+          AND M_PUR_PRICE.ITEM_CD
+          ${@fw.common.util.SearchModeUtil@getSearchSQL("fw.domain.slip.price.register.purprice.priceregisterapp.PriceRegisterAppSearchCondition","itemCd")}
+      </if>
+      <if test="@org.apache.commons.lang.StringUtils@isNotBlank(itemName)">
+          AND (COMPANY_LANGUAGE.ITEM_NAME
+          ${@fw.common.util.SearchModeUtil@getSearchSQL("fw.domain.slip.price.register.purprice.priceregisterapp.PriceRegisterAppSearchCondition","itemName")}
+          OR
+          SYSTEM_LANGUAGE.ITEM_NAME
+          ${@fw.common.util.SearchModeUtil@getSearchSQL("fw.domain.slip.price.register.purprice.priceregisterapp.PriceRegisterAppSearchCondition","itemName")})
+      </if>
+      <if test="@org.apache.commons.lang.StringUtils@isNotBlank(buyerUserId)">
+          AND M_PUR_PRICE.BUYER_USER_ID = #{buyerUserId, jdbcType=VARCHAR}
+      </if>
+      <if test="@org.apache.commons.lang.StringUtils@isNotBlank(buyerSectionCode)">
+          AND M_PUR_PRICE.BUYER_SECTION_CD = #{buyerSectionCode, jdbcType=VARCHAR}
+      </if>
+      <if test="@org.apache.commons.lang.StringUtils@isNotBlank(supplierCd)">
+          AND M_PUR_PRICE.SUP_CD = #{supplierCd, jdbcType=VARCHAR}
+      </if>
+      <if test="@org.apache.commons.lang.StringUtils@isNotBlank(ind.creat) or @org.apache.commons.lang.StringUtils@isNotBlank(ind.revision) or @org.apache.commons.lang.StringUtils@isNotBlank(ind.correct)">
+          AND (1=2
+            <if test="@org.apache.commons.lang.StringUtils@isNotBlank(ind.creat) and ind.creat==1 ">
+                OR M_PUR_PRICE.MODIFY_IND = '1'
+            </if>
+            <if test="@org.apache.commons.lang.StringUtils@isNotBlank(ind.revision) and ind.revision==1 ">
+                OR M_PUR_PRICE.MODIFY_IND = '3'
+            </if>
+            <if test="@org.apache.commons.lang.StringUtils@isNotBlank(ind.correct) and ind.correct==1 ">
+                OR M_PUR_PRICE.MODIFY_IND = '2'
+            </if>
+            )
+      </if>
+    </sql>
+
+    <select id="listKeyIdentity"
+            parameterType="fw.domain.slip.price.register.purprice.priceregisterapp.PriceRegisterAppSearchCondition"
+            resultType="fw.domain.slip.price.register.purprice.priceregisterapp.Identify">
+        SELECT M_PUR_PRICE.BUYER_COMPANY_CD as "buyerCompanyCd",
+               M_PUR_PRICE.BUYER_SECTION_CD as "buyerSectionCd",
+               M_PUR_PRICE.SUP_CD as "supCd",
+               M_PUR_PRICE.ITEM_CD as "itemCd",
+               M_PUR_PRICE.VALID_START_DATE as "validPeriodStart.dateOfymd",
+               M_PUR_PRICE.VALID_END_DATE as "validPeriodEnd.dateOfymd",
+               M_PUR_PRICE.LAST_UPD_DATE as "lastUpdDate"
+          FROM M_PUR_PRICE
+          LEFT JOIN M_ITEM
+                 ON (M_ITEM.COMPANY_CD = M_PUR_PRICE.BUYER_COMPANY_CD
+                 OR M_ITEM.ITEM_CD = '${@fw.common.constant.ApplicationConstant@COMPANY_CD_ALL}')
+                AND M_ITEM.ITEM_CD = M_PUR_PRICE.ITEM_CD
+         LEFT JOIN M_ITEM_LANG COMPANY_LANGUAGE
+               <!-- 強化-00180-000 2013/05/07 MODIFY SBO_SOKOU START -->
+                 ON (COMPANY_LANGUAGE.COMPANY_CD = M_PUR_PRICE.BUYER_COMPANY_CD
+                 OR COMPANY_LANGUAGE.COMPANY_CD = '${@fw.common.constant.ApplicationConstant@COMPANY_CD_ALL}')
+               <!-- 強化-00180-000 2013/05/07 MODIFY SBO_SOKOU END -->
+                AND COMPANY_LANGUAGE.ITEM_CD = M_PUR_PRICE.ITEM_CD
+                AND COMPANY_LANGUAGE.LANGUAGE_IND = '${@fw.security.SecurityAdapter@getCommonCompanyUseLanguageInd()}'
+         LEFT JOIN M_ITEM_LANG SYSTEM_LANGUAGE
+                 ON (SYSTEM_LANGUAGE.COMPANY_CD = M_PUR_PRICE.BUYER_COMPANY_CD
+                 OR SYSTEM_LANGUAGE.COMPANY_CD = '${@fw.common.constant.ApplicationConstant@COMPANY_CD_ALL}')
+                AND SYSTEM_LANGUAGE.ITEM_CD = M_PUR_PRICE.ITEM_CD
+                AND SYSTEM_LANGUAGE.LANGUAGE_IND = '${@fw.common.util.AppUtil@getSysLanguageByEscapeSql()}'
+         INNER JOIN T_APPROVAL
+                 ON M_PUR_PRICE.PUR_PRICE_JNL_SEQ = T_APPROVAL.APP_VOUCHER_KEY
+                AND T_APPROVAL.APP_VOUCHER_IND = 'D'
+                AND T_APPROVAL.APP_STATUS_IND IN ('0','1')
+                AND T_APPROVAL.DELETE_FLG = '0'
+                AND T_APPROVAL.NOW_APP_COMPANY_CD = M_PUR_PRICE.BUYER_COMPANY_CD
+                AND T_APPROVAL.NOW_APP_COMPANY_CD = '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}'
+        <where>
+            <include refid="listKeyIdentityWhereCondition"/>
+        </where>
+          ORDER BY ${searchCondition.columnOrder.columnOrder()}
+    </select>
+
+    <!--価格マスタ登録承認一覧明細を取得する-->
+    <resultMap type="fw.domain.slip.price.register.purprice.priceregisterapp.PriceRegisterAppItem" id="PriceRegisterAppItem_Map">
+           <result column="VALID_START_DATE" property="identify.validPeriodStart.dateOfymd"/>
+           <result column="VALID_END_DATE" property="identify.validPeriodEnd.dateOfymd"/>
+           <result column="BUYER_USER_SECTION_CD" property="identify.buyerUserSectionCd"/>
+    </resultMap>
+    <select id="listPageItem"
+            parameterType="fw.domain.slip.price.register.purprice.priceregisterapp.PriceRegisterAppSearchCondition"
+            resultMap="PriceRegisterAppItem_Map">
+         SELECT M_PUR_PRICE.ITEM_CD as "itemCd",
+                M_PUR_PRICE.ITEM_CD as "identify.itemCd",
+                M_ITEM.MANUFACT_CD as "manufactCd",
+                M_PUR_PRICE.BUYER_COMPANY_CD as "identify.buyerCompanyCd",
+                M_PUR_PRICE.SUP_CD as "supplierCd",
+                M_PUR_PRICE.SUP_CD as "identify.supCd",
+                M_ITEM.UNIT_CD as "unitCd",
+                M_PUR_PRICE.BUYER_USER_ID as "buyerUserId",
+                M_PUR_PRICE.MODIFY_IND as "ind",
+                M_PUR_PRICE.TERM_FLG as "termFlg",
+                M_PUR_PRICE.PRICE_TYPE as "priceType",
+                M_PUR_PRICE.CURRENCY_CD as "currencyCd",
+                M_PUR_PRICE.BUY_PRICE as "price.amount",
+                M_PUR_PRICE.PUR_STOP_FROM as "purStopFrom.dateOfymd",
+                M_PUR_PRICE.PUR_STOP_TO as "purStopTo.dateOfymd",
+                M_PUR_PRICE.VALID_START_DATE,
+                M_PUR_PRICE.VALID_END_DATE,
+                M_PUR_PRICE.BUYER_SECTION_CD as "identify.buyerSectionCd",
+                M_PUR_PRICE.BUYER_USER_SECTION_CD,
+                M_PUR_PRICE.QUOT_REQ_NO as "quotReqNo",
+                M_PUR_PRICE.NEXT_UPD_YM as "nextUpdYm.dateOfym",
+                T_APPROVAL.NOW_APP_USER_NAME as "appUser",
+                T_APPROVAL.NEXT_APP_USER_NAME as "nextAppUser",
+                M_PUR_PRICE.LAST_UPD_DATE as "identify.lastUpdDate"
+           FROM M_PUR_PRICE
+           LEFT JOIN M_ITEM
+                  ON (M_PUR_PRICE.BUYER_COMPANY_CD = M_ITEM.COMPANY_CD
+                  OR M_ITEM.COMPANY_CD = '${@fw.common.constant.ApplicationConstant@COMPANY_CD_ALL}')
+                 AND M_ITEM.ITEM_CD = M_PUR_PRICE.ITEM_CD
+                 AND M_ITEM.TERM_FLG = '0'
+          LEFT JOIN M_ITEM_LANG COMPANY_LANGUAGE
+                <!-- 強化-00180-000 2013/05/09 MODIFY SBO_SOKOU START -->
+                  ON (COMPANY_LANGUAGE.COMPANY_CD = M_PUR_PRICE.BUYER_COMPANY_CD
+                  OR COMPANY_LANGUAGE.COMPANY_CD = '${@fw.common.constant.ApplicationConstant@COMPANY_CD_ALL}')
+                <!-- 強化-00180-000 2013/05/09 MODIFY SBO_SOKOU END -->
+                 AND COMPANY_LANGUAGE.ITEM_CD = M_PUR_PRICE.ITEM_CD
+                 AND COMPANY_LANGUAGE.LANGUAGE_IND = '${@fw.security.SecurityAdapter@getCommonCompanyUseLanguageInd()}'
+          LEFT JOIN M_ITEM_LANG SYSTEM_LANGUAGE
+                  ON (SYSTEM_LANGUAGE.COMPANY_CD = M_PUR_PRICE.BUYER_COMPANY_CD
+                  OR SYSTEM_LANGUAGE.COMPANY_CD = '${@fw.common.constant.ApplicationConstant@COMPANY_CD_ALL}')
+                 AND SYSTEM_LANGUAGE.ITEM_CD = M_PUR_PRICE.ITEM_CD
+                 AND SYSTEM_LANGUAGE.LANGUAGE_IND = '${@fw.common.util.AppUtil@getSysLanguageByEscapeSql()}'
+          INNER JOIN T_APPROVAL
+                  ON M_PUR_PRICE.PUR_PRICE_JNL_SEQ =  T_APPROVAL.APP_VOUCHER_KEY
+                 AND T_APPROVAL.APP_VOUCHER_IND = 'D'
+                 AND T_APPROVAL.APP_STATUS_IND IN ('0','1')
+                 AND T_APPROVAL.DELETE_FLG = '0'
+        <where>
+            (M_PUR_PRICE.BUYER_COMPANY_CD,M_PUR_PRICE.BUYER_SECTION_CD,M_PUR_PRICE.ITEM_CD,M_PUR_PRICE.SUP_CD,M_PUR_PRICE.VALID_START_DATE,M_PUR_PRICE.VALID_END_DATE) IN
+            <foreach collection="searchCondition.page.keyDomainEntityList" item="keyList" open="(" separator="," close=")">
+                (#{keyList.buyerCompanyCd},#{keyList.buyerSectionCd},#{keyList.itemCd},#{keyList.supCd},#{keyList.validPeriodStart.dateOfymd},#{keyList.validPeriodEnd.dateOfymd})
+            </foreach>
+            <include refid="listKeyIdentityWhereCondition"/>
+        </where>
+        ORDER BY ${searchCondition.columnOrder.columnOrder()}
+    </select>
+
+    <!-- PSAPR122 価格マスタ登録承認（個別） START -->
+    <!-- 画面初期化(購買価格マスタ情報)-->
+    <select id="initPriceRegister"
+            parameterType="fw.domain.slip.price.register.purprice.priceregisterapp.Identify"
+            resultMap="initPriceRegister_map">
+            SELECT M_PUR_PRICE.REG_DATE,<!--登録日時 -->
+                   M_PUR_PRICE.PUR_PRICE_JNL_SEQ,<!-- -->
+                   M_PUR_PRICE.TERM_FLG,<!-- 廃止フラグ -->
+                   M_PUR_PRICE.BUYER_COMPANY_CD,<!--購買価格マスタ.購買会社コード -->
+                   M_PUR_PRICE.BUYER_SECTION_CD,<!--購買価格マスタ.購買部門コード -->
+                   M_PUR_PRICE.LAST_UPD_DATE,<!--購買価格マスタ.登録日時/最終更新日時 -->
+                   M_PUR_PRICE.MODIFY_IND,<!--購買価格マスタ.変更区分 -->
+                   M_PUR_PRICE.ITEM_CD,<!--購買価格マスタ.品名コード -->
+                   M_PUR_PRICE.ORDER_UNIT,<!--購買価格マスタ.発注単位数量 -->
+                   M_PUR_PRICE.MIN_ORDER_VOL,<!--購買価格マスタ.最小発注数量 -->
+                   M_PUR_PRICE.PRICE_LIST_NO,<!--購買価格マスタ.価格表No. -->
+                   M_PUR_PRICE.NEXT_UPD_YM,<!--購買価格マスタ.次回見直時期 -->
+                   M_PUR_PRICE.UPDATE_CYCLE,<!--購買価格マスタ.価格改定サイクル -->
+                   M_PUR_PRICE.QUOT_REQ_NO,<!--購買価格マスタ.見積依頼番号 -->
+                   M_PUR_PRICE.INSPECT_IND,<!--購買価格マスタ.検査区分 -->
+                   M_PUR_PRICE.TAX_IND,<!--購買価格マスタ.課税区分 -->
+                   M_PUR_PRICE.CONSUMPT_IND,<!--購買価格マスタ.消費税区分 -->
+                   M_PUR_PRICE.GREEN_FLG,<!--購買価格マスタ.グリーン品フラグ -->
+                   M_PUR_PRICE.GREEN_LABEL,<!--購買価格マスタ.グリーン購入判断基準 -->
+                   M_PUR_PRICE.GREEN_FILE_NAME,<!--購買価格マスタ.グリーン品添付ファイル名 -->
+                   M_PUR_PRICE.CATALOG_FLG,<!--購買価格マスタ.カタログ種別 -->
+                   M_PUR_PRICE.CONNECT_TYPE,<!--購買価格マスタ.接続種別 -->
+                   M_PUR_PRICE.PUR_STOP_FROM,<!--購買価格マスタ.購入停止期間（開始） -->
+                   M_PUR_PRICE.PUR_STOP_TO,<!--購買価格マスタ.購入停止期間（終了） -->
+                   M_PUR_PRICE.PRICE_REMARKS,<!--購買価格マスタ.購買価格説明 -->
+                   M_PUR_PRICE.REF_URL,<!--購買価格マスタ.参照先URL -->
+                   M_PUR_PRICE.IMG_FILE_NAME,<!--購買価格マスタ.画像ファイル名  -->
+                   M_PUR_PRICE.CURRENCY_CD,<!--購買価格マスタ.通貨コード -->
+                   M_PUR_PRICE.APP_PRICE_REG_ROUTE,<!--購買価格マスタ.承認ルート番号 -->
+                   M_PUR_PRICE.APP_PRICE_REG_ROUTE_NAME,<!--購買価格マスタ.承認ルート名 -->
+                   M_PUR_PRICE.CATALOG_IND,<!--購買価格マスタ.カタログ区分 -->
+                   M_PUR_PRICE.SUP_CD,<!--購買価格マスタ.取引先コード -->
+                   M_PUR_PRICE.VALID_START_DATE,<!--購買価格マスタ.有効期間（開始） -->
+                   M_PUR_PRICE.VALID_END_DATE,<!--購買価格マスタ.有効期間（終了） -->
+                   M_PUR_PRICE.UPDATE_NO,<!--購買価格マスタ.改訂番号 -->
+                   M_PUR_PRICE.MNG_IND,<!--購買価格マスタ.価格管理区分 -->
+                   M_PUR_PRICE.AUTO_ORDER_FLG,<!--購買価格マスタ.自動発注フラグ -->
+                   M_PUR_PRICE.BUYER_USER_COMPANY_CD,<!--購買価格マスタ.購買会社コード -->
+                   M_PUR_PRICE.BUYER_USER_SECTION_CD,<!--購買価格マスタ.購買部門コード -->
+                   M_PUR_PRICE.BUYER_USER_ID,<!--購買価格マスタ.購買担当者ID -->
+                   M_PUR_PRICE.PRICE_MNG_COMPANY_CD,<!--購買価格マスタ.価格管理会社コード -->
+                   M_PUR_PRICE.PRICE_MNG_SECTION_CD,<!--購買価格マスタ.価格管理者ID -->
+                   M_PUR_PRICE.PRICE_MNG_USER_ID,<!--購買価格マスタ.価格管理者ID -->
+                   M_PUR_PRICE.PIECE_FLG,<!--購買価格マスタ.自動打切フラグ -->
+                   M_PUR_PRICE.ORDER_LT,<!--購買価格マスタ.標準納入日数 -->
+                   M_PUR_PRICE.APP_STATUS_IND,<!--購買価格マスタ.承認状態区分 -->
+                   M_ITEM.MANUFACT_CD,<!--品名マスタ.メーカーコード -->
+                   M_ITEM.KATASHIKI,<!--品名マスタ.型式 -->
+                   M_ITEM.ITEM_CLASS_L,<!--品名マスタ.大分類コード -->
+                   M_ITEM.ITEM_CLASS_M,<!--品名マスタ.中分類コード -->
+                   M_ITEM.ITEM_CLASS_S,<!--品名マスタ.小分類コード -->
+                   M_ITEM.UNIT_CD<!--単位コード -->
+              FROM M_PUR_PRICE<!--購買価格マスタ -->
+         LEFT JOIN M_ITEM<!--品名マスタ -->
+                ON (M_ITEM.COMPANY_CD = M_PUR_PRICE.BUYER_COMPANY_CD<!--(品名マスタ.会社コード = 購買価格マスタ.購買会社コード -->
+                OR M_ITEM.COMPANY_CD = '${@fw.common.constant.ApplicationConstant@COMPANY_CD_ALL}')<!--OR 品名マスタ.会社コード = 'ALL') -->
+               AND M_ITEM.ITEM_CD = M_PUR_PRICE.ITEM_CD<!--品名マスタ.品名コード = 購買価格マスタ.品名コード -->
+               AND M_ITEM.TERM_FLG = '0'<!--品名マスタ.廃止フラグ = '0' -->
+             WHERE M_PUR_PRICE.BUYER_COMPANY_CD = #{buyerCompanyCd}<!--購買価格マスタ.購買会社コード = セッション.購買会社コード -->
+               AND M_PUR_PRICE.BUYER_SECTION_CD = #{buyerSectionCd}<!--購買価格マスタ.購買部門コード = セッション.購買部門コード -->
+               AND M_PUR_PRICE.ITEM_CD = #{itemCd}<!--購買価格マスタ.品名コード = セッション.品名コード -->
+               AND M_PUR_PRICE.SUP_CD = #{supCd}<!--購買価格マスタ.取引先コード = セッション.取引先コード -->
+               AND M_PUR_PRICE.VALID_START_DATE = #{validPeriodStart.dateOfymd}<!--購買価格マスタ.有効期間(開始) = セッション.有効期間(開始) -->
+               AND M_PUR_PRICE.VALID_END_DATE = #{validPeriodEnd.dateOfymd}<!--購買価格マスタ.有効期間(終了) = セッション.有効期間(終了) -->
+    </select>
+    <!-- 強化-00180-000 2013/03/13 MODIFY SBO_SOKOU END -->
+    <resultMap id="initPriceRegister_map"
+               type="fw.domain.slip.price.register.purprice.priceregisterapp.PriceRegisterApl">
+        <id column="TERM_FLG" property="buyerPrice.termFlg"/><!--廃止フラグ -->
+        <id column="REG_DATE" property="buyerPrice.managementInfo.registerDate.reqDate.dateOfymd"/><!--登録日時 -->
+        <id column="PUR_PRICE_JNL_SEQ" property="buyerPrice.identify.purPriceJnlSeq"/><!-- 購買価格変更SEQ -->
+        <id column="BUYER_COMPANY_CD" property="buyerPrice.identify.buyerCompany.buyerCompanyCd"/><!--購買価格マスタ.購買会社コード -->
+        <id column="BUYER_SECTION_CD" property="buyerPrice.identify.buyerCompany.buyerSectionCd"/><!--購買価格マスタ.購買部門コード -->
+        <id column="LAST_UPD_DATE" property="buyerPrice.identify.lastUpdDate"/><!--購買価格マスタ.最終更新日時 -->
+        <id column="MODIFY_IND" property="buyerPrice.managementInfo.preInd.preInd"/> <!--購買価格マスタ.変更区分 -->
+        <id column="ITEM_CD" property="buyerPrice.identify.item.itemCd"/> <!--購買価格マスタ.品名コード -->
+        <id column="ORDER_UNIT" property="buyerPrice.orderDeliv.custUnitVol.custUnitVol.vol"/><!--購買価格マスタ.発注単位数量 -->
+        <id column="MIN_ORDER_VOL" property="buyerPrice.orderDeliv.minCustVol.minCustVol.vol"/> <!--購買価格マスタ.最小発注数量 -->
+        <id column="PRICE_LIST_NO" property="buyerPrice.supple.priceNo"/><!--購買価格マスタ.価格表No. -->
+        <id column="NEXT_UPD_YM" property="buyerPrice.revision.lastUpdYm.lastUpdYm.dateOfym"/><!--購買価格マスタ.次回見直時期 -->
+        <id column="UPDATE_CYCLE" property="buyerPrice.revision.updateCycle.updateCycle"/><!--購買価格マスタ.価格改定サイクル -->
+        <id column="QUOT_REQ_NO" property="buyerPrice.managementInfo.quotReqNo.quotReqNo"/> <!--購買価格マスタ.見積依頼番号 -->
+        <id column="INSPECT_IND" property="buyerPrice.orderDeliv.inspectInd.inspectInd"/><!--購買価格マスタ.検査区分 -->
+        <id column="TAX_IND" property="buyerPrice.supItem.amountTypePrice.taxCalculationInd.taxInd.taxInd"/><!--購買価格マスタ.課税区分 -->
+        <id column="CONSUMPT_IND" property="buyerPrice.supItem.amountTypePrice.taxCalculationInd.consumptInd.consumptInd"/><!--購買価格マスタ.消費税区分 -->
+        <id column="GREEN_FLG" property="buyerPrice.supple.green.greenPur"/> <!--購買価格マスタ.グリーン品フラグ -->
+        <id column="GREEN_LABEL" property="buyerPrice.supple.green.priceLabel"/><!--購買価格マスタ.グリーン購入判断基準(環境ラベル) -->
+        <id column="GREEN_FILE_NAME" property="buyerPrice.supple.green.greenItemAttach.fileName"/><!--購買価格マスタ.グリーン品添付ファイル名 -->
+        <id column="CATALOG_FLG" property="buyerPrice.supItem.kind.materialType.materialType"/><!--購買価格マスタ.カタログ種別 -->
+        <id column="CONNECT_TYPE" property="buyerPrice.orderDeliv.connectType.connectTypeInd"/><!--購買価格マスタ.接続種別 -->
+        <id column="PUR_STOP_FROM" property="buyerPrice.managementInfo.purStopFlag.purStopPeriod.purStopPeriodStart.dateOfymd"/> <!--購買価格マスタ.購入停止期間（開始） -->
+        <id column="PUR_STOP_TO" property="buyerPrice.managementInfo.purStopFlag.purStopPeriod.purStopPeriodEnd.dateOfymd"/><!--購買価格マスタ.購入停止期間（終了） -->
+        <id column="PRICE_REMARKS" property="buyerPrice.supple.buyerPriceRemarks"/><!--購買価格マスタ.購買価格説明 -->
+        <id column="REF_URL" property="buyerPrice.supple.refUrl"/><!--購買価格マスタ.参照先URL -->
+        <id column="IMG_FILE_NAME" property="buyerPrice.supple.imgFile.fileName"/><!--購買価格マスタ.画像ファイル名-->
+        <id column="CURRENCY_CD" property="buyerPrice.identify.supplierFrom.currency.currencyCd"/><!--購買価格マスタ.通貨コード -->
+        <id column="APP_PRICE_REG_ROUTE" property="buyerPrice.managementInfo.approute.appRouteNo"/><!--購買価格マスタ.承認ルート番号 -->
+        <id column="APP_PRICE_REG_ROUTE_NAME" property="buyerPrice.managementInfo.approute.appRouteName"/><!--購買価格マスタ.承認ルート名 -->
+        <id column="CATALOG_IND" property="buyerPrice.managementInfo.catalogInd"/> <!--購買価格マスタ.カタログ区分 -->
+        <id column="SUP_CD" property="buyerPrice.identify.supplierFrom.supCd"/><!--購買価格マスタ.取引先コード -->
+        <id column="VALID_START_DATE" property="buyerPrice.identify.validityPeriod.period.startDate.dateOfymd"/> <!--購買価格マスタ.有効期間（開始） -->
+        <id column="VALID_END_DATE" property="buyerPrice.identify.validityPeriod.period.endDate.dateOfymd"/> <!--購買価格マスタ.有効期間（終了） -->
+        <id column="UPDATE_NO" property="buyerPrice.revision.updateNo"/> <!--購買価格マスタ.改訂番号 -->
+        <id column="MNG_IND" property="buyerPrice.managementInfo.priceManagementInd.priceManagementInd"/><!--購買価格マスタ.価格管理区分 -->
+        <id column="AUTO_ORDER_FLG" property="buyerPrice.orderDeliv.autoOrderFlg.autoOrderFlg"/><!--購買価格マスタ.自動発注フラグ -->
+        <id column="BUYER_USER_COMPANY_CD" property="buyerPrice.managementInfo.buyerUserCompanyCd"/> <!--購買価格マスタ.購買担当会社コード -->
+        <id column="BUYER_USER_SECTION_CD" property="buyerPrice.managementInfo.buyerUserSectionCd"/> <!--購買価格マスタ.購買担当部門コード -->
+        <id column="BUYER_USER_ID" property="buyerPrice.managementInfo.buyerUser.buyerUserId"/><!--購買価格マスタ.購買担当者ID -->
+        <id column="PRICE_MNG_COMPANY_CD" property="buyerPrice.managementInfo.priceMngCompanyCd"/><!--購買価格マスタ.価格管理会社コード -->
+        <id column="PRICE_MNG_SECTION_CD" property="buyerPrice.managementInfo.priceMngSectionCd"/> <!--購買価格マスタ.価格管理部門コード -->
+        <id column="PRICE_MNG_USER_ID" property="buyerPrice.managementInfo.priceMngUser.priceMngUserId"/> <!--購買価格マスタ.価格管理者ID -->
+        <id column="PIECE_FLG" property="buyerPrice.orderDeliv.autoTerminateFlg.autoTerminateFlg"/><!--購買価格マスタ.自動打切フラグ -->
+        <id column="ORDER_LT" property="buyerPrice.orderDeliv.standardDelivDayCount.standardDelivDayCount.dayCount"/><!--購買価格マスタ.標準納入日数 -->
+        <id column="APP_STATUS_IND" property="buyerPrice.managementInfo.appStatusInd"/> <!--購買価格マスタ.承認状態区分 -->
+        <id column="MANUFACT_CD" property="buyerPrice.identify.item.manufact.manufactCd"/> <!--品名マスタ.メーカーコード -->
+        <id column="KATASHIKI" property="buyerPrice.identify.item.katashiki"/> <!--品名マスタ.型式 -->
+        <id column="ITEM_CLASS_L" property="buyerPrice.identify.item.itemClass.itemClassL"/> <!--品名マスタ.大分類コード -->
+        <id column="ITEM_CLASS_M" property="buyerPrice.identify.item.itemClass.itemClassM"/><!--品名マスタ.中分類コード -->
+        <id column="ITEM_CLASS_S" property="buyerPrice.identify.item.itemClass.itemClassS"/> <!--品名マスタ.小分類コード -->
+        <id column="UNIT_CD" property="buyerPrice.identify.item.unit.unitCd"/><!--単位コード -->
+    </resultMap>
+
+    <!-- 購買価格(購買価格表示制御マスタ情報) -->
+    <select id="initPurPriceDspAuth"
+            parameterType="fw.domain.slip.price.register.purprice.priceregisterapp.Identify"
+            resultMap="initPurPriceDspAuth_map">
+        SELECT M_PUR_PRICE_DSP_AUTH.BUYER_COMPANY_CD, <!-- 購買価格表示制御マスタ.依頼元会社コード  --><!-- 会社名：②-1で取得した会社名  -->
+               M_PUR_PRICE_DSP_AUTH.REQ_SECTION_PLACE_CD <!-- 購買価格表示制御マスタ.依頼元事業所コード  --><!-- 事業所名：②-1で取得した事業所名  -->
+          FROM M_PUR_PRICE <!-- 購買価格マスタ  -->
+     INNER JOIN M_PUR_PRICE_DSP_AUTH <!-- 購買価格表示制御マスタ  -->
+            ON M_PUR_PRICE_DSP_AUTH.BUYER_COMPANY_CD  =  M_PUR_PRICE.BUYER_COMPANY_CD <!-- 購買価格表示制御マスタ.購買会社コード = 購買価格マスタ.購買会社コード  -->
+           AND M_PUR_PRICE_DSP_AUTH.BUYER_SECTION_CD  =  M_PUR_PRICE.BUYER_SECTION_CD <!-- 購買価格表示制御マスタ.購買部門コード = 購買価格マスタ.購買部門コード  -->
+           AND M_PUR_PRICE_DSP_AUTH.ITEM_CD  =  M_PUR_PRICE.ITEM_CD <!-- 購買価格表示制御マスタ.品名コード = 購買価格マスタ.品名コード  -->
+           AND M_PUR_PRICE_DSP_AUTH.SUP_CD  =  M_PUR_PRICE.SUP_CD <!-- 購買価格表示制御マスタ.取引先コード = 購買価格マスタ.取引先コード  -->
+           AND M_PUR_PRICE_DSP_AUTH.VALID_START_DATE  =  M_PUR_PRICE.VALID_START_DATE <!-- 購買価格表示制御マスタ.有効期間(開始) = 購買価格マスタ.有効期間(開始)  -->
+           AND M_PUR_PRICE_DSP_AUTH.VALID_END_DATE  =  M_PUR_PRICE.VALID_END_DATE <!-- 購買価格表示制御マスタ.有効期間(終了) = 購買価格マスタ.有効期間(終了)  -->
+         WHERE M_PUR_PRICE.BUYER_COMPANY_CD = #{buyerCompanyCd}<!--購買価格マスタ.購買会社コード = セッション.購買会社コード -->
+           AND M_PUR_PRICE.BUYER_SECTION_CD = #{buyerSectionCd}<!--購買価格マスタ.購買部門コード = セッション.購買部門コード -->
+           AND M_PUR_PRICE.ITEM_CD = #{itemCd}<!--購買価格マスタ.品名コード = セッション.品名コード -->
+           AND M_PUR_PRICE.SUP_CD = #{supCd}<!--購買価格マスタ.取引先コード = セッション.取引先コード -->
+           AND M_PUR_PRICE.VALID_START_DATE = #{validPeriodStart.dateOfymd}<!--購買価格マスタ.有効期間(開始) = セッション.有効期間(開始) -->
+           AND M_PUR_PRICE.VALID_END_DATE = #{validPeriodEnd.dateOfymd}<!--購買価格マスタ.有効期間(終了) = セッション.有効期間(終了) -->
+    </select>
+    <resultMap id="initPurPriceDspAuth_map"
+               type="fw.domain.slip.price.register.purprice.Requester">
+        <id column="BUYER_COMPANY_CD" property="reqCompanyCd"/><!-- 購買価格表示制御マスタ.依頼元会社コード  --><!-- 会社名：②-1で取得した会社名  -->
+        <id column="REQ_SECTION_PLACE_CD" property="reqSectionPlaceCd"/><!-- 購買価格表示制御マスタ.依頼元事業所コード  --><!-- 会社名：②-1で取得した会社名  -->
+    </resultMap>
+
+    <!-- 購買価格(購買価格明細マスタ情報) -->
+    <select id="initPurPriceDtl"
+            parameterType="fw.domain.slip.price.register.purprice.priceregisterapp.Identify"
+            resultMap="initPurPriceDtl_map">
+        SELECT M_PUR_PRICE_DTL.LOWER_VOL, <!-- 購買価格明細マスタ.数量下限  -->
+               M_PUR_PRICE_DTL.BUY_PRICE <!-- 購買価格明細マスタ.購入単価  -->
+          FROM M_PUR_PRICE_DTL <!-- 購買価格明細マスタ  -->
+         WHERE M_PUR_PRICE_DTL.BUYER_COMPANY_CD = #{buyerCompanyCd} <!-- 購買価格明細マスタ.購買会社コード = セッション.購買会社コード  -->
+           AND M_PUR_PRICE_DTL.BUYER_SECTION_CD = #{buyerSectionCd} <!-- 購買価格明細マスタ.購買部門コード = セッション.購買部門コード  -->
+           AND M_PUR_PRICE_DTL.ITEM_CD  =  #{itemCd} <!-- 購買価格明細マスタ.品名コード = セッション.品名コード  -->
+           AND M_PUR_PRICE_DTL.SUP_CD  =  #{supCd} <!-- 購買価格明細マスタ.取引先コード = セッション.取引先コード  -->
+           AND M_PUR_PRICE_DTL.VALID_START_DATE = #{validPeriodStart.dateOfymd} <!-- 購買価格明細マスタ.有効期間(開始) = セッション.有効期間(開始)  -->
+           AND M_PUR_PRICE_DTL.VALID_END_DATE = #{validPeriodEnd.dateOfymd} <!-- 購買価格明細マスタ.有効期間(終了) = セッション.有効期間(終了)  -->
+      ORDER BY M_PUR_PRICE_DTL.LOWER_VOL    <!-- 購買価格明細マスタ.数量下限 昇順  -->
+    </select>
+    <resultMap id="initPurPriceDtl_map"
+               type="fw.domain.slip.price.register.purprice.tradeitem.AmountPrice">
+        <id column="LOWER_VOL" property="minAmount.vol"/><!-- 購買価格明細マスタ.数量下限  -->
+        <id column="BUY_PRICE" property="price.amount"/><!-- 購買価格明細マスタ.購入単価  -->
+    </resultMap>
+
+    <!-- 更新仕様（購買価格マスタ） -->
+    <update id="updatePurPrice">
+        UPDATE M_PUR_PRICE    <!-- 購買価格マスタ  -->
+           SET M_PUR_PRICE.APP_STATUS_IND  =  #{appStatusInd} , <!-- 承認状態区分  -->
+               M_PUR_PRICE.LAST_UPD_DATE  =  '${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}' , <!-- 最終更新日時  -->
+               M_PUR_PRICE.LAST_UPD_COMPANY_CD  =  '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}' , <!-- 最終更新会社コード  -->
+               M_PUR_PRICE.LAST_UPD_SECTION_CD  =  '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}' , <!-- 最終更新部門コード  -->
+               M_PUR_PRICE.LAST_UPD_USER_ID  =  '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}'  <!-- 最終更新ユーザーID  -->
+         WHERE M_PUR_PRICE.BUYER_COMPANY_CD  =  #{identify.buyerCompanyCd}  <!-- 購買会社コード  -->
+           AND M_PUR_PRICE.BUYER_SECTION_CD  =  #{identify.buyerSectionCd}  <!-- 購買部門コード  -->
+           AND M_PUR_PRICE.ITEM_CD  =  #{identify.itemCd}  <!-- 品名コード  -->
+           AND M_PUR_PRICE.SUP_CD  =  #{identify.supCd}  <!-- 取引先コード  -->
+           AND M_PUR_PRICE.VALID_START_DATE  =  #{identify.validPeriodStart.dateOfymd}  <!-- 有効期間(開始)  -->
+           AND M_PUR_PRICE.VALID_END_DATE  =  #{identify.validPeriodEnd.dateOfymd}  <!-- 有効期間(終了)  -->
+    </update>
+
+    <!-- 更新仕様（購買価格マスタ）(最終承認時の改定) -->
+    <update id="updatePurPriceByUpdate">
+        UPDATE M_PUR_PRICE    <!-- 購買価格マスタ  -->
+           SET M_PUR_PRICE.VALID_END_DATE  =  #{validPeriodEnd} , <!-- 有効期間（終了）  -->
+               M_PUR_PRICE.LAST_UPD_DATE  =  '${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}' , <!-- 最終更新日時  -->
+               M_PUR_PRICE.LAST_UPD_COMPANY_CD  =  '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}' , <!-- 最終更新会社コード  -->
+               M_PUR_PRICE.LAST_UPD_SECTION_CD  =  '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}' , <!-- 最終更新部門コード  -->
+               M_PUR_PRICE.LAST_UPD_USER_ID  =  '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}'  <!-- 最終更新ユーザーID  -->
+         WHERE M_PUR_PRICE.BUYER_COMPANY_CD  =  #{identify.buyerCompanyCd}  <!-- 購買会社コード  -->
+           AND M_PUR_PRICE.BUYER_SECTION_CD  =  #{identify.buyerSectionCd}  <!-- 購買部門コード  -->
+           AND M_PUR_PRICE.ITEM_CD  =  #{identify.itemCd}  <!-- 品名コード  -->
+           AND M_PUR_PRICE.SUP_CD  =  #{identify.supCd}  <!-- 取引先コード  -->
+           AND M_PUR_PRICE.TERM_FLG  =  '0'  <!-- 廃止フラグ  -->
+           AND M_PUR_PRICE.VALID_END_DATE  >  M_PUR_PRICE.VALID_START_DATE  <!-- （改定前）有効期間（終了）＞有効期間（開始）  -->
+    </update>
+
+    <!-- 更新仕様（購買価格ジャーナル） -->
+    <insert id="insertPurPriceJnl">
+        INSERT INTO M_PUR_PRICE_JNL (
+            PUR_PRICE_HIST_SEQ     <!-- 購買価格履歴SEQ  -->
+          , BUYER_COMPANY_CD     <!-- 購買会社コード  -->
+          , BUYER_SECTION_CD     <!-- 購買部門コード  -->
+          , ITEM_CD     <!-- 品名コード  -->
+          , ITEM_NAME     <!-- 品名  -->
+          , SUP_CD     <!-- 取引先コード  -->
+          , SUP_NAME     <!-- 取引先名  -->
+          , VALID_START_DATE     <!-- 有効期間（開始）  -->
+          , VALID_END_DATE     <!-- 有効期間（終了）  -->
+          , UPDATE_NO     <!-- 改訂番号  -->
+          , MODIFY_IND     <!-- 変更区分  -->
+          , APP_STATUS_IND     <!-- 承認状態区分  -->
+          , ITEM_CLASS_L     <!-- 大分類コード  -->
+          , ITEM_CLASS_L_NAME     <!-- 大分類名  -->
+          , ITEM_CLASS_M     <!-- 中分類コード  -->
+          , ITEM_CLASS_M_NAME     <!-- 中分類名  -->
+          , ITEM_CLASS_S     <!-- 小分類コード  -->
+          , ITEM_CLASS_S_NAME     <!-- 小分類名  -->
+          , KATASHIKI     <!-- 型式  -->
+          , MANUFACT_CD     <!-- メーカーコード  -->
+          , MANUFACT_NAME     <!-- メーカー名  -->
+          , PRICE_TYPE     <!-- 価格タイプ  -->
+          , MNG_IND     <!-- 価格管理区分  -->
+          , INSPECT_IND     <!-- 検査区分  -->
+          , CURRENCY_CD     <!-- 通貨コード  -->
+          , BUYER_USER_COMPANY_CD     <!-- 購買担当会社コード  -->
+          , BUYER_USER_SECTION_CD     <!-- 購買担当部門コード  -->
+          , BUYER_USER_ID     <!-- 購買担当者ID  -->
+          , PRICE_MNG_COMPANY_CD     <!-- 価格管理会社コード  -->
+          , PRICE_MNG_SECTION_CD     <!-- 価格管理部門コード  -->
+          , PRICE_MNG_USER_ID     <!-- 価格管理者ID  -->
+          , UNIT_CD     <!-- 単位コード  -->
+          , UNIT_NAME     <!-- 単位名  -->
+          , ORDER_UNIT     <!-- 発注単位  -->
+          , MIN_ORDER_VOL     <!-- 最小発注数量  -->
+          , TAX_IND     <!-- 課税区分  -->
+          , CONSUMPT_IND     <!-- 消費税区分  -->
+          , BUY_PRICE     <!-- 購買価格適用基準区分  -->
+          , AUTO_ORDER_FLG     <!-- 購入単価  -->
+          , ORDER_LT     <!-- 自動発注フラグ  -->
+          , CATALOG_IND     <!-- 標準納入日数  -->
+          , QUOT_REQ_NO     <!-- カタログ区分  -->
+          , PRICE_LIST_NO     <!-- 見積依頼番号  -->
+          , UPDATE_CYCLE     <!-- 価格表№  -->
+          , NEXT_UPD_YM     <!-- 価格改定サイクル  -->
+          , PRICE_REMARKS     <!-- 次回見直時期  -->
+          , PIECE_FLG     <!-- 購買価格説明  -->
+          , GREEN_FLG     <!-- 自動打切フラグ  -->
+          , GREEN_LABEL     <!-- グリーン品フラグ  -->
+          , GREEN_FILE_NAME     <!-- グリーン購入判断基準  -->
+          , GREEN_FILE     <!-- グリーン品添付ファイル名  -->
+          , PUR_PRICE_JNL_SEQ     <!-- グリーン品添付ファイル  -->
+          , APP_PRICE_REG_ROUTE     <!-- 購買価格変更SEQ  -->
+          , APP_PRICE_REG_ROUTE_NAME     <!-- 承認ルート番号  -->
+          , REF_URL     <!-- 承認ルート名  -->
+          , IMG_FILE_NAME     <!-- 参照先URL  -->
+          , IMG_FILE     <!-- 画像ファイル名  -->
+            <!-- 画像ファイル PUR_STOP_FLG(削除された) -->
+          , PUR_STOP_FROM     <!-- 購入停止期間（開始）  -->
+          , PUR_STOP_TO     <!-- 購入停止期間（終了）  -->
+          , CATALOG_FLG     <!-- カタログ種別  -->
+          , CONNECT_TYPE     <!-- 接続種別  -->
+          , TERM_FLG     <!-- 廃止フラグ  -->
+          , LAST_UPD_DATE     <!-- 最終更新日時  -->
+          , LAST_UPD_COMPANY_CD     <!-- 最終更新会社コード  -->
+          , LAST_UPD_SECTION_CD     <!-- 最終更新部門コード  -->
+          , LAST_UPD_USER_ID     <!-- 最終更新ユーザーID  -->
+          , REG_DATE     <!-- 登録日時  -->
+          , REG_COMPANY_CD     <!-- 登録会社コード  -->
+          , REG_SECTION_CD     <!-- 登録部門コード  -->
+          , REG_USER_ID     <!-- 登録ユーザーID  -->
+        )
+        SELECT
+            #{newSeq}  <!-- 購買価格履歴SEQ  -->
+          , BUYER_COMPANY_CD  <!-- 購買会社コード  -->
+          , BUYER_SECTION_CD  <!-- 購買部門コード  -->
+          , ITEM_CD  <!-- 品名コード  -->
+          , #{buyerPrice.identify.item.itemName}  <!-- 品名  -->
+          , SUP_CD  <!-- 取引先コード  -->
+          , #{buyerPrice.identify.supplierFrom.supplierName.supplierAbbrName} <!-- 取引先名  -->
+          , VALID_START_DATE  <!-- 有効期間（開始）  -->
+          , VALID_END_DATE  <!-- 有効期間（終了）  -->
+          , UPDATE_NO  <!-- 改訂番号  -->
+          , MODIFY_IND  <!-- 変更区分  -->
+          , APP_STATUS_IND  <!-- 承認状態区分  -->
+          , #{buyerPrice.identify.item.itemClass.itemClassL}  <!-- 大分類コード  -->
+          , #{buyerPrice.identify.item.itemClass.itemClassNameL}  <!-- 大分類名  -->
+          , #{buyerPrice.identify.item.itemClass.itemClassM}  <!-- 中分類コード  -->
+          , #{buyerPrice.identify.item.itemClass.itemClassNameM}  <!-- 中分類名  -->
+          , #{buyerPrice.identify.item.itemClass.itemClassS}  <!-- 小分類コード  -->
+          , #{buyerPrice.identify.item.itemClass.itemClassNameS}  <!-- 小分類名  -->
+          , #{buyerPrice.identify.item.katashiki}  <!-- 型式  -->
+          , #{buyerPrice.identify.item.manufact.manufactCd}  <!-- メーカーコード  -->
+          , #{buyerPrice.identify.item.manufact.manufactName}  <!-- メーカー名  -->
+          , PRICE_TYPE  <!-- 価格タイプ  -->
+          , MNG_IND  <!-- 価格管理区分  -->
+          , INSPECT_IND  <!-- 検査区分  -->
+          , CURRENCY_CD  <!-- 通貨コード  -->
+          , BUYER_USER_COMPANY_CD  <!-- 購買担当会社コード  -->
+          , BUYER_USER_SECTION_CD  <!-- 購買担当部門コード  -->
+          , BUYER_USER_ID  <!-- 購買担当者ID  -->
+          , PRICE_MNG_COMPANY_CD  <!-- 価格管理会社コード  -->
+          , PRICE_MNG_SECTION_CD  <!-- 価格管理部門コード  -->
+          , PRICE_MNG_USER_ID  <!-- 価格管理者ID  -->
+          , #{buyerPrice.identify.item.unit.unitCd}  <!-- 単位コード  -->
+          , #{buyerPrice.identify.item.unit.unitName}  <!-- 単位名  -->
+          , ORDER_UNIT  <!-- 発注単位  -->
+          , MIN_ORDER_VOL  <!-- 最小発注数量  -->
+          , TAX_IND  <!-- 課税区分  -->
+          , CONSUMPT_IND  <!-- 消費税区分  --><!-- TODO 購買価格適用基準区分(削除された)  -->
+          , BUY_PRICE  <!-- 購入単価  -->
+          , AUTO_ORDER_FLG  <!-- 自動発注フラグ  -->
+          , ORDER_LT  <!-- 標準納入日数  -->
+          , CATALOG_IND  <!-- カタログ区分  -->
+          , QUOT_REQ_NO  <!-- 見積依頼番号  -->
+          , PRICE_LIST_NO  <!-- 価格表№  -->
+          , UPDATE_CYCLE  <!-- 価格改定サイクル  -->
+          , NEXT_UPD_YM  <!-- 次回見直時期  -->
+          , PRICE_REMARKS  <!-- 購買価格説明  -->
+          , PIECE_FLG  <!-- 自動打切フラグ  -->
+          , GREEN_FLG  <!-- グリーン品フラグ  -->
+          , GREEN_LABEL  <!-- グリーン購入判断基準  -->
+          , GREEN_FILE_NAME  <!-- グリーン品添付ファイル名  -->
+          , GREEN_FILE  <!-- グリーン品添付ファイル  -->
+          , PUR_PRICE_JNL_SEQ  <!-- 購買価格変更SEQ  -->
+          , APP_PRICE_REG_ROUTE  <!-- 承認ルート番号  -->
+          , APP_PRICE_REG_ROUTE_NAME  <!-- 承認ルート名  -->
+          , REF_URL  <!-- 参照先URL  -->
+          , IMG_FILE_NAME  <!-- 画像ファイル名  -->
+          , IMG_FILE  <!-- 画像ファイル  -->
+           <!-- TODO 購入停止フラグ(削除された)  -->
+          , PUR_STOP_FROM  <!-- 購入停止期間（開始）  -->
+          , PUR_STOP_TO  <!-- 購入停止期間（終了）  -->
+          , CATALOG_FLG  <!-- カタログ種別  -->
+          , CONNECT_TYPE  <!-- 接続種別  -->
+          , TERM_FLG  <!-- 廃止フラグ  -->
+          , '${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}'  <!-- 最終更新日時  -->
+          , '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}'  <!-- 最終更新会社コード  -->
+          , '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}'  <!-- 最終更新部門コード  -->
+          , '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}'  <!-- 最終更新ユーザーID  -->
+          , '${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}'  <!-- 登録日時  -->
+          , '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}'  <!-- 登録会社コード  -->
+          , '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}'  <!-- 登録部門コード  -->
+          , '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}'  <!-- 登録ユーザーID  -->
+        FROM M_PUR_PRICE
+       WHERE BUYER_COMPANY_CD = #{identify.buyerCompanyCd}
+         AND BUYER_SECTION_CD = #{identify.buyerSectionCd}
+         AND ITEM_CD = #{identify.itemCd}
+         AND SUP_CD = #{identify.supCd}
+         AND VALID_START_DATE = #{identify.validPeriodStart.dateOfymd}
+         AND VALID_END_DATE = #{identify.validPeriodEnd.dateOfymd}
+    </insert>
+
+    <!-- 更新仕様（購買価格明細ジャーナル） -->
+    <insert id="insertPurPriceDtlJnl">
+        INSERT INTO M_PUR_PRICE_DTL_JNL (
+              PUR_PRICE_HIST_SEQ    <!-- 購買価格ジャーナルと同じseq  -->
+            , LOWER_VOL   <!-- 購買価格明細マスタ.数量下限  -->
+            , UPPER_VOL   <!-- 購買価格明細マスタ.数量上限  -->
+            , BUYER_COMPANY_CD    <!-- 購買価格明細マスタ.会社コード  -->
+            , BUYER_SECTION_CD    <!-- 購買価格明細マスタ.部門コード  -->
+            , SUP_CD  <!-- 購買価格明細マスタ.取引先コード  -->
+            , VALID_START_DATE    <!-- 購買価格明細マスタ.有効期間（開始）  -->
+            , VALID_END_DATE  <!-- 購買価格明細マスタ.有効期間（終了）  -->
+            , UPDATE_NO   <!-- 購買価格明細マスタ.改訂番号  -->
+            , BUY_PRICE   <!-- 購買価格明細マスタ.購入単価  -->
+            , LAST_UPD_DATE   <!-- システム日時  -->
+            , LAST_UPD_COMPANY_CD     <!-- ログインユーザー会社コード  -->
+            , LAST_UPD_SECTION_CD     <!-- ログインユーザー部門コード  -->
+            , LAST_UPD_USER_ID    <!-- ログインユーザーユーザーID  -->
+            , REG_DATE    <!-- システム日時  -->
+            , REG_COMPANY_CD  <!-- ログインユーザー会社コード  -->
+            , REG_SECTION_CD  <!-- ログインユーザー部門コード  -->
+            , REG_USER_ID     <!-- ログインユーザーユーザーID  -->
+        )
+        SELECT
+              #{newSeq}  <!-- 購買価格ジャーナルと同じseq  -->
+            , LOWER_VOL <!-- 購買価格明細マスタ.数量下限  -->
+            , UPPER_VOL <!-- 購買価格明細マスタ.数量上限  -->
+            , BUYER_COMPANY_CD  <!-- 購買価格明細マスタ.会社コード  -->
+            , BUYER_SECTION_CD  <!-- 購買価格明細マスタ.部門コード  -->
+            , SUP_CD    <!-- 購買価格明細マスタ.取引先コード  -->
+            , VALID_START_DATE  <!-- 購買価格明細マスタ.有効期間（開始）  -->
+            , VALID_END_DATE    <!-- 購買価格明細マスタ.有効期間（終了）  -->
+            , UPDATE_NO <!-- 購買価格明細マスタ.改訂番号  -->
+            , BUY_PRICE <!-- 購買価格明細マスタ.購入単価  -->
+            , '${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}' <!-- システム日時  -->
+            , '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}'  <!-- ログインユーザー会社コード  -->
+            , '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}'   <!-- ログインユーザー部門コード  -->
+            , '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}' <!-- ログインユーザーユーザーID  -->
+            , '${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}' <!-- システム日時  -->
+            , '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}'  <!-- ログインユーザー会社コード  -->
+            , '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}'   <!-- ログインユーザー部門コード  -->
+            , '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}' <!-- ログインユーザーユーザーID  -->
+         FROM M_PUR_PRICE_DTL
+        WHERE BUYER_COMPANY_CD = #{identify.buyerCompanyCd}
+          AND BUYER_SECTION_CD = #{identify.buyerSectionCd}
+          AND ITEM_CD = #{identify.itemCd}
+          AND SUP_CD = #{identify.supCd}
+          AND VALID_START_DATE = #{identify.validPeriodStart.dateOfymd}
+          AND VALID_END_DATE = #{identify.validPeriodEnd.dateOfymd}
+    </insert>
+
+    <!-- 更新仕様（購買価格表示制御ジャーナル） -->
+    <insert id="insertPurPriceDspAuthJnl">
+        INSERT INTO M_PUR_PRICE_DSP_AUTH_JNL (
+              PUR_PRICE_HIST_SEQ    <!-- 購買価格ジャーナルと同じseq  -->
+            , REQ_COMPANY_CD  <!-- 購買価格表示制御マスタ.依頼元会社コード  -->
+            , REQ_SECTION_PLACE_CD    <!-- 購買価格表示制御マスタ.依頼元事業所コード  -->
+            , LAST_UPD_DATE   <!-- システム日時  -->
+            , LAST_UPD_COMPANY_CD     <!-- ログインユーザー会社コード  -->
+            , LAST_UPD_SECTION_CD     <!-- ログインユーザー部門コード  -->
+            , LAST_UPD_USER_ID    <!-- ログインユーザーユーザーID  -->
+            , REG_DATE    <!-- システム日時  -->
+            , REG_COMPANY_CD  <!-- ログインユーザー会社コード  -->
+            , REG_SECTION_CD  <!-- ログインユーザー部門コード  -->
+            , REG_USER_ID     <!-- ログインユーザーユーザーID  -->
+        )
+        SELECT
+              #{newSeq}  <!-- 購買価格ジャーナルと同じseq  -->
+            , REQ_COMPANY_CD    <!-- 購買価格表示制御マスタ.依頼元会社コード  -->
+            , REQ_SECTION_PLACE_CD  <!-- 購買価格表示制御マスタ.依頼元事業所コード  -->
+            , '${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}'     <!-- システム日時  -->
+            , '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}'  <!-- ログインユーザー会社コード  -->
+            , '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}'   <!-- ログインユーザー部門コード  -->
+            , '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}'     <!-- ログインユーザーユーザーID  -->
+            , '${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}'     <!-- システム日時  -->
+            , '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}'  <!-- ログインユーザー会社コード  -->
+            , '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}'   <!-- ログインユーザー部門コード  -->
+            , '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}'     <!-- ログインユーザーユーザーID  -->
+        FROM M_PUR_PRICE_DSP_AUTH
+       WHERE BUYER_COMPANY_CD = #{identify.buyerCompanyCd}
+         AND BUYER_SECTION_CD = #{identify.buyerSectionCd}
+         AND ITEM_CD = #{identify.itemCd}
+         AND SUP_CD = #{identify.supCd}
+         AND VALID_START_DATE = #{identify.validPeriodStart.dateOfymd}
+         AND VALID_END_DATE = #{identify.validPeriodEnd.dateOfymd}
+    </insert>
+
+    <select id="getLastPurPriceHistSeq" resultType="java.lang.String">
+        SELECT * FROM (
+           SELECT
+               PUR_PRICE_HIST_SEQ
+           FROM
+               M_PUR_PRICE_JNL
+           WHERE
+                   BUYER_COMPANY_CD = #{buyerPrice.identify.buyerCompany.buyerCompanyCd}
+               AND BUYER_SECTION_CD = #{buyerPrice.identify.buyerCompany.buyerSectionCd}
+               AND ITEM_CD = #{buyerPrice.identify.item.itemCd}
+               AND SUP_CD = #{buyerPrice.identify.supplierFrom.supCd}
+               AND UPDATE_NO = #{updateNo}
+           ORDER BY LAST_UPD_DATE DESC
+        )
+        WHERE
+            ROWNUM = 1
+    </select>
+    <!-- PSAPR122 価格マスタ登録承認（個別） END -->
+</mapper>

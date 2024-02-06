@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<flow xmlns="http://www.springframework.org/schema/webflow"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.springframework.org/schema/webflow
+        http://www.springframework.org/schema/webflow/spring-webflow-2.0.xsd"
+    parent="base">
+    <!-- 開発用domainの定義 -->
+        <input name="identify" />
+        <input name="range"/>
+        <input name="approveFlg" />
+        <input name="historyIdentify" />
+        <input name="isSearchByHistory" />
+        <input name="isSearchByAll" />
+        <input name="isSearchByHistoryAll" />
+
+    <decision-state id="isSearchByHistory">
+        <if test="isSearchByAll" then="searchByAll" />
+        <if test="isSearchByHistoryAll" then="searchByHistoryAll" />
+        <if test="isSearchByHistory" then="searchByHistory" else="searchByCondition" />
+    </decision-state>
+
+    <action-state id="searchByCondition">
+        <evaluate expression="PSTST050Service.detail(identify,range,approveFlg)"
+            result="flowScope.domain" />
+        <transition to="PSTST050"/> 
+    </action-state>
+
+    <action-state  id="searchByHistory" >
+        <evaluate expression="PSTST050Service.initFromHistory(historyIdentify.historySeq)" result="flowScope.domain" />
+        <transition to="PSTST050"/>
+    </action-state>
+
+    <action-state id="searchByAll">
+            <evaluate expression="PSTST050Service.detailAll(identify,range,approveFlg)"
+            result="flowScope.domain" />
+            <transition to="PSTST050"/> 
+    </action-state>
+
+    <action-state  id="searchByHistoryAll" >
+            <evaluate expression="PSTST050Service.initFromHistoryAll(historyIdentify.historySeq)" result="flowScope.domain" />
+            <transition to="PSTST050"/>
+        </action-state>
+
+    <view-state id="PSTST050"  view="tst/ins/PSTST050">
+        <transition on="downloadext" validate="false">
+            <evaluate expression="PSTST050Service.downloadFileExt(domain)"/>
+        </transition>
+    </view-state>
+</flow>

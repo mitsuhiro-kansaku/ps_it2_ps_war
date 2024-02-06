@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<flow xmlns="http://www.springframework.org/schema/webflow"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.springframework.org/schema/webflow
+        http://www.springframework.org/schema/webflow/spring-webflow-2.0.xsd"
+    parent="base">
+
+    <var name="defaultSearchCondition" class="fw.domain.slip.businesscommon.slipsearch.SlipSearchCondition" />
+      <!-- 詳細情報 -->
+    <var name="slipSearchItem" class="fw.domain.slip.businesscommon.slipsearch.SlipSearchItem" />
+    <on-start>
+        <evaluate expression="PSVIW010Service.init()"
+            result="flowScope.searchCondition" />
+    </on-start>
+    <view-state id="PSVIW010" model="searchCondition"  view="viw/slip/PSVIW010">
+        <transition on="validate" validate="true">
+            <set name="flowScope.isCurrentPageSearch" value="false" />
+            <set name="flowScope.isShowList" value="true"></set>
+            <evaluate expression="PSVIW010Service.search(searchCondition)"></evaluate>
+        </transition>
+        <transition on="search" to="list" validate="false" />
+        <transition on="downloadValidate" validate="true">
+            <evaluate expression="PSVIW010Service.downloadValidate(searchCondition)" 
+            result="flashScope.isDownLoadValidate"/>
+        </transition>
+        <transition on="download" validate="false">
+            <evaluate expression="PSVIW010Service.download(searchCondition)"/>
+        </transition>
+        <transition on="back" to="home" validate="false" />
+    </view-state>
+
+    <subflow-state id="list" subflow="viw/slip/PSVIW020">
+        <input name="searchCondition" value="searchCondition" />
+        <input name="isCurrentPageSearch" value="isCurrentPageSearch" />
+        <transition on="back" to="PSVIW010">
+            <set name="flowScope.isCurrentPageSearch" value="true" />
+        </transition>
+    </subflow-state>
+</flow>

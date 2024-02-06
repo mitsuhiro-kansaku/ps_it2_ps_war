@@ -1,0 +1,283 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="ps.dataaccess.mst.codename.CodeNameMapper">
+
+    <!-- SRC-00115-00 include化共通-->
+    <sql id="listKeyIdentityWhereCondition">
+        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(codeKey)">
+            AND M_CODE_NAME.CODE_KEY
+            ${@fw.common.util.SearchModeUtil@getSearchSQL("fw.domain.mst.resource.codename.CodeNameSearchCondition","codeKey")}
+        </if>
+        <!-- 強化-00712-000 2013/04/02 DEL SBO_wangmeng START -->
+        <!-- <if test="@org.apache.commons.lang.StringUtils@isNotBlank(codeName)">
+            AND CODE_NAME_COMPANY.CODE_NAME
+            ${@fw.common.util.SearchModeUtil@getSearchSQL("fw.domain.mst.resource.codename.CodeNameSearchCondition","codeName")}
+        </if> -->
+        <!-- 強化-00712-000 2013/04/02 DEL SBO_wangmeng -END- -->
+        
+        <!-- 強化-00712-000 2013/04/02 ADD SBO_wangmeng START -->
+		<if test="@org.apache.commons.lang.StringUtils@isNotBlank(codeName)">
+            AND (CODE_NAME_COMPANY.CODE_NAME
+                ${@fw.common.util.SearchModeUtil@getSearchSQL("fw.domain.mst.resource.codename.CodeNameSearchCondition","codeName")}
+              	OR
+               	CODE_NAME_SYSTEM.CODE_NAME
+                ${@fw.common.util.SearchModeUtil@getSearchSQL("fw.domain.mst.resource.codename.CodeNameSearchCondition","codeName")}
+            )
+        </if>
+		<!-- 強化-00712-000 2013/04/02 ADD SBO_wangmeng -END- -->
+        
+        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(codeKeyName)">
+            AND M_CODE_NAME.CODE_KEY_NAME
+            ${@fw.common.util.SearchModeUtil@getSearchSQL("fw.domain.mst.resource.codename.CodeNameSearchCondition","codeKeyName")}
+        </if>
+    </sql>
+
+    <select id="listKeyIdentity" parameterType="fw.domain.mst.resource.codename.CodeNameSearchCondition" resultType="fw.domain.mst.resource.codename.CodeNameIdentify">
+        SELECT
+            M_CODE_NAME.CODE_KEY as "codeKey",
+            M_CODE_NAME.CODE_VALUE as "codeValue",
+            CASE
+              WHEN CODE_NAME_COMPANY.CODE_NAME IS NOT NULL THEN
+                CODE_NAME_COMPANY.CODE_NAME
+              ELSE
+                CODE_NAME_SYSTEM.CODE_NAME
+            END AS codeName
+        FROM M_CODE_NAME
+            LEFT JOIN M_CODE_NAME_LANG CODE_NAME_COMPANY
+            ON
+                CODE_NAME_COMPANY.CODE_KEY = M_CODE_NAME.CODE_KEY
+                AND CODE_NAME_COMPANY.CODE_VALUE = M_CODE_NAME.CODE_VALUE
+                AND CODE_NAME_COMPANY.LANGUAGE_IND = '${@fw.security.SecurityUtil@getCompanyUseLanguageIndByEscapeSql()}'
+            LEFT JOIN M_CODE_NAME_LANG CODE_NAME_SYSTEM
+            ON
+                CODE_NAME_SYSTEM.CODE_KEY = M_CODE_NAME.CODE_KEY
+                AND CODE_NAME_SYSTEM.CODE_VALUE = M_CODE_NAME.CODE_VALUE
+                AND CODE_NAME_SYSTEM.LANGUAGE_IND = '${@fw.common.util.AppUtil@getSysLanguageByEscapeSql()}'
+        <where>
+            <include refid="listKeyIdentityWhereCondition"/>
+        </where>
+        ORDER BY ${searchCondition.columnOrder.columnOrder()}
+    </select>
+
+    <select id="listPageItem" resultType="fw.domain.mst.resource.codename.CodeNameItem">
+        SELECT 
+            M_CODE_NAME.CODE_KEY as "codeNameIdentify.codeKey",
+            M_CODE_NAME.CODE_VALUE as "codeNameIdentify.codeValue",
+            M_CODE_NAME.LAST_UPD_DATE as "codeNameIdentify.lastUpdDate",
+            CODE_KEY_NAME as "codeKeyName",
+            CASE
+              WHEN CODE_NAME_COMPANY.CODE_NAME IS NOT NULL THEN
+                CODE_NAME_COMPANY.CODE_NAME
+              ELSE
+                CODE_NAME_SYSTEM.CODE_NAME
+            END AS codeName,
+            DSP_ORDER as "dspOrder"
+        FROM M_CODE_NAME
+            LEFT JOIN M_CODE_NAME_LANG CODE_NAME_COMPANY
+            ON
+                CODE_NAME_COMPANY.CODE_KEY = M_CODE_NAME.CODE_KEY
+                AND CODE_NAME_COMPANY.CODE_VALUE = M_CODE_NAME.CODE_VALUE
+                AND CODE_NAME_COMPANY.LANGUAGE_IND = '${@fw.security.SecurityUtil@getCompanyUseLanguageIndByEscapeSql()}'
+            LEFT JOIN M_CODE_NAME_LANG CODE_NAME_SYSTEM
+            ON
+                CODE_NAME_SYSTEM.CODE_KEY = M_CODE_NAME.CODE_KEY
+                AND CODE_NAME_SYSTEM.CODE_VALUE = M_CODE_NAME.CODE_VALUE
+                AND CODE_NAME_SYSTEM.LANGUAGE_IND = '${@fw.common.util.AppUtil@getSysLanguageByEscapeSql()}'
+        <where>
+            (M_CODE_NAME.CODE_KEY,M_CODE_NAME.CODE_VALUE) in
+            <foreach collection="searchCondition.page.keyDomainEntityList" item="keyList" open="(" separator="," close=")">
+               (#{keyList.codeKey},#{keyList.codeValue})
+            </foreach>
+            <include refid="listKeyIdentityWhereCondition"/>
+        </where>
+        ORDER BY ${searchCondition.columnOrder.columnOrder()}
+    </select>
+
+    <!-- 強化-01784-000 2013/06/11 DEL SBO_SOKOU START -->
+    <!-- 
+    <select id="sectionType" parameterType="fw.domain.mst.resource.codename.CodeNameSearchCondition" resultType="fw.domain.mst.resource.codename.CodeNameItem">
+        SELECT 
+            M_CODE_NAME.CODE_KEY as "codeNameIdentify.codeKey",
+            M_CODE_NAME.CODE_VALUE as "codeNameIdentify.codeValue",
+            M_CODE_NAME.LAST_UPD_DATE as "codeNameIdentify.lastUpdDate",
+            CODE_KEY_NAME as "codeKeyName",
+            CODE_NAME as "codeName",
+            DSP_ORDER as "dspOrder"
+        FROM M_CODE_NAME
+            INNER JOIN M_CODE_NAME_LANG
+            ON
+                M_CODE_NAME_LANG.CODE_KEY = M_CODE_NAME.CODE_KEY
+                AND M_CODE_NAME_LANG.CODE_VALUE = M_CODE_NAME.CODE_VALUE
+                AND M_CODE_NAME_LANG.LANGUAGE_IND = '${@fw.security.SecurityUtil@getCompanyUseLanguageIndByEscapeSql()}'
+        WHERE 
+            M_CODE_NAME.CODE_KEY in
+            ('BUYER_SECTION_FLG','ACC_SECTION_FLG','PLANNED_SECTION_FLG')
+            AND M_CODE_NAME.CODE_VALUE = '1' 
+    </select>
+    -->
+    <!-- 強化-01784-000 2013/06/11 DEL SBO_SOKOU -END- -->
+
+    <select id="search" parameterType="fw.domain.mst.resource.codename.CodeNameIdentify" resultType="fw.domain.mst.resource.codename.CodeNameManagement">
+        <!-- 強化-01784-000 2013/06/11 DEL SBO_SOKOU START -->
+        <!-- 
+        SELECT
+            M_CODE_NAME.CODE_KEY as "codeNameIdentify.codeKey",
+            M_CODE_NAME.CODE_VALUE as "codeNameIdentify.codeValue",
+            M_CODE_NAME.LAST_UPD_DATE as "codeNameIdentify.lastUpdDate",
+            DSP_ORDER as "dspOrder",
+            CASE
+              WHEN CODE_NAME_COMPANY.CODE_NAME IS NOT NULL THEN
+                CODE_NAME_COMPANY.CODE_NAME
+              ELSE
+                CODE_NAME_SYSTEM.CODE_NAME
+            END AS "codeName",
+            CASE
+              WHEN CODE_NAME_COMPANY.CODE_NAME IS NOT NULL THEN
+                '${@fw.security.SecurityUtil@getCompanyUseLanguageIndByEscapeSql()}'
+              ELSE
+                '${@fw.common.util.AppUtil@getSysLanguageByEscapeSql()}'
+            END AS "baseLanguageInd.languageInd",
+            CODE_KEY_NAME as "codeKeyName"
+        FROM M_CODE_NAME
+        LEFT JOIN M_CODE_NAME_LANG CODE_NAME_COMPANY
+        ON 
+            CODE_NAME_COMPANY.LANGUAGE_IND = '${@fw.security.SecurityUtil@getCompanyUseLanguageIndByEscapeSql()}'
+            AND CODE_NAME_COMPANY.CODE_KEY = M_CODE_NAME.CODE_KEY
+            AND CODE_NAME_COMPANY.CODE_VALUE = M_CODE_NAME.CODE_VALUE
+        LEFT JOIN M_CODE_NAME_LANG CODE_NAME_SYSTEM
+        ON 
+            CODE_NAME_SYSTEM.LANGUAGE_IND = '${@fw.common.util.AppUtil@getSysLanguageByEscapeSql()}'
+            AND CODE_NAME_SYSTEM.CODE_KEY = M_CODE_NAME.CODE_KEY
+            AND CODE_NAME_SYSTEM.CODE_VALUE = M_CODE_NAME.CODE_VALUE
+        WHERE 
+            M_CODE_NAME.CODE_KEY = #{codeKey}
+            AND M_CODE_NAME.CODE_VALUE = #{codeValue}
+        -->
+        <!-- 強化-01784-000 2013/06/11 DEL SBO_SOKOU -END- -->
+        <!-- 強化-01784-000 2013/06/11 ADD SBO_SOKOU START -->
+            SELECT M_CODE_NAME.CODE_KEY          AS "codeNameIdentify.codeKey"
+                 , M_CODE_NAME.CODE_VALUE        AS "codeNameIdentify.codeValue"
+                 , M_CODE_NAME.CODE_KEY_NAME     AS "codeKeyName"
+                 , M_CODE_NAME.LAST_UPD_DATE     AS "codeNameIdentify.lastUpdDate"
+                 , M_CODE_NAME.DSP_ORDER         AS "dspOrder"
+                 , M_CODE_NAME_LANG.CODE_NAME    AS "codeName"
+                 , M_CODE_NAME_LANG.LANGUAGE_IND AS "baseLanguageInd.languageInd"
+              FROM M_CODE_NAME 
+             INNER JOIN M_CODE_NAME_LANG 
+                     ON M_CODE_NAME_LANG.LANGUAGE_IND = '${@fw.common.util.AppUtil@getSysLanguageByEscapeSql()}' 
+                    AND M_CODE_NAME_LANG.CODE_KEY = M_CODE_NAME.CODE_KEY 
+                    AND M_CODE_NAME_LANG.CODE_VALUE = M_CODE_NAME.CODE_VALUE
+             WHERE M_CODE_NAME.CODE_KEY = #{codeKey}
+               AND M_CODE_NAME.CODE_VALUE = #{codeValue}
+        <!-- 強化-01784-000 2013/06/11 ADD SBO_SOKOU -END- -->
+    </select>
+
+    <select id="searchExclusive" parameterType="fw.domain.mst.resource.codename.CodeNameIdentify" resultType="fw.domain.mst.resource.codename.CodeNameIdentify">
+        SELECT
+            M_CODE_NAME.CODE_KEY as "codeKey",
+            M_CODE_NAME.CODE_VALUE as "codeValue"
+        FROM M_CODE_NAME
+        WHERE
+            M_CODE_NAME.CODE_KEY = #{codeKey}
+            AND M_CODE_NAME.CODE_VALUE = #{codeValue}
+            AND M_CODE_NAME.LAST_UPD_DATE = #{lastUpdDate}
+    </select>
+
+    <select id="listCodeNameLanguage" parameterType="fw.domain.mst.resource.codename.CodeNameIdentify" resultType="fw.domain.mst.resource.codename.CodeNameLanguage">
+        SELECT
+            M_CODE_NAME_LANG.CODE_KEY as "codeNameIdentify.codeKey",
+            M_CODE_NAME_LANG.CODE_VALUE as "codeNameIdentify.codeValue",
+            LANGUAGE_IND as "languageInd.languageInd",
+            CODE_NAME as "codeName"
+        FROM M_CODE_NAME_LANG
+            INNER JOIN M_CODE_NAME
+            ON
+                M_CODE_NAME_LANG.CODE_KEY = M_CODE_NAME.CODE_KEY
+                AND M_CODE_NAME_LANG.CODE_VALUE = M_CODE_NAME.CODE_VALUE
+        <!-- 強化-01784-000 2013/06/11 DEL SBO_SOKOU START -->
+                <!-- AND M_CODE_NAME_LANG.LANGUAGE_IND != '${@fw.security.SecurityUtil@getCompanyUseLanguageIndByEscapeSql()}' -->
+        <!-- 強化-01784-000 2013/06/11 DEL SBO_SOKOU -END- -->
+        <!-- 強化-01784-000 2013/06/11 ADD SBO_SOKOU START -->
+                AND M_CODE_NAME_LANG.LANGUAGE_IND != '${@fw.common.util.AppUtil@getSysLanguageByEscapeSql()}'
+        <!-- 強化-01784-000 2013/06/11 ADD SBO_SOKOU -END- -->
+            INNER JOIN M_CODE_NAME M_CODE_NAME_DSP_ORDER
+            ON
+                M_CODE_NAME_DSP_ORDER.CODE_KEY = 'LANGUAGE_IND'
+                AND M_CODE_NAME_DSP_ORDER.CODE_VALUE = M_CODE_NAME_LANG.LANGUAGE_IND
+        WHERE 
+            M_CODE_NAME.CODE_KEY = #{codeKey}
+            AND M_CODE_NAME.CODE_VALUE = #{codeValue}
+        ORDER BY 
+            M_CODE_NAME_DSP_ORDER.DSP_ORDER
+    </select>
+
+    <insert id="insertCodeNameLanguage" parameterType="fw.domain.mst.resource.codename.CodeNameLanguage">
+        INSERT INTO M_CODE_NAME_LANG
+        (
+           CODE_KEY,
+           CODE_VALUE,
+           LANGUAGE_IND,
+           CODE_NAME,
+           LAST_UPD_DATE,
+           LAST_UPD_COMPANY_CD,
+           LAST_UPD_SECTION_CD,
+           LAST_UPD_USER_ID,
+           REG_DATE,
+           REG_COMPANY_CD,
+           REG_SECTION_CD,
+           REG_USER_ID
+        )VALUES(
+           #{codeNameIdentify.codeKey, jdbcType=VARCHAR},
+           #{codeNameIdentify.codeValue, jdbcType=VARCHAR},
+           #{languageInd.languageInd, jdbcType=VARCHAR},
+           #{codeName, jdbcType=VARCHAR},
+           #{registInfo.lastUpdDate, jdbcType=VARCHAR},
+           #{registInfo.lastUpdCompanyCd, jdbcType=VARCHAR},
+           #{registInfo.lastUpdSectionCd, jdbcType=VARCHAR},
+           #{registInfo.lastUpdUserId, jdbcType=VARCHAR},
+           #{registInfo.regDate, jdbcType=VARCHAR},
+           #{registInfo.regCompanyCd, jdbcType=VARCHAR},
+           #{registInfo.regSectionCd, jdbcType=VARCHAR},
+           #{registInfo.regUserId, jdbcType=VARCHAR}
+        )
+    </insert>
+
+    <update id="update" parameterType="fw.domain.mst.resource.codename.CodeNameManagement">
+        UPDATE M_CODE_NAME
+        SET
+           DSP_ORDER = #{dspOrder, jdbcType=VARCHAR},
+           LAST_UPD_DATE = #{registInfo.lastUpdDate, jdbcType=VARCHAR},
+           LAST_UPD_COMPANY_CD = #{registInfo.lastUpdCompanyCd, jdbcType=VARCHAR},
+           LAST_UPD_SECTION_CD = #{registInfo.lastUpdSectionCd, jdbcType=VARCHAR},
+           LAST_UPD_USER_ID =  #{registInfo.lastUpdUserId, jdbcType=VARCHAR}
+        WHERE
+           CODE_KEY = #{codeNameIdentify.codeKey, jdbcType=VARCHAR}
+           AND CODE_VALUE = #{codeNameIdentify.codeValue, jdbcType=VARCHAR}
+    </update>
+
+    <delete id="deleteCodeNameLanguage" parameterType="fw.domain.mst.resource.codename.CodeNameIdentify">
+        DELETE FROM M_CODE_NAME_LANG
+        WHERE
+            CODE_KEY = #{codeKey, jdbcType=VARCHAR}
+            AND CODE_VALUE = #{codeValue, jdbcType=VARCHAR}
+    </delete>
+
+    <select id="searchCodeNameLanguage" resultType="fw.domain.mst.resource.codename.CodeNameLanguage">
+        SELECT 
+            M_CODE_NAME_LANG.CODE_KEY as "codeNameIdentify.codeKey",
+            M_CODE_NAME_LANG.CODE_VALUE as "codeNameIdentify.codeValue",
+            M_CODE_NAME_LANG.LANGUAGE_IND as "languageInd.languageInd",
+            M_CODE_NAME_LANG.CODE_NAME as "codeName"
+        FROM M_CODE_NAME_LANG
+            INNER JOIN M_CODE_NAME
+            ON 
+                M_CODE_NAME_LANG.CODE_KEY = M_CODE_NAME.CODE_KEY
+                AND M_CODE_NAME_LANG.CODE_VALUE = M_CODE_NAME.CODE_VALUE
+        ORDER BY
+           M_CODE_NAME_LANG.CODE_KEY,
+           M_CODE_NAME_LANG.LANGUAGE_IND,
+           M_CODE_NAME.DSP_ORDER
+    </select>
+</mapper>

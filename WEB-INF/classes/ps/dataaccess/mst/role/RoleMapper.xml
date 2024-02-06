@@ -1,0 +1,255 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="ps.dataaccess.mst.role.RoleMapper">
+
+    <sql id="listKeyIdentityWhereCondition">
+        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(companyCd)">
+            AND M_ROLE.COMPANY_CD = #{companyCd}
+        </if>
+        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(roleNo)">
+            AND M_ROLE.ROLE_NO ${@fw.common.util.SearchModeUtil@getSearchSQL("fw.domain.mst.userauthority.role.RoleSearchCondition","roleNo")}
+        </if>
+        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(roleName)">
+            AND M_ROLE.ROLE_NAME ${@fw.common.util.SearchModeUtil@getSearchSQL("fw.domain.mst.userauthority.role.RoleSearchCondition","roleName")}
+        </if>
+        <if test="@fw.domain.mst.searchcondition.SearchCondition@termFlgIsNotEmpty(searchCondition.termFlg)">
+            AND M_ROLE.TERM_FLG = #{searchCondition.termFlg, jdbcType=VARCHAR}
+        </if> 
+    </sql>
+
+    <select id="listKeyIdentity"
+            parameterType="fw.domain.mst.userauthority.role.RoleSearchCondition"
+            resultType="fw.domain.mst.userauthority.role.RoleIdentify">
+        SELECT COMPANY_CD as "companyCd",
+               ROLE_NO as "roleNo"
+          FROM M_ROLE
+        <where>
+            <include refid="listKeyIdentityWhereCondition"/>
+        </where> 
+             ORDER BY ${searchCondition.columnOrder.columnOrder()}
+    </select>
+
+    <select id="listPageItem"
+            parameterType="fw.domain.mst.searchcondition.SearchCondition"
+            resultType="fw.domain.mst.userauthority.role.RoleItem">
+        SELECT M_ROLE.COMPANY_CD as "roleIdentify.companyCd",
+               M_ROLE.ROLE_NO as "roleIdentify.roleNo",
+               M_ROLE.LAST_UPD_DATE as "roleIdentify.lastUpdDate",
+               M_ROLE.ROLE_NO as "roleNo",
+               M_ROLE.ROLE_NAME as "roleName",
+               M_ROLE.TERM_FLG as "termFlg"
+          FROM M_ROLE
+         WHERE (M_ROLE.COMPANY_CD,M_ROLE.ROLE_NO )IN
+            <foreach collection="searchCondition.page.keyDomainEntityList" item="keyList"  open="(" separator="," close=")">
+                (#{keyList.companyCd},#{keyList.roleNo})
+            </foreach> 
+            <include refid="listKeyIdentityWhereCondition"/>
+          ORDER BY ${searchCondition.columnOrder.columnOrder()}
+    </select>
+
+    <select id="listRoleDtl" 
+            parameterType="fw.domain.mst.userauthority.role.RoleIdentify"
+            resultType="fw.domain.mst.userauthority.role.RoleDtl">
+        SELECT M_AUTH_NAME.AUTH_NO as "authName.authIdentify.authNo",
+               M_AUTH_NAME.AUTH_NAME as "authName.authName",
+               M_AUTH_NAME.AUTH_REMARKS as "authName.authRemarks",
+               M_AUTH_NAME.AUTH_GROUP_NO as "authName.authGroupNo",
+               M_AUTH_NAME.AUTH_TOP_FLG as "authName.authTopFlg",
+               M_AUTH_NAME.DSP_ORDER as "authName.dspOrder",
+               M_AUTH_NAME.TERM_FLG as "authName.termFlg",
+               CASE WHEN M_ROLE_DTL.COMPANY_CD IS NOT NULL
+                    THEN CAST (M_ROLE_DTL.COMPANY_CD AS VARCHAR2(6))
+                    ELSE #{companyCd}
+                     END AS "roleDtlIdentify.companyCd",
+               CASE WHEN M_ROLE_DTL.ROLE_NO IS NOT NULL
+                    THEN M_ROLE_DTL.ROLE_NO
+                    ELSE CAST (#{roleNo} AS NUMBER(3))
+                     END AS "roleDtlIdentify.roleNo",     
+               CASE WHEN M_ROLE_DTL.AUTH_NO IS NOT NULL
+                    THEN M_ROLE_DTL.AUTH_NO
+                    ELSE M_AUTH_NAME.AUTH_NO
+                     END AS "roleDtlIdentify.authIdt.authNo",    
+               CASE WHEN M_ROLE_DTL.AUTH_IND IS NOT NULL
+                    THEN CAST(M_ROLE_DTL.AUTH_IND AS VARCHAR2(1))
+                    ELSE '0'
+                     END AS "authInd",
+               M_ROLE_DTL.LAST_UPD_DATE       as "registInfo.lastUpdDate",
+               M_ROLE_DTL.LAST_UPD_COMPANY_CD as "registInfo.lastUpdCompanyCd",
+               M_ROLE_DTL.LAST_UPD_SECTION_CD as "registInfo.lastUpdSectionCd",
+               M_ROLE_DTL.LAST_UPD_USER_ID    as "registInfo.lastUpdUserId",
+               M_ROLE_DTL.REG_DATE            as "registInfo.regDate",
+               M_ROLE_DTL.REG_COMPANY_CD      as "registInfo.regCompanyCd",
+               M_ROLE_DTL.REG_SECTION_CD      as "registInfo.regSectionCd",
+               M_ROLE_DTL.REG_USER_ID         as "registInfo.regUserId"
+          FROM M_AUTH_NAME
+          LEFT JOIN M_ROLE_DTL
+                 ON M_ROLE_DTL.AUTH_NO = M_AUTH_NAME.AUTH_NO
+                AND COMPANY_CD = #{companyCd}
+                AND ROLE_NO = #{roleNo}
+         ORDER BY M_AUTH_NAME.AUTH_GROUP_NO ASC,
+                  M_AUTH_NAME.AUTH_TOP_FLG  DESC,
+                  M_AUTH_NAME.DSP_ORDER     ASC
+    </select>
+
+    <select id="search"
+            parameterType="fw.domain.mst.userauthority.role.RoleIdentify"
+            resultType="fw.domain.mst.userauthority.role.RoleManagement">
+        SELECT M_ROLE.COMPANY_CD as "roleIdentify.companyCd",
+               ROLE_NO as "roleIdentify.roleNo",
+               M_ROLE.LAST_UPD_DATE as "roleIdentify.lastUpdDate",
+               M_COMPANY_LANG.COMPANY_NAME as "companySummary.companyName",
+               ROLL_REMARK as "roleRemark",
+               ROLE_NAME as "roleName",
+               M_ROLE.TERM_FLG as "termFlg",
+               M_ROLE.LAST_UPD_DATE as "registInfo.lastUpdDate",
+               M_ROLE.LAST_UPD_COMPANY_CD as "registInfo.lastUpdCompanyCd",
+               M_ROLE.LAST_UPD_SECTION_CD as "registInfo.lastUpdSectionCd",
+               M_ROLE.LAST_UPD_USER_ID as "registInfo.lastUpdUserId",
+               M_ROLE.REG_DATE as "registInfo.regDate",
+               M_ROLE.REG_COMPANY_CD as "registInfo.regCompanyCd",
+               M_ROLE.REG_SECTION_CD as "registInfo.regSectionCd",
+               M_ROLE.REG_USER_ID as "registInfo.regUserId"
+          FROM M_ROLE
+          LEFT JOIN M_COMPANY
+                 ON M_ROLE.COMPANY_CD = M_COMPANY.COMPANY_CD
+          LEFT JOIN M_COMPANY_LANG
+                 ON M_COMPANY.COMPANY_CD = M_COMPANY_LANG.COMPANY_CD
+                AND M_COMPANY.COMPANY_USE_LANGUAGE_IND = M_COMPANY_LANG.LANGUAGE_IND
+         WHERE M_ROLE.COMPANY_CD = #{companyCd}
+           AND ROLE_NO = #{roleNo}
+    </select>
+
+    <select id="searchExclusive"
+            parameterType="fw.domain.mst.userauthority.role.RoleIdentify"
+            resultType="fw.domain.mst.userauthority.role.RoleIdentify">
+        SELECT COMPANY_CD as "companyCd",
+               ROLE_NO as "roleNo",
+               LAST_UPD_DATE as "lastUpdDate"
+          FROM M_ROLE
+         WHERE COMPANY_CD = #{companyCd}
+           AND ROLE_NO = #{roleNo}
+           AND LAST_UPD_DATE = #{lastUpdDate}
+    </select>
+
+    <insert id="insert"
+            parameterType="fw.domain.mst.userauthority.role.RoleManagement">
+        INSERT INTO M_ROLE
+        (
+            COMPANY_CD,
+            ROLE_NO,
+            ROLE_NAME,
+            ROLL_REMARK,
+            TERM_FLG,
+            LAST_UPD_DATE,
+            LAST_UPD_COMPANY_CD,
+            LAST_UPD_SECTION_CD,
+            LAST_UPD_USER_ID,
+            REG_DATE,
+            REG_COMPANY_CD,
+            REG_SECTION_CD,
+            REG_USER_ID
+        ) VALUES (
+            #{roleIdentify.companyCd},
+            #{roleIdentify.roleNo},
+            #{roleName},
+            #{roleRemark, jdbcType=VARCHAR},
+            #{termFlg},
+            #{registInfo.lastUpdDate},
+            #{registInfo.lastUpdCompanyCd},
+            #{registInfo.lastUpdSectionCd},
+            #{registInfo.lastUpdUserId},
+            #{registInfo.regDate},
+            #{registInfo.regCompanyCd},
+            #{registInfo.regSectionCd},
+            #{registInfo.regUserId}
+        )
+    </insert>
+
+    <update id="update"
+            parameterType="fw.domain.mst.userauthority.role.RoleManagement">
+        UPDATE M_ROLE
+           SET ROLE_NAME = #{roleName},
+               ROLL_REMARK = #{roleRemark},
+               TERM_FLG = #{termFlg},
+               LAST_UPD_DATE = #{registInfo.lastUpdDate},
+               LAST_UPD_COMPANY_CD = #{registInfo.lastUpdCompanyCd},
+               LAST_UPD_SECTION_CD = #{registInfo.lastUpdSectionCd},
+               LAST_UPD_USER_ID = #{registInfo.lastUpdUserId}
+         WHERE COMPANY_CD = #{roleIdentify.companyCd}
+           AND ROLE_NO = #{roleIdentify.roleNo}
+    </update>
+
+    <delete id="delete"
+            parameterType="fw.domain.mst.userauthority.role.RoleIdentify">
+        DELETE
+          FROM M_ROLE
+         WHERE COMPANY_CD = #{companyCd}
+           AND ROLE_NO = #{roleNo}
+    </delete>
+
+    <insert id="insertRoleDtl"
+            parameterType="fw.domain.mst.userauthority.role.RoleDtl">
+        INSERT INTO M_ROLE_DTL
+        (
+            COMPANY_CD,
+            ROLE_NO,
+            AUTH_NO,
+            AUTH_IND,
+            LAST_UPD_DATE,
+            LAST_UPD_COMPANY_CD,
+            LAST_UPD_SECTION_CD,
+            LAST_UPD_USER_ID,
+            REG_DATE,
+            REG_COMPANY_CD,
+            REG_SECTION_CD,
+            REG_USER_ID
+        ) VALUES (
+            #{roleDtlIdentify.companyCd},
+            #{roleDtlIdentify.roleNo},
+            #{roleDtlIdentify.authIdt.authNo},
+            #{authInd},
+            #{registInfo.lastUpdDate},
+            #{registInfo.lastUpdCompanyCd},
+            #{registInfo.lastUpdSectionCd},
+            #{registInfo.lastUpdUserId},
+            #{registInfo.regDate},
+            #{registInfo.regCompanyCd},
+            #{registInfo.regSectionCd},
+            #{registInfo.regUserId}
+            
+        )
+    </insert>
+
+    <update id="updateRoleDtl"
+            parameterType="fw.domain.mst.userauthority.role.RoleDtl">
+        UPDATE M_ROLE_DTL
+           SET AUTH_IND = #{authInd},
+               LAST_UPD_DATE = #{registInfo.lastUpdDate},
+               LAST_UPD_COMPANY_CD = #{registInfo.lastUpdCompanyCd},
+               LAST_UPD_SECTION_CD = #{registInfo.lastUpdSectionCd},
+               LAST_UPD_USER_ID = #{registInfo.lastUpdUserId}
+         WHERE COMPANY_CD = #{roleDtlIdentify.companyCd}
+           AND ROLE_NO = #{roleDtlIdentify.roleNo}
+           AND AUTH_NO = #{roleDtlIdentify.authIdt.authNo}
+    </update>
+
+    <delete id="deleteRoleDtl" parameterType="fw.domain.mst.userauthority.role.RoleIdentify">
+        DELETE
+          FROM M_ROLE_DTL
+         WHERE COMPANY_CD = #{companyCd}
+           AND ROLE_NO = #{roleNo}
+    </delete>
+
+    <select id="listRole"
+            parameterType="fw.domain.mst.userauthority.role.RoleIdentify"
+            resultType="fw.domain.mst.userauthority.role.RoleManagement">
+        SELECT M_ROLE.ROLE_NO AS "roleIdentify.roleNo",
+               M_ROLE.ROLE_NAME AS "roleName"
+          FROM M_ROLE
+         WHERE M_ROLE.TERM_FLG=0
+           AND M_ROLE.COMPANY_CD =#{companyCd}
+         ORDER BY ROLE_NO
+    </select>
+</mapper>

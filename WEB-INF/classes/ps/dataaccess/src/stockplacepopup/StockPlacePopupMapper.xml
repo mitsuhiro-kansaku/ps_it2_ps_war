@@ -1,0 +1,128 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="ps.dataaccess.src.stockplacepopup.StockPlacePopupMapper">
+
+    <sql id="listKeyIdentityWhereCondition">
+            M_STOCK_PLACE.COMPANY_CD = #{companyCd, jdbcType=VARCHAR}
+        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(stockPlaceCd)">
+            AND M_STOCK_PLACE.STOCK_PLACE_CD
+            ${@fw.common.util.SearchModeUtil@getSearchSQL("fw.domain.options.stock.stockplace.StockPlacePopupSearchCondition","stockPlaceCd")}
+        </if>
+        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(stockPlaceName)">
+            AND M_STOCK_PLACE_LANG_VALID.STOCK_PLACE_NAME 
+            ${@fw.common.util.SearchModeUtil@getSearchSQL("fw.domain.options.stock.stockplace.StockPlacePopupSearchCondition","stockPlaceName")}
+        </if>
+        <choose>
+            <when test="@org.apache.commons.lang.StringUtils@equals(referenceRangeInd,'1')">
+                <if test="@org.apache.commons.lang.StringUtils@isNotBlank(sectionPlaceCd)">
+                    AND M_STOCK_PLACE.SECTION_PLACE_CD
+                    ${@fw.common.util.SearchModeUtil@getSearchSQL("fw.domain.options.stock.stockplace.StockPlacePopupSearchCondition","sectionPlaceCd")}
+                </if>
+            </when>
+            <otherwise>
+                AND M_STOCK_PLACE.SECTION_PLACE_CD
+                ${@fw.common.util.SearchModeUtil@getSearchSQL("fw.domain.options.stock.stockplace.StockPlacePopupSearchCondition","sectionPlaceCdForHidden")}
+            </otherwise>
+        </choose>
+        <if test="@org.apache.commons.lang.StringUtils@equals(referenceRangeInd,'1') 
+            and @org.apache.commons.lang.StringUtils@isNotBlank(sectionPlaceName)">
+                AND M_SECTION_PLACE_LANG_VALID.SECTION_PLACE_NAME
+                ${@fw.common.util.SearchModeUtil@getSearchSQL("fw.domain.options.stock.stockplace.StockPlacePopupSearchCondition","sectionPlaceName")}
+        </if>
+        <if test="@fw.domain.mst.searchcondition.SearchCondition@termFlgIsNotEmpty(searchCondition.termFlg) and  searchCondition.termFlg==0">
+            AND M_STOCK_PLACE.TERM_FLG = '0'
+        </if>
+    </sql>
+
+    <sql id="listKeyIdentityFromTable">
+            M_STOCK_PLACE
+        LEFT JOIN (
+                SELECT
+                        M_STOCK_PLACE_LANG.COMPANY_CD,
+                        M_STOCK_PLACE_LANG.SECTION_PLACE_CD,
+                        M_STOCK_PLACE_LANG.STOCK_PLACE_CD,
+                        CASE
+                            WHEN TRIM(M_STOCK_PLACE_LANG.STOCK_PLACE_NAME) IS NULL
+                            THEN M_STOCK_PLACE_LANG_SYSTEM.STOCK_PLACE_NAME
+                            ELSE M_STOCK_PLACE_LANG.STOCK_PLACE_NAME
+                        END AS STOCK_PLACE_NAME
+                FROM
+                        M_STOCK_PLACE_LANG
+                LEFT JOIN
+                        M_STOCK_PLACE_LANG M_STOCK_PLACE_LANG_SYSTEM
+                    ON  M_STOCK_PLACE_LANG_SYSTEM.COMPANY_CD = M_STOCK_PLACE_LANG.COMPANY_CD
+                    AND M_STOCK_PLACE_LANG_SYSTEM.SECTION_PLACE_CD = M_STOCK_PLACE_LANG.SECTION_PLACE_CD
+                    AND M_STOCK_PLACE_LANG_SYSTEM.STOCK_PLACE_CD = M_STOCK_PLACE_LANG.STOCK_PLACE_CD
+                    AND M_STOCK_PLACE_LANG_SYSTEM.LANGUAGE_IND = '${@fw.common.util.AppUtil@getSysLanguageByEscapeSql()}'
+                WHERE
+                        M_STOCK_PLACE_LANG.LANGUAGE_IND = '${@fw.security.SecurityUtil@getCompanyUseLanguageIndByEscapeSql()}'
+        ) M_STOCK_PLACE_LANG_VALID
+            ON  M_STOCK_PLACE_LANG_VALID.COMPANY_CD = M_STOCK_PLACE.COMPANY_CD
+            AND M_STOCK_PLACE_LANG_VALID.SECTION_PLACE_CD = M_STOCK_PLACE.SECTION_PLACE_CD
+            AND M_STOCK_PLACE_LANG_VALID.STOCK_PLACE_CD = M_STOCK_PLACE.STOCK_PLACE_CD
+        LEFT JOIN
+                M_SECTION_PLACE
+            ON  M_SECTION_PLACE.COMPANY_CD = M_STOCK_PLACE.COMPANY_CD
+            AND M_SECTION_PLACE.SECTION_PLACE_CD = M_STOCK_PLACE.SECTION_PLACE_CD
+            AND '${@fw.common.util.AppUtil@getSysDate()}' BETWEEN M_SECTION_PLACE.VALID_START_DATE AND M_SECTION_PLACE.VALID_END_DATE
+            AND M_SECTION_PLACE.TERM_FLG = '0'
+        LEFT JOIN (
+                SELECT
+                        M_SECTION_PLACE_LANG.COMPANY_CD,
+                        M_SECTION_PLACE_LANG.SECTION_PLACE_CD,
+                        CASE
+                            WHEN TRIM(M_SECTION_PLACE_LANG.SECTION_PLACE_NAME) IS NULL
+                            THEN M_SECTION_PLACE_LANG_SYSTEM.SECTION_PLACE_NAME
+                            ELSE M_SECTION_PLACE_LANG.SECTION_PLACE_NAME
+                        END AS SECTION_PLACE_NAME
+                FROM
+                        M_SECTION_PLACE_LANG
+                LEFT JOIN
+                        M_SECTION_PLACE_LANG M_SECTION_PLACE_LANG_SYSTEM
+                    ON  M_SECTION_PLACE_LANG_SYSTEM.COMPANY_CD = M_SECTION_PLACE_LANG.COMPANY_CD
+                    AND M_SECTION_PLACE_LANG_SYSTEM.SECTION_PLACE_CD = M_SECTION_PLACE_LANG.SECTION_PLACE_CD
+                    AND M_SECTION_PLACE_LANG_SYSTEM.LANGUAGE_IND = '${@fw.common.util.AppUtil@getSysLanguageByEscapeSql()}'
+                WHERE
+                        M_SECTION_PLACE_LANG.LANGUAGE_IND = '${@fw.security.SecurityUtil@getCompanyUseLanguageIndByEscapeSql()}'
+        ) M_SECTION_PLACE_LANG_VALID
+            ON  M_SECTION_PLACE_LANG_VALID.COMPANY_CD = M_SECTION_PLACE.COMPANY_CD
+            AND M_SECTION_PLACE_LANG_VALID.SECTION_PLACE_CD = M_SECTION_PLACE.SECTION_PLACE_CD
+    </sql>
+
+
+    <select id="listKeyIdentity" parameterType ="fw.domain.options.stock.stockplace.StockPlacePopupSearchCondition" 
+        resultType="fw.domain.options.stock.stockplace.StockPlacePopupIdentify">
+       SELECT 
+            M_STOCK_PLACE.COMPANY_CD AS "companyCd",
+            M_STOCK_PLACE.SECTION_PLACE_CD AS "sectionPlaceCd",
+            M_STOCK_PLACE.STOCK_PLACE_CD AS "stockPlaceCd"
+        FROM
+        <include refid="listKeyIdentityFromTable"/>    
+        <where>
+            <include refid="listKeyIdentityWhereCondition"/>
+        </where> 
+         ORDER BY ${searchCondition.columnOrder.columnOrder()}
+    </select>
+
+    <select id="listPageItem" parameterType ="fw.domain.options.stock.stockplace.StockPlacePopupSearchCondition" 
+            resultType="fw.domain.options.stock.stockplace.StockPlacePopupItem">
+        SELECT 
+            M_STOCK_PLACE.STOCK_PLACE_CD AS "stockPlaceCd",
+            M_STOCK_PLACE_LANG_VALID.STOCK_PLACE_NAME AS "stockPlaceName",
+            M_STOCK_PLACE.SECTION_PLACE_CD AS "sectionPlaceCd",
+            M_SECTION_PLACE_LANG_VALID.SECTION_PLACE_NAME AS "sectionPlaceName"
+        FROM 
+            <include refid="listKeyIdentityFromTable"/>
+        <where>
+            <include refid="listKeyIdentityWhereCondition"/>
+            AND (M_STOCK_PLACE.COMPANY_CD, M_STOCK_PLACE.SECTION_PLACE_CD, M_STOCK_PLACE.STOCK_PLACE_CD) IN         
+            <foreach collection="searchCondition.page.keyDomainEntityList" item="keyList"  open="(" separator="," close=")">  
+                (#{keyList.companyCd}, #{keyList.sectionPlaceCd}, #{keyList.stockPlaceCd}) 
+            </foreach>
+        </where>
+        ORDER BY ${searchCondition.columnOrder.columnOrder()}
+    </select>
+    
+</mapper>

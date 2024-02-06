@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<flow xmlns="http://www.springframework.org/schema/webflow"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.springframework.org/schema/webflow
+        http://www.springframework.org/schema/webflow/spring-webflow-2.0.xsd"
+    parent="base">
+
+    <var name="dlFlg" class="java.lang.String" />
+
+    <input name="quotAcqReqIdentify" />
+    <input name="historyIdentify" />
+    <input name="isSearchByHistory" />
+    <input name="isSearchByAll" />
+    <input name="isSearchByHistoryAll" />
+
+   <decision-state id="isSearchByHistory">
+       <if test="isSearchByAll" then="searchByAll" />
+       <if test="isSearchByHistoryAll" then="searchByHistoryAll" />
+       <if test="isSearchByHistory" then="searchByHistory" else="searchByCondition" />
+   </decision-state>
+
+    <action-state id="searchByCondition">
+        <evaluate expression="PSREQ040Service.init(quotAcqReqIdentify)" result="flowScope.domain" />
+        <transition to="PSREQ040"/> 
+    </action-state>
+
+    <action-state  id="searchByHistory" >
+        <evaluate expression="PSREQ040Service.initFromHistory(historyIdentify.historySeq)" result="flowScope.domain" />
+        <transition to="PSREQ040"/>
+    </action-state>
+
+    <action-state id="searchByAll">
+        <evaluate expression="PSREQ040Service.initAll(quotAcqReqIdentify)" result="flowScope.domain" />
+        <transition to="PSREQ040">
+            <set name="dlFlg" value="true"/>
+        </transition>
+    </action-state>
+
+    <action-state  id="searchByHistoryAll" >
+        <evaluate expression="PSREQ040Service.initFromHistoryAll(historyIdentify.historySeq)" result="flowScope.domain" />
+        <transition to="PSREQ040">
+            <set name="dlFlg" value="true"/>
+        </transition>
+    </action-state>
+
+    <view-state id="PSREQ040" model="domain" view="req/est/PSREQ040">
+        <transition on="download" to="downloadIf" />
+        <transition on="downloadext" validate="false">
+            <evaluate expression="PSREQ040Service.downloadFileExt()"/>
+        </transition>
+    </view-state> 
+
+    <decision-state id="downloadIf">
+        <if test="dlFlg" then="PSREQ040_downloadAll" else="PSREQ040_download"/>
+    </decision-state>
+
+    <action-state id="PSREQ040_downloadAll" >
+        <evaluate expression="PSREQ040Service.downloadByteFileAll()"/>
+        <transition to="PSREQ040"/> 
+    </action-state> 
+
+    <action-state id="PSREQ040_download">
+        <evaluate expression="PSREQ040Service.downloadByteFile()"/>
+        <transition to="PSREQ040"/> 
+    </action-state> 
+</flow>

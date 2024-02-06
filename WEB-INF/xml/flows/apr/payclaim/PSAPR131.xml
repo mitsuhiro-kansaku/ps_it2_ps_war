@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<flow xmlns="http://www.springframework.org/schema/webflow"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.springframework.org/schema/webflow
+        http://www.springframework.org/schema/webflow/spring-webflow-2.0.xsd"
+    parent="base">
+
+    <var name="domain" class="fw.domain.slip.payreq.payreq.payclaimapp.PayClaimAppListItem" />
+    <var name="identify" class="fw.domain.slip.payreq.payreq.payreqinput.PayReqIdentify" />
+    <input name="searchCondition" />
+    <input name="isCurrentPageSearch" />
+    <input name="isQuickLink"/>
+    
+    <decision-state id="isSearchByKey">
+       <if test="flowScope.isCurrentPageSearch" then="searchByKey" else="searchByCondition" />
+    </decision-state>
+    
+    <action-state id="searchByCondition">
+    <evaluate expression="PSAPR131Service.init(searchCondition)" result="flowScope.itemList" />
+        <transition to="PSAPR131"/> 
+    </action-state>
+
+    <action-state  id="searchByKey" >
+        <evaluate expression="PSAPR131Service.page(searchCondition)" 
+        result="flowScope.itemList" />
+        <transition to="PSAPR131"/>
+    </action-state>
+
+    <view-state id="PSAPR131" view="apr/payclaim/PSAPR131" model="itemList">
+       <transition on="order" validate="false">
+            <evaluate expression="PSAPR131Service.order(searchCondition)" 
+                 result="flowScope.itemList" />
+        </transition>
+        <transition on="page" validate="false">
+             <evaluate expression="PSAPR131Service.page(searchCondition)" 
+                result="flowScope.itemList" /> 
+        </transition>
+        <transition on="packageApproval" validate="true" to="searchByKey">
+             <evaluate expression="PSAPR131Service.packageApproval(itemList)"/> 
+             <set name="flashScope.isSuccess" value="true"></set>
+        </transition>
+        
+        <!--個別承認 -->
+        <transition on="individualApprovalValidate" validate="true">
+         	<set name="identify.payReqSeq" value="requestParameters.paySeq"/><!-- 支払請求シーケンス番号 -->
+            <set name="identify.payNo" value="requestParameters.payNo"/><!-- 支払請求番号 -->
+            <set name="identify.lastUpdDate" value="requestParameters.lastUpdDate"/><!--最終更新日時 -->
+            <set name="flashScope.isShowApproval" value="true"/>
+        </transition>
+        
+        <transition on="individualApproval" to="PSAPR132" validate="false"/>
+        
+        <transition on="back" to="home" validate="false" />
+        <!-- 詳細 -->
+        <!-- 強化-00259-000 2013/04/03 DEL SBO_pangzhen START -->
+<!--         <transition on="detail" to="PSPAY050" validate="false" > -->
+<!--             <set name="identify.payReqSeq" value="requestParameters.paySeq"/>支払請求シーケンス番号 -->
+<!--             <set name="identify.lastUpdDate" value="requestParameters.lastUpdDate"/>最終更新日時 -->
+<!--         </transition> -->
+        <!-- 強化-00259-000 2013/04/03 DEL SBO_pangzhen -END- -->
+        <!-- 強化-00259-000 2013/04/03 ADD SBO_pangzhen START -->
+        <transition on="detailValidate" validate="false" >
+            <set name="identify.payReqSeq" value="requestParameters.paySeq"/><!-- 支払請求シーケンス番号 -->
+            <set name="identify.lastUpdDate" value="requestParameters.lastUpdDate"/><!--最終更新日時 -->
+            <set name="flashScope.isShowDetail" value="true"/>
+        </transition>
+        <transition on="detail" to="PSPAY050" validate="false" />
+        <!-- 強化-00259-000 2013/04/03 ADD SBO_pangzhen -END- -->
+    </view-state>
+    
+    <!--個別承認 -->
+    <subflow-state id="PSAPR132" subflow="apr/payclaim/PSAPR132" >
+        <input name="payReqIdentify" value="identify" />
+        <input name="isInitIndividualApr" value="true" />
+        <input name="SessionKey" value="SessionKey" />
+        <input name="searchCondition" value="searchCondition.getSearchCondition()"/>
+    </subflow-state>
+    <!-- 詳細 -->
+    <subflow-state id="PSPAY050" subflow="pay/claim/PSPAY050TOP">
+        <input name="payReqIdentify" value="identify" />
+    </subflow-state>
+</flow>

@@ -1,0 +1,135 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="ps.dataaccess.options.budget.popup.ringi.RingiBudgetDetailPopupMapper">
+
+    <sql id="listKeyIdentityWhereCondition">
+            AND T_RINGI_BUDGET.COMPANY_CD = #{companyCd, jdbcType=VARCHAR}
+            AND T_RINGI_BUDGET.SECTION_PLACE_CD = #{sectionPlaceCd, jdbcType=VARCHAR} 
+            AND T_RINGI_BUDGET_DTL.BUDGET_DTL_NO = #{budgetDtlNo} 
+         <if test="searchComp==0">
+            AND (T_RINGI_BUDGET.END_DATE IS NULL OR T_RINGI_BUDGET.END_DATE &gt; '${@fw.common.util.AppUtil@getSysDate()}') 
+        </if>
+        <if test="searchComp==1">
+            AND (T_RINGI_BUDGET.END_DATE IS NOT NULL AND T_RINGI_BUDGET.END_DATE &lt;= '${@fw.common.util.AppUtil@getSysDate()}')
+        </if>
+        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(searchCondition.termFlg)">
+            AND T_RINGI_BUDGET.AUTO_DELETE_FLG = #{searchCondition.termFlg, jdbcType=VARCHAR} 
+            AND T_RINGI_BUDGET_DTL.AUTO_DELETE_FLG = #{searchCondition.termFlg, jdbcType=VARCHAR} 
+        </if>
+    </sql>
+
+    <sql id="budgetnoPopupSearchConditionJoin">
+        INNER JOIN T_RINGI_BUDGET 
+            ON T_RINGI_BUDGET.COMPANY_CD = T_RINGI_BUDGET_DTL.COMPANY_CD 
+            AND T_RINGI_BUDGET.SECTION_PLACE_CD = T_RINGI_BUDGET_DTL.SECTION_PLACE_CD 
+            AND T_RINGI_BUDGET.BUDGET_NO = T_RINGI_BUDGET_DTL.BUDGET_NO
+		LEFT JOIN (SELECT T_RINGI_RESULTS_W.COMPANY_CD, 
+		                         T_RINGI_RESULTS_W.SECTION_PLACE_CD, 
+		                         T_RINGI_RESULTS_W.BUDGET_NO,
+		                         T_RINGI_RESULTS_W.BUDGET_DTL_NO,
+		                         Sum(Nvl(T_RINGI_RESULTS_W.ACCEPT_SUM_AMOUNT, 0)) AS  ACCEPT_SUM, 
+		                         Sum(Nvl(T_RINGI_RESULTS_W.PUR_REQ_SUM_AMOUNT, 0)) AS PUR_REQ_SUM, 
+		                         Sum(Nvl(T_RINGI_RESULTS_W.ORDER_DIFF_SUM_AMOUNT, 0)) AS ORDER_DIFF_SUM 
+		                  FROM   T_RINGI_RESULTS t_RINGI_RESULTS_W 
+		                  GROUP  BY T_RINGI_RESULTS_W.COMPANY_CD, 
+		                            T_RINGI_RESULTS_W.SECTION_PLACE_CD, 
+		                            T_RINGI_RESULTS_W.BUDGET_NO,
+		                            T_RINGI_RESULTS_W.BUDGET_DTL_NO) T_RINGI_RESULTS 
+		              ON T_RINGI_BUDGET_DTL.COMPANY_CD = T_RINGI_RESULTS.COMPANY_CD 
+		                 AND T_RINGI_BUDGET_DTL.SECTION_PLACE_CD = T_RINGI_RESULTS.SECTION_PLACE_CD 
+		                 AND T_RINGI_BUDGET_DTL.BUDGET_NO = T_RINGI_RESULTS.BUDGET_NO
+		                 AND T_RINGI_BUDGET_DTL.BUDGET_DTL_NO = T_RINGI_RESULTS.BUDGET_DTL_NO
+    </sql>
+
+    <resultMap type="fw.domain.options.budget.popup.ringi.RingiBudgetDetailPopupIdentify" 
+        id="RingibudgetdtlIdentify_Map">
+        <id column="COMPANY_CD" property="companyCd" />
+        <id column="SECTION_PLACE_CD" property="sectionPlaceCd" />
+        <id column="BUDGET_NO" property="budgetNo" />
+        <id column="BUDGET_DTL_NO" property="budgetDtlNo" />
+        <id column="LAST_UPD_DATE" property="lastUpdDate" />
+    </resultMap>
+    <select id="listKeyIdentity" parameterType="fw.domain.mst.ringi.ringibudgetdtl.BudgetnoPopupSearchCondition"
+        resultMap="RingibudgetdtlIdentify_Map">
+        SELECT
+            T_RINGI_BUDGET_DTL.COMPANY_CD 
+            , T_RINGI_BUDGET_DTL.SECTION_PLACE_CD 
+            , T_RINGI_BUDGET_DTL.BUDGET_NO 
+            , T_RINGI_BUDGET_DTL.BUDGET_DTL_NO 
+            , T_RINGI_BUDGET_DTL.LAST_UPD_DATE 
+            , T_RINGI_BUDGET_DTL.BUDGET_AMOUNT
+            , NVL(T_RINGI_BUDGET_DTL.BUDGET_AMOUNT, 0) - NVL(T_RINGI_RESULTS.PUR_REQ_SUM, 0) + NVL(T_RINGI_RESULTS.ORDER_DIFF_SUM, 0) AS BUDGET_BAL_EST
+            , NVL(T_RINGI_RESULTS.ACCEPT_SUM, 0)   AS ACCEPT_SUM
+            , T_RINGI_BUDGET.RIN_TOTAL_CHK_IND  AS TOTAL_CHK
+        FROM
+            T_RINGI_BUDGET_DTL 
+        <include refid="budgetnoPopupSearchConditionJoin"/>
+        <where>
+            <include refid="listKeyIdentityWhereCondition"/>
+        </where> 
+         ORDER BY ${searchCondition.columnOrder.columnOrder()}
+    </select>
+
+    <resultMap type="fw.domain.options.budget.popup.ringi.RingiBudgetDetailPopupItem" 
+        id="BudgetnoPopupItem_Map">
+        <id column="COMPANY_CD" property="ringibudgetdtlIdentify.companyCd" />
+        <id column="SECTION_PLACE_CD" property="ringibudgetdtlIdentify.sectionPlaceCd" />
+        <id column="BUDGET_NO" property="ringibudgetdtlIdentify.budgetNo" />
+        <id column="BUDGET_DTL_NO" property="ringibudgetdtlIdentify.budgetDtlNo" />
+        <id column="LAST_UPD_DATE" property="ringibudgetdtlIdentify.lastUpdDate" />
+        <id column="BUDGET_NAME" property="budgetName" />
+        <id column="SUBJECT_CD" property="subjectCode" />
+        <id column="SUBJECT_NAME" property="subjectName" />
+        <id column="PERMIT_DATE" property="permitDate.dateOfymd" />
+        <id column="END_DATE" property="endDate.dateOfymd" />
+        <id column="END_EXP_DATE" property="endExpDate.dateOfymd" />
+        <id column="BUDGET_AMOUNT" property="budgetAmount.amount" />
+        <id column="ACCEPT_SUM" property="acceptSumAmount.amount" />
+        <id column="BUDGET_BAL_EST" property="budgetBalEstAmount.amount" />
+        <id column="TOTAL_CHK" property="totalChkInd" />
+        <id column="CURRENCY_CD" property="currencyCode" />
+    </resultMap>
+    <select id="listPageItem" parameterType="fw.domain.mst.ringi.ringibudgetdtl.BudgetnoPopupSearchCondition"
+        resultMap="BudgetnoPopupItem_Map">
+        SELECT
+              T_RINGI_BUDGET_DTL.COMPANY_CD 
+            , T_RINGI_BUDGET_DTL.SECTION_PLACE_CD 
+            , T_RINGI_BUDGET_DTL.BUDGET_NO 
+            , T_RINGI_BUDGET_DTL.BUDGET_DTL_NO 
+            , T_RINGI_BUDGET_DTL.LAST_UPD_DATE 
+            , T_RINGI_BUDGET_DTL.BUDGET_NAME
+            , T_RINGI_BUDGET_DTL.SUBJECT_CD
+            , T_RINGI_BUDGET_DTL.SUBJECT_NAME
+            , T_RINGI_BUDGET.PERMIT_DATE 
+            , T_RINGI_BUDGET.END_DATE
+            , T_RINGI_BUDGET.END_EXP_DATE
+            , T_RINGI_BUDGET_DTL.BUDGET_AMOUNT
+            , NVL(T_RINGI_BUDGET_DTL.BUDGET_AMOUNT, 0) - NVL(T_RINGI_RESULTS.PUR_REQ_SUM, 0) + NVL(T_RINGI_RESULTS.ORDER_DIFF_SUM, 0) AS BUDGET_BAL_EST
+            , NVL(T_RINGI_RESULTS.ACCEPT_SUM, 0)   AS ACCEPT_SUM
+            , T_RINGI_BUDGET.RIN_TOTAL_CHK_IND  AS TOTAL_CHK
+            , T_RINGI_BUDGET.CURRENCY_CD
+        FROM
+            T_RINGI_BUDGET_DTL 
+        <include refid="budgetnoPopupSearchConditionJoin"/>
+        <where>
+            (
+                T_RINGI_BUDGET_DTL.COMPANY_CD
+                , T_RINGI_BUDGET_DTL.SECTION_PLACE_CD
+                , T_RINGI_BUDGET_DTL.BUDGET_NO
+                , T_RINGI_BUDGET_DTL.BUDGET_DTL_NO
+            ) in
+            <foreach collection="searchCondition.page.keyDomainEntityList" item="keyList" open="(" separator="," close=")">
+                (
+                    #{keyList.companyCd}
+                    , #{keyList.sectionPlaceCd}
+                    , #{keyList.budgetNo}
+                    , #{keyList.budgetDtlNo}
+                )
+            </foreach>
+            <include refid="listKeyIdentityWhereCondition"/>
+        </where>
+        ORDER BY ${searchCondition.columnOrder.columnOrder()}
+    </select>
+</mapper>

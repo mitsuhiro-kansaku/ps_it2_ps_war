@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="ps.dataaccess.ajax.SupplierOnblurMapper">
+
+    <select id="getSupplierInfoOnBlur"
+            resultType="fw.domain.mst.supplier.supplier.SupplierPopupItem">
+        SELECT M_SUPPLIER.COMPANY_CD as "supplierIdentify.companyCd",
+               M_SUPPLIER.SUP_CD as "supplierIdentify.supCd",
+               M_SUPPLIER.LAST_UPD_DATE as "supplierIdentify.lastUpdDate",
+               CASE WHEN M1.SUP_NAME IS NOT NULL
+                    THEN M1.SUP_NAME
+                    ELSE M2.SUP_NAME
+                     END
+                      AS "supName",
+               CASE WHEN M1.SUP_ABBR_NAME IS NOT NULL
+                    THEN M1.SUP_ABBR_NAME
+                    ELSE M2.SUP_ABBR_NAME
+                     END
+                      AS "supAbbrName",
+               CASE WHEN M1.ADDRESS1 IS NOT NULL
+                    THEN M1.ADDRESS1
+                    ELSE M2.ADDRESS1
+                     END
+                      AS "address1",
+               CASE WHEN M1.ADDRESS2 IS NOT NULL
+                    THEN M1.ADDRESS2
+                    ELSE M2.ADDRESS2
+                     END
+                      AS "address2",
+               CASE WHEN M1.SUP_PERSON_NAME IS NOT NULL
+                    THEN M1.SUP_PERSON_NAME
+                    ELSE M2.SUP_PERSON_NAME
+                     END
+                      AS "supPersonName",
+               M_SUPPLIER.EDI_IND as "ediInd",
+               M_SUPPLIER.FAX_NO as "faxNo",
+               M_SUPPLIER.TEL_NO as "telNo",
+               M_SUPPLIER.ZIP_CD as "postalCode",
+               M_SUPPLIER.SUBCON_IND as "subconInd",
+               M_SUPPLIER.VENDOR_CD as "vendorCd",
+               M_SUPPLIER.BANK_CD as "bankCd",
+               M_SUPPLIER.BANK_NAME as "bankName",
+               M_SUPPLIER.ACCOUNT_TYPE as "accountType",
+               M_SUPPLIER.ACCOUNT_NO as "accountNo",
+               M_SUPPLIER.ACCOUNT_NAME as "accountName",
+               M_SUPPLIER.BRANCH_CD as "branchCd",
+               M_SUPPLIER.BRANCH_NAME as "branchName",
+               M_SUPPLIER.PAY_CONDITION_CD as "payConditonCd",
+               M_SUPPLIER.BASE_CURRENCY_CD as currencyCd
+          FROM M_SUPPLIER
+          LEFT JOIN M_SUPPLIER_LANG M1
+                 ON M_SUPPLIER.COMPANY_CD = M1.COMPANY_CD
+                AND M_SUPPLIER.SUP_CD = M1.SUP_CD
+                AND M1.LANGUAGE_IND = '${@fw.security.SecurityUtil@getCompanyUseLanguageIndByEscapeSql()}'  
+          LEFT JOIN M_SUPPLIER_LANG M2
+                 ON M_SUPPLIER.COMPANY_CD = M2.COMPANY_CD
+                AND M_SUPPLIER.SUP_CD = M2.SUP_CD
+                AND M2.LANGUAGE_IND = '${@fw.common.util.AppUtil@getSysLanguageByEscapeSql()}'
+         WHERE '${@fw.common.util.AppUtil@getSysDate(@fw.common.util.AppUtil@DATE_SHORT)}' BETWEEN M_SUPPLIER.VALID_START_DATE AND M_SUPPLIER.VALID_END_DATE
+           AND (M_SUPPLIER.COMPANY_CD = #{companyCd, jdbcType=VARCHAR}
+            OR M_SUPPLIER.COMPANY_CD = '${@fw.common.constant.ApplicationConstant@COMPANY_CD_ALL}')
+           AND M_SUPPLIER.SUP_CD = #{supCd}
+           <if test="@org.apache.commons.lang.StringUtils@isNotBlank(termFlag) and termFlag==0">
+           AND M_SUPPLIER.TERM_FLG = #{termFlag, jdbcType=VARCHAR}
+           </if>
+    </select>
+</mapper>

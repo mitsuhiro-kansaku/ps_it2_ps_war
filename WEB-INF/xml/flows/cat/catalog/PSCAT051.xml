@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<flow xmlns="http://www.springframework.org/schema/webflow"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.springframework.org/schema/webflow
+        http://www.springframework.org/schema/webflow/spring-webflow-2.0.xsd"
+    parent="base">
+    
+    <var name="catalogIdentify" class="fw.domain.slip.purreq.purreqcatalog.CatalogIdentify" />
+    <input name="searchCondition" />
+    <input name="isCurrentPageSearch" />
+    
+    <decision-state id="isSearchByKey">
+       <if test="flowScope.isCurrentPageSearch" then="searchByKey" else="searchByCondition" />
+    </decision-state>
+    
+    <action-state id="searchByCondition">
+        <evaluate expression="PSCAT051Service.init(searchCondition)" result="flowScope.itemList" />
+        <transition to="PSCAT051"/> 
+    </action-state>
+
+    <action-state  id="searchByKey" >
+        <evaluate expression="PSCAT051Service.page(searchCondition)" result="flowScope.itemList" />
+        <transition to="PSCAT051"/>
+    </action-state>
+     
+    <view-state id="PSCAT051" view="cat/catalog/PSCAT051" model="catalogIdentify">
+        <transition on="page" validate="false">
+            <evaluate expression="PSCAT051Service.page(searchCondition)"
+                result="flowScope.itemList" />
+        </transition>
+        <transition on="order" validate="false">
+            <evaluate expression="PSCAT051Service.order(searchCondition)"
+                result="flowScope.itemList" />
+        </transition>
+        <transition on="back" to="home" validate="false" />
+         
+        <!-- ＩＴ３-00081-000 2013/06/14 ADD SBO_CHENCHENG START -->
+        <transition on="editValidate" validate="false">
+            <set name="flashScope.isShowEdit" value="true" />
+        </transition>
+        <!-- ＩＴ３-00081-000 2013/06/14 ADD SBO_CHENCHENG -END- -->
+        <transition on="edit" to="PSCAT020Update" validate="true" >
+        </transition>
+        <!-- 強化-00675-000 2013/03/26 ADD SBO_KANGJW START -->
+        <transition on="applyAgainValidate" validate="false">
+            <set name="flashScope.isShowApplyAgain" value="true" />
+        </transition>
+        <!-- 強化-00675-000 2013/03/26 ADD SBO_KANGJW END -->
+        <transition on="applyAgain" to="PSCAT020Correct" validate="true" >
+        </transition>
+        <transition on="applyCancel" validate="false" to="searchByKey">
+	       <evaluate expression="PSCAT051Service.applyCancel(catalogIdentify)"/>
+	       <set name="flashScope.isApplyCancel" value="true"></set>
+        </transition>
+        <transition on="delete" validate="false" to="searchByKey">
+	       <evaluate expression="PSCAT051Service.delete(catalogIdentify)"/>
+	       <set name="flashScope.isDelete" value="true"></set>
+        </transition>
+        <transition on="detailValidate" validate="true">
+            <set name="flashScope.isShowDetail" value="true"></set>
+        </transition>
+        <transition on="detail" to="PSCAT040TOP" validate="false" />
+    </view-state>
+    
+    <subflow-state id="PSCAT020Update" subflow="cat/catalog/PSCAT020Update" >
+        <input name="catalogIdentify" value="catalogIdentify" />
+        <input name="fromPattern" value="'List'" />
+    </subflow-state>
+    
+    <subflow-state id="PSCAT020Correct" subflow="cat/catalog/PSCAT020Correct" >
+        <input name="catalogIdentify" value="catalogIdentify" />
+        <input name="fromPattern" value="'List'" />
+        <input name="SessionKey" value="SessionKey" />
+    </subflow-state>
+    
+    <subflow-state id="PSCAT040TOP" subflow="cat/catalog/PSCAT040TOP" >
+        <input name="catalogIdentify" value="catalogIdentify" />
+    </subflow-state>
+
+</flow> 

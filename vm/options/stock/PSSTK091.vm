@@ -1,0 +1,260 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<title>#customSpringMessage('INVENTORY_SETTLE_LIST')</title><!--棚卸決済一覧-->
+<meta http-equiv="Content-type" content="text/html; charset=UTF-8">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Content-script-type" content="text/javascript">
+<link id="CSS_FONT" rel="stylesheet" href="../../include/FontS.css" type="text/css">
+<link rel="stylesheet" href="../../include/Layout.css" type="text/css">
+<link rel="stylesheet" href="../../include/Color.css" type="text/css">
+<link rel="stylesheet" href="../../include/ime.css" type="text/css">
+<script language="javascript" type="text/javascript" src="../../include/common.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/check.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/date.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/tablesort.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/jquery-1.7.2.min.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/jquery.tablefix.js"></script>
+<script language="javascript" type="text/javascript">
+<!--
+#set($updateGrant = $LoginUser.hasAuth(${AuthNoConstant.getValue("INVENTORY_UPDATE_GRANT")}))## 棚卸更新権限
+#parse("./common/common_js.vm")
+## ビューが初めて表示される直前に発生します。
+function onLoad(){
+    parentButtonEnable();
+    dataLoadHasPage();
+#if($!itemList.inventorySettleItemList && $!itemList.inventorySettleItemList.size() > 0)
+    setControlEnabled();
+#end
+    var alertMessage="$!alertMessage";
+    if(alertMessage!=""){
+        buttonUsableForList(alertMessage);
+        alert(alertMessage);
+    }
+    var isStartSuccess="#jsEscape($!isStartSuccess)";
+    if(isStartSuccess=="true"){
+        #set($params=["#customSpringMessage('INVENTORY_SETTLE')"])
+        alert("#customMessageArgs('I601',$params)");
+        return;
+    }
+    var isCancelSuccess="#jsEscape($!isCancelSuccess)";
+    if(isCancelSuccess=="true"){
+        #set($params=["#customSpringMessage('SETTLE_CANCEL')"])
+        alert("#customMessageArgs('I601',$params)");
+        return;
+    }
+}
+## 各コントロールの表示/非表示を設定します。
+function setControlEnabled(){
+    var body="#TABLE > tbody > ";
+    if($('#bodyTableDiv').length!=0){
+        body="#bodyTableDiv > table > tbody > ";
+    }
+    $(body+'tr:[id^=Row_]').each(function(index){
+        ## エラー発生時に選択色が元に戻るため、再設定する
+        var checkbox=$('input:[type=checkbox][name=status_'+index+']');
+        if(!$(checkbox)[0]){ return true; }
+        if($(checkbox).prop('disabled')){ return; }
+        if($(checkbox).prop('checked')){
+            $(this).css('background-color','#ff9');
+        }
+    });
+    if($updateGrant){ ## 編集可
+        $('#settle',parent.document).css('display','');
+        $('#cancel',parent.document).css('display','');
+    }else{ ## 編集不可
+        $('#settle',parent.document).css('display','none');
+        $('#cancel',parent.document).css('display','none');
+    }
+}
+## 全選択/全選択解除をクリックしたとき発生します。
+$(function(){
+    $(document).delegate('#ParentCheckBox','change',function(){
+        if($(this).prop('disabled')){ return; }
+        var checked = $(this).prop('checked');
+        var body="#TABLE > tbody > ";
+        if($('#bodyTableDiv').length!=0){
+            body="#bodyTableDiv > table > tbody > ";
+        }
+        $(body+'tr:[id^=Row_]').each(function(index){
+            var checkbox=$('input:[type=checkbox][name=status_'+index+']');
+            if(!$(checkbox)[0]){ return true; }
+            var status;
+            if(checked){
+                $('tr:[id=Row_'+index+']').css('background-color','#ff9');
+                status = "1";
+            }else{
+                $('tr:[id=Row_'+index+']').css('background-color','');
+                status = "0";
+            }
+            getObj("inventorySettleItemList["+index+"].checkStatus").value=status;
+            $(checkbox).prop('checked',checked);
+        });
+    });
+});
+## 選択/選択解除ボタンをクリックしたとき発生します。
+function checkboxOnClick(obj,index){
+    if(obj.disabled){ return; }
+    var status;
+    if(obj.checked){
+        $('tr:[id=Row_'+index+']').css('background-color','#ff9');
+        status = "1";
+    }else{
+        $('tr:[id=Row_'+index+']').css('background-color','');
+        status = "0";
+    }
+    getObj("inventorySettleItemList["+index+"].checkStatus").value=status;
+}
+## 「棚卸決済」ボタンをクリックしたときに発生します。
+function doSettle(){
+    var count=0;
+    $("input:[type=checkbox][name^=status_]").each(function(){
+        if($(this).prop("checked"))
+            count++;
+    });
+    if(count==0){
+        alert("#nothingSelectedMessage()");
+    }else{
+        #set($params = ["#customSpringMessage('INVENTORY_SETTLE')","#customSpringMessage('ACTION_RUN')"]);
+        if(!confirm("#customMessageArgs('W001',$params)")){
+            return;
+        }
+        buttonDisable();
+        parentButtonDisable();
+        getObj("BodyForm").action="${flowExecutionUrl}&_eventId=settle";
+        getObj("BodyForm").submit();
+    }
+}
+## 「決済取消」ボタンをクリックしたときに発生します。
+function doCancel(){
+    var count=0;
+    $("input:[type=checkbox][name^=status_]").each(function(){
+        if($(this).prop("checked"))
+            count++;
+    });
+    if(count==0){
+        alert("#nothingSelectedMessage()");
+    }else{
+        #set($params = ["#customSpringMessage('SETTLE_CANCEL')","#customSpringMessage('ACTION_RUN')"]);
+        if(!confirm("#customMessageArgs('W001',$params)")){
+            return;
+        }
+        buttonDisable();
+        parentButtonDisable();
+        getObj("BodyForm").action="${flowExecutionUrl}&_eventId=cancel";
+        getObj("BodyForm").submit();
+    }
+}
+//-->
+</script>
+</head>
+<body id="BODY" topmargin="0" leftmargin="0" marginwidth="0" marginheight="0" align="left" onload="onLoad();setTablefix('#TABLE',1,2+$!PSSTK091PageCreaterForList.printLockColumn());">
+#if($!errorMessage && $!errorMessage != "")
+<div id="error" class="error">
+    $!errorMessage
+</div>
+#end
+#if($!itemList.inventorySettleItemList && $!itemList.inventorySettleItemList.size() > 0)
+<form id="BodyForm" name="BodyForm" method="post">
+    <table id="TABLE" class="ListArea" width="100%">
+        <thead>
+            <tr id="Header">
+                <th class="BoxHeaderCenter FontSmall" width="5%">No.<!--No.--></th>
+                <th id="CheckCol_H" label="chk" class="BoxHeaderCenter FontSmall" width="5%">
+                    <input name="ParentCheckBox" id="ParentCheckBox" type="checkbox"><!--全選択/全選択解除-->
+                </th>
+                #foreach($!item in $!PSSTK091PageCreaterForList.getItemListForBody())
+                    #set($currentOneColumnFlag = $!PSSTK091PageCreaterForList.getOneColumnFlag($!item))
+                    #if($velocityCount == 0)
+                        $!PSSTK091PageCreaterForList.printTHtag($!item,'class="BoxHeaderCenter FontSmall"')
+                    #elseif($currentOneColumnFlag)
+                        $!PSSTK091PageCreaterForList.printBRtag($!item)
+                    #else
+                        $!PSSTK091PageCreaterForList.printTHtagClose()
+                        $!PSSTK091PageCreaterForList.printTHtag($!item,'class="BoxHeaderCenter FontSmall"')
+                    #end
+                    #if($!item.getColumnName() == "T_INVENTORY.INV_STATUS")
+                        $!PSSTK091PageCreaterForList.printHead($!item)
+                    #elseif($!item.getColumnName() == "T_INVENTORY.INV_YEAR_MONTH")
+                        $!PSSTK091PageCreaterForList.printHead($!item)
+                    #elseif($!item.getColumnName() == "T_INVENTORY.COMPANY_CD")
+                        $!PSSTK091PageCreaterForList.printHead($!item)
+                    #elseif($!item.getColumnName() == "T_INVENTORY.COMPANY_NAME")
+                        $!PSSTK091PageCreaterForList.printHead($!item)
+                    #elseif($!item.getColumnName() == "T_INVENTORY.SECTION_PLACE_CD")
+                        $!PSSTK091PageCreaterForList.printHead($!item)
+                    #elseif($!item.getColumnName() == "T_INVENTORY.SECTION_PLACE_NAME")
+                        $!PSSTK091PageCreaterForList.printHead($!item)
+                    #elseif($!item.getColumnName() == "T_INVENTORY.STOCK_PLACE_CD")
+                        $!PSSTK091PageCreaterForList.printHead($!item)
+                    #elseif($!item.getColumnName() == "T_INVENTORY.STOCK_PLACE_NAME")
+                        $!PSSTK091PageCreaterForList.printHead($!item)
+                    #else
+                        $!PSSTK091PageCreaterForList.printHead($!item)
+                    #end
+                #end
+                $!PSSTK091PageCreaterForList.printTHtagClose()
+            </tr>
+        </thead>
+        <tbody>
+        #foreach($!item in $!itemList.inventorySettleItemList)
+            <tr id="Row_$foreach.index" name="Row_$foreach.index" #if($foreach.index % 2 == 0) bgcolor="#dce4ef" #else bgcolor="#ffffff" #end>
+                #set($isCheckable=$!item.checkable)
+                <td class="BoxDetailCenter FontList">$foreach.count</td>
+                <td id="CheckCol_$foreach.index" class="BoxDetailCenter FontList"><!--選択-->
+                  #if($isCheckable)
+                    <input type="checkbox" class="Icon" name="status_$foreach.index" onclick="checkboxOnClick(this,$foreach.index);" #if($!item.checkStatus == '1') checked #end>
+                    #customFormHiddenInput("inventorySettleItemList[$foreach.index].checkStatus" "$!item.checkStatus")
+                  #end
+                </td>
+                #foreach($!item in $!PSSTK091PageCreaterForList.getItemListForBody($velocityCount))
+                    #set($currentOneColumnFlag = $!PSSTK091PageCreaterForList.getOneColumnFlag($!item))
+                    #if($velocityCount == 0)
+                        $!PSSTK091PageCreaterForList.printTDtag('class="BoxDetailLeft FontList"')
+                    #elseif(!$currentOneColumnFlag)
+                        $!PSSTK091PageCreaterForList.printTDtagClose()
+                        $!PSSTK091PageCreaterForList.printTDtag('class="BoxDetailLeft FontList"')
+                    #end
+                    #if($!item.getColumnName() == "T_INVENTORY.INV_STATUS")
+                        $!PSSTK091PageCreaterForList.printSpecial("s25_codeName", $!item
+                            , 'INV_STATUS_IND', ''
+                            , "_data_style", 'class="FontStatus" align="center"'
+                        )
+                    #elseif($!item.getColumnName() == "T_INVENTORY.INV_YEAR_MONTH")
+                        $!PSSTK091PageCreaterForList.printDefault($!item
+                            , "_data_style", 'align="center"'
+                        )
+                    #elseif($!item.getColumnName() == "T_INVENTORY.COMPANY_CD")
+                        $!PSSTK091PageCreaterForList.printDefault($!item
+                            , "_data_style", 'align="center"'
+                        )
+                    #elseif($!item.getColumnName() == "T_INVENTORY.COMPANY_NAME")
+                        $!PSSTK091PageCreaterForList.printDefault($!item)
+                    #elseif($!item.getColumnName() == "T_INVENTORY.SECTION_PLACE_CD")
+                        $!PSSTK091PageCreaterForList.printDefault($!item
+                            , "_data_style", 'align="center"'
+                        )
+                    #elseif($!item.getColumnName() == "T_INVENTORY.SECTION_PLACE_NAME")
+                        $!PSSTK091PageCreaterForList.printDefault($!item)
+                    #elseif($!item.getColumnName() == "T_INVENTORY.STOCK_PLACE_CD")
+                        $!PSSTK091PageCreaterForList.printDefault($!item
+                            , "_data_style", 'align="center"'
+                        )
+                    #elseif($!item.getColumnName() == "T_INVENTORY.STOCK_PLACE_NAME")
+                        $!PSSTK091PageCreaterForList.printDefault($!item)
+                    #else
+                        $!PSSTK091PageCreaterForList.printDefault($!item)
+                    #end
+                #end
+                $!PSSTK091PageCreaterForList.printTDtagClose()
+            </tr>
+        #end
+        </tbody>
+    </table>
+</form>
+#end
+<br>
+<table id="WAIT" class="NoBorder" style="display:none;width:100%;"><tr><td style="text-align:center;"><br><br>
+<img src="../../image/wait.gif"><br><span class="FontMini"><br>#customSpringMessage('SEARCH_MESSAGE')<!--問い合わせ中...--></span></td></tr></table>
+</body>
+</html>

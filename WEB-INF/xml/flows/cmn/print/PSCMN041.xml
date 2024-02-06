@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<flow xmlns="http://www.springframework.org/schema/webflow"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.springframework.org/schema/webflow
+        http://www.springframework.org/schema/webflow/spring-webflow-2.0.xsd"
+    parent="base">
+    
+    <var name="printIdentify" class="fw.domain.slip.businesscommon.print.printlist.PrintIdentify" />
+    
+    <input name="searchCondition" />
+    <input name="isCurrentPageSearch" />
+    <input name="reportNameList" />
+    
+    <decision-state id="isSearchByKey">
+       <if test="flowScope.isCurrentPageSearch" then="searchByKey" else="searchByCondition" />
+    </decision-state>
+    
+    <action-state id="searchByCondition">
+        <evaluate expression="PSCMN041Service.init(searchCondition)" result="flowScope.itemList" />
+        <transition to="PSCMN041"/> 
+    </action-state>
+
+    <action-state  id="searchByKey" >
+        <evaluate expression="PSCMN041Service.page(searchCondition)" result="flowScope.itemList" />
+        <transition to="PSCMN041"/>
+    </action-state>
+     
+    <view-state id="PSCMN041" view="cmn/print/PSCMN041" model="itemList">
+        <!-- クリックすると項目でソート -->
+        <transition on="sort" validate="false">
+            <evaluate expression="PSCMN041Service.sort(searchCondition)"
+                result="flowScope.itemList" />
+        </transition>
+        
+        <transition on="page" validate="false">
+            <evaluate expression="PSCMN041Service.page(searchCondition)"
+                result="flowScope.itemList" />
+        </transition>
+        
+        <transition on="back" to="home" validate="false" />
+         
+        <transition on="detailValidate" validate="true">
+            <set name="flashScope.isShowDetail" value="true" />
+        </transition>
+        
+    </view-state>
+    
+</flow> 

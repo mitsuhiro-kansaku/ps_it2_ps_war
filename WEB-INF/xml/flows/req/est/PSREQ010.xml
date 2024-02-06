@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<flow xmlns="http://www.springframework.org/schema/webflow"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.springframework.org/schema/webflow
+        http://www.springframework.org/schema/webflow/spring-webflow-2.0.xsd"
+parent="base">
+
+    <input name="pattern" />
+    <input name="quotAcqAplSeq" />
+    <input name="identify" />
+    <input name="isInitIndividualApr" />
+    <input name="SessionKey" />
+    
+    <decision-state id="isInitIndividualApr">
+    <!-- 強化-01278-000 2013/05/27 DEL SBO_pangzhen START -->
+    <!-- <if test="flowScope.isInitIndividualApr" then="initDetail" else="back" /> -->
+    <!-- 強化-01278-000 2013/05/27 DEL SBO_pangzhen -END- -->
+    <!-- 強化-01278-000 2013/05/27 ADD SBO_pangzhen START -->
+        <if test="flowScope.isInitIndividualApr == null or flowScope.isInitIndividualApr" then="initDetail" else="back" />
+    <!-- 強化-01278-000 2013/05/27 ADD SBO_pangzhen -END- -->
+    </decision-state>
+    
+    <action-state id="initDetail">
+       
+        <evaluate expression="PSREQ010Service.init(identify)" result="flowScope.domain" />
+        <transition to="PSREQ010"/> 
+    </action-state>
+
+	 <view-state id="PSREQ010" model="domain" view="req/est/PSREQ010">
+	    <transition on="addDetail" validate="false">
+            <evaluate expression="PSREQ010Service.addDetail(domain)" />
+        </transition>
+        
+        <transition on="deleteDetail" validate="false">
+            <evaluate
+                expression="PSREQ010Service.delDetail(domain, requestParameters.detailIndex)" />
+        </transition>
+        <transition on="download" validate="false">
+            <evaluate
+                expression="PSREQ010Service.downloadByteFile(domain, requestParameters.seqNo,requestParameters.index, requestParameters.detailindex)" />
+        </transition>
+        <transition on="downloadext" validate="false">
+            <evaluate expression="PSREQ010Service.downloadFileExt()" />
+        </transition>
+       
+        <transition on="tempSave" validate="true">
+            <evaluate expression="PSREQ010Service.tempSave(domain)" />
+            <set name="flashScope.isTempSuccess" value="true"></set>
+        </transition>
+        <transition on="apply" validate="true">
+            <evaluate expression="PSREQ010Service.apply(domain)" />
+            <set name="flashScope.isSuccess" value="true"></set>
+        </transition>
+
+        <transition on="applyAgain" validate="true">
+            <evaluate expression="PSREQ010Service.apply(domain)" />
+            <set name="flashScope.isSuccess" value="true"></set>
+        </transition>
+         <transition on="showdetail" validate="false" to="isInitIndividualApr">
+             <set name="flowScope.from" value="requestParameters.from"></set> 
+             <set name="flowScope.quotAcqAplSeq" value="requestParameters.quotAcqAplSeq"></set> 
+             <set name="flowScope.pattern" value="requestParameters.pattern"></set> 
+             <set name="flowScope.isInitIndividualApr" value="true"></set> 
+        </transition>
+        <transition on="backlist" validate="false" to="backlist">
+        </transition>
+	</view-state>
+    <end-state id="backlist"/>
+</flow>

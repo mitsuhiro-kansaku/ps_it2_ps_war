@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<flow xmlns="http://www.springframework.org/schema/webflow"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.springframework.org/schema/webflow
+        http://www.springframework.org/schema/webflow/spring-webflow-2.0.xsd"
+    parent="base">
+    
+    <var name="domain" class="fw.domain.slip.order.order.Order" />
+    
+    <input name="notActionPurReqIdentify" />
+    <input name="orderIdentify" />
+    <input name="quotReqSeq" />
+    <input name="quotSupLineNo" />
+    <input name="quotRespSeq" />
+    <input name="eventType" />
+    <input name="SessionKey"/>
+    <input name="orderSeq"/>
+    <input name="psqot070"/>
+    
+    
+    
+    <decision-state id="isPage">
+       <if test="flowScope.eventType == 'page'" then="initPage" else="isRegister" />
+    </decision-state>
+    
+    <decision-state id="isRegister">
+       <if test="flowScope.eventType == 'register'" then="initRegister" else="initOther" />
+    </decision-state>
+    
+    <decision-state id="initOther">
+       <if test="flowScope.eventType == 'insert'" then="initInsert" else="initUpdate" />
+    </decision-state>
+    
+    <action-state id="initPage">
+        <evaluate expression="PSORD040Service.initPage(notActionPurReqIdentify,eventType)"
+            result="flowScope.domain" />
+        <transition to="PSORD040Input"/> 
+    </action-state>
+    
+    <action-state id="initRegister">
+        <evaluate expression="PSORD040Service.initRegister(notActionPurReqIdentify)"
+            result="flowScope.domain" />
+        <transition to="PSORD040Input"/> 
+    </action-state>
+    
+    <action-state id="initInsert">
+        <evaluate expression="PSORD040Service.initInsert(quotReqSeq,quotSupLineNo,quotRespSeq,eventType)"
+            result="flowScope.domain" />
+        <transition to="PSORD040Input"/> 
+    </action-state>
+    
+    <action-state id="initUpdate">
+        <evaluate expression="PSORD040Service.initUpdate(orderIdentify,eventType,orderSeq,psqot070,quotReqSeq,quotSupLineNo)"
+            result="flowScope.domain" />
+        <transition to="PSORD040Input"/> 
+    </action-state>
+    
+    <view-state id="PSORD040Input" view="ord/order/PSORD040">
+        <transition on="PSORD040" to="PSORD040">
+        </transition>
+    </view-state> 
+    
+    <view-state id="PSORD040" view="ord/order/PSORD040_Input" model="domain">
+        <transition on="apply" validate="true">
+            <evaluate expression="PSORD040Service.apply(domain)"/>
+            <set name="flashScope.isSuccess" value="true"></set>
+        </transition>
+        <transition on="tempSave" validate="true">
+            <evaluate expression="PSORD040Service.tempSave(domain)"/>
+            <set name="flashScope.isSuccess" value="true"></set>
+            <set name="flashScope.actionType" value="'tempSave'"></set>
+        </transition>
+        <transition on="sendBack" validate="false">
+            <evaluate expression="PSORD040Service.orderRemand(domain)"/>
+            <set name="flashScope.isSuccess" value="true"></set>
+            <set name="flashScope.actionType" value="'remand'"></set>
+        </transition>
+        <transition on="page" validate="false">
+             <evaluate expression="PSORD040Service.page()" result="flowScope.domain"/> 
+        </transition>
+        <transition on="next" validate="false">
+             <evaluate expression="PSORD040Service.next()" result="flowScope.domain"/> 
+        </transition>
+        <transition on="downloadext" validate="false">
+            <evaluate expression="PSORD040Service.downloadExt()" />
+        </transition>
+        <transition on="download" validate="false">
+            <evaluate expression="PSORD040Service.downloadByteFile(domain, requestParameters.seqNo,requestParameters.index)" />
+        </transition>
+    </view-state> 
+
+</flow> 

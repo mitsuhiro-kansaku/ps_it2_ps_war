@@ -1,0 +1,228 @@
+<!doctype html><html xmlns="http://www.w3.org/1999/xhtml" xml:lang="ja" lang="ja">
+<html lang="ja">
+<head>
+<title>#customSpringMessage('PRICE_CREATE_REGISTER')</title><!-- 価格改定表登録-->
+<meta http-equiv="Content-type" content="text/html; charset=UTF-8">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Content-script-type" content="text/javascript">
+<link id="CSS_FONT" rel="stylesheet" href="../../include/FontS.css" type="text/css">
+<link id="CSS_CORNERS" rel="stylesheet" href="../../include/Layout.css" type="text/css">
+<link id="CSS_CORNERS" rel="stylesheet" href="../../include/Color.css" type="text/css">
+<link id="CSS_FONT" rel="stylesheet" href="../../include/FontS.css" type="text/css">
+<link rel="stylesheet" href="../../include/Layout.css" type="text/css">
+<link rel="stylesheet" href="../../include/Color.css" type="text/css">
+<link rel="stylesheet" href="../../include/ime.css" type="text/css">
+<script language="javascript" type="text/javascript" src="../../include/jquery-1.7.2.min.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/jquery.tablefix.js"></script>
+<script language="javascript" TYPE="text/javascript" src="../../include/common.js"></script>
+<script language="javascript" TYPE="text/javascript" src="../../include/check.js"></script>
+<script language="javascript" TYPE="text/javascript" src="../../include/date.js"></script>
+<script language="javascript" TYPE="text/javascript" src="../../include/tablesort.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/searchbox.js"></script>
+<script language="javascript" TYPE="text/javascript">
+<!--
+#parse("./common/common_js.vm")
+var isClickable = false;
+function onLoad() {
+    setFocusForInput();
+    changeFontSize0();
+    initAppRoute($!domain.approute.appRouteNo);
+    setShowButton();
+    var alertMessage = "$!alertMessage";
+    if (alertMessage != ""){
+        alert(alertMessage);
+    }
+    var errorMsg = "$!errorMessage";
+    if (errorMsg != ""){
+        isClickable = true;
+        return;
+    }
+    var isShowInfo = "#jsEscape($isShowInfo)";
+    if (isShowInfo == 'true') {
+        buttonDisable();
+        top.iframeChange("${flowExecutionUrl}&_eventId=showUploadResult");
+        return;
+    } else if (isShowInfo == 'false') {
+        #set( $priceReqInfo = "#customSpringMessage('PRICE_SHEET')" )   
+        alert("#customMessageArgs('I005',[$priceReqInfo])");
+        getObj("filename").innerHTML="";
+        parent.iframeChange("${flowExecutionUrl}&_eventId=reset");
+        return;
+    }
+    setShowButton();
+    isClickable = true;
+}
+function initAppRoute(currentRoute){
+    $.ajax({
+        type: "POST", 
+        async:false, 
+        url:"../../appRouteController/getAppRoute",
+        data: {
+            "approuteVoucherInd.approuteVoucherInd":'D',
+            current:currentRoute
+        },
+        success:function(data){
+            $("[id='approute.appRouteNo']").empty();
+            $.each(data,function(index,element){
+                var varItem = new Option(element.text, element.value);
+                varItem.selected = element.selected;
+                getObj('approute.appRouteNo').options.add(varItem);
+              });
+        }
+     });   
+}
+function upload() {
+    if(!isClickable) {
+        return;
+    }
+    var dateOfym = getObj("nextUpdateYM.nextUpdateYM.dateOfymFormat");
+    #set( $priceReqInfo = "#customSpringMessage('PRICE_REQ_INFORMATION')" )   
+    #set( $register = "#customSpringMessage('ACTION_REGISTER')" )  
+    if( confirm('#customMessageArgs("W001",[$priceReqInfo,$register])') ) {
+        dateOnFocus(dateOfym);
+        buttonDisable();
+        getObj("Body").action = "${flowExecutionUrl}&_eventId=upload";
+        getObj("Body").submit();
+    }
+}
+//表示
+function openApprouteDetail() {
+    appRouteDetailPopup.setParam('#jsEscape($!userCompany)','#jsEscape($!userSection)','D',getObj('approute.appRouteNo').value);
+    poppage('../../src/apr/PSCMN030','PLACESEARCHBOX','700','300');
+}
+function setShowButton() {
+    var selObj = getObj('approute.appRouteNo');
+    if (!selObj.options[0].selected) {
+      getObj("showBth").disabled = false;
+    } else {
+      getObj("showBth").disabled = true;
+    }
+}
+function supcdOnBlur() {
+    //取引先
+    var supCd = getObj("supplierFrom.supCd").value;
+    // ログインユーザの会社コード
+    var companyCd = "#jsEscape($!{userCompany})";
+    // 廃止フラグ(0:有効)
+    var termFlag = "0";
+    if(supCd == "") {
+        getObj("supplierFrom.supplierName.supplierAbbrName").value = "";
+    } else {
+         $.ajax({
+            type: "POST", 
+            async:false, 
+            url:"../../getSupplierInfoOnBlur",
+            data: {
+                termFlag:'0',
+                companyCd:companyCd,
+                supCd:supCd
+            },
+            success:function(data){  
+                //設定
+                getObj("supplierFrom.supplierName.supplierAbbrName").value = data.supAbbrName;
+            }
+         });  
+   }
+ }
+//-->
+</script>
+<style>
+table.HomeBox {
+    background-color:#FFFFFF;
+    border: 1px solid #333333;
+    -moz-border-radius: 16px;
+    -webkit-border-radius: 16px;
+    border-radius: 16px;
+    behavior: url("../../include/ie-css3.htc");
+    zoom:1;
+    position: relative;
+    z-index:200;
+    padding:16px;
+    box-shadow: 3px 3px 0px #000000;
+    margin-left:auto;
+    margin-right:auto;
+}
+</style>
+</head>
+<body class="CreateArea" style="text-align:center;vertical-align:top;" onload="onLoad();" >
+<form name="Body" id="Body" method="post" enctype="multipart/form-data">
+    <table class="HomeBox" width="680">
+        <tr>
+            <td>
+                <table class="Base" style="width:100%;">
+                    <tr>
+                        <td align="left">
+                            <table class="NoBorder" width="98%">
+                                <tr>
+                                    <td>
+                                        <u><img src="../../image/mrkCircle.gif"><span id="StepTitle" class="FontStepTitle">#customSpringMessage('PRICE_CREATE_REGISTER')</span></u><br><br><!-- 価格改定表登録-->
+                                        <span id="STEPMSG" class="FontSmallBold DarkBlue">#customSpringMessage('PSPRC100_HEADER_COMMENT')</span>
+                                        <br><br>
+                                    </td>
+                                    <td align="right" valign="middle" id="Submit1">
+                                        <input type="button" class="LargeButton" value="#customSpringMessage('ACTION_UPLOAD')" onclick="upload();"><!-- アップロード-->
+                                    </td>
+                                </tr>
+                            </table>
+                            #if($!errorMessage && $!errorMessage!="")
+							<div class="error">
+							    $!errorMessage
+							</div>
+							#end
+                            <table class="NoBorder" style="width:100%;">
+                                <tbody class="Box1H FontBoxHeader ListBorderWidth">
+                                    <tr>
+                                        <td nowrap class="Box1H FontBoxHeader">#customSpringMessage('APP_ROUTE')<span class="FontWarn">&nbsp;※</span><!-- 承認ルート-->
+                                        </td>
+                                        <td nowrap class="Box1D FontSmallAnk">
+                                            #customFormSingleSelect("domain.approute.appRouteNo" $appRouteList "class='Small' onchange='setShowButton();'")
+                                            <input type="button" name="showBth" id="showBth" class="SmallButton" value="#customSpringMessage('SHOW')" onclick="openApprouteDetail()"><!-- 表示-->
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td nowrap class="Box1H FontBoxHeader">#customSpringMessage('PRC_REV_UPLOAD_TITLE_NAME')<span class="FontWarn">&nbsp;※</span></td>##価格改定依頼件名
+                                        <td nowrap class="Box1D FontSmallAnk">
+                                            #springFormInput("domain.titleName.titleName" "size='100' maxlength='30' class='Small onIME'")
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td nowrap class="Box1H FontBoxHeader">#customSpringMessage('NEXT_UPD_YM')</td><!-- 価格見直時期-->
+                                        <td nowrap class="Box1D">
+                                            #springFormInput("domain.nextUpdateYM.nextUpdateYM.dateOfymFormat" "class='SmallAnk noIME' maxlength='6' size='8' onblur='dateOnBlurYYYYMM(this);' onfocus='dateOnFocus(this);'")
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td nowrap class="Box1H FontBoxHeader">#customSpringMessage('SUPPLIER')<span class="FontWarn">&nbsp;※</span></td><!-- 取引先-->
+                                        <td nowrap class="Box1D">
+                                        #springFormInput("domain.supplierFrom.supCd" "class='Small noIME' size='20' maxlength='12' onblur='supcdOnBlur(); 'onchange='supcdOnBlur();'")
+                                        #springFormInput("domain.supplierFrom.supplierName.supplierAbbrName" "class='SmallDsp' size='32' readonly tabIndex='-1'")
+                                        <img class="Icon" src="../../image/btnLupe.gif" onclick="supplierPopup.setParam('0','#jsEscapeInHTML($!{userCompany})');supplierPopup.setObject(getObj('supplierFrom.supCd'),null,getObj('supplierFrom.supplierName.supplierAbbrName'));masterSearch('../../src/supplierPopup/search?pageid=supplierPopupSearch&popupPageid=PSPRC100','supplierPopup','700','500');">
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td nowrap class="Box1H FontBoxHeader">#customSpringMessage('UPLOAD_FILE')<span class="FontWarn">&nbsp;※</span></td><!--  アップロードファイル-->
+                                        <td nowrap class="Box1D">
+                                             #if($!domain.priceRevTable.attachFile.fileName!='') 
+                                            <span id="filename">#out($!domain.priceRevTable.attachFile.fileName)</span>
+                                            #end
+                                            <input type="file" class="Small" name="priceRevTable.attachFile.screenFile" id="priceRevTable.attachFile.screenFile" style="width:600px;">
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                            <table class="NoBorder" width="100%">
+                                <tr>
+                                    <td>
+                                        #customSpringMessage("PSPRC100_FOOTER_COMMENT")
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+</form>
+</body>
+</html>

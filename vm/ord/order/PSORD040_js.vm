@@ -1,0 +1,635 @@
+#set( $orderInput = "#springMessage('PUR_ORDER')" )
+#set( $register = "#springMessage('ACTION_REGISTER')" )
+#set( $tempSave = "#springMessage('TEMPORARY_PRESERVATION')" )
+#set( $remand = "#springMessage('RETURN')" )
+// 取引先コード の旧い値を保存する
+var supCd_x = "";
+// 変更前の負担部門コード
+var sectionCd_x = "";
+// 変更前の納入先コード
+var delivPlaceCd_x = "";
+// 変更前の科目コード
+var subjectCd_x = "";
+function pageSetting() {
+    var pageNow = parseInt("#jsEscape($!pageNow)");
+    var pageCount = parseInt("#jsEscape($!pageCount)");
+    parent.getObj('PageNo').innerHTML = pageNow;
+    parent.getObj('PageCount').innerHTML = pageCount;
+    if (pageNow == 1) {
+        if (parent.getObj('PageFirst') != null) {
+            parent.getObj('PageFirst').style.display = "";
+        }
+        if (parent.getObj('PageFirstOn') != null) {
+            parent.getObj('PageFirstOn').style.display = "none";
+        }
+        if (parent.getObj('PagePrev') != null) {
+            parent.getObj('PagePrev').style.display = "";
+        }
+        if (parent.getObj('PagePrevOn') != null) {
+            parent.getObj('PagePrevOn').style.display = "none";
+        }
+    }
+    if (1 < pageNow) {
+        if (parent.getObj('PageFirst') != null) {
+            parent.getObj('PageFirst').style.display = "none";
+        }
+        if (parent.getObj('PageFirstOn') != null) {
+            parent.getObj('PageFirstOn').style.display = "";
+            parent.getObj('PageFirstOn').onclick = new Function("parent.iframeChange('${flowExecutionUrl}&_eventId=page','pageNow','1')");
+        }
+        if (parent.getObj('PagePrev') != null) {
+            parent.getObj('PagePrev').style.display = "none";
+        }
+        if (parent.getObj('PagePrevOn') != null) {
+            parent.getObj('PagePrevOn').style.display = "";
+            parent.getObj('PagePrevOn').onclick = new Function("parent.iframeChange('${flowExecutionUrl}&_eventId=page','pageNow','"+(pageNow-1)+"')");
+        }
+    }
+    if (pageNow < pageCount) {
+        if (parent.getObj('PageNext') != null) {
+            parent.getObj('PageNext').style.display = "none";
+        }
+        if (parent.getObj('PageNextOn') != null) {
+            parent.getObj('PageNextOn').style.display = "";
+            parent.getObj('PageNextOn').onclick = new Function("parent.iframeChange('${flowExecutionUrl}&_eventId=page','pageNow','"+(pageNow+1)+"')");
+        }
+        if (parent.getObj('PageLast') != null) {
+            parent.getObj('PageLast').style.display = "none";
+        }
+        if (parent.getObj('PageLastOn') != null) {
+            parent.getObj('PageLastOn').style.display = "";
+            parent.getObj('PageLastOn').onclick = new Function("parent.iframeChange('${flowExecutionUrl}&_eventId=page','pageNow','$!pageCount')");
+        }
+    }
+    if (pageNow == pageCount) {
+        if (parent.getObj('PageNext') != null) {
+            parent.getObj('PageNext').style.display = "";
+        }
+        if (parent.getObj('PageNextOn') != null) {
+            parent.getObj('PageNextOn').style.display = "none";
+        }
+        if (parent.getObj('PageLast') != null) {
+            parent.getObj('PageLast').style.display = "";
+        }
+        if (parent.getObj('PageLastOn') != null) {
+            parent.getObj('PageLastOn').style.display = "none";
+        }
+    }
+}
+
+function setFileDeleteFlg() {
+
+    var eventType = '#jsEscape($!eventType)';
+    if (eventType == "stop") {
+        return;
+    }
+    var del1 = getObj("complement.rangeByAttachFile1.attachFile.screenDelFlg").value;
+    var file1 = getObj("complement.rangeByAttachFile1.attachFile.screenFile").value;
+    if("1" == del1 && file1.length > 0) {
+        getObj("complement.rangeByAttachFile1.attachFile.screenDelFlg").value = "0";
+    }
+    
+    var del2 = getObj("complement.rangeByAttachFile2.attachFile.screenDelFlg").value;
+    var file2 = getObj("complement.rangeByAttachFile2.attachFile.screenFile").value;
+    if("1" == del2 && file2.length > 0) {
+        getObj("complement.rangeByAttachFile2.attachFile.screenDelFlg").value = "0";
+    }
+    
+    var del3 = getObj("complement.rangeByAttachFile3.attachFile.screenDelFlg").value;
+    var file3 = getObj("complement.rangeByAttachFile3.attachFile.screenFile").value;
+    if("1" == del3 && file3.length > 0) {
+        getObj("complement.rangeByAttachFile3.attachFile.screenDelFlg").value = "0";
+    }
+     
+}
+
+
+//差戻し
+function remand() {
+    if(!isClickable) {
+        return;
+    }
+    if (!confirm('#customMessageArgs("W001",[$orderInput,$remand])')) {
+        return;
+    }
+    getObj("Body").action="${flowExecutionUrl}&_eventId=sendBack";
+    buttonDisable();
+    setFileDeleteFlg();
+    getObj("Body").submit();
+}
+
+//一時保存
+function tempSave() {
+    if(!isClickable) {
+        return;
+    }
+    if (!confirm('#customMessageArgs("W001",[$orderInput,$tempSave])')) {
+        return;
+    }
+    getObj("Body").action="${flowExecutionUrl}&_eventId=tempSave";
+    buttonDisable();
+    setFileDeleteFlg();
+    getObj("Body").submit();
+}
+
+//登録
+function apply() {
+    if(!isClickable) {
+        return;
+    }
+    if (!confirm('#customMessageArgs("W001",[$orderInput,$register])')) {
+        return;
+    }
+    getObj("Body").action="${flowExecutionUrl}&_eventId=apply";
+    buttonDisable();
+    setFileDeleteFlg();
+    getObj("Body").submit();
+}
+
+function dispUnitPriceInd() {
+    if (getObj("status.priceManagement.unitPriceInd").value == '0') {
+        if (getObj("unDecReason") != null) {
+            setDisplay("unDecReason",true);
+        }
+        if (getObj("priceDecDate") != null) {
+            setDisplay("priceDecDate",true);
+        }
+    } else {
+        if (getObj("unDecReason") != null) {
+            setDisplay("unDecReason",false);
+            getObj("status.priceManagement.priceUndecReason.comment").value = "";
+        }
+        if (getObj("priceDecDate") != null) {
+            setDisplay("priceDecDate",false);
+            getObj("status.priceManagement.priceDecDate.dateOfymdFormat").value = "";
+        }
+    }
+}
+
+function calculateAmountByAjax() {
+    var price = getObj("accounting.orderAmount.unitPrice.amount.amountFormat").value;
+    var vol = getObj("accounting.orderAmount.orderVolume.orderVol.volFormat").value;
+    var currencyCd = getObj('accounting.orderAmount.amountMng.currency.currencyCd').value;
+
+    $.ajax({
+        type:"POST",
+        async:false,
+        url:"../../buyPriceController/calculateAmount",
+        data:{
+            "price.amountFormat":cleanXss(price),
+            "vol.volFormat":cleanXss(vol),
+            currencyCd:cleanXss(currencyCd)
+        },
+        success:function(data){
+            getObj('orderAmount').innerHTML = data.amount.amountFormat;
+            getObj('accounting.orderAmount.orderAmount.amountFormat').value = data.amount.amountFormat;
+            changeAppRoute();
+        }
+    });
+}
+
+/** 負担部門のオンブラーイベント **/
+function sectionOnblur() {
+
+    // 入力した部門コード
+    var sectionCd = getObj("user.loadSection.loadSection.sectionCd").value;
+    if(sectionCd == sectionCd_x) {
+        return;
+    } else {
+        sectionCd_x = sectionCd;
+    }    
+    // 負担会社コード
+    var companyCd = "#jsEscape($!reqCompanyCd)";
+    // 廃止フラグ(0:有効)
+    var termFlag = "0";
+
+    // 入力した部門コードが空の場合
+    if(sectionCd == "") {
+        getObj("user.loadSection.loadSection.sectionName").value = "";
+        getObj("user.loadSection.loadSection.company.companyCd").value = "";
+        getObj("user.loadSection.loadSection.company.companyName").value = "";
+        getObj("user.loadSection.loadSection.sectionPlace.sectionPlaceCd").value = "";
+        getObj("user.loadSection.loadSection.sectionPlace.sectionPlaceName").value = "";
+    } else {
+        $.ajax({
+            type:"POST",
+            async:false,
+            url:"../../getSectionInfoOnBlur",
+            data:{
+                sectionCd:cleanXss(sectionCd),
+                companyCd:cleanXss(companyCd),
+                termFlag:cleanXss(termFlag)
+                ,loadSectionFlg:'1'
+            },
+            success:function(data){
+                // 設定
+                getObj("user.loadSection.loadSection.sectionName").value = data.sectionName;
+                getObj("user.loadSection.loadSection.company.companyCd").value = data.sectionIdentify.companyCd;
+                getObj("user.loadSection.loadSection.company.companyName").value = data.companyName;
+                getObj("user.loadSection.loadSection.sectionPlace.sectionPlaceCd").value = data.sectionPlaceCd;
+                getObj("user.loadSection.loadSection.sectionPlace.sectionPlaceName").value=data.sectionPlaceName;
+            }
+        });
+    }
+}
+
+function sectionCodeGetfocus(obj){
+    sectionCd_x  = obj.value;
+}
+
+/** 取引先のオンブラーイベント **/
+function supcdOnBlur() {
+
+    var supCd = getObj("supplierFrom.supCd").value;
+    if(supCd == supCd_x) {
+        return;
+    } else {
+        supCd_x = supCd;
+    }
+    // ログインユーザの会社コード
+    var companyCd = "#jsEscape($!userCompanyCd)";
+    // 廃止フラグ(0:有効)
+    var termFlag = "0";
+    
+    if (supCd == "") {
+        getObj("supplierFrom.supplierName.supplierName").value = "";
+        getObj("supplierFrom.supplierName.supplierAbbrName").value = "";
+        getObj("supplierFrom.subcon.subconInd").value = "";
+        getObj("supplierFrom.ediInd.ediInd").value = "";
+        getObj("supplierFrom.supplierContact.ctc.zipCd.zipCd").value = "";
+        getObj("supplierFrom.supplierContact.ctc.address1.address").value = "";
+        getObj("supplierFrom.supplierContact.ctc.address2.address").value = "";
+        getObj("supplierFrom.supplierContact.ctc.telNo.telNo").value = "";
+        getObj("supplierFrom.supplierContact.ctc.faxNo.faxNo").value = "";
+        getObj("supplierFrom.vendor.vendorCd").value = "";
+        getObj("supplierAbbrName").innerHTML = "";
+        getObj("subconInd").innerHTML = "";
+        getObj("PostalCode").innerHTML = "";
+        getObj("address1").innerHTML = "";
+        getObj("address2").innerHTML = "";
+        getObj("telNo").innerHTML = "";
+        getObj("fax").innerHTML = "";
+        getObj("currencyCd").innerHTML = "";
+        getObj("accounting.orderAmount.amountMng.currency.currencyCd").value = "";
+        getObj("mark.accounting.orderAmount.unitPrice.amount.amountFormat").innerHTML = "";
+        getObj("CurrMark4").innerHTML = "";
+        getObj('edi').innerText = "";
+    } else {
+         $.ajax({
+            type: "POST", 
+            async:false, 
+            url:"../../getSupplierInfoOnBlur",
+            data: {
+                termFlag:cleanXss(termFlag),
+                companyCd:cleanXss(companyCd),
+                supCd:cleanXss(supCd)
+            },
+            success:function(data){
+                //設定
+                getObj("supplierFrom.supplierName.supplierName").value = data.supName;
+                getObj("supplierFrom.supplierName.supplierAbbrName").value = data.supAbbrName;
+                getObj("supplierFrom.subcon.subconInd").value = data.subconInd;
+                getObj("supplierFrom.ediInd.ediInd").value = data.ediInd;
+                getObj("supplierFrom.supplierContact.ctc.zipCd.zipCd").value = data.postalCode;
+                getObj("supplierFrom.supplierContact.ctc.address1.address").value = data.address1;
+                getObj("supplierFrom.supplierContact.ctc.address2.address").value = data.address2;
+                getObj("supplierFrom.supplierContact.ctc.telNo.telNo").value = data.telNo;
+                getObj("supplierFrom.supplierContact.ctc.faxNo.faxNo").value = data.faxNo;
+                getObj("supplierFrom.vendor.vendorCd").value = data.vendorCd;
+                getObj("supplierAbbrName").innerText = data.supAbbrName;
+                getObj("subconInd").innerText = data.subconTractor;
+                getObj("PostalCode").innerText = data.postalCode;
+                getObj("address1").innerText = data.address1;
+                getObj("address2").innerText = data.address2;
+                getObj("telNo").innerText = data.telNo;
+                getObj("fax").innerText = data.faxNo;
+                getObj("currencyCd").innerText = data.currencyCd;
+                getObj("accounting.orderAmount.amountMng.currency.currencyCd").value = data.currencyCd;
+                getObj("mark.accounting.orderAmount.unitPrice.amount.amountFormat").innerText = data.currencyMark;
+                getObj("CurrMark4").innerText = data.currencyMark;
+                getObj("payConditionItem.payConditionIdentify.payConditionCd").value = data.payConditonCd;
+                var edi =  '';
+            	if(data.ediInd == '0'){
+            		edi = getObj('nonEdiValue').value
+            	}
+            	if(data.ediInd == '1'){
+            		edi = getObj('ediValue').value
+            	}
+            	getObj('edi').innerText = edi;
+                
+                
+                changeAppRoute();
+            }
+        });
+    }
+}
+
+function supCodeGetfocus(obj) {
+    supCd_x = obj.value;
+}
+
+function supplierSelectAfterProc() {
+    changeAppRoute();
+}
+
+/** 納入先のオンブラーイベント **/
+function deliveryPlaceOnBlur() {
+
+    // 入力した納入先コード
+    var delivPlaceCd = getObj("complement.delivPlace.delivPlaceCd").value;
+    if(delivPlaceCd == delivPlaceCd_x) {
+        return;
+    } else {
+        delivPlaceCd_x = delivPlaceCd;
+    }
+    // 納入先会社コード
+    var companyCd = "#jsEscape($!reqCompanyCd)";
+    // 廃止フラグ(0:有効)
+    var termFlag = "0";
+    
+    if(delivPlaceCd == "") {
+        getObj("complement.delivPlace.delivPlaceName").value = "";
+    } else {
+        $.ajax({
+            type: "POST", 
+            async:false, 
+            url:"../../getDeliveryPlaceOnBlur",
+            data: {
+                termFlag:cleanXss(termFlag),
+                companyCd:cleanXss(companyCd),
+                delivPlaceCd:cleanXss(delivPlaceCd)
+            },
+            success:function(data){  
+                //納入先名
+                getObj("complement.delivPlace.delivPlaceName").value = data.delivPlaceName;
+            }
+        });  
+    }
+}
+
+function deliveryPlaceCodeGetfocus(obj){
+    delivPlaceCd_x  = obj.value;
+}
+ 
+/** 科目のオンブラーイベント **/
+function subjectOnblur() {
+
+    // 入力した科目コード
+    var subjectCd = getObj("accounting.subject.subjectCd").value;
+    if(subjectCd == subjectCd_x) {
+        return;
+    } else {
+        subjectCd_x = subjectCd;
+    }
+    // ログインユーザの会社コード
+    var companyCd = "#jsEscape($!userCompanyCd)";
+    // 廃止フラグ(0:有効)
+    var termFlag = "0";
+
+    // 入力した科目コードが空の場合
+    if(subjectCd == "") {
+        getObj("accounting.subject.subjectName").value = "";
+    } else {
+        $.ajax({
+            type:"POST",
+            async:false,
+            url:"../../getSubjectOnBlur",
+            data:{
+                subjectCd:cleanXss(subjectCd),
+                companyCd:cleanXss(companyCd),
+                termFlag:cleanXss(termFlag)
+            },
+            success:function(data){
+                // 科目名
+                getObj("accounting.subject.subjectName").value = data.subjectName;
+            }
+        });
+    }
+}
+
+function subjectCodeGetfocus(obj){
+    subjectCd_x  = obj.value;
+}
+
+/** メーカーのオンブラーイベント **/
+function manufactOnBlur() {
+
+    // 入力したメーカーコード
+    var manufacCd = getObj("accounting.orderItem.item.manufact.manufactCd").value;
+
+    if(manufacCd == manufacCd_x) {
+        return;
+    } else {
+        manufacCd_x = manufacCd;
+    }
+
+
+    // 廃止フラグ(0:有効)
+    var termFlag = "0";
+    
+    // 入力したメーカーコードが空の場合
+    var focusId = document.activeElement.id;
+    if　(manufacCd == "") {
+        if(focusId != null && focusId != "") {
+            getObj(focusId).disabled = true;
+            getObj(focusId).disabled = false;
+        }
+        getObj("accounting.orderItem.item.manufact.manufactName").value = "";
+        getObj("accounting.orderItem.item.manufact.manufactName").readOnly = false;
+        getObj("accounting.orderItem.item.manufact.manufactName").style.backgroundColor = 'white';
+        if(focusId != null && focusId != "") {
+            getObj(focusId).focus();
+        }
+    } else {
+        $.ajax({
+            type: "POST", 
+            async:false, 
+            url:"../../getManufactInfoOnBlur",
+            data: {
+                termFlag:cleanXss(termFlag),
+                manufactCd:cleanXss(manufacCd)
+            },
+            success:function(data){
+                if(focusId != null && focusId != "") {
+                    getObj(focusId).disabled = true;
+                    getObj(focusId).disabled = false;
+                }
+                //メーカー名
+                getObj("accounting.orderItem.item.manufact.manufactName").value = data.manufactName;
+                getObj("accounting.orderItem.item.manufact.manufactName").readOnly = true;
+                getObj("accounting.orderItem.item.manufact.manufactName").style.backgroundColor = '#ECECEC';
+                if(focusId != null && focusId != "") {
+                    getObj(focusId).focus();
+                }
+            }
+        });
+    }
+}
+
+function manufactSelectAfterProc() {
+    getObj("accounting.orderItem.item.manufact.manufactName").readOnly = true;
+    getObj("accounting.orderItem.item.manufact.manufactName").style.backgroundColor = '#ECECEC';
+}
+ 
+function buttonDisable(){
+    var i;
+    var buttonArr = $("input[type='button']");
+    for(i = 0;i < buttonArr.length; i++){
+        buttonArr[i].disabled = true;
+    }
+    if (parent.getObj('PageFirst') != null) {
+        parent.getObj('PageFirst').style.display = "";
+    }
+    if (parent.getObj('PageFirstOn') != null) {
+        parent.getObj('PageFirstOn').style.display = "none";
+    }
+    if (parent.getObj('PagePrev') != null) {
+        parent.getObj('PagePrev').style.display = "";
+    }
+    if (parent.getObj('PagePrevOn') != null) {
+        parent.getObj('PagePrevOn').style.display = "none";
+    }
+    if (parent.getObj('PageNext') != null) {
+        parent.getObj('PageNext').style.display = "";
+    }
+    if (parent.getObj('PageNextOn') != null) {
+        parent.getObj('PageNextOn').style.display = "none";
+    }
+    if (parent.getObj('PageLast') != null) {
+        parent.getObj('PageLast').style.display = "";
+    }
+    if (parent.getObj('PageLastOn') != null) {
+        parent.getObj('PageLastOn').style.display = "none";
+    }
+}
+
+function changeAppRoute() {
+    setAppRouteByAmount('2',
+                        getObj('accounting.orderAmount.orderAmount.amountFormat').value,
+                        getObj('accounting.orderAmount.amountMng.currency.currencyCd').value);
+}
+
+var isClickable = false;
+
+function onload() {
+    buttonDisable();
+    setFocusForInput();
+    top.document.title = parent.document.title;
+    var eventType = '#jsEscape($!eventType)';
+
+    changeAppRoute();
+
+    var alertMessage = "$!alertMessage";
+    var isSuccess = '#jsEscape($!isSuccess)';
+    
+    var errorMsg = "$!errorMessage";
+    if (alertMessage != "" && isSuccess == "") {
+        if (errorMsg == "") {
+            if (eventType == 'page') {
+                if(alertMessage.indexOf("#customSpringMessage('E035')") != -1){
+                    alert(alertMessage);
+                        #if ($!pageNow == $!pageCount && $!pageNow == '1')
+                                top.iframeChange("${flowExecutionUrl}&_eventId=back&isNoKeyList=true");
+                                return;
+                        #else
+                                parent.iframeChange("${flowExecutionUrl}&_eventId=next&pageNow=$!pageNow");
+                                return;
+                        #end
+                } else {
+                    if (confirm(alertMessage)) {
+                           getObj("Body").action="${flowExecutionUrl}&_eventId=apply&checkPass=1";
+                           getObj("Body").submit();
+                           pageSetting();
+                           return;
+                    } 
+                }
+            } else{
+                #if($!alertMessage.indexOf("E035") != -1)
+                    alert("$!alertMessage");
+                    isClickable = true;
+                    buttonUsable();
+                    return;
+                #else
+                    if (confirm(alertMessage)) {
+                        getObj("Body").action="${flowExecutionUrl}&_eventId=apply&checkPass=1";
+                        getObj("Body").submit();
+                        return;
+                    }
+                #end
+            }
+        }
+    }
+
+    var supCdObj = getObj("supplierFrom.supCd");
+    if (supCdObj != undefined) {
+
+        if (supCdObj.value != "") {
+            getObj("CurrMark4").innerHTML = getObj("mark.accounting.orderAmount.unitPrice.amount.amountFormat").innerHTML;
+            changeAppRoute();
+        }
+    }
+    
+    var manufacCd = getObj("accounting.orderItem.item.manufact.manufactCd");
+    if(manufacCd != undefined && manufacCd.value != "") {
+        getObj("accounting.orderItem.item.manufact.manufactName").readOnly = true;
+        getObj("accounting.orderItem.item.manufact.manufactName").style.backgroundColor = '#ECECEC';
+    }
+
+    if (errorMsg != "") {
+        document.getElementById("TR_ERROR").style.display = "";
+        if (eventType == 'page') {
+            pageSetting();
+        }
+        isClickable = true;
+        buttonUsable();
+        return;
+    }
+    if (isSuccess == 'true') {
+        var actionType = '#jsEscape($!actionType)';
+        if (actionType == 'tempSave') {
+            alert('#customMessageArgs("I030",[$orderInput])');
+        } else if (actionType == 'remand') {
+            alert('#customMessageArgs("I029",[$orderInput])');
+        } else {
+            alert('#customMessageArgs("I005",[$orderInput])');
+        }
+        if (eventType != 'page') {
+            top.iframeChange("${flowExecutionUrl}&_eventId=back");
+            return;
+        } else {
+            #if ($!pageNow == $!pageCount && $!pageNow == '1')
+                top.iframeChange("${flowExecutionUrl}&_eventId=back&isNoKeyList=true");
+                return;
+            #else
+                getObj("Body").action="${flowExecutionUrl}&_eventId=page&pageNow=$!pageNow";
+                getObj("Body").submit();
+                pageSetting();
+                return;
+            #end
+        }
+    }
+
+    if (eventType == 'page') {
+        pageSetting();
+    }
+
+    isClickable = true;
+    buttonUsable();
+}
+
+/** 取引先コードの変更によって、通貨記号を変わります。 **/
+function changeCurrencyMark(obj) {
+    if (obj.value == "") {
+        return;
+    }
+    if (typeof test != 'undefined' && test instanceof Function) {
+        alert(1);
+    }
+    getObj("mark.accounting.orderAmount.unitPrice.amount.amountFormat").innerHTML = obj.value;
+    getObj("CurrMark4").innerHTML = obj.value;
+}
+
+function manufactCodeGetfocus(obj) {
+    manufacCd_x = obj.value;
+}
+

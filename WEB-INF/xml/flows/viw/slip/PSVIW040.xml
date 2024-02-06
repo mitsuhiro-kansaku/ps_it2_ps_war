@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<flow xmlns="http://www.springframework.org/schema/webflow"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.springframework.org/schema/webflow
+        http://www.springframework.org/schema/webflow/spring-webflow-2.0.xsd"
+    parent="base">
+
+    <!-- 伝票照会（購買用）検索条件 -->
+    <var name="defaultSearchCondition" 
+        class="fw.domain.slip.slipsearchbybuyer.SlipSearchByBuyerSearchCondition" />
+    
+    <on-start>
+        <evaluate expression="PSVIW040Service.init()"
+            result="flowScope.searchCondition" />
+    </on-start>
+    
+    <!-- 伝票照会（購買用）検索 の場合-->
+    <view-state id="PSVIW040" model="searchCondition"  view="viw/slip/PSVIW040">
+    
+        <transition on="validate" validate="true">
+            <set name="flowScope.isCurrentPageSearch" value="false" />
+            <set name="flowScope.isShowList" value="true"></set>
+        </transition>
+        <transition on="search" to="list" validate="false" >
+          <evaluate expression="PSVIW040Service.search(searchCondition)"></evaluate>
+        </transition>
+        <!-- 伝票照会（購買用）　ダウンロード の場合-->
+        <transition on="downloadValidate" validate="true">
+            <evaluate expression="PSVIW040Service.downloadValidate(searchCondition)" result="flashScope.isDownLoadValidate"/>
+        </transition>
+        <transition on="download" validate="false">
+            <evaluate expression="PSVIW040Service.download(searchCondition)"/>
+        </transition>
+        <transition on="back" to="home" validate="false" />
+    </view-state>
+    
+    <!-- 伝票照会（購買用）一覧 の場合-->
+    <subflow-state id="list" subflow="viw/slip/PSVIW050" >
+        <input name="searchCondition" value="searchCondition" />
+        <input name="isCurrentPageSearch" value="isCurrentPageSearch" />
+        <transition on="back" to="PSVIW040" >
+            <set name="flowScope.isCurrentPageSearch" value="true" />
+        </transition>
+    </subflow-state>
+</flow>

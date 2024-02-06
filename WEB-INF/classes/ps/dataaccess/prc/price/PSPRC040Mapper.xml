@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="ps.dataaccess.prc.price.PSPRC040Mapper">
+
+    <sql id="listKeyIdentitySearchWhereCondition">
+        AND M_PUR_PRICE_JNL.ITEM_CD = #{itemCd}
+        AND M_PUR_PRICE_JNL.BUYER_COMPANY_CD = #{buyerCompanyCd}
+        AND M_PUR_PRICE_JNL.BUYER_SECTION_CD = #{buyerSectionCd}
+        AND M_PUR_PRICE_JNL.SUP_CD = #{supplierCd}
+    </sql> 
+    
+    <!--検索条件で全てキリストを取得する-->
+    <select id="listKeyIdentitySearch" 
+        parameterType="fw.domain.slip.price.revision.PriceRevisionSearchCondition" 
+        resultType="fw.domain.slip.price.revision.PriceRevisionIdentify">
+        SELECT 
+            M_PUR_PRICE_JNL.PUR_PRICE_HIST_SEQ  AS "purPriceHistSeq"
+        FROM M_PUR_PRICE_JNL
+        <where>
+            <include refid="listKeyIdentitySearchWhereCondition"/>
+        </where>
+        ORDER BY ${searchCondition.columnOrder.columnOrder()}
+    </select>
+   
+    <!--価格マスタ明細を取得する-->
+    <select id="listPageItem" 
+        parameterType="fw.domain.slip.price.revision.PriceRevisionSearchCondition" 
+        resultType="fw.domain.slip.price.revision.PriceRevisionItem">
+        SELECT 
+            M_PUR_PRICE_JNL.ITEM_CD AS "itemCd",
+            M_PUR_PRICE_JNL.ITEM_NAME AS "itemName",
+            M_PUR_PRICE_JNL.SUP_CD AS "supplierCd",
+            M_PUR_PRICE_JNL.UPDATE_NO AS "updateNo",
+            M_PUR_PRICE_JNL.VALID_START_DATE AS "validStartDate.dateOfymd",
+            M_PUR_PRICE_JNL.VALID_END_DATE AS "validEndDate.dateOfymd",
+            M_PUR_PRICE_JNL.LAST_UPD_DATE AS "lastUpdDate.dateOfymd",
+            M_PUR_PRICE_JNL.TERM_FLG AS "termFlg",
+            M_PUR_PRICE_JNL.MODIFY_IND AS "modifyInd",
+            M_PUR_PRICE_JNL.CURRENCY_CD AS "currencyCd.currencyCd",
+            M_CURRENCY.CURRENCY_MARK AS "currencyCd.currencyMark",
+            M_PUR_PRICE_JNL.BUY_PRICE AS "unitPrice.amount",
+            M_PUR_PRICE_JNL.UNIT_NAME AS "unit",
+            M_PUR_PRICE_JNL.ORDER_UNIT AS "orderUnitVol.vol",
+            M_PUR_PRICE_JNL.MIN_ORDER_VOL AS "minOrderVol.vol",
+            M_PUR_PRICE_JNL.MNG_IND AS "mngInd",
+            M_PUR_PRICE_JNL.KATASHIKI AS "katashiki.katashiki",
+            M_PUR_PRICE_JNL.MANUFACT_CD AS "manufact.manufactCd",
+            M_PUR_PRICE_JNL.MANUFACT_NAME AS "manufact.manufactName",
+            M_PUR_PRICE_JNL.BUYER_USER_SECTION_CD AS "buyerSectionCd",
+            M_PUR_PRICE_JNL.BUYER_USER_ID AS "buyerUserCd",
+            M_PUR_PRICE_JNL.PRICE_MNG_USER_ID AS "priceMngUserId",
+            M_PUR_PRICE_JNL.PUR_PRICE_HIST_SEQ AS "purPriceHistSeq"
+        FROM 
+            M_PUR_PRICE_JNL
+        LEFT JOIN 
+            M_CURRENCY
+        ON 
+            M_CURRENCY.CURRENCY_CD = M_PUR_PRICE_JNL.CURRENCY_CD
+        <where>
+            M_PUR_PRICE_JNL.PUR_PRICE_HIST_SEQ IN
+            <foreach collection="searchCondition.page.keyDomainEntityList" item="keyList"  open="(" separator="," close=")">  
+                #{keyList.purPriceHistSeq, jdbcType=VARCHAR}
+            </foreach>
+            <include refid="listKeyIdentitySearchWhereCondition" /> 
+        </where>
+        ORDER BY ${searchCondition.columnOrder.columnOrder()}
+    </select>
+</mapper>

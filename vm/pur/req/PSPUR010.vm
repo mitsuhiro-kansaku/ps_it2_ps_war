@@ -1,0 +1,1267 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<title>#customSpringMessage("EVERY_PUR_REQ_INPUT")</title>
+<meta http-equiv="Content-type" content="text/html; charset=UTF-8">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Content-script-type" CONTENT="text/javascript">
+<link rel="stylesheet" href="../../include/Layout.css" type="text/css">
+<link id="CSS_FONT" rel="stylesheet" href="../../include/FontS.css" type="text/css">
+<link rel="stylesheet" href="../../include/searchbox.css" type="text/css">
+<link rel="stylesheet" href="../../include/Color.css" type="text/css">
+<link rel="stylesheet" href="../../include/ime.css" type="text/css">
+
+<script language="javascript" type="text/javascript" src="../../include/common.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/check.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/date.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/searchbox.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/jquery-1.7.2.min.js"></script>
+
+
+<script language="javascript" type="text/javascript">
+<!--
+#set($isActiveProfileBudget = "#isActiveProfile('budget')")
+#parse("./common/common_js.vm")
+var sectionTermFlag = 0;
+var userReferenceRangeFlg = "3";
+var itemKindTermFlag = 0;
+var CompanyCd="#jsEscape($!userCompanyCd)";
+var UserSectionCd ="#jsEscape($!userSectionCd)";
+var termFlag = 0;
+var manufactTermFlag = 0;
+var errFlg = false;
+var aval = 100;
+var subjectPopupCompanyCd = "#jsEscape($!userCompanyCd)";
+var buyerCompanyCd = "#jsEscape($!userCompanyCd)";
+var supplierTermFlag = 0;
+var itemTermFlag = 0;
+var itemPopupFlag = 0;
+var chgUserId = "";
+
+// 品名コード の旧い値を保存する
+var itemCode_x = "";
+// 取引先コード の旧い値を保存する
+var supCode_x = "";
+//変更前の負担部門コード
+var sectionCd_x = "";
+//変更前の納入先コード
+var delivPlaceCd_x = "";
+// 変更前の科目コード
+var subjectCd_x = "";
+var manufacCd_x = "";
+var itemOnLoadFlag;
+
+var isClickable = false;
+
+#if ($!patternName == "New" && "$!isFromHome" == "true")
+top.backUrl="${flowExecutionUrl}&_eventId=home";
+#end
+
+function onLoad() {
+    setFocusForInput();
+    setItemDisplay();
+    setManufactDisplay();
+    setChgUserIdValue();
+    #if ($!pageFrom == "create" || $!pageFrom == "history")
+         top.document.title = "#customSpringMessage('EVERY_PUR_REQ_INPUT')";
+    #elseif ($!pageFrom == "edit")
+         top.document.title = "#customSpringMessage('EVERY_PUR_REQ_CORRECT')";
+    #elseif ($!pageFrom == "reApply")
+         top.document.title = "#customSpringMessage('EVERY_PUR_REQ_CORRECT')";
+    #elseif ($!pageFrom == "create2")
+         top.document.title = "#customSpringMessage('EVERY_PUR_REQ_INPUT')";
+    #end
+
+
+    // 見積状況から遷移 の場合
+    #if(!$!quotFlag)
+          //amountByAjax(0);
+          detailAmountByAjax();
+    #end
+
+    setAppRoute();
+
+    #if($!alertMessage.indexOf("E035") != -1
+        || $!alertMessage.indexOf("I037") != -1
+        || $!alertMessage.indexOf("I038") != -1
+        || $!alertMessage.indexOf("I039") != -1
+        || $!alertMessage.indexOf("I040") != -1)
+        alert("$!alertMessage");
+    #else
+        #if("$!alertMessage" != "" && "$!errorMessage" == "" )
+
+            #if( ($!pageFrom == "create" || $!pageFrom == "history") && ("$!isSuccess" == "") )
+                if (confirm("$!alertMessage")) {
+                        setItemEnable();
+                        setFileDeleteFlg();
+                        getObj("Body").action = "${flowExecutionUrl}&_eventId=apply&checkPass=1";
+                        buttonDisable();
+                        getObj("Body").submit();
+                        return;
+                }
+            #elseif( ($!pageFrom == "edit" || $!pageFrom == "reApply") && ("$!isReSuccess" == "" ) )
+                if (confirm("$!alertMessage")) {
+                        setItemEnable();
+                        #if($!pageFrom != "reApply")
+                            setFileDeleteFlg();
+                        #end
+                        getObj("Body").action = "${flowExecutionUrl}&_eventId=applyAgain&checkPass=1";
+                        buttonDisable();
+                        getObj("Body").submit();
+                        return;
+                }
+            #elseif( $!pageFrom == "create2" && "$!isSuccess" == "" )
+                if (confirm("$!alertMessage")) {
+                        setItemEnable();
+                        getObj("Body").action = "${flowExecutionUrl}&_eventId=apply&checkPass=1";
+                        buttonDisable();
+                        getObj("Body").submit();
+                        return;
+                }
+            #end
+        #end
+    #end
+
+
+    changeFontSize();
+    var errorMsg = "$!errorMessage";
+    if (errorMsg != ""){
+        document.getElementById("TR_ERROR").style.display = "";
+        isClickable = true;
+        return;
+    }
+    var isSuccess = '#jsEscape($!isSuccess)';
+    if(isSuccess == 'true'){
+          #set( $mPurreq = "#customSpringMessage('PUR_REQ')" )
+          alert("#customMessageArgs("I005",[$mPurreq])"+"\n\n#customSpringMessage('PUR_APL_NO')"+": "+ getObj('purAplManagement.purAplIdentify.purAplNo.purAplNo').value);
+          buttonDisable();
+          #if ($!pageFrom == "create")
+            top.iframeChange('../pur/req/PSPUR010New','pageid','PSPUR010New','pattern','create','patternName','New','isInitIndividualApr', 'true','isFromHome','true');
+          #elseif ($!pageFrom == "create2")
+            top.iframeChange("${flowExecutionUrl}&_eventId=backlist");
+          #else
+            top.iframeChange("${flowExecutionUrl}&_eventId=back");
+          #end
+          return;
+    }
+    var isReSuccess = '#jsEscape($!isReSuccess)';
+      if(isReSuccess == 'true'){
+          #set( $mPurreq = "#customSpringMessage('PUR_REQ')" )
+          alert("#customMessageArgs("I002",[$mPurreq])"+"\n\n#customSpringMessage('PUR_APL_NO')"+": "+ getObj('purAplManagement.purAplIdentify.purAplNo.purAplNo').value);
+          buttonDisable();
+          #if ($!pageFrom == "create")
+            top.iframeChange('../pur/req/PSPUR010New','pageid','PSPUR010New','pattern','create','patternName','New','isInitIndividualApr', 'true','isFromHome','true');
+          #else
+            top.back();
+          #end
+          return;
+    }
+
+    var isTempSuccess = '#jsEscape($!isTempSuccess)';
+    if(isTempSuccess == 'true'){
+         #set( $mPurreq = "#customSpringMessage('PUR_REQ')" )
+         alert("#customMessageArgs("I030",[$mPurreq])"+"\n\n#customSpringMessage('PUR_APL_NO')"+": "+ getObj('purAplManagement.purAplIdentify.purAplNo.purAplNo').value);
+         if ('$!pageFrom' == "create2") {
+            top.iframeChange("${flowExecutionUrl}&_eventId=backlist");
+            return;
+         }
+         top.iframeChange('${flowExecutionUrl}&_eventId=reloadAfterTempSaved');
+    }
+
+    isClickable = true;
+}
+
+function tempSave() {
+    if(!isClickable) {
+        return;
+    }
+
+    buttonDisable();
+    setItemEnable();
+    setFileDeleteFlg();
+    setPriceFlg();
+    getObj("Body").action="${flowExecutionUrl}&_eventId=tempSave";
+    getObj("Body").submit();
+}
+
+
+function downloadExt(filename, file) {
+    iframeChange("${flowExecutionUrl}&_eventId=downloadext", 'filename', filename, 'file', file);
+}
+function apply() {
+    if(!isClickable) {
+        return;
+    }
+
+	if(isFresh() == true) {
+		return;
+	}
+    #set( $req = "#customSpringMessage('PUR_REQ')" )//申請
+    #set( $register = "#customSpringMessage('ACTION_REGISTER')" )
+    if( !confirm('#customMessageArgs("W001",[$req,$register])') ) {
+        return;
+    }
+    buttonDisable();
+    setItemEnable();
+    setFileDeleteFlg();
+    setPriceFlg();
+    getObj("Body").action = "${flowExecutionUrl}&_eventId=apply";
+    getObj("Body").submit();
+}
+
+
+function reApply() {
+    if(!isClickable) {
+        return;
+    }
+
+	if(isFresh() == true) {
+		return;
+	}
+    #set( $req = "#customSpringMessage('PUR_REQ')" )//再申請
+    #set( $register = "#customSpringMessage('UPDATE')" )
+    if( !confirm('#customMessageArgs("W001",[$req,$register])') ) {
+        return;
+    }
+    buttonDisable();
+    setItemEnable();
+    setFileDeleteFlg();
+    setPriceFlg();
+    getObj("Body").action = "${flowExecutionUrl}&_eventId=applyAgain";
+    getObj("Body").submit();
+}
+
+
+function applyFromEdit() {
+    if(!isClickable) {
+        return;
+    }
+
+	if(isFresh() == true) {
+		return;
+	}
+    #set( $req = "#customSpringMessage('PUR_REQ')" )//申請
+    #set( $register = "#customSpringMessage('ACTION_REGISTER')" )
+    if( !confirm('#customMessageArgs("W001",[$req,$register])') ) {
+        return;
+    }
+    buttonDisable();
+    setItemEnable();
+    setFileDeleteFlg();
+    setPriceFlg();
+    getObj("Body").action = "${flowExecutionUrl}&_eventId=applyAgain";
+    getObj("Body").submit();
+}
+function isFresh() {
+	var isSuccess = '#jsEscape($!isSuccess)';
+	var isReSuccess = '#jsEscape($!isReSuccess)';
+
+
+	if(isSuccess == 'true'
+		|| isReSuccess == 'true') {
+		return true;
+	} else {
+	    return false;
+	}
+}
+function changeFontSize() {
+    changeFontSize0();
+}
+
+function userSelectAfterProc() {
+    //メール更新
+    getObj('link.purAplManagement.reqUser.reqUser.mailAddr.mail').href="mailto:"+getObj('purAplManagement.reqUser.reqUser.userName').value+"<"+getObj('purAplManagement.reqUser.reqUser.mailAddr.mail').value+">";
+    getObj('link.purAplManagement.reqUser.reqUser.mailAddr.mail').innerHTML=getObj('purAplManagement.reqUser.reqUser.mailAddr.mail').value;
+}
+
+function setRowItemEnable(index) {
+        getObj("purAplManagement.everyPurReqList["+index+"].amountMng.taxCalculationInd.taxInd.taxInd").disabled = "";
+        getObj("purAplManagement.everyPurReqList["+index+"].itemName.unit.unitCd").disabled = "";
+
+        var objects = document.getElementsByName('purAplManagement.everyPurReqList['+index+'].inspectInd.inspectInd');
+        for(var i = 0; i < objects.length; i++) {
+             objects[i].disabled = "";
+        }
+        //単位名設定
+        var selObj = getObj('purAplManagement.everyPurReqList['+index+'].itemName.unit.unitCd');
+        var selindex = selObj.selectedIndex;
+        if(!selObj.options[0].selected){
+            getObj('purAplManagement.everyPurReqList['+index+'].itemName.unit.unitName').value = selObj.options[selindex].text;
+        } else {
+            getObj('purAplManagement.everyPurReqList['+index+'].itemName.unit.unitName').value = "";
+        }
+ }
+
+function setItemEnable() {
+  #if(!$!quotFlag)
+      #foreach($!PurReqItem in $!domain.purAplManagement.everyPurReqList)
+        setRowItemEnable($velocityCount);
+      #end
+  #end
+ }
+
+function setItemDisplay() {
+     var focusId = document.activeElement.id;
+     #if(!$!quotFlag)
+         #foreach($!PurReqItem in $!domain.purAplManagement.everyPurReqList)
+            //品名設定
+            if(getObj("purAplManagement.everyPurReqList[$velocityCount].itemName.itemCd").value == ''){
+                    if(focusId != null && focusId != "") {
+                        getObj(focusId).disabled = true;
+                        getObj(focusId).disabled = false;
+                    }
+                    getObj("purAplManagement.everyPurReqList[$velocityCount].itemName.itemName").readOnly = false;
+                    getObj("purAplManagement.everyPurReqList[$velocityCount].itemName.itemName").style.backgroundColor = 'white';
+                    getObj("purAplManagement.everyPurReqList[$velocityCount].itemName.katashiki").readOnly = false;
+                    getObj("purAplManagement.everyPurReqList[$velocityCount].itemName.katashiki").style.backgroundColor = 'white';
+                    getObj("purAplManagement.everyPurReqList[$velocityCount].itemName.manufact.manufactCd").readOnly = false;
+                    getObj("purAplManagement.everyPurReqList[$velocityCount].itemName.manufact.manufactCd").style.backgroundColor = 'white';
+                    if(getObj("purAplManagement.everyPurReqList[$velocityCount].itemName.manufact.manufactCd").value == "") {
+                        getObj("purAplManagement.everyPurReqList[$velocityCount].itemName.manufact.manufactName").readOnly = false;
+                        getObj("purAplManagement.everyPurReqList[$velocityCount].itemName.manufact.manufactName").style.backgroundColor = 'white';
+                    }
+                    getObj("purAplManagement.everyPurReqList[$velocityCount].itemName.unit.unitCd").disabled = "";
+                    getObj("img.purAplManagement.everyPurReqList[$velocityCount].itemName.manufact.manufactCd").disabled= "";
+
+                    if(focusId != null && focusId != "") {
+                        getObj(focusId).focus();
+                    }
+             } else {
+                    if(focusId != null && focusId != "") {
+                        getObj(focusId).disabled = true;
+                        getObj(focusId).disabled = false;
+                    }
+
+                    getObj("purAplManagement.everyPurReqList[$velocityCount].itemName.itemName").readOnly = true;
+                    getObj("purAplManagement.everyPurReqList[$velocityCount].itemName.itemName").style.backgroundColor = '#ECECEC';;
+                    getObj("purAplManagement.everyPurReqList[$velocityCount].itemName.katashiki").readOnly = true;
+                    getObj("purAplManagement.everyPurReqList[$velocityCount].itemName.katashiki").style.backgroundColor = '#ECECEC';
+                    getObj("purAplManagement.everyPurReqList[$velocityCount].itemName.manufact.manufactCd").readOnly = true;
+                    getObj("purAplManagement.everyPurReqList[$velocityCount].itemName.manufact.manufactCd").style.backgroundColor = '#ECECEC';
+                    getObj("purAplManagement.everyPurReqList[$velocityCount].itemName.manufact.manufactName").readOnly = true;
+                    getObj("purAplManagement.everyPurReqList[$velocityCount].itemName.manufact.manufactName").style.backgroundColor = '#ECECEC';
+                    getObj("purAplManagement.everyPurReqList[$velocityCount].itemName.unit.unitCd").disabled = true;
+                    getObj("img.purAplManagement.everyPurReqList[$velocityCount].itemName.manufact.manufactCd").disabled= true;
+                    if(focusId != null && focusId != "") {
+                        getObj(focusId).focus();
+                    }
+             }
+
+         #end
+     #end
+}
+function setIndex(index) {
+    getObj('detailindex').value = index;
+}
+
+function setFileDeleteFlg() {
+    var del1 = getObj("purAplManagement.rangeByAttachFile1.attachFile.screenDelFlg").value;
+    var file1 = getObj("purAplManagement.rangeByAttachFile1.attachFile.screenFile").value;
+    if("1" == del1 && file1.length > 0) {
+        getObj("purAplManagement.rangeByAttachFile1.attachFile.screenDelFlg").value = "0";
+    }
+
+    var del2 = getObj("purAplManagement.rangeByAttachFile2.attachFile.screenDelFlg").value;
+    var file2 = getObj("purAplManagement.rangeByAttachFile2.attachFile.screenFile").value;
+    if("1" == del2 && file2.length > 0) {
+        getObj("purAplManagement.rangeByAttachFile2.attachFile.screenDelFlg").value = "0";
+    }
+    if("0" == del1){
+        getObj("purAplManagement.rangeByAttachFile1.attachFile.screenDelFlg").value = "";
+    }
+    if("0" == del2){
+        getObj("purAplManagement.rangeByAttachFile2.attachFile.screenDelFlg").value = "";
+    }
+
+    #foreach($!PurReqItem in $!domain.purAplManagement.everyPurReqList)
+       var del = getObj("purAplManagement.everyPurReqList[$velocityCount].rangeByAttachFile.attachFile.screenDelFlg").value;
+       var file = getObj("purAplManagement.everyPurReqList[$velocityCount].rangeByAttachFile.attachFile.screenFile").value;
+       if("1" == del && file.length > 0) {
+           getObj("purAplManagement.everyPurReqList[$velocityCount].rangeByAttachFile.attachFile.screenDelFlg").value = "0";
+       }
+       if("0" == del){
+           getObj("purAplManagement.everyPurReqList[$velocityCount].rangeByAttachFile.attachFile.screenDelFlg").value = "";
+       }
+    #end
+}
+
+function setPriceFlg(){
+    #foreach($!PurReqItem in $!domain.purAplManagement.everyPurReqList)
+        var priceFlg = getObj("purAplManagement.everyPurReqList[$velocityCount].priceCreateFlg.priceCreateFlg").value;
+        if("2"==priceFlg){
+            getObj("purAplManagement.everyPurReqList[$velocityCount].priceCreateFlg.priceCreateFlg").value = "1";
+        }
+    #end
+}
+
+function downloadFile(seqNo,index, detailindex) {
+    parent.iframeChange("${flowExecutionUrl}&_eventId=download",'seqNo',seqNo, 'index',index, 'detailindex',detailindex);
+}
+function itemSelectAfterProc() {
+    //共通
+   setItemDisplay();
+ }
+
+function itemOnblur(index) {
+    var itemCd = getObj("purAplManagement.everyPurReqList["+index+"].itemName.itemCd").value;
+    // 品名コード の旧い値と新しい値同じの場合、何もしない。同じではない場合、旧い値に更新された。
+    if(itemCd == itemCode_x) {
+        return;
+    } else {
+        itemCode_x = itemCd;
+    }
+
+    var amountCalFlg = '0';
+    if(itemCd == "") {
+        //品名関連情報クリア
+        getObj("purAplManagement.everyPurReqList["+index+"].itemName.itemName").value = "";
+        getObj("purAplManagement.everyPurReqList["+index+"].itemName.katashiki").value = "";
+        getObj("purAplManagement.everyPurReqList["+index+"].itemName.manufact.manufactCd").value = "";
+        getObj("purAplManagement.everyPurReqList["+index+"].itemName.manufact.manufactName").value = "";
+        getObj("purAplManagement.everyPurReqList["+index+"].subject.subjectCd").value = "";
+        getObj("purAplManagement.everyPurReqList["+index+"].subject.subjectName").value = "";
+	} else {
+        $.ajax({
+            type: "POST",
+            async:false,
+            url:"../../getItemInfoOnBlur",
+            data: {
+                termFlag:'0',
+                companyCd:'#jsEscape($!userCompanyCd)',
+                sectionPlaceCd:'#jsEscape($!userSectPlaceCd)',
+                itemCd:itemCd
+            },
+            success:function(data){
+                getObj("purAplManagement.everyPurReqList["+index+"].itemName.itemName").value = data.itemName;
+                getObj("purAplManagement.everyPurReqList["+index+"].itemName.katashiki").value = data.katashiki;
+                getObj("purAplManagement.everyPurReqList["+index+"].itemName.manufact.manufactCd").value = data.manufactCd;
+                getObj("purAplManagement.everyPurReqList["+index+"].itemName.manufact.manufactName").value = data.manufactName;
+                if(data.itemCd != "") {
+                    getObj("purAplManagement.everyPurReqList["+index+"].itemName.unit.unitCd").value = data.unitCd;
+                }
+                getObj("purAplManagement.everyPurReqList["+index+"].subject.subjectCd").value = data.subjectCd;
+                getObj("purAplManagement.everyPurReqList["+index+"].subject.subjectName").value = data.subjectName;
+            }
+        });
+    }
+    setItemDisplay();
+}
+
+function detailAmountByAjax() {
+	#foreach($!PurReqItem in $!domain.purAplManagement.everyPurReqList)
+	   amountByAjax($velocityCount);
+	#end
+}
+
+ function amountByAjax(index) {
+    if (getObj('purAplManagement.everyPurReqList[' + index + '].hopePrice.hopePrice.amountFormat').value == ""){
+        getObj('hopePrice[' + index + ']').innerHTML = "";
+        getObj('currencyMark[' + index + ']').innerHTML = "";
+        getObj('purAplManagement.everyPurReqList[' + index + '].amountMng.noTaxAmount.noTaxAmount.amountFormat').value = '';
+    }
+
+    if (getObj('purAplManagement.everyPurReqList[' + index + '].vol.volFormat').value == ""){
+        getObj('hopePrice[' + index + ']').innerHTML = "";
+        getObj('currencyMark[' + index + ']').innerHTML = "";
+        getObj('purAplManagement.everyPurReqList[' + index + '].amountMng.noTaxAmount.noTaxAmount.amountFormat').value = '';
+    }
+
+    //金額設定
+    if (getObj('purAplManagement.everyPurReqList[' + index + '].hopePrice.hopePrice.amountFormat').value != "" &&
+        getObj('purAplManagement.everyPurReqList[' + index + '].vol.volFormat').value != ""){
+
+        getObj('purAplManagement.everyPurReqList[' + index + '].amountMng.noTaxAmount.noTaxAmount.amountFormat').value = '';
+        $.ajax({
+            type: "POST",
+            async:false,
+            url:"../../buyPriceController/calculateAmount",
+            data: {
+                "price.amountFormat":getObj('purAplManagement.everyPurReqList[' + index + '].hopePrice.hopePrice.amountFormat').value,
+                "vol.volFormat":getObj('purAplManagement.everyPurReqList[' + index + '].vol.volFormat').value,
+                currencyCd:getObj("purAplManagement.everyPurReqList[0].amountMng.currency.currencyCd").value
+            },
+            success:function(data){
+                getObj('purAplManagement.everyPurReqList[' + index + '].amountMng.noTaxAmount.noTaxAmount.amountFormat').value = data.amount.amountFormat;
+                getObj('purAplManagement.hopeAmountTotal.hopeAmountTotal.amount').value =data.cnvAmount.amount;
+
+                if (data.amount.amountFormat != "") {
+                    getObj('hopePrice[' + index + ']').innerHTML = data.amount.amountFormat;
+                    getObj('currencyMark[' + index + ']').innerHTML = data.currencyMark;
+                    getObj('defaultAmount').innerHTML = data.amount.amountFormat;
+                }
+
+                getObj('purAplManagement.everyPurReqList[' + index + '].hopePrice.hopePrice.amountFormat').value = data.price.amountFormat;
+
+                //通貨、通貨記号設定
+                getObj('purAplManagement.everyPurReqList[0].amountMng.currency.currencyCd.Lable').innerHTML =getObj("purAplManagement.everyPurReqList[0].amountMng.currency.currencyCd").value;
+                getObj('mark.purAplManagement.everyPurReqList[' + index + '].hopePrice.hopePrice.amountFormat').innerText = data.currencyMark;
+                getObj('purAplManagement.everyPurReqList[' + index + '].amountMng.currency.currencyMark').value = data.currencyMark;
+            }
+        });
+    }
+    $.ajax({
+        type: "POST",
+        async:false,
+        url:"../../buyPriceController/itemAmount",
+        data: {
+            #foreach($!purReqItem in $!domain.purAplManagement.everyPurReqList)
+               "amountArray[$velocityCount].amountFormat":getObj('purAplManagement.everyPurReqList[$velocityCount].amountMng.noTaxAmount.noTaxAmount.amountFormat').value,
+            #end
+            currencyCd:getObj('purAplManagement.everyPurReqList[0].amountMng.currency.currencyCd').value
+        },
+        success:function(data){
+            getObj('defaultAmount').innerHTML = data.amount.amountFormat;
+            getObj('purAplManagement.hopeAmountTotal.hopeAmountTotal.amount').value = data.amount.amountFormat;
+            setAppRoute();
+        }
+    });
+}
+
+function setAppRoute() {
+    setAppRouteByAmount('1',
+        getObj('purAplManagement.hopeAmountTotal.hopeAmountTotal.amount').value,
+        getObj('purAplManagement.everyPurReqList[0].amountMng.currency.currencyCd').value);
+}
+
+function beforeChangeSupCd() {
+    var supCd = getObj("purAplManagement.hopeSupplier.hopeSupplier.supCd").value;
+
+    // 取引先コード の旧い値と新しい値同じの場合、何もしない。同じではない場合、旧い値に更新された。
+    if(supCd == supCode_x) {
+        return false;
+    } else {
+        supCode_x = supCd;
+    }
+    return true;
+}
+
+function supcdOnBlur() {
+
+    var supCd = getObj("purAplManagement.hopeSupplier.hopeSupplier.supCd").value;
+
+    if(! beforeChangeSupCd()) {
+        return;
+    }
+
+    if(supCd == "") {
+        getObj("purAplManagement.hopeSupplier.hopeSupplier.supplierName.supplierAbbrName").value = "";
+        getObj("purAplManagement.hopeSupplier.hopeSupplier.supplierName.supplierName").value = "";
+        return;
+    }
+
+     $.ajax({
+        type: "POST",
+        async:false,
+        url:"../../getSupplierInfoOnBlur",
+        data: {
+            termFlag:'0',
+            companyCd:'#jsEscape($!userCompanyCd)',
+            supCd:supCd
+        },
+        success:function(data){
+            //設定
+            getObj("purAplManagement.hopeSupplier.hopeSupplier.supplierName.supplierAbbrName").value = data.supAbbrName;
+            getObj("purAplManagement.hopeSupplier.hopeSupplier.supplierName.supplierName").value = data.supName;
+        }
+     });
+}
+
+function manufactOnBlur(index) {
+    var manufacCd = getObj("purAplManagement.everyPurReqList["+index+"].itemName.manufact.manufactCd").value;
+    if(manufacCd == manufacCd_x) {
+        return;
+    } else {
+        manufacCd_x = manufacCd;
+    }
+
+    var focusId = document.activeElement.id;
+    if(manufacCd == "") {
+        if(focusId != null && focusId != "") {
+            getObj(focusId).disabled = true;
+            getObj(focusId).disabled = false;
+        }
+        getObj("purAplManagement.everyPurReqList["+index+"].itemName.manufact.manufactName").value = "";
+        getObj("purAplManagement.everyPurReqList["+index+"].itemName.manufact.manufactName").readOnly = false;
+        getObj("purAplManagement.everyPurReqList["+index+"].itemName.manufact.manufactName").style.backgroundColor = 'white';
+        if(focusId != null && focusId != "") {
+            getObj(focusId).focus();
+        }
+    } else {
+         $.ajax({
+            type: "POST",
+            async:false,
+            url:"../../getManufactInfoOnBlur",
+            data: {
+                termFlag:'0',
+                manufactCd:manufacCd
+            },
+            success:function(data){
+                if(focusId != null && focusId != "") {
+                    getObj(focusId).disabled = true;
+                    getObj(focusId).disabled = false;
+                }
+                //設定
+                getObj("purAplManagement.everyPurReqList["+index+"].itemName.manufact.manufactName").readOnly = true;
+                getObj("purAplManagement.everyPurReqList["+index+"].itemName.manufact.manufactName").style.backgroundColor = '#ECECEC';
+                getObj("purAplManagement.everyPurReqList["+index+"].itemName.manufact.manufactName").value = data.manufactName;
+                if(focusId != null && focusId != "") {
+                    getObj(focusId).focus();
+                }
+            }
+         });
+   }
+ }
+
+function setManufactDisplay() {
+    #foreach($!PurReqItem in $!domain.purAplManagement.everyPurReqList)
+        var manufacCd = getObj("purAplManagement.everyPurReqList[$velocityCount].itemName.manufact.manufactCd");
+        var itemCd = getObj("purAplManagement.everyPurReqList[$velocityCount].itemName.itemCd");
+        if(manufacCd != undefined && itemCd != undefined) {
+            if(manufacCd.value == "" && itemCd.value == '') {
+                getObj("purAplManagement.everyPurReqList[$velocityCount].itemName.manufact.manufactName").readOnly = false;
+                getObj("purAplManagement.everyPurReqList[$velocityCount].itemName.manufact.manufactName").style.backgroundColor = 'white';
+            } else {
+                getObj("purAplManagement.everyPurReqList[$velocityCount].itemName.manufact.manufactName").readOnly = true;
+                getObj("purAplManagement.everyPurReqList[$velocityCount].itemName.manufact.manufactName").style.backgroundColor = '#ECECEC';
+            }
+        }
+    #end
+}
+
+function manufactSelectAfterProc() {
+    setManufactDisplay();
+}
+
+function deliveryPlaceOnBlur() {
+    var delivPlaceCd = getObj("purAplManagement.delivPlace.delivPlaceCd").value;
+    if(delivPlaceCd == delivPlaceCd_x) {
+        return;
+    } else {
+        delivPlaceCd_x = delivPlaceCd;
+    }
+    if(delivPlaceCd == "") {
+        getObj("purAplManagement.delivPlace.delivPlaceName").value = "";
+    } else {
+         $.ajax({
+            type: "POST",
+            async:false,
+            url:"../../getDeliveryPlaceOnBlur",
+            data: {
+                termFlag:'0',
+                companyCd:'#jsEscape($!userCompanyCd)',
+                delivPlaceCd:delivPlaceCd
+            },
+            success:function(data){
+                //設定
+                getObj("purAplManagement.delivPlace.delivPlaceName").value = data.delivPlaceName;
+            }
+         });
+
+   }
+ }
+
+function deliveryPlaceCodeGetfocus(obj){
+    delivPlaceCd_x  = obj.value;
+}
+
+function userOnblur() {
+    var userId = getObj("purAplManagement.reqUser.reqUser.userID").value;
+    if(userId == "") {
+        getObj("purAplManagement.reqUser.reqUser.section.sectionCd").value = "";
+        getObj("purAplManagement.reqUser.reqUser.section.sectionName").value = "";
+        getObj("purAplManagement.reqUser.reqUser.section.sectionPlace.sectionPlaceCd").value = "";
+        getObj("purAplManagement.reqUser.reqUser.section.sectionPlace.sectionPlaceName").value = "";
+        getObj("purAplManagement.reqUser.reqUser.userName").value = "";
+        getObj("purAplManagement.reqUser.reqUser.externalNo.externalNo").value = "";
+        getObj("purAplManagement.reqUser.reqUser.extNo.extensionNo").value = "";
+        getObj("purAplManagement.reqUser.reqUser.mailAddr.mail").value = "";
+        getObj('link.purAplManagement.reqUser.reqUser.mailAddr.mail').innerHTML="";
+        chgUserId = userId;
+    } else if (userId != chgUserId) {
+         chgUserId = userId;
+         $.ajax({
+            type: "POST",
+            async:false,
+            url:"../../getUserInfoOnBlur",
+            data: {
+                termFlag:'0',
+                companyCd:'#jsEscape($!userCompanyCd)',
+                referenceRangeFlg:'#jsEscape($!referenceRangeFlg)',
+                userPermissionFlg:'60',
+                userId:userId
+            },
+            success:function(data){
+                //設定
+                getObj("purAplManagement.reqUser.reqUser.section.sectionCd").value = data.userIdentify.sectionCd;
+                getObj("purAplManagement.reqUser.reqUser.section.sectionName").value = data.sectionName;
+                getObj("purAplManagement.reqUser.reqUser.section.sectionPlace.sectionPlaceCd").value = data.sectionPlaceCd;
+                getObj("purAplManagement.reqUser.reqUser.section.sectionPlace.sectionPlaceName").value = data.sectionPlaceName;
+                getObj("purAplManagement.reqUser.reqUser.userName").value = data.userName;
+                getObj("purAplManagement.reqUser.reqUser.externalNo.externalNo").value = data.externalNo;
+                getObj("purAplManagement.reqUser.reqUser.extNo.extensionNo").value = data.extensionNo;
+                getObj("purAplManagement.reqUser.reqUser.mailAddr.mail").value = data.mailAddr;
+                getObj('link.purAplManagement.reqUser.reqUser.mailAddr.mail').href="mailto:"+data.userName+"<"+data.mailAddr+">";
+                getObj('link.purAplManagement.reqUser.reqUser.mailAddr.mail').innerHTML=data.mailAddr;
+
+            }
+         });
+
+   }
+ }
+
+function sectionInfoOnBlur() {
+    var sectionCd = getObj("purAplManagement.loadSection.loadSection.sectionCd").value;
+    if(sectionCd == sectionCd_x) {
+        return;
+    } else {
+        sectionCd_x = sectionCd;
+    }
+    if(sectionCd == "") {
+        getObj("purAplManagement.loadSection.loadSection.sectionName").value = "";
+        getObj("purAplManagement.loadSection.loadSection.company.companyCd").value = "";
+        getObj("purAplManagement.loadSection.loadSection.company.companyName").value = "";
+        getObj("purAplManagement.loadSection.loadSection.sectionPlace.sectionPlaceCd").value = "";
+        getObj("purAplManagement.loadSection.loadSection.sectionPlace.sectionPlaceName").value = "";
+    } else {
+         $.ajax({
+            type: "POST",
+            async:false,
+            url:"../../getSectionInfoOnBlur",
+            data: {
+                termFlag:'0',
+                sectionCd:cleanXss(sectionCd),
+                companyCd:cleanXss('#jsEscape($!userCompanyCd)'),
+                loadSectionFlg:'1'
+            },
+            success:function(data){
+                //設定
+                getObj("purAplManagement.loadSection.loadSection.sectionName").value = data.sectionName;
+                getObj("purAplManagement.loadSection.loadSection.company.companyCd").value = data.sectionIdentify.companyCd;
+                getObj("purAplManagement.loadSection.loadSection.company.companyName").value = data.companyName;
+                getObj("purAplManagement.loadSection.loadSection.sectionPlace.sectionPlaceCd").value = data.sectionPlaceCd;
+                getObj("purAplManagement.loadSection.loadSection.sectionPlace.sectionPlaceName").value = data.sectionPlaceName;
+            }
+         });
+   }
+ }
+
+function sectionCodeGetfocus(obj){
+    sectionCd_x  = obj.value;
+}
+
+function subjectOnblur(index) {
+    var subjectCd = getObj("purAplManagement.everyPurReqList["+index+"].subject.subjectCd").value;
+    if(subjectCd == subjectCd_x) {
+        return;
+    } else {
+        subjectCd_x = subjectCd;
+    }
+    if(subjectCd == "") {
+        getObj("purAplManagement.everyPurReqList["+index+"].subject.subjectName").value = "";
+    } else {
+         $.ajax({
+            type: "POST",
+            async:false,
+            url:"../../getSubjectOnBlur",
+            data: {
+                termFlag:'0',
+                subjectCd:subjectCd,
+                companyCd:'#jsEscape($!userCompanyCd)'
+            },
+            success:function(data){
+                //設定
+                getObj("purAplManagement.everyPurReqList["+index+"].subject.subjectName").value = data.subjectName;
+            }
+         });
+   }
+ }
+
+function subjectCodeGetfocus(obj){
+    subjectCd_x  = obj.value;
+}
+
+function setSubject(){
+    #foreach($!PurReqItem in $!domain.purAplManagement.everyPurReqList)
+        getObj('purAplManagement.everyPurReqList[$velocityCount].subject.subjectCd').value = getObj('SubjectCd1').value;
+        getObj('purAplManagement.everyPurReqList[$velocityCount].subject.subjectName').value = getObj('SubjectName1').value;
+    #end
+}
+
+function subjectOnblurPaste() {
+    var subjectCd = getObj("SubjectCd1").value;
+    if(subjectCd == "") {
+        getObj("SubjectName1").value = "";
+    } else {
+         $.ajax({
+            type: "POST",
+            async:false,
+            url:"../../getSubjectOnBlur",
+            data: {
+                termFlag:'0',
+                subjectCd:subjectCd,
+                companyCd:cleanXss('#jsEscape($!userCompanyCd)')
+            },
+            success:function(data){
+                //設定
+                getObj("SubjectName1").value = data.subjectName;
+            }
+         });
+   }
+ }
+
+function codeGetfocus(obj) {
+    itemCode_x = obj.value;
+}
+
+function supCodeGetfocus(obj) {
+    supCode_x = obj.value;
+}
+
+function manufactCodeGetfocus(obj) {
+    manufacCd_x = obj.value;
+}
+
+function setChgUserIdValue() {
+    chgUserId = getObj("purAplManagement.reqUser.reqUser.userID").value;
+}
+
+function pasteItem(name) {
+    objs = document.getElementsByName(name);
+    #foreach($!purReqItem in $!domain.purAplManagement.everyPurReqList)
+        getObj('purAplManagement.everyPurReqList[$velocityCount].hopeDlvEst.hopeDlvEst.dateOfymdFormat').value = objs[0].value;
+    #end
+}
+
+function addDetail() {
+    buttonDisable();
+    setItemEnable();
+    setFileDeleteFlg();
+    getObj("Body").action="${flowExecutionUrl}&_eventId=addDetail";
+    getObj("Body").submit();
+}
+
+function deleteDetail(index) {
+    setItemEnable();
+    setFileDeleteFlg();
+    getObj("Body").action="${flowExecutionUrl}&_eventId=deleteDetail&detailIndex="+index;
+    getObj("Body").submit();
+}
+//-->
+</script>
+
+
+</head>
+<body class="CreateArea" onload="onLoad();">
+
+<form id="Body" name="Body" method="post" enctype="multipart/form-data">
+#customFormHiddenInput("isClassify" "false")
+<input type="hidden" id="detailindex" name="detailindex" value="">
+#set($detailFlg = 0)
+#if($!{domain.purAplManagement.purAplIdentify.purReqNo} == "")
+    #set($detailFlg = 1)
+#end
+    <table class="HomeBox" width="800">
+
+        <tr>
+            <td style="padding: 16px 16px 16px 16px;">
+                <!-- ＊＊＊＊＊　カレンダーボックス　＊＊＊＊＊ -->
+                <iframe id="CALENDARBOX" class="CALENDARBOX" framespacing="0"scrolling="no" frameborder="0" src="../../sbxCalendar/body.vm"></iframe>
+
+                <table width="100%">
+                    <tr>
+                        <td align="left">
+
+                            <table class="NoBorder" width="100%">
+                                <tr width="70%">
+                                    #if($!pageFrom == "create" || $!pageFrom == "history" || $!pageFrom == "create2")
+                                    <td id="Title1">
+                                        <u><img src="../../image/mrkCircle.gif"><span id="StepTitle" class="FontStepTitle">#customSpringMessage('EVERY_PUR_REQ_INPUT')</span></u><br><br><!--都度購入依頼入力-->
+                                    #end
+                                    #if($!pageFrom == "reApply")
+                                    <td id="Title2">
+                                        <u><img src="../../image/mrkCircle.gif"><span id="StepTitle" class="FontStepTitle">#customSpringMessage('EVERY_PUR_REQ_CORRECT')</span></u><br><br><!--都度購入依頼訂正-->
+                                    #end
+                                    #if($!pageFrom == "edit")
+                                    <td id="Title3">
+                                        <u><img src="../../image/mrkCircle.gif"><span id="StepTitle" class="FontStepTitle">#customSpringMessage('EVERY_PUR_REQ_CORRECT')</span></u><br><br><!--都度購入依頼訂正-->
+                                    #end
+                                    <span id="STEPMSG" class="FontSmallBold DarkBlue">#customSpringMessage('PSPUR010_HEADER_COMMENT')</span>
+                                        <br><br>
+                                    </td>
+
+                                  <td align="right" valign="middle" id="Submit1" nowrap>
+                                  #if($!pageFrom == "create" || $!pageFrom == "history" || $!pageFrom == "edit" || $!pageFrom == "create2")
+                                        <input name="Button1" type="button" class="LargeButton" value="#customSpringMessage('TEMPORARY_PRESERVATION')" onclick="tempSave();">&nbsp;&nbsp;<!--一時保存-->
+                                   #end
+                                   #if($!pageFrom == "create" || $!pageFrom == "history" || $!pageFrom == "create2")
+                                        <input name="Button2" type="button" class="LargeButton" value="#customSpringMessage('REQ')" onclick="apply();"><!--申　請-->
+                                   #end
+                                   #if($!pageFrom == "edit")
+                                        <input name="Button2" type="button" class="LargeButton" value="#customSpringMessage('REQ')" onclick="applyFromEdit();"><!--申　請-->
+                                   #end
+                                   #if($!pageFrom == "reApply")
+                                        <input name="Button3" type="button" class="LargeButton" value="#customSpringMessage('RE_REQ')" onclick="reApply();"><!-- 再申請 -->
+                                   #end
+                                   </td>
+                                </tr>
+                                <tr id="status" style="display:none;">
+                                    <td>
+                                        <input id="sts" type="text">
+                                    </td>
+                                </tr>
+                                 <tr id ="TR_ERROR" style="display:none;"><td class="error" style="height:0px;">
+                                    $!errorMessage
+                                </td></tr>
+                            </table>
+
+                            <table class="Box1G" width="100%">
+                                <tbody class="Box1G">
+                                  $!PSPUR010PageCreater.build('reg','_tr_style', '', '_td_style_left', 'class="Box1H FontBoxHeader"','_td_style_right', 'class="Box1D FontSmallAnk"', '_label_style', 'FontSmallAnk')
+                                    #foreach($!item in $!PSPUR010PageCreater.getItemListForBody())
+                                        #if($!item.getColumnName()=="T_PUR_APL.PUR_APL_NO")
+                                            #if(($!pageFrom!='create' && $!pageFrom!='history') || $!isSuccess == "true" || $!isTempSuccess == "true") ##2013.01.18 ADD DAIKO_MUTO
+                                            $!PSPUR010PageCreater.printSpecial("s00_label",$!item,'_item_style','class="FontSlipNo"')
+                                            #end
+                                        #elseif($!item.getColumnName()=="T_PUR_APL.PUR_REQ_DATE")
+                                            $!PSPUR010PageCreater.printSpecial("s00_label",$!item,'_item_style','class="Small"')
+                                        #elseif($!item.getColumnName()=="T_PUR_APL.URGENT_IND")
+                                            $!PSPUR010PageCreater.printSpecial('s31_checkbox', $!item, '_elementcd','EMERGENCY', '_td_style_right', 'class="Box1D FontSmallAnk"')
+                                        #elseif($!item.getColumnName()=="T_PUR_APL.TITLE_NAME")
+                                            $!PSPUR010PageCreater.printDefault($!item)
+                                        #elseif($!item.getColumnName()=="T_PUR_APL.REQ_USER_ID")
+                                            $!PSPUR010PageCreater.printSpecial("CLIENT", "m01_inputUser",$!item,'_item_style','class="FontSlipNo"', 'popupPageid','PSPUR010',
+                                            '_userCdEvent', 'onblur="userOnblur()";', '_extensionNoEvent', 'onfocus="this.select();"')
+                                        #elseif($!item.getColumnName()=="T_PUR_APL.APP_ROUTE_NO")
+                                            $!PSPUR010PageCreater.printSpecial("APP_ROUTE","m02_inputAppRoute",$!item,'_item_style','class="Small" onchange="setAppRouteName();setShowButton();"','_companyCd',$!userCompanyCd,'_sectionCd',$!userSectionCd,'_voucherType','1','_currentAppRoute',"$!domain.purAplManagement.approute.appRouteNo")
+                                        #elseif($!item.getColumnName()=="T_PUR_APL.LOAD_SECTION_CD")
+                                        	#if($customMacroRequestContext.isActiveProfile('budget'))
+                                            	$!PSPUR010PageCreater.printSpecial("m03_inputLoadSection",$!item,'popupPageid','PSPUR010','_imageName','sectionName', '_event', 'onblur="sectionInfoOnBlur()" onfocus="sectionCodeGetfocus(this);"')
+                                            #else
+                                            	$!PSPUR010PageCreater.printSpecial("m03_inputSection",$!item,'popupPageid','PSPUR010','_imageName','sectionName', '_event', 'onblur="sectionInfoOnBlur()" onfocus="sectionCodeGetfocus(this);"','_loadSectionFlag','1')
+                                            #end
+                                        #elseif($!item.getColumnName()=="T_PUR_APL.DELIV_PLACE_CD")
+                                            #if($!quotFlag)
+                                                $!PSPUR010PageCreater.printSpecial("DELIVERY_PLACE","m17_showDelivery",$!item)
+                                                #customFormHiddenInput("purAplManagement.delivPlace.delivPlaceCd" "$!domain.purAplManagement.delivPlace.delivPlaceCd")
+                                                #customFormHiddenInput("purAplManagement.delivPlace.delivPlaceName" "$!domain.purAplManagement.delivPlace.delivPlaceName")
+                                            #else
+                                                $!PSPUR010PageCreater.printSpecial("DELIVERY_PLACE","m04_inputDelivery",$!item,'popupPageid','PSPUR010','_event', 'onblur="deliveryPlaceOnBlur()"; onfocus="deliveryPlaceCodeGetfocus(this);"')
+                                            #end
+                                        #elseif($!item.getColumnName()=="T_PUR_APL.HOPE_SUPPLIER_CD")
+                                            #if($!quotFlag)
+                                                $!PSPUR010PageCreater.printSpecial("HOPE_SUPPLIER","m31_showSupplierSimple",$!item)
+                                                #customFormHiddenInput("purAplManagement.hopeSupplier.hopeSupplier.supCd" "$!domain.purAplManagement.hopeSupplier.hopeSupplier.supCd")
+                                                #customFormHiddenInput("purAplManagement.hopeSupplier.hopeSupplier.supplierName.supplierName" "$!domain.purAplManagement.hopeSupplier.hopeSupplier.supplierName.supplierName")
+                                            #else
+                                                $!PSPUR010PageCreater.printSpecial("HOPE_SUPPLIER","m05_inputSupplier",$!item,"popupPageid","PSPUR010",'_imageName','supplierName', '_event', 'onblur="supcdOnBlur()" onfocus = "supCodeGetfocus(this)"')
+                                            #end
+                                        #elseif($!item.getColumnName()=="T_PUR_APL.ITEM_CLASS_S")
+                                            $!PSPUR010PageCreater.printSpecial("ITEM_KIND","m06_inputItemKind",$!item,'popupPageid','PSPUR010','_sectionTypeCode','1')
+                                        <tr id = "edit_mark6">
+                                            <td nowrap class="Box1H FontBoxHeader" >#customSpringMessage('CURRENCY_CD')</td>
+                                            <td nowrap class="Box1D FontSmallAnk" id="purAplManagement.everyPurReqList[0].amountMng.currency.currencyCd.Lable">#out($!domain.purAplManagement.everyPurReqList[0].amountMng.currency.currencyCd)
+                                           </td>
+                                        </tr>
+                                         <tr id = "edit_mark6">
+                                            <td nowrap class="Box1H FontBoxHeader" >#customSpringMessage('HOPE_PRICE_TOTAL')</td>
+                                            <td nowrap class="Box1D FontCurrMiddle Brown">
+                                                #out($!domain.purAplManagement.everyPurReqList[0].amountMng.currency.currencyMark)
+                                                <span id="defaultAmount" class="FontBigBold FontCurrMiddle Brown">#out($!domain.purAplManagement.hopeAmountTotal.hopeAmountTotal.amountFormat)</span>
+                                            </td>
+                                         </tr>
+                                         #customFormHiddenInput("purAplManagement.hopeAmountTotal.hopeAmountTotal.amount" "$!domain.purAplManagement.hopeAmountTotal.hopeAmountTotal.amount")
+                                         #elseif($!item.getColumnName() == "T_PUR_APL.PRICE_REQ_FLG")
+                                            $!PSPUR010PageCreater.printSpecial('s31_checkbox', $!item,'_elementcd','HOPE','_td_style_right', 'class="Box1D FontSmallAnk"')
+                                        #elseif($!item.getColumnName()=="T_PUR_APL.BUDGET_NO")
+                                            #if($isActiveProfileBudget == "true")
+                                                $!PSPUR010PageCreater.printSpecial("BG01_input_BudgetNo",$!item,'popupPageid','PSPUR010')
+                                            #else
+                                                $!PSPUR010PageCreater.printDefault($!item)
+                                            #end
+                                        #elseif($!item.getColumnName()=="T_PUR_APL.ATTACH_FILE_SEQ1")
+                                            $!PSPUR010PageCreater.printSpecial("s01_file2",$!item)
+                                        #else
+                                            $!PSPUR010PageCreater.printDefault($!item)
+                                        #end
+                                    #end
+                                    </tbody>
+
+                            </table>
+                            <br>
+                            <div id ="detail_edit">
+                                <table class="NoBorder" width="100%">
+                                    <tr>
+                                        <td>
+                                            <span class="CornerTopBrown"><span class="Corner1"></span> <span class="Corner2"></span> <span class="Corner3"></span><span class="Corner4"></span></span>
+                                            <div class="CornerMidBrown" width="100%">
+                                                <table>
+                                                    <tbody>
+                                    #if(!$!quotFlag && $detailFlg == 1)
+                                                        <tr>
+                                                            <td>
+                                                                &nbsp;<img src="../../image/mrkInfo.gif">&nbsp;
+                                                            </td>
+                                                            <td width="300px;" class="FontSmallBold DarkBlue" align="left">
+                                                                #customSpringMessage("DTL_ADD_COMMENT")<!-- 最大N社まで入力することができます。 -->
+                                                            </td>
+                                                            <td></td>
+                                                            <td>
+                                                                <input type="button" class="SmallButton" value="#customSpringMessage('DETAIL_ADD')" onclick="addDetail();">
+                                                            </td>
+                                                        </tr>
+                                    #end
+                                    #if(!$!quotFlag)
+                                                        <tr>
+                                                            <td>
+                                                                &nbsp;<img src="../../image/mrkInfo.gif">&nbsp;
+                                                            </td>
+                                                            <td width="300px;" class="FontSmallBold DarkBlue" align="left">
+                                                                #customSpringMessage("COMMENT_PASTE_INPUT_VALUE")
+                                                            </td>
+                                                            <td align="left">
+                                                                <span class="FontBoxHeader">#customSpringMessage("DELIV_DATE")&nbsp;&nbsp;&nbsp;</span>
+                                                                <input class="MiddleAnk  noIME" id="aptDate" name="aptDate" type="text" maxlength="8" size="12" value="" onblur="dateOnBlur(this);" onfocus="dateOnFocus(this);">
+                                                                <img class="Icon" src="../../image/btnCalendar.gif" onclick="initSearchBox(1,getElementById('aptDate'));">
+                                                            </td>
+                                                            <td>
+                                                                <input class="SmallButton" type="button" value="#customSpringMessage('ACTION_PASTE')" onclick="pasteItem('aptDate');">
+                                                            </td>
+                                                        </tr>
+                                    #end
+                                                        <tr>
+                                    #if($!quotFlag)
+                                                            <td>
+                                                                &nbsp;<img src="../../image/mrkInfo.gif">&nbsp;
+                                                            </td>
+                                                            <td width="300px;" class="FontSmallBold DarkBlue" align="left">
+                                                                #customSpringMessage("COMMENT_PASTE_INPUT_VALUE")
+                                                            </td>
+                                    #else
+                                                            <td></td>
+                                                            <td></td>
+                                    #end
+                                                            <td align="left">
+                                                                <span class="FontBoxHeader">#customSpringMessage("SUBJECT")&nbsp;&nbsp;&nbsp;</span>
+                                                                <input id="SubjectCd1" class="Small noIME" maxlength="12" type="text" size="16"  onblur ="subjectOnblurPaste();">
+                                                                <input id="SubjectName1" class="SmallDsp" type="text" size="32" readonly>
+                                                                <img class="Icon" name="SubjectSearch" src="../../image/btnLupe.gif" onclick="subjectPopup.setParam('0','#jsEscapeInHTML($!userCompanyCd)'); subjectPopup.setObject(getObj('SubjectCd1'),getObj('SubjectName1'));masterSearch('../../src/subjectPopup/search?pageid=subjectPopupSearch','subjectPopup','700','500');">
+                                                            </td>
+                                                            <td>
+                                                                <input class="SmallButton" type="button" value="#customSpringMessage('ACTION_PASTE')" onclick="setSubject()">&nbsp;
+                                                            </td>
+                                                        </tr>
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                            <span class="CornerBtmBrown"><span class="Corner4"></span> <span class="Corner3"></span> <span class="Corner1"></span><span class="Corner1"></span></span>
+                                        </td>
+                                    </tr>
+                                </table>
+                            </div>
+                            <br>
+                             <table class="Box1G" width="100%">
+                                #if($!quotFlag)
+                                    $!PSPUR010PageCreater.buildDetail('index')
+                                #else
+                                    #if($!detailFlg == 1)
+                                        $!PSPUR010PageCreater.buildDetail('index&cancel')
+                                    #else
+                                        $!PSPUR010PageCreater.buildDetail('index')
+                                    #end
+                                #end
+                                $!PSPUR010PageCreater.build('reg','_tr_style', '',
+                                    '_td_style_left', 'class="Box1H FontBoxHeader"','_td_style_right', 'class="Box1D FontSmallAnk"', '_label_style', 'FontSmallAnk')
+                                #foreach($!PurReqItem in $!domain.purAplManagement.everyPurReqList)
+                                #set( $index = $velocityCount )
+                                <tbody id="Detail$velocityCount"  class="ListBorderWidth">
+                                   #set($listCount=$!PSPUR010PageCreater.getItemListForDetail($velocityCount).size())
+                                    #foreach($!item in $!PSPUR010PageCreater.getItemListForDetail($velocityCount))
+                                    #if(($velocityCount+1) == $listCount)
+                                        #set($td_style_left="class='Box1Hdt FontBoxHeader'")
+                                        #set($td_style_right="class='Box1Ddt FontSmallAnk'")
+                                     #else
+                                        #set($td_style_left="class='Box1Hd FontBoxHeader'")
+                                        #set($td_style_right="class='Box1Dd FontSmallAnk'")
+                                     #end
+                                        #if($!item.getColumnName()=="T_PUR_REQUEST.SUBJECT_CD")
+                                              #set($prif='onblur="subjectOnblur(')
+                                              #set($post=');"')
+                                              #set($onfocus='onfocus="subjectCodeGetfocus(this);"')
+                                              #set($onblur="$prif$index$post$onfocus")
+                                            #if($!quotFlag)
+                                            $!PSPUR010PageCreater.printSpecial("m07_inputSubject",$!item,'popupPageid','PSPUR010','_event', $onblur,'_td_style_left', $td_style_left,'_td_style_right', $td_style_right)
+                                            #else
+                                            $!PSPUR010PageCreater.printSpecial("m07_inputSubject",$!item,'popupPageid','PSPUR010','_event', $onblur, '_td_style_left', $td_style_left,'_td_style_right', $td_style_right)
+                                            #end
+                                        #elseif($!item.getColumnName()=="T_PUR_REQUEST.MANUFACT_CD")
+                                            #if($!quotFlag)
+                                                $!PSPUR010PageCreater.printSpecial("m20_showManufact",$!item,'_td_style_left', $td_style_left,'_td_style_right', $td_style_right)
+                                                #customFormHiddenInput("purAplManagement.everyPurReqList[$index].itemName.manufact.manufactCd" "$!domain.purAplManagement.everyPurReqList[$index].itemName.manufact.manufactCd")
+                                                #customFormHiddenInput("purAplManagement.everyPurReqList[$index].itemName.manufact.manufactName" "$!domain.purAplManagement.everyPurReqList[$index].itemName.manufact.manufactName")
+                                            #else
+                                                #set($prif='onblur="manufactOnBlur(')
+                                                #set($post=');"')
+                                                #set($onblur="$prif$index$post onfocus='manufactCodeGetfocus(this)'")
+                                                $!PSPUR010PageCreater.printSpecial("m09_inputManufact",$!item,'popupPageid','PSPUR010','_event', $onblur, '_td_style_left', $td_style_left,'_td_style_right', $td_style_right)
+                                            #end
+                                        #elseif($!item.getColumnName()=="T_PUR_REQUEST.ITEM_CD")
+                                            #if($!quotFlag)
+                                                $!PSPUR010PageCreater.printSpecial("s00_label",$!item,'_td_style_left', $td_style_left,'_td_style_right', $td_style_right)
+                                            #else
+                                                #set($prif='itemOnblur(')
+                                                #set($post=');')
+                                                #set($onblur="$prif$index$post")
+                                                $!PSPUR010PageCreater.printSpecial(
+                                                    "m08_inputItem",$!item,
+                                                    'popupPageid','PSPUR010',
+                                                    '_index',"$index",
+                                                    '_itemNameObj',"purAplManagement.everyPurReqList[$index].itemName.itemName",
+                                                    '_katashikiObj',"purAplManagement.everyPurReqList[$index].itemName.katashiki",
+                                                    '_manufactCdObj',"purAplManagement.everyPurReqList[$index].itemName.manufact.manufactCd",
+                                                    '_manufactNameObject', "purAplManagement.everyPurReqList[$index].itemName.manufact.manufactName",
+                                                    '_unitCdObject', "purAplManagement.everyPurReqList[$index].itemName.unit.unitCd",
+                                                    '_subjectCdObject', "purAplManagement.everyPurReqList[$index].subject.subjectCd",
+                                                    '_subjectNameObject', "purAplManagement.everyPurReqList[$index].subject.subjectName",
+                                                    '_setItemName', $onblur,'_event', 'onfocus = "codeGetfocus(this);"'
+                                                    , '_td_style_left', $td_style_left,'_td_style_right', $td_style_right
+                                                )
+                                            #end
+                                            #customFormHiddenInput("purAplManagement.everyPurReqList[$index].supplierFrom.supCd" "$!domain.purAplManagement.everyPurReqList[$index].supplierFrom.supCd")
+                                            #customFormHiddenInput("purAplManagement.everyPurReqList[$index].supplierFrom.supplierName.supplierName" "$!domain.purAplManagement.everyPurReqList[$index].supplierFrom.supplierName.supplierName")
+                                            #customFormHiddenInput("purAplManagement.everyPurReqList[$index].supplierFrom.supplierName.supplierAbbrName" "$!domain.purAplManagement.everyPurReqList[$index].supplierFrom.supplierName.supplierAbbrName")
+                                            #customFormHiddenInput("purAplManagement.everyPurReqList[$index].priceCreateFlg.priceCreateFlg" "$!domain.purAplManagement.everyPurReqList[$index].priceCreateFlg.priceCreateFlg")
+                                            #customFormHiddenInput("purAplManagement.everyPurReqList[$index].autoOrderFlg" "$!domain.purAplManagement.everyPurReqList[$index].autoOrderFlg")
+                                            #customFormHiddenInput("purAplManagement.everyPurReqList[$index].inspectIndData" "")
+                                            #customFormHiddenInput("purAplManagement.everyPurReqList[$index].amountMng.currency.currencyCd" "$!domain.purAplManagement.everyPurReqList[$index].amountMng.currency.currencyCd")
+                                            #customFormHiddenInput("purAplManagement.everyPurReqList[$index].amountMng.currency.currencyMark" "$!domain.purAplManagement.everyPurReqList[$index].amountMng.currency.currencyMark")
+                                            #customFormHiddenInput("purAplManagement.everyPurReqList[$index].exclusiveSlipId.slipNo" "$!domain.purAplManagement.everyPurReqList[$index].exclusiveSlipId.slipNo")
+                                            #customFormHiddenInput("purAplManagement.everyPurReqList[$index].exclusiveSlipId.lastUpdDate" "$!domain.purAplManagement.everyPurReqList[$index].exclusiveSlipId.lastUpdDate")
+										#elseif($!item.getColumnName()=="T_PUR_REQUEST.ITEM_NAME")
+                                            #if($!quotFlag)
+                                                $!PSPUR010PageCreater.printSpecial("s00_label",$!item,'_td_style_left', $td_style_left,'_td_style_right', $td_style_right)
+                                            #else
+                                                $!PSPUR010PageCreater.printDefault($!item, '_td_style_left', $td_style_left,'_td_style_right', $td_style_right)
+                                            #end
+                                        #elseif($!item.getColumnName()=="T_PUR_REQUEST.KATASHIKI")
+                                            #if($!quotFlag)
+                                                $!PSPUR010PageCreater.printSpecial("s00_label",$!item,'_td_style_left', $td_style_left,'_td_style_right', $td_style_right)
+                                            #else
+                                                $!PSPUR010PageCreater.printDefault($!item, '_td_style_left', $td_style_left,'_td_style_right', $td_style_right)
+                                            #end
+                                        #elseif($!item.getColumnName()=="T_PUR_REQUEST.INSPECT_IND")
+                                            $!PSPUR010PageCreater.printSpecial("s05_radio",$!item,'_td_style_left', $td_style_left,'_td_style_right', $td_style_right)
+                                        #elseif($!item.getColumnName()=="T_PUR_REQUEST.REQ_AMOUNT")
+                                             #if($!quotFlag)
+                                                $!PSPUR010PageCreater.printSpecial('s24_currency', $!item, '_td_style_left', $td_style_left, '_td_style_right', 'class="Box1Dd FontSmall"','_item_style','class="FontCurrSmall"')
+                                             #else
+                                                #set($currencyMarkId1='currencyMark[')
+                                                #set($currencyMarkId2=']')
+                                                #set($currencyMarkId="$currencyMarkId1$index$currencyMarkId2")
+                                                #set($currencyId1='id="hopePrice[')
+                                                #set($currencyId2=']" class="FontCurrSmall"')
+                                                #set($currencyId="$currencyId1$index$currencyId2")
+                                                $!PSPUR010PageCreater.printSpecial("s24_currency",$!item, '_td_style_left', $td_style_left,'_td_style_right', 'class="Box1Dd FontSmall"', '_item_style', $currencyId, 'currencyMarkId', $currencyMarkId )
+                                            #end
+                                        #elseif($!item.getColumnName()=="T_PUR_REQUEST.REQ_DELIV_DATE")
+                                            #if($!quotFlag && $!PurReqItem.getHopeDlvEst().getHopeDlvEst().getDateOfymd() != "" && $!PurReqItem.isHopeDlvEstFlg())
+                                                $!PSPUR010PageCreater.printSpecial("s00_label",$!item,'_td_style_left', $td_style_left,'_td_style_right', $td_style_right)
+                                             #else
+                                                $!PSPUR010PageCreater.printDefault($!item, '_td_style_left', $td_style_left,'_td_style_right', $td_style_right)
+                                            #end
+                                        #elseif($!item.getColumnName()=="T_PUR_REQUEST.REQ_VOL")
+                                             #if($!quotFlag)
+                                                $!PSPUR010PageCreater.printSpecial("HOPE_VOL_UNIT", "s16_showVol",$!item,'_td_style_left', $td_style_left,'_td_style_right', $td_style_right)
+                                                #customFormHiddenInput("purAplManagement.everyPurReqList[$index].vol.vol" "$!domain.purAplManagement.everyPurReqList[$index].vol.vol")
+                                                #customFormHiddenInput("purAplManagement.everyPurReqList[$index].itemName.unit.unitCd" "$!domain.purAplManagement.everyPurReqList[$index].itemName.unit.unitCd")
+                                                #customFormHiddenInput("purAplManagement.everyPurReqList[$index].itemName.unit.unitName" "$!domain.purAplManagement.everyPurReqList[$index].itemName.unit.unitName")
+                                             #else
+                                                 #set($prif='onblur="amountByAjax(')
+                                                 #set($post=');editVal(this);" onfocus="deleteComma(this);"')
+                                                 #set($onblur="$prif$index$post")
+                                                $!PSPUR010PageCreater.printSpecial("HOPE_VOL_UNIT", "s03_volUnit",$!item,'_index',"$index",'_event',$onblur, '_td_style_left', $td_style_left,'_td_style_right', $td_style_right)
+                                            #end
+                                        #elseif($!item.getColumnName()=="T_PUR_REQUEST.TAX_IND")
+                                            #if($!quotFlag)
+                                                $!PSPUR010PageCreater.printSpecial('s46_inputTaxInd', $!item, '_td_style_left', $td_style_left,'_td_style_right', $td_style_right, '_spaceAddFlg', '1')
+                                            #else
+                                                #if ($!pageFrom == "create")
+                                                    $!PSPUR010PageCreater.printSpecial('s46_inputTaxInd', $!item, '_td_style_left', $td_style_left,'_td_style_right', $td_style_right)
+                                                #else
+                                                    $!PSPUR010PageCreater.printSpecial('s46_inputTaxInd', $!item, '_td_style_left', $td_style_left,'_td_style_right', $td_style_right, '_spaceAddFlg', '1')
+                                                #end
+                                            #end
+                                        #elseif($!item.getColumnName()=="T_PUR_REQUEST.UNIT_PRICE")
+                                             #if($!quotFlag)
+                                                $!PSPUR010PageCreater.printSpecial('s24_currency', $!item,'_td_style_left', $td_style_left,'_td_style_right', $td_style_right,'_item_style','class="FontCurrSmall"')
+                                             #else
+                                                #set($prif='onblur="editVal(this);amountByAjax(')
+                                                #set($post=');" onfocus="deleteComma(this);"')
+                                                #set($onblur="$prif$index$post")
+                                                $!PSPUR010PageCreater.printSpecial("s02_currency", $!item, '_item_style', 'FontCurrSmall', '_td_style_left', $td_style_left, '_td_style_right', $td_style_right, '_event', $onblur)
+                                            #end
+                                        #elseif($!item.getColumnName()=="T_PUR_REQUEST.ATTACH_FILE_SEQ")
+                                            $!PSPUR010PageCreater.printSpecial("s04_file1",$!item, '_index',$index, '_td_style_left', $td_style_left,'_td_style_right', $td_style_right)
+                                       #else
+                                            $!PSPUR010PageCreater.printDefault($!item, '_td_style_left', $td_style_left,'_td_style_right', $td_style_right)
+                                       #end
+                                    #end
+
+                                </tbody>
+
+                            #end
+                            </table>
+                            </div>
+                            #if(!$!quotFlag)
+                                #if($!detailFlg == 1)
+                            <br>
+                            <span class="CornerTopBrown"><span class="Corner1"></span> <span class="Corner2"></span> <span class="Corner3"></span><span class="Corner4"></span></span>
+                            <div class="CornerMidBrown" width="100%">
+                                <table>
+                                    <tbody>
+                                        <tr>
+                                            <td>
+                                                &nbsp;<img src="../../image/mrkInfo.gif">&nbsp;
+                                            </td>
+                                            <td class="FontSmallBold DarkBlue" align="left">
+                                                #customSpringMessage("DTL_ADD_COMMENT")
+                                                <input type="button" class="SmallButton" value="#customSpringMessage('DETAIL_ADD')" onclick="addDetail();">
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                            <span class="CornerBtmBrown"><span class="Corner4"></span> <span class="Corner3"></span> <span class="Corner1"></span><span class="Corner1"></span></span>
+                                #end
+                            #end
+                            <br>
+                            <table class="NoBorder" width="100%">
+                                <tr>
+                                    <td>
+                                        #customSpringMessage("PSPUR010_FOOTER_COMMENT") ## ※印の項目は、必須入力です。
+                                    </td>
+                                    <td align="right" valign="middle">
+                                    #if($!pageFrom == "create" || $!pageFrom == "history" || $!pageFrom == "edit" || $!pageFrom == "create2")
+                                        <input name="Button1" type="button" class="LargeButton" value="#customSpringMessage('TEMPORARY_PRESERVATION')" onclick="tempSave();">&nbsp;&nbsp;<!--一時保存-->
+                                    #end
+                                    #if($!pageFrom == "create" || $!pageFrom == "history" || $!pageFrom == "create2")
+                                        <input name="Button2" type="button" class="LargeButton" value="#customSpringMessage('REQ')" onclick="apply();"><!--申　請-->
+                                    #end
+                                    #if($!pageFrom == "edit")
+                                        <input name="Button2" type="button" class="LargeButton" value="#customSpringMessage('REQ')" onclick="applyFromEdit();"><!--申　請-->
+                                    #end
+                                    #if($!pageFrom == "reApply")
+                                        <input name="Button3" type="button" class="LargeButton" value="#customSpringMessage('RE_REQ')" onclick="reApply();"> <!-- 再申請 -->
+                                    #end
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+</form>
+</body>
+</html>
+

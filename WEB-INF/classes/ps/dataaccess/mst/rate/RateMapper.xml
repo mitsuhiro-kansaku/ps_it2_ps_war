@@ -1,0 +1,272 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="ps.dataaccess.mst.rate.RateMapper">
+
+	<!-- SRC-00115-00 include化共通-->
+	<sql id="listKeyIdentityWhereCondition">
+        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(companyCd)">
+            AND M_RATE.COMPANY_CD = #{companyCd, jdbcType=VARCHAR}
+        </if>
+        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(orgCurrencyCd)">
+            AND M_RATE.ORG_CURRENCY_CD = #{orgCurrencyCd, jdbcType=VARCHAR}
+        </if>
+        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(valStartDateFrom.dateOfymd)">
+            AND M_RATE.RATE_START_DATE>= #{valStartDateFrom.dateOfymd}
+        </if>
+        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(valStartDateTo.dateOfymd)">
+            AND M_RATE.RATE_START_DATE &lt; = #{valStartDateTo.dateOfymd}
+        </if>
+        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(valEndDateFrom.dateOfymd)">
+            AND M_RATE.RATE_END_DATE >= #{valEndDateFrom.dateOfymd}
+        </if>
+        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(valEndDateTo.dateOfymd)">
+            AND M_RATE.RATE_END_DATE &lt;= #{valEndDateTo.dateOfymd}
+        </if>
+	</sql>
+	
+    <select id="listKeyIdentity" parameterType="fw.domain.mst.amount.rate.RateSearchCondition" resultType="fw.domain.mst.amount.rate.RateIdentify">
+        SELECT
+        M_RATE.COMPANY_CD as "companyCd",
+        M_RATE.ORG_CURRENCY_CD as "orgCurrencyCd",
+        M_RATE.CNV_CURRENCY_CD as "cnvCurrencyCd",
+        M_RATE.RATE_START_DATE as "rateStartDate.dateOfymd",
+        M_RATE.RATE_END_DATE as "rateEndDate.dateOfymd"
+        FROM M_RATE
+        <where>
+            <include refid="listKeyIdentityWhereCondition"/>
+        </where>
+        ORDER BY ${searchCondition.columnOrder.columnOrder()}
+    </select>
+
+    <resultMap id="rateItemMap"
+               type="fw.domain.mst.amount.rate.RateItem">
+        <id column="RATE_START_DATE" property="rateIdentify.rateStartDate.dateOfymd"/>
+        <id column="RATE_END_DATE" property="rateIdentify.rateEndDate.dateOfymd"/>
+    </resultMap>
+    <select id="listPageItem"
+            resultMap="rateItemMap">
+        SELECT
+        M_RATE.COMPANY_CD as "rateIdentify.companyCd",
+        M_RATE.ORG_CURRENCY_CD as "rateIdentify.orgCurrencyCd",
+        M_RATE.CNV_CURRENCY_CD as "rateIdentify.cnvCurrencyCd",
+        M_RATE.LAST_UPD_DATE as "rateIdentify.lastUpdDate",
+        M_RATE.RATE_START_DATE as "rateStartDate.dateOfymd",
+        M_RATE.RATE_END_DATE as "rateEndDate.dateOfymd",
+        M_RATE.RATE_START_DATE,
+        M_RATE.RATE_END_DATE,
+        M_RATE.RATE as "rate.amount"
+        FROM M_RATE
+        <where>
+            (M_RATE.COMPANY_CD ,M_RATE.ORG_CURRENCY_CD ,CNV_CURRENCY_CD ,RATE_START_DATE ,RATE_END_DATE ) in
+            <foreach collection="searchCondition.page.keyDomainEntityList" item="keyList" open="(" separator=","
+            close=")">
+            (
+            #{keyList.companyCd},
+            #{keyList.orgCurrencyCd},
+            #{keyList.cnvCurrencyCd},
+            #{keyList.rateStartDate.dateOfymd},
+            #{keyList.rateEndDate.dateOfymd}
+            )
+            </foreach>
+            <include refid="listKeyIdentityWhereCondition"/>
+        </where>
+        ORDER BY ${searchCondition.columnOrder.columnOrder()}
+    </select>
+
+    <resultMap id="rateManagementMap"
+               type="fw.domain.mst.amount.rate.RateManagement">
+        <id column="RATE_START_DATE" property="rateIdentify.rateStartDate.dateOfymd"/>
+        <id column="RATE_END_DATE" property="rateIdentify.rateEndDate.dateOfymd"/>
+    </resultMap>
+    <select id="search"
+            parameterType="fw.domain.mst.amount.rate.RateIdentify"
+            resultMap="rateManagementMap">
+        SELECT
+        M_RATE.COMPANY_CD as "rateIdentify.companyCd",
+        M_RATE.ORG_CURRENCY_CD as "rateIdentify.orgCurrencyCd",
+        M_RATE.CNV_CURRENCY_CD as "rateIdentify.cnvCurrencyCd",
+        <!-- 2013.03.27 ADD DAIKO_WANG -->
+        M_RATE.CNV_CURRENCY_CD as "rateIdentify.cnvCurrencyCdOld",
+        M_RATE.LAST_UPD_DATE as "rateIdentify.lastUpdDate",
+        M_RATE.RATE_START_DATE,
+        M_RATE.RATE_END_DATE,
+        M_RATE.RATE_START_DATE as "rateStartDate.dateOfymd",
+        M_RATE.RATE_END_DATE as "rateEndDate.dateOfymd",
+        M_RATE.RATE as "rate.amount",
+        M_COMPANY.COMPANY_CD as "companySummary.companyCd",
+        M_COMPANY_LANG.COMPANY_NAME as "companySummary.companyName",
+        <if test="companyCd=='ALL'">
+             '${@fw.common.util.AppUtil@getSysLanguageByEscapeSql()}' as "companySummary.languageInd"
+        </if>
+        <if test="companyCd!='ALL'">
+             M_COMPANY.COMPANY_USE_LANGUAGE_IND as "companySummary.languageInd"
+        </if>   
+        FROM M_RATE
+        LEFT JOIN M_COMPANY
+        ON M_RATE.COMPANY_CD = M_COMPANY.COMPANY_CD
+        LEFT JOIN M_COMPANY_LANG
+        ON M_COMPANY.COMPANY_CD = M_COMPANY_LANG.COMPANY_CD
+        AND M_COMPANY.COMPANY_USE_LANGUAGE_IND = M_COMPANY_LANG.LANGUAGE_IND
+        WHERE M_RATE.COMPANY_CD = #{companyCd}
+        AND M_RATE.ORG_CURRENCY_CD = #{orgCurrencyCd}
+        AND M_RATE.CNV_CURRENCY_CD = #{cnvCurrencyCd}
+        AND RATE_START_DATE = #{rateStartDate.dateOfymd}
+    </select>
+    <select id="searchExclusive" parameterType="fw.domain.mst.amount.rate.RateIdentify" resultType="fw.domain.mst.amount.rate.RateIdentify">
+        SELECT
+        M_RATE.COMPANY_CD as "companyCd",
+        M_RATE.ORG_CURRENCY_CD as "orgCurrencyCd",
+        M_RATE.CNV_CURRENCY_CD as "cnvCurrencyCd",
+        M_RATE.LAST_UPD_DATE as "lastUpdDate",
+        M_RATE.RATE_START_DATE as "rateStartDate.dateOfymd",
+        M_RATE.RATE_END_DATE as "rateEndDate.dateOfymd"
+        FROM M_RATE
+        WHERE
+        M_RATE.COMPANY_CD = #{companyCd}
+        AND M_RATE.ORG_CURRENCY_CD = #{orgCurrencyCd}
+        AND M_RATE.CNV_CURRENCY_CD = #{cnvCurrencyCd}
+        AND M_RATE.RATE_START_DATE = #{rateStartDate.dateOfymd}
+        AND M_RATE.RATE_END_DATE = #{rateEndDate.dateOfymd}
+        AND M_RATE.LAST_UPD_DATE = #{lastUpdDate}
+    </select>
+    <insert id="insert" parameterType="fw.domain.mst.amount.rate.RateManagement">
+        INSERT INTO M_RATE
+        (
+        COMPANY_CD,
+        ORG_CURRENCY_CD,
+        CNV_CURRENCY_CD,
+        RATE_START_DATE,
+        RATE_END_DATE,
+        RATE,
+        LAST_UPD_DATE,
+        LAST_UPD_COMPANY_CD,
+        LAST_UPD_SECTION_CD,
+        LAST_UPD_USER_ID,
+        REG_DATE,
+        REG_COMPANY_CD,
+        REG_SECTION_CD,
+        REG_USER_ID
+        ) VALUES (
+        #{rateIdentify.companyCd},
+        #{rateIdentify.orgCurrencyCd},
+        #{rateIdentify.cnvCurrencyCd},
+        #{rateStartDate.dateOfymd},
+        #{rateEndDate.dateOfymd},
+        #{rate.amount},
+        #{registInfo.lastUpdDate},
+        #{registInfo.lastUpdCompanyCd},
+        #{registInfo.lastUpdSectionCd},
+        #{registInfo.lastUpdUserId},
+        #{registInfo.regDate},
+        #{registInfo.regCompanyCd},
+        #{registInfo.regSectionCd},
+        #{registInfo.regUserId}
+        )
+    </insert>
+    <update id="update"
+            parameterType="fw.domain.mst.amount.rate.RateManagement">
+        UPDATE M_RATE
+        SET
+        RATE = #{rate.amount},
+        RATE_START_DATE = #{rateStartDate.dateOfymd},
+        RATE_END_DATE = #{rateEndDate.dateOfymd},
+        LAST_UPD_DATE = #{registInfo.lastUpdDate},
+        LAST_UPD_COMPANY_CD = #{registInfo.lastUpdCompanyCd},
+        LAST_UPD_SECTION_CD = #{registInfo.lastUpdSectionCd},
+        LAST_UPD_USER_ID = #{registInfo.lastUpdUserId}
+        WHERE
+        COMPANY_CD = #{rateIdentify.companyCd}
+        AND ORG_CURRENCY_CD = #{rateIdentify.orgCurrencyCd}
+        AND CNV_CURRENCY_CD = #{rateIdentify.cnvCurrencyCd}
+        AND RATE_START_DATE = #{rateIdentify.rateStartDate.dateOfymd}
+        AND RATE_END_DATE = #{rateIdentify.rateEndDate.dateOfymd}
+    </update>
+    <delete id="delete"
+            parameterType="fw.domain.mst.amount.rate.RateIdentify">
+        DELETE FROM M_RATE
+        WHERE
+        COMPANY_CD = #{companyCd}
+        AND ORG_CURRENCY_CD = #{orgCurrencyCd}
+        AND CNV_CURRENCY_CD = #{cnvCurrencyCd}
+        AND RATE_START_DATE = #{rateStartDate.dateOfymd}
+        AND RATE_END_DATE = #{rateEndDate.dateOfymd}
+    </delete>
+    <select id="searchCountRate" parameterType="fw.domain.mst.amount.currency.CurrencyIdentify" resultType="int">
+        SELECT
+        COUNT(1)
+        FROM M_RATE
+        WHERE
+        ORG_CURRENCY_CD=#{currencyCd}
+        OR CNV_CURRENCY_CD=#{currencyCd}
+    </select>
+
+    <select id="searchBeforeStartDate"
+            parameterType="fw.domain.mst.amount.rate.RateIdentify"
+            resultMap="rateManagementMap">
+      SELECT COMPANY_CD    as "rateIdentify.companyCd",
+           ORG_CURRENCY_CD as "rateIdentify.orgCurrencyCd",
+           CNV_CURRENCY_CD as "rateIdentify.cnvCurrencyCd",
+           RATE_START_DATE,
+           RATE_END_DATE,
+           RATE_START_DATE as "rateStartDate.dateOfymd",
+           RATE_END_DATE   as "rateEndDate.dateOfymd",
+           RATE            as "rate.amount",
+           LAST_UPD_DATE   as "registInfo.lastUpdDate",
+           LAST_UPD_COMPANY_CD as "registInfo.lastUpdCompanyCd",
+           LAST_UPD_SECTION_CD as "registInfo.lastUpdSectionCd",
+           LAST_UPD_USER_ID as "registInfo.lastUpdUserId"
+      FROM (SELECT M_RATE.COMPANY_CD,
+                   M_RATE.ORG_CURRENCY_CD,
+                   M_RATE.CNV_CURRENCY_CD,
+                   M_RATE.RATE_START_DATE,
+                   M_RATE.RATE_END_DATE,
+                   M_RATE.RATE,
+                   LAST_UPD_DATE,
+                   LAST_UPD_COMPANY_CD,
+                   LAST_UPD_SECTION_CD,
+                   LAST_UPD_USER_ID
+              FROM M_RATE
+             WHERE M_RATE.COMPANY_CD = #{companyCd}
+                AND M_RATE.ORG_CURRENCY_CD = #{orgCurrencyCd}
+                AND M_RATE.CNV_CURRENCY_CD = #{cnvCurrencyCd}
+                AND M_RATE.RATE_START_DATE &lt; #{rateStartDate.dateOfymd}
+             ORDER BY M_RATE.RATE_START_DATE DESC)
+     WHERE ROWNUM &lt; =  1
+    </select>
+
+    <select id="searchAfterStartDate"
+            parameterType="fw.domain.mst.amount.rate.RateIdentify"
+            resultMap="rateManagementMap">
+      SELECT COMPANY_CD    as "rateIdentify.companyCd",
+           ORG_CURRENCY_CD as "rateIdentify.orgCurrencyCd",
+           CNV_CURRENCY_CD as "rateIdentify.cnvCurrencyCd",
+           RATE_START_DATE,
+           RATE_END_DATE,
+           RATE_START_DATE as "rateStartDate.dateOfymd",
+           RATE_END_DATE   as "rateEndDate.dateOfymd",
+           RATE            as "rate.amount",
+           LAST_UPD_DATE   as "registInfo.lastUpdDate",
+           LAST_UPD_COMPANY_CD as "registInfo.lastUpdCompanyCd",
+           LAST_UPD_SECTION_CD as "registInfo.lastUpdSectionCd",
+           LAST_UPD_USER_ID as "registInfo.lastUpdUserId"
+      FROM (SELECT M_RATE.COMPANY_CD,
+                   M_RATE.ORG_CURRENCY_CD,
+                   M_RATE.CNV_CURRENCY_CD,
+                   M_RATE.RATE_START_DATE,
+                   M_RATE.RATE_END_DATE,
+                   M_RATE.RATE,
+                   LAST_UPD_DATE,
+                   LAST_UPD_COMPANY_CD,
+                   LAST_UPD_SECTION_CD,
+                   LAST_UPD_USER_ID
+              FROM M_RATE
+             WHERE M_RATE.COMPANY_CD = #{companyCd}
+                AND M_RATE.ORG_CURRENCY_CD = #{orgCurrencyCd}
+                AND M_RATE.CNV_CURRENCY_CD = #{cnvCurrencyCd}
+                AND M_RATE.RATE_START_DATE > #{rateStartDate.dateOfymd}
+             ORDER BY M_RATE.RATE_END_DATE)
+     WHERE ROWNUM &lt; =  1
+    </select>
+</mapper>

@@ -1,0 +1,580 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="ps.dataaccess.apr.acp.AcpMapper">
+
+<!-- ============================= PSAPR091 検収承認一覧  START ==========================-->
+
+      <sql id="listKeyIdentityWhereCondition">
+          ${@ps.common.util.ItemSettingUtil@getItemSettingWhereSQL()}
+          AND T_RECEIVE_MNG.DELETE_FLG = '0'
+          AND T_ORDER.NEW_APP_FLG = '1'
+          AND T_ORDER.DELETE_FLG = '0'
+          AND T_ACCEPTANCE.DELETE_FLG = '0'
+          AND T_APPROVAL.APP_STATUS_IND IN ('0','1')
+          AND T_APPROVAL.NOW_APP_COMPANY_CD = '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}'
+          AND T_APPROVAL.DELETE_FLG = '0'
+          <choose>
+              <when test="@org.apache.commons.lang.StringUtils@isNotBlank(appUserId)">
+                  AND T_APPROVAL.NOW_APP_USER_ID = #{appUserId}
+              </when>
+              <otherwise>
+                  AND T_APPROVAL.NOW_APP_USER_ID = '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}'
+              </otherwise>
+          </choose>
+          <if test="orderDiffOnly">
+             AND T_ORDER.ORDER_AMOUNT &lt;&gt; T_ACCEPTANCE.ACCEPT_AMOUNT
+          </if>
+          <if test="orderNoDiffOnly">
+             AND T_ORDER.ORDER_AMOUNT = T_ACCEPTANCE.ACCEPT_AMOUNT
+          </if>
+          AND T_ACCEPTANCE.ACCEPT_STATUS IN ('01', '02')
+    </sql>
+     <select id="listKeyIdentity" 
+        parameterType="fw.domain.slip.receive.acceptance.acceptanceapp.AcceptAppSearchCondition"
+        resultType="fw.domain.slip.receive.acceptance.Identify">
+        SELECT T_RECEIVE_MNG.DELIV_KEY_NO as "delivKeyNo",
+            T_RECEIVE_MNG.LAST_UPD_DATE as "lastUpdDate",
+            T_ORDER.ORDER_SEQ as "orderSeq",
+            T_RECEIVE_MNG.NEW_ACCEPTANCE_SEQ as "acceptSeqNo.sequenceNo"
+        FROM T_RECEIVE_MNG
+        LEFT JOIN T_ORDER
+            ON T_ORDER.ORDER_NO = T_RECEIVE_MNG.ORDER_NO
+        LEFT JOIN T_ACCEPTANCE
+            ON T_ACCEPTANCE.ACCEPT_SEQ = T_RECEIVE_MNG.NEW_ACCEPTANCE_SEQ
+        LEFT JOIN T_APPROVAL
+            ON T_APPROVAL.APP_VOUCHER_KEY = T_ACCEPTANCE.ACCEPT_SEQ
+            AND T_APPROVAL.APP_VOUCHER_IND = '5'
+        <where>
+            <include refid="listKeyIdentityWhereCondition"/>
+        </where>
+        ORDER BY ${searchCondition.columnOrder.columnOrder()}
+    </select>
+
+    <resultMap type="fw.domain.slip.receive.acceptance.acceptanceapp.AcceptAppItem" id="ACC_MAPPER">
+        <id column="ACCEPT_SEQ" property="identify.acceptSeqNo.sequenceNo" />
+        <id column="EXCLUSIVE_SLIP_NO" property="identify.exclusiveSlipId.slipNo"/>
+        <id column="EXCLUSIVE_LAST_UPD_DATE" property="identify.exclusiveSlipId.lastUpdDate"/>
+    </resultMap>
+    <select id="listPageItem" parameterType="fw.domain.slip.receive.acceptance.acceptanceapp.AcceptAppSearchCondition" resultMap="ACC_MAPPER">
+        SELECT 
+            T_ORDER.ORDER_SEQ as "identify.orderSeq" ,
+            T_ORDER.ORDER_NO as "identify.orderNo" ,
+            T_RECEIVE_MNG.DELIV_KEY_NO as "identify.delivKeyNo",
+            T_RECEIVE_MNG.LAST_UPD_DATE as "identify.lastUpdDate",
+            T_ACCEPTANCE.ACCEPT_SEQ AS "ACCEPT_SEQ",
+            T_ACCEPTANCE.CORRECT_CD as "identify.correctCd",
+            T_ACCEPTANCE.ACCEPT_VERSION as "acceptVersion",
+            T_ACCEPTANCE.ACCEPT_SECTION_CD as "acceptSectionCd" ,
+            T_ACCEPTANCE.ACCEPT_SECTION_NAME as "acceptSectionName" ,
+            T_ACCEPTANCE.ACCEPT_USER_ID as "acceptUserId" ,
+            T_ACCEPTANCE.ACCEPT_USER_NAME as "acceptUserName" ,
+            T_ACCEPTANCE.ACCEPT_DATE as "acceptDate.dateOfymd" ,
+            T_ACCEPTANCE.CURRENCY_CD as "currencyCd" ,
+            CASE WHEN 
+                T_ORDER.ORDER_AMOUNT = T_ACCEPTANCE.ACCEPT_AMOUNT 
+            THEN 
+                '0' 
+            ELSE 
+                '1' 
+            END as "orderDiffInd" ,<!--発注差異 -->
+            T_ORDER.ORDER_VOL as "orderVol.vol", <!-- 注文数量 -->
+            T_ORDER.UNIT_PRICE as "orderUnitPrice.amount", <!-- 注文単価 -->
+            T_ORDER.ORDER_AMOUNT as "orderAmount.amount", <!-- 注文金額 -->
+            T_ACCEPTANCE.DELIV_VOL as "delivVol.vol" ,
+            T_ACCEPTANCE.ACCEPT_VOL as "acceptVol.vol" ,
+            T_ACCEPTANCE.UNIT_NAME as "unitName" ,
+            T_ACCEPTANCE.UNIT_PRICE as "unitPrice.amount" ,
+            T_ACCEPTANCE.ACCEPT_AMOUNT as "acceptAmount.amount" ,
+            T_ORDER.ITEM_CD as "itemCd" ,
+            T_ORDER.ITEM_NAME as "itemName" ,
+            T_ORDER.SUP_CD as "supCd" ,
+            T_ORDER.SUP_ABBR_NAME as "supAbbrName" ,
+            T_ORDER.SUBCON_IND as "subconInd" ,
+            T_ORDER.EDI_IND as "ediInd" ,
+            T_ORDER.BUYER_SECTION_CD as "buyerSectionCd" , 
+            T_ORDER.BUYER_SECTION_NAME as "buyerSectionName" ,
+            T_ORDER.BUYER_USER_ID as "buyerUserId" ,
+            T_ORDER.BUYER_USER_NAME as "buyerUserName" ,
+            T_ORDER.ORDER_FIRST_DATE as "orderDate.dateOfymd" ,
+            T_ORDER.REQ_SECTION_CD as "reqSectionCd" ,
+            T_ORDER.REQ_SECTION_NAME as "reqSectionName" ,
+            T_ORDER.REQ_USER_ID as "reqUserId" ,
+            T_ORDER.REQ_USER_NAME as "reqUserName" ,
+            T_APPROVAL.NOW_APP_USER_NAME as "appUserName" ,
+            T_APPROVAL.NEXT_APP_USER_NAME as "nextAppUserName",
+            T_ACCEPTANCE.LOAD_SECTION_CD as "loadSectionCd",
+            T_ACCEPTANCE.LOAD_SECTION_NAME as "loadSectionName",
+            T_ACCEPTANCE.SUBJECT_CD as "subjectCd",
+            T_ACCEPTANCE.SUBJECT_NAME as "subjectName",
+            T_ACCEPTANCE.BUDGET_NO as "budgetNo",
+            T_ACCEPTANCE.HAVE_IN_STOCK_FLG as "haveInStockFlg",
+            T_ACCEPTANCE.STOCK_PLACE_CD as "stockPlaceCd",
+            T_ACCEPTANCE.STOCK_PLACE_NAME as "stockPlaceName",
+            T_SLIP_MNG.SLIP_NO AS EXCLUSIVE_SLIP_NO,
+            T_SLIP_MNG.LAST_UPD_DATE AS EXCLUSIVE_LAST_UPD_DATE,
+            T_ACCEPTANCE.TAX_RATE as "taxRate",
+            T_ACCEPTANCE.TOTAL_AMOUNT as "totalAmount.amount",
+            T_ORDER.TITLE_NAME as "titleName",
+            T_ORDER.PAY_CONDITION_CD as "payConditionCd",
+            T_ORDER.PAY_CONDITION_NAME as "payConditionName",
+            ${@ps.common.util.ItemSettingUtil@getItemSettingSelectSQLDomainAliasNonBinary("T_ORDER","orderExtItem")},
+            ${@ps.common.util.ItemSettingUtil@getItemSettingSelectSQLDomainAliasNonBinary("T_ACCEPTANCE","acceptExtItem")}
+        FROM T_RECEIVE_MNG
+        LEFT JOIN T_ORDER
+            ON T_ORDER.ORDER_NO = T_RECEIVE_MNG.ORDER_NO
+        LEFT JOIN T_ACCEPTANCE
+            ON T_ACCEPTANCE.ACCEPT_SEQ = T_RECEIVE_MNG.NEW_ACCEPTANCE_SEQ
+        LEFT JOIN T_APPROVAL
+            ON T_APPROVAL.APP_VOUCHER_KEY = T_ACCEPTANCE.ACCEPT_SEQ
+            AND T_APPROVAL.APP_VOUCHER_IND = '5'
+        LEFT JOIN T_SLIP_MNG
+            ON T_ORDER.ORDER_NO = T_SLIP_MNG.SLIP_NO
+            AND T_SLIP_MNG.DELETE_FLG = '0'
+        <where> 
+            <include refid="listKeyIdentityWhereCondition"/>
+            AND (T_RECEIVE_MNG.DELIV_KEY_NO,T_ORDER.ORDER_SEQ) IN 
+            <foreach collection="searchCondition.page.keyDomainEntityList" item="keyList"  open="(" separator="," close=")">  
+                (#{keyList.delivKeyNo},#{keyList.orderSeq}) 
+            </foreach>
+        </where>
+        ORDER BY ${searchCondition.columnOrder.columnOrder()}
+    </select>
+
+    <update id="updateReceiveNew" parameterType="fw.domain.slip.receive.acceptance.Identify" >
+        UPDATE T_RECEIVE_MNG
+        SET DELIV_STATUS = '4102' ,
+            LAST_UPD_DATE = '${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}',
+            LAST_UPD_COMPANY_CD = '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}', 
+            LAST_UPD_SECTION_CD = '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}', 
+            LAST_UPD_USER_ID = '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}'
+        WHERE DELIV_KEY_NO = #{delivKeyNo}
+    </update>
+
+    <update id="updateReceive" parameterType="fw.domain.slip.receive.acceptance.Identify" >
+        UPDATE T_RECEIVE_MNG
+        SET DELIV_STATUS = '4103' ,
+            LAST_UPD_DATE = '${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}',
+            LAST_UPD_COMPANY_CD = '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}', 
+            LAST_UPD_SECTION_CD = '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}', 
+            LAST_UPD_USER_ID = '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}'
+        WHERE DELIV_KEY_NO = #{delivKeyNo}
+    </update>
+
+    <update id="updateAccept" parameterType="fw.domain.slip.receive.acceptance.Identify" >
+        UPDATE T_ACCEPTANCE
+        SET T_ACCEPTANCE.ACCEPT_STATUS = '02' ,
+            LAST_UPD_DATE = '${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}',
+            LAST_UPD_COMPANY_CD = '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}', 
+            LAST_UPD_SECTION_CD = '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}', 
+            LAST_UPD_USER_ID = '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}'
+        WHERE ACCEPT_SEQ = #{acceptSeqNo.sequenceNo}
+    </update>
+<!-- ============================= PSAPR091 検収承認一覧  END ==========================-->
+<!-- ￥￥￥￥￥￥￥￥￥￥￥￥ PSAPR092検収承認（個別）  START￥￥￥￥￥￥￥￥￥￥￥￥￥￥￥￥￥-->
+<!-- 
+（１）初期化表示時、検収承認(個別)情報を取得する
+①納品キー番号より、下記の情報を取得
+17:02 2012-08-22  
+???accept.identify.acceptSeqNo.sequenceNo
+
+-->
+     <resultMap id="aprAcpDetail_Map" type="fw.domain.slip.receive.acceptance.AcceptApplication">
+        <id column="T_ACCEPTANCE$ACCEPT_SEQ" property="accept.identify.acceptSeqNo.sequenceNo"/>
+        <id column="T_ACCEPTANCE$CORRECT_CD" property="accept.correctInd.correctInd"/>
+        <id column="T_ACCEPTANCE$ACCEPT_VERSION" property="accept.historyNo.historyNo"/>
+        <id column="T_ACCEPTANCE$LOAD_SECTION_CD" property="accept.acceptResult.loadSection.loadSection.sectionCd"/>
+        <id column="T_ACCEPTANCE$LOAD_SECTION_NAME" property="accept.acceptResult.loadSection.loadSection.sectionName"/>
+        <id column="T_ACCEPTANCE$SUBJECT_CD" property="accept.acceptResult.subject.subjectCd"/>
+        <id column="T_ACCEPTANCE$SUBJECT_NAME" property="accept.acceptResult.subject.subjectName"/>
+        <id column="T_ACCEPTANCE$BUDGET_NO" property="accept.acceptResult.budgetNumber.budgetNumber"/>
+        <id column="T_ACCEPTANCE$HAVE_IN_STOCK_FLG" property="accept.acceptResult.haveInStockFlg.haveInStockFlg"/>
+        <id column="T_ACCEPTANCE$STOCK_COMPANY_CD" property="accept.acceptResult.stockPlace.company.companyCd"/>
+        <id column="T_ACCEPT$STK_SECTION_PLACE_CD" property="accept.acceptResult.stockPlace.sectionPlace.sectionPlaceCd"/>
+        <id column="T_ACCEPTANCE$STOCK_PLACE_CD" property="accept.acceptResult.stockPlace.stockPlaceCd"/>
+        <id column="T_ACCEPTANCE$STOCK_PLACE_NAME" property="accept.acceptResult.stockPlace.stockPlaceName"/>
+        <id column="T_ACCEPTANCE$ACCEPT_DATE" property="accept.acceptResult.acceptDate.acceptDate.dateOfymd"/>
+        <id column="T_ACCEPTANCE$UNIT_PRICE" property="accept.acceptResult.acceptAmount.acceptUnitPrice.amount"/>
+        <id column="T_ACCEPTANCE$ACCEPT_VOL" property="accept.acceptResult.acceptVol.acceptVol.vol"/>
+        <id column="T_ACCEPTANCE$UNIT_NAME" property="accept.order.accounting.orderItem.item.unit.unitName"/>
+        <id column="T_ACCEPTANCE$ACCEPT_AMOUNT" property="accept.acceptResult.acceptAmount.acceptAmount.amount"/>
+        <id column="T_ACCEPTANCE$ACCEPT_COMPANY" property="accept.acceptResult.acceptUser.user.section.company.companyCd"/>
+        <id column="T_ACCEPTANCE$ACCEPT_SECTION_CD" property="accept.acceptResult.acceptUser.user.section.sectionCd"/>
+        <id column="T_ACCEPTANCE$ACCEPT" property="accept.acceptResult.acceptUser.user.section.sectionName"/>
+        <id column="T_ACCEPTANCE$ACCEPT_USER_ID" property="accept.acceptResult.acceptUser.user.userID"/>
+        <id column="T_ACCEPTANCE$ACCEPT_USER_NAME" property="accept.acceptResult.acceptUser.user.userName"/>
+        <id column="T_ACCEPTANCE$APP_ROUTE_NAME" property="accept.acceptAppRoute.approute.appRouteName"/>
+        <id column="T_ORDER$DELIV_PLACE_CD" property="accept.order.complement.delivPlace.delivPlaceCd"/>
+        <id column="T_ORDER$DELIV_PLACE_NAME" property="accept.order.complement.delivPlace.delivPlaceName"/>
+        <id column="T_ORDER$ITEM_CD" property="accept.order.accounting.orderItem.item.itemCd"/>
+        <id column="T_ORDER$ITEM_NAME" property="accept.order.accounting.orderItem.item.itemName"/>
+        <id column="T_ORDER$ORDER_DATE" property="accept.order.schedule.reqDate.reqDate.dateOfymd"/>
+        <id column="T_ORDER$ORDER_DELIV_DATE" property="accept.order.schedule.dlvEst.dlvEst.dateOfymd"/>
+        <id column="T_ORDER$CURRENCY_CD" property="accept.order.accounting.orderAmount.amountMng.currency.currencyCd"/>
+        <id column="T_ORDER$UNIT_PRICE" property="accept.order.accounting.orderAmount.unitPrice.amount.amount"/>
+        <id column="T_ORDER$ORDER_VOL" property="accept.order.accounting.orderAmount.orderVolume.orderVol.vol"/>
+        <id column="T_ORDER$UNIT_NAME" property="accept.order.accounting.orderItem.item.unit.unitName"/>
+        <id column="T_ORDER$ORDER_AMOUNT" property="accept.order.accounting.orderAmount.orderAmount.amount"/>
+        <id column="ORDER_CANCEL_VOL" property="accept.order.orderCancel.orderCancelVol.vol"/>
+        <id column="ORDER_CANCEL_AMOUNT" property="accept.order.orderCancel.orderCancelAmount.amount"/>
+        <id column="T_ORDER$TAX_IND" property="accept.amountMng.taxCalculationInd.taxInd.taxInd"/>
+        <id column="T_ORDER$SUP_CD" property="accept.order.supplierFrom.supCd"/>
+        <id column="T_ORDER$SUP_ABBR_NAME" property="accept.order.supplierFrom.supplierName.supplierAbbrName"/>
+        <id column="T_ORDER$SUBCON_IND" property="accept.order.supplierFrom.subcon.subconInd"/>
+        <id column="T_ORDER$EDI_IND" property="accept.order.supplierFrom.ediInd.ediInd"/>
+        <id column="T_ORDER$REQ_SECTION_CD" property="accept.order.user.reqUser.reqUser.section.sectionCd"/>
+        <id column="T_ORDER$REQ_SECTION_NAME" property="accept.order.user.reqUser.reqUser.section.sectionName"/>
+        <id column="T_ORDER$REQ_USER_ID" property="accept.order.user.reqUser.reqUser.userID"/>
+        <id column="T_ORDER$REQ_USER_NAME" property="accept.order.user.reqUser.reqUser.userName"/>
+        <id column="T_ORDER$REQ_USER_EXTENSION_NO" property="accept.order.user.reqUser.reqUser.extNo.extensionNo"/>
+        <id column="T_ORDER$REQ_USER_TEL_NO" property="accept.order.user.reqUser.reqUser.externalNo.externalNo"/>
+        <id column="T_ORDER$BUYER_SECTION_CD" property="accept.order.user.buyUser.buyUser.section.sectionCd"/>
+        <id column="T_ORDER$BUYER_SECTION_NAME" property="accept.order.user.buyUser.buyUser.section.sectionName"/>
+        <id column="T_ORDER$BUYER_USER_ID" property="accept.order.user.buyUser.buyUser.userID"/>
+        <id column="T_ORDER$BUYER_USER_NAME" property="accept.order.user.buyUser.buyUser.userName"/>
+        <id column="T_ORDER$BUYER_USER_EXT_NO" property="accept.order.user.buyUser.buyUser.extNo.extensionNo"/>
+        <id column="T_ORDER$BUYER_USER_TEL_NO" property="accept.order.user.buyUser.buyUser.externalNo.externalNo"/>
+        <id column="T_ORDER$UNIT_NAME" property="accept.order.accounting.orderItem.item.unit.unitName"/>
+        <id column="T_ORDER$KATASHIKI" property="accept.order.accounting.orderItem.item.katashiki"/>
+        <id column="T_ORDER$MANUFACT_CD" property="accept.order.accounting.orderItem.item.manufact.manufactCd"/>
+        <id column="T_ORDER$MANUFACT_NAME" property="accept.order.accounting.orderItem.item.manufact.manufactName"/>
+        <id column="T_ORDER$FOR_SUPPRIER_COMMENT" property="accept.order.orderComment.forSupplierComment.forSupplierComment.comment"/>
+        <id column="T_ORDER$ORDER_NO" property="accept.identify.orderNo"/>
+        <id column="T_ARRIVAL$DELIV_VOL" property="accept.receiveManagement.delivVol.delivVol.vol"/>
+        <id column="T_ARRIVAL$ARRIV_EXP_DATE" property="accept.receiveResult.receiveDate.receiveDate.dateOfymd"/>
+        <id column="T_ARRIVAL$HAVE_IN_STOCK_FLG" property="accept.receiveResult.haveInStockFlg.haveInStockFlg"/>
+        <id column="T_ARRIVAL$STOCK_COMPANY_CD" property="accept.receiveResult.stockPlace.company.companyCd"/>
+        <id column="T_ARRIVAL$STK_SECTION_PLACE_CD" property="accept.receiveResult.stockPlace.sectionPlace.sectionPlaceCd"/>
+        <id column="T_ARRIVAL$STOCK_PLACE_CD" property="accept.receiveResult.stockPlace.stockPlaceCd"/>
+        <id column="T_ARRIVAL$STOCK_PLACE_NAME" property="accept.receiveResult.stockPlace.stockPlaceName"/>
+        <id column="T_ARRIVAL$ARRIV_REMARK" property="accept.receiveResult.receiveRemark.remark.comment"/>
+        <id column="T_ARRIVAL$ARRIV_SECTION_CD" property="accept.receiveResult.receiveUser.receiveUser.section.sectionCd"/>
+        <id column="T_ARRIVAL$ARRIV_SECTION_NAME" property="accept.receiveResult.receiveUser.receiveUser.section.sectionName"/>
+        <id column="T_ARRIVAL$ARRIV_USER_ID" property="accept.receiveResult.receiveUser.receiveUser.userID"/>
+        <id column="T_ARRIVAL$ARRIV_USER_NAME" property="accept.receiveResult.receiveUser.receiveUser.userName"/>
+        <id column="T_INSPECT$INSPECT_DATE" property="accept.inspectResult.inspectDate.inspectDate.dateOfymd"/>
+        <id column="T_INSPECT$INSPECT_PASS_QUANT" property="accept.inspectResult.inspectVol.successAmount.vol"/>
+        <id column="T_INSPECT$INSPECT_SECTION_CD" property="accept.inspectResult.inspectUser.user.section.sectionCd"/>
+        <id column="T_INSPECT$INSPECT_SECTION_NAME" property="accept.inspectResult.inspectUser.user.section.sectionName"/>
+        <id column="T_INSPECT$INSPECT_USER_ID" property="accept.inspectResult.inspectUser.user.userID"/>
+        <id column="T_INSPECT$INSPECT_USER_NAME" property="accept.inspectResult.inspectUser.user.userName"/>
+        <id column="M_B_USER_D$MAIL_ADDR" property="accept.inspectResult.inspectUser.user.mailAddr.mail"/>
+        <id column="T_INSPECT$INSPECT_ACCOUNT" property="accept.inspectResult.inspectAccount.comment"/>
+        <id column="T_ACCEPTANCE$CURRENCY_CD" property="accept.amountMng.currency.currencyCd"></id>
+        <id column="T_ACCEPTANCE$ACCEPT_STATUS" property="accept.acceptResult.acceptStatus.acceptStatus"/>
+        <id column="T_ORDER$REQ_COMPANY_CD" property="accept.order.user.reqUser.reqUser.section.company.companyCd"></id>
+        <id column="T_ORDER$BUYER_COMPANY_CD" property="accept.order.user.buyUser.buyUser.section.company.companyCd"></id>
+        <id column="T_ARRIVAL$ARRIV_COMPANY_CD" property="accept.receiveResult.receiveUser.receiveUser.section.company.companyCd"></id>
+        <id column="T_INSPECT$INSPECT_COMPANY_CD" property="accept.inspectResult.inspectUser.user.section.company.companyCd"></id>
+        <id column="EXCLUSIVE_SLIP_NO" property="accept.identify.exclusiveSlipId.slipNo"/>
+        <id column="EXCLUSIVE_LAST_UPD_DATE" property="accept.identify.exclusiveSlipId.lastUpdDate"/>
+        <id column="TAX_RATE" property="accept.amountMng.taxRate.taxRate"/>
+        <id column="TOTAL_AMOUNT" property="accept.acceptResult.acceptAmount.includingTaxSum.amount"/>
+
+        <id column="EXT_TXT_1" property="accept.acceptResult.detailExtItem.extendTxt.extendTxt1"/>
+        <id column="EXT_TXT_2" property="accept.acceptResult.detailExtItem.extendTxt.extendTxt2"/>
+        <id column="EXT_TXT_3" property="accept.acceptResult.detailExtItem.extendTxt.extendTxt3"/>
+        <id column="EXT_TXT_4" property="accept.acceptResult.detailExtItem.extendTxt.extendTxt4"/>
+        <id column="EXT_TXT_5" property="accept.acceptResult.detailExtItem.extendTxt.extendTxt5"/>
+        <id column="EXT_TXT_6" property="accept.acceptResult.detailExtItem.extendTxt.extendTxt6"/>
+        <id column="EXT_TXT_7" property="accept.acceptResult.detailExtItem.extendTxt.extendTxt7"/>
+        <id column="EXT_TXT_8" property="accept.acceptResult.detailExtItem.extendTxt.extendTxt8"/>
+        <id column="EXT_TXT_9" property="accept.acceptResult.detailExtItem.extendTxt.extendTxt9"/>
+        <id column="EXT_TXT_10" property="accept.acceptResult.detailExtItem.extendTxt.extendTxt10"/>
+        <id column="EXT_AREA_1" property="accept.acceptResult.detailExtItem.extendArea.extendArea1"/>
+        <id column="EXT_AREA_2" property="accept.acceptResult.detailExtItem.extendArea.extendArea2"/>
+        <id column="EXT_AREA_3" property="accept.acceptResult.detailExtItem.extendArea.extendArea3"/>
+        <id column="EXT_AREA_4" property="accept.acceptResult.detailExtItem.extendArea.extendArea4"/>
+        <id column="EXT_AREA_5" property="accept.acceptResult.detailExtItem.extendArea.extendArea5"/>
+        <id column="EXT_DATE_1" property="accept.acceptResult.detailExtItem.extendDate.extendDate1.dateOfymd"/>
+        <id column="EXT_DATE_2" property="accept.acceptResult.detailExtItem.extendDate.extendDate2.dateOfymd"/>
+        <id column="EXT_DATE_3" property="accept.acceptResult.detailExtItem.extendDate.extendDate3.dateOfymd"/>
+        <id column="EXT_DATE_4" property="accept.acceptResult.detailExtItem.extendDate.extendDate4.dateOfymd"/>
+        <id column="EXT_DATE_5" property="accept.acceptResult.detailExtItem.extendDate.extendDate5.dateOfymd"/>
+        <id column="EXT_INT_1" property="accept.acceptResult.detailExtItem.extendInt.extendInt1.value"/>
+        <id column="EXT_INT_2" property="accept.acceptResult.detailExtItem.extendInt.extendInt2.value"/>
+        <id column="EXT_INT_3" property="accept.acceptResult.detailExtItem.extendInt.extendInt3.value"/>
+        <id column="EXT_INT_4" property="accept.acceptResult.detailExtItem.extendInt.extendInt4.value"/>
+        <id column="EXT_INT_5" property="accept.acceptResult.detailExtItem.extendInt.extendInt5.value"/>
+        <id column="EXT_INT_6" property="accept.acceptResult.detailExtItem.extendInt.extendInt6.value"/>
+        <id column="EXT_INT_7" property="accept.acceptResult.detailExtItem.extendInt.extendInt7.value"/>
+        <id column="EXT_INT_8" property="accept.acceptResult.detailExtItem.extendInt.extendInt8.value"/>
+        <id column="EXT_INT_9" property="accept.acceptResult.detailExtItem.extendInt.extendInt9.value"/>
+        <id column="EXT_INT_10" property="accept.acceptResult.detailExtItem.extendInt.extendInt10.value"/>
+        <id column="EXT_DEC_1" property="accept.acceptResult.detailExtItem.extendDec.extendDec1.value"/>
+        <id column="EXT_DEC_2" property="accept.acceptResult.detailExtItem.extendDec.extendDec2.value"/>
+        <id column="EXT_DEC_3" property="accept.acceptResult.detailExtItem.extendDec.extendDec3.value"/>
+        <id column="EXT_DEC_4" property="accept.acceptResult.detailExtItem.extendDec.extendDec4.value"/>
+        <id column="EXT_DEC_5" property="accept.acceptResult.detailExtItem.extendDec.extendDec5.value"/>
+        <id column="EXT_SEL_1" property="accept.acceptResult.detailExtItem.extendSel.extendSel1"/>
+        <id column="EXT_SEL_2" property="accept.acceptResult.detailExtItem.extendSel.extendSel2"/>
+        <id column="EXT_SEL_3" property="accept.acceptResult.detailExtItem.extendSel.extendSel3"/>
+        <id column="EXT_SEL_4" property="accept.acceptResult.detailExtItem.extendSel.extendSel4"/>
+        <id column="EXT_SEL_5" property="accept.acceptResult.detailExtItem.extendSel.extendSel5"/>
+        <id column="EXT_SEL_6" property="accept.acceptResult.detailExtItem.extendSel.extendSel6"/>
+        <id column="EXT_SEL_7" property="accept.acceptResult.detailExtItem.extendSel.extendSel7"/>
+        <id column="EXT_SEL_8" property="accept.acceptResult.detailExtItem.extendSel.extendSel8"/>
+        <id column="EXT_SEL_9" property="accept.acceptResult.detailExtItem.extendSel.extendSel9"/>
+        <id column="EXT_SEL_10" property="accept.acceptResult.detailExtItem.extendSel.extendSel10"/>
+        <id column="EXT_CHK_1" property="accept.acceptResult.detailExtItem.extendChk.extendChk1"/>
+        <id column="EXT_CHK_2" property="accept.acceptResult.detailExtItem.extendChk.extendChk2"/>
+        <id column="EXT_CHK_3" property="accept.acceptResult.detailExtItem.extendChk.extendChk3"/>
+        <id column="EXT_CHK_4" property="accept.acceptResult.detailExtItem.extendChk.extendChk4"/>
+        <id column="EXT_CHK_5" property="accept.acceptResult.detailExtItem.extendChk.extendChk5"/>
+        <id column="EXT_FILE_1" property="accept.acceptResult.detailExtItem.extendFile.extendFile1.fileName"/>
+        <id column="EXT_FILE_2" property="accept.acceptResult.detailExtItem.extendFile.extendFile2.fileName"/>
+        <id column="EXT_FILE_3" property="accept.acceptResult.detailExtItem.extendFile.extendFile3.fileName"/>
+        <id column="EXT_FILE_BINARY_1" property="accept.acceptResult.detailExtItem.extendFile.extendFile1.binary"/>
+        <id column="EXT_FILE_BINARY_2" property="accept.acceptResult.detailExtItem.extendFile.extendFile2.binary"/>
+        <id column="EXT_FILE_BINARY_3" property="accept.acceptResult.detailExtItem.extendFile.extendFile3.binary"/>
+        <id column="EXT_MST_1" property="accept.acceptResult.detailExtItem.extendMst.extendMst1.mstKey"/>
+        <id column="EXT_MST_2" property="accept.acceptResult.detailExtItem.extendMst.extendMst2.mstKey"/>
+        <id column="EXT_MST_3" property="accept.acceptResult.detailExtItem.extendMst.extendMst3.mstKey"/>
+        <id column="EXT_MST_4" property="accept.acceptResult.detailExtItem.extendMst.extendMst4.mstKey"/>
+        <id column="EXT_MST_5" property="accept.acceptResult.detailExtItem.extendMst.extendMst5.mstKey"/>
+        <id column="EXT_MST_6" property="accept.acceptResult.detailExtItem.extendMst.extendMst6.mstKey"/>
+        <id column="EXT_MST_7" property="accept.acceptResult.detailExtItem.extendMst.extendMst7.mstKey"/>
+        <id column="EXT_MST_8" property="accept.acceptResult.detailExtItem.extendMst.extendMst8.mstKey"/>
+        <id column="EXT_MST_NAME_1" property="accept.acceptResult.detailExtItem.extendMst.extendMst1.mstName"/>
+        <id column="EXT_MST_NAME_2" property="accept.acceptResult.detailExtItem.extendMst.extendMst2.mstName"/>
+        <id column="EXT_MST_NAME_3" property="accept.acceptResult.detailExtItem.extendMst.extendMst3.mstName"/>
+        <id column="EXT_MST_NAME_4" property="accept.acceptResult.detailExtItem.extendMst.extendMst4.mstName"/>
+        <id column="EXT_MST_NAME_5" property="accept.acceptResult.detailExtItem.extendMst.extendMst5.mstName"/>
+        <id column="EXT_MST_NAME_6" property="accept.acceptResult.detailExtItem.extendMst.extendMst6.mstName"/>
+        <id column="EXT_MST_NAME_7" property="accept.acceptResult.detailExtItem.extendMst.extendMst7.mstName"/>
+        <id column="EXT_MST_NAME_8" property="accept.acceptResult.detailExtItem.extendMst.extendMst8.mstName"/>
+        <id column="TITLE_NAME" property="accept.order.titleName.titleName"/>
+        <id column="PAY_CONDITION_CD" property="accept.order.payConditionItem.payConditionIdentify.payConditionCd"/>
+        <id column="PAY_CONDITION_NAME" property="accept.order.payConditionItem.payConditionName"/>
+    </resultMap>
+    <select id="aprAcpDetail" parameterType="fw.domain.slip.receive.receive.Identify"
+        resultMap="aprAcpDetail_Map">
+        SELECT
+            T_RECEIVE_MNG.DELIV_KEY_NO AS "accept.delivKeyNo.delivKeyNo",
+            T_RECEIVE_MNG.LAST_UPD_DATE as "accept.identify.lastUpdDate",
+            T_ACCEPTANCE.ACCEPT_SEQ AS "T_ACCEPTANCE$ACCEPT_SEQ",
+            T_ACCEPTANCE.CORRECT_CD AS "T_ACCEPTANCE$CORRECT_CD",
+            T_ACCEPTANCE.ACCEPT_VERSION AS "T_ACCEPTANCE$ACCEPT_VERSION",
+            T_ACCEPTANCE.RB_IND AS "accept.rbInd.rbInd",
+            T_ACCEPTANCE.RB_SEQ AS "accept.rbInd.rbSeq",
+            T_ACCEPTANCE.LOAD_SECTION_CD AS "T_ACCEPTANCE$LOAD_SECTION_CD",
+            T_ACCEPTANCE.LOAD_SECTION_NAME AS "T_ACCEPTANCE$LOAD_SECTION_NAME",
+            T_ACCEPTANCE.SUBJECT_CD AS "T_ACCEPTANCE$SUBJECT_CD",
+            T_ACCEPTANCE.SUBJECT_NAME AS "T_ACCEPTANCE$SUBJECT_NAME",
+            T_ACCEPTANCE.BUDGET_NO AS "T_ACCEPTANCE$BUDGET_NO",
+            T_ACCEPTANCE.HAVE_IN_STOCK_FLG AS "T_ACCEPTANCE$HAVE_IN_STOCK_FLG",
+            T_ACCEPTANCE.STOCK_COMPANY_CD AS "T_ACCEPTANCE$STOCK_COMPANY_CD",
+            T_ACCEPTANCE.STOCK_SECTION_PLACE_CD AS "T_ACCEPT$STK_SECTION_PLACE_CD",
+            T_ACCEPTANCE.STOCK_PLACE_CD AS "T_ACCEPTANCE$STOCK_PLACE_CD",
+            T_ACCEPTANCE.STOCK_PLACE_NAME AS "T_ACCEPTANCE$STOCK_PLACE_NAME",
+            T_ACCEPTANCE.ACCEPT_DATE AS "T_ACCEPTANCE$ACCEPT_DATE",
+            T_ACCEPTANCE.UNIT_PRICE AS "T_ACCEPTANCE$UNIT_PRICE",
+            T_ACCEPTANCE.ACCEPT_VOL AS "T_ACCEPTANCE$ACCEPT_VOL",
+            T_ACCEPTANCE.UNIT_NAME AS "T_ACCEPTANCE$UNIT_NAME",
+            T_ACCEPTANCE.ACCEPT_AMOUNT AS "T_ACCEPTANCE$ACCEPT_AMOUNT",
+            T_ACCEPTANCE.ACCEPT_COMPANY_CD AS "T_ACCEPTANCE$ACCEPT_COMPANY",
+            T_ACCEPTANCE.ACCEPT_SECTION_CD AS "T_ACCEPTANCE$ACCEPT_SECTION_CD",
+            T_ACCEPTANCE.ACCEPT_SECTION_NAME AS "T_ACCEPTANCE$ACCEPT",
+            T_ACCEPTANCE.ACCEPT_USER_ID AS "T_ACCEPTANCE$ACCEPT_USER_ID",
+            T_ACCEPTANCE.ACCEPT_USER_NAME AS "T_ACCEPTANCE$ACCEPT_USER_NAME",
+            T_ACCEPTANCE.APP_ROUTE_NAME AS "T_ACCEPTANCE$APP_ROUTE_NAME",
+            T_ACCEPTANCE.CURRENCY_CD AS "T_ACCEPTANCE$CURRENCY_CD",
+            T_ACCEPTANCE.ACCEPT_STATUS AS "T_ACCEPTANCE$ACCEPT_STATUS",
+            T_ACCEPTANCE.LAST_UPD_DATE AS "accept.identify.lastUpdDate",
+            T_ORDER.DELIV_PLACE_CD AS "T_ORDER$DELIV_PLACE_CD",
+            T_ORDER.DELIV_PLACE_NAME AS "T_ORDER$DELIV_PLACE_NAME",
+            T_ORDER.ITEM_CD AS "T_ORDER$ITEM_CD",
+            T_ORDER.ITEM_NAME AS "T_ORDER$ITEM_NAME",
+            T_ORDER.ORDER_FIRST_DATE AS "T_ORDER$ORDER_DATE",
+            T_ORDER.ORDER_DELIV_DATE AS "T_ORDER$ORDER_DELIV_DATE",
+            T_ORDER.CURRENCY_CD AS "T_ORDER$CURRENCY_CD",
+            T_ORDER.UNIT_PRICE AS "T_ORDER$UNIT_PRICE",
+            T_ORDER.ORDER_VOL AS "T_ORDER$ORDER_VOL",
+            T_ORDER.UNIT_NAME AS "T_ORDER$UNIT_NAME",
+            T_ORDER.ORDER_AMOUNT AS "T_ORDER$ORDER_AMOUNT",
+            T_ORDER.ORDER_CANCEL_VOL,
+            T_ORDER.ORDER_CANCEL_AMOUNT,
+            T_ORDER.TAX_IND AS "T_ORDER$TAX_IND",
+            T_ORDER.SUP_CD AS "T_ORDER$SUP_CD",
+            T_ORDER.SUP_ABBR_NAME AS "T_ORDER$SUP_ABBR_NAME",
+            T_ORDER.SUBCON_IND AS "T_ORDER$SUBCON_IND",
+            T_ORDER.EDI_IND AS "T_ORDER$EDI_IND",
+            T_ORDER.REQ_COMPANY_CD AS "T_ORDER$REQ_COMPANY_CD",
+            T_ORDER.REQ_SECTION_CD AS "T_ORDER$REQ_SECTION_CD",
+            T_ORDER.REQ_SECTION_NAME AS "T_ORDER$REQ_SECTION_NAME",
+            T_ORDER.REQ_USER_ID AS "T_ORDER$REQ_USER_ID",
+            T_ORDER.REQ_USER_NAME AS "T_ORDER$REQ_USER_NAME",
+            T_ORDER.REQ_USER_EXTENSION_NO AS "T_ORDER$REQ_USER_EXTENSION_NO",
+            T_ORDER.REQ_USER_TEL_NO AS "T_ORDER$REQ_USER_TEL_NO",
+            T_ORDER.BUYER_COMPANY_CD AS "T_ORDER$BUYER_COMPANY_CD",
+            T_ORDER.BUYER_SECTION_CD AS "T_ORDER$BUYER_SECTION_CD",
+            T_ORDER.BUYER_SECTION_NAME AS "T_ORDER$BUYER_SECTION_NAME",
+            T_ORDER.BUYER_USER_ID AS "T_ORDER$BUYER_USER_ID",
+            T_ORDER.BUYER_USER_NAME AS "T_ORDER$BUYER_USER_NAME",
+            T_ORDER.BUYER_USER_EXTENSION_NO AS "T_ORDER$BUYER_USER_EXT_NO",
+            T_ORDER.BUYER_USER_TEL_NO AS "T_ORDER$BUYER_USER_TEL_NO",
+            T_ORDER.UNIT_NAME AS "T_ORDER$UNIT_NAME",
+            T_ORDER.ORDER_NO AS "T_ORDER$ORDER_NO",
+            T_ORDER.KATASHIKI AS "T_ORDER$KATASHIKI",
+            T_ORDER.MANUFACT_CD AS "T_ORDER$MANUFACT_CD",
+            T_ORDER.MANUFACT_NAME AS "T_ORDER$MANUFACT_NAME",
+            T_ORDER.FOR_SUPPRIER_COMMENT AS "T_ORDER$FOR_SUPPRIER_COMMENT",
+            T_ARRIVAL.DELIV_VOL AS "T_ARRIVAL$DELIV_VOL",
+            T_ARRIVAL.ARRIV_EXP_DATE AS "T_ARRIVAL$ARRIV_EXP_DATE",
+            T_ARRIVAL.HAVE_IN_STOCK_FLG AS "T_ARRIVAL$HAVE_IN_STOCK_FLG",
+            T_ARRIVAL.STOCK_COMPANY_CD AS "T_ARRIVAL$STOCK_COMPANY_CD",
+            T_ARRIVAL.STOCK_SECTION_PLACE_CD AS "T_ARRIVAL$STK_SECTION_PLACE_CD",
+            T_ARRIVAL.STOCK_PLACE_CD AS "T_ARRIVAL$STOCK_PLACE_CD",
+            T_ARRIVAL.STOCK_PLACE_NAME AS "T_ARRIVAL$STOCK_PLACE_NAME",
+            T_ARRIVAL.ARRIV_REMARK AS "T_ARRIVAL$ARRIV_REMARK",
+            T_ARRIVAL.ARRIV_COMPANY_CD AS "T_ARRIVAL$ARRIV_COMPANY_CD",
+            T_ARRIVAL.ARRIV_SECTION_CD AS "T_ARRIVAL$ARRIV_SECTION_CD",
+            T_ARRIVAL.ARRIV_SECTION_NAME AS "T_ARRIVAL$ARRIV_SECTION_NAME",
+            T_ARRIVAL.ARRIV_USER_ID AS "T_ARRIVAL$ARRIV_USER_ID",
+            T_ARRIVAL.ARRIV_USER_NAME AS "T_ARRIVAL$ARRIV_USER_NAME",
+            T_INSPECT.INSPECT_DATE AS "T_INSPECT$INSPECT_DATE",
+            T_INSPECT.INSPECT_PASS_QUANT AS "T_INSPECT$INSPECT_PASS_QUANT",
+            T_INSPECT.INSPECT_ACCOUNT AS "T_INSPECT$INSPECT_ACCOUNT",
+            T_INSPECT.INSPECT_COMPANY_CD AS "T_INSPECT$INSPECT_COMPANY_CD",
+            T_INSPECT.INSPECT_SECTION_CD AS "T_INSPECT$INSPECT_SECTION_CD",
+            T_INSPECT.INSPECT_SECTION_NAME AS "T_INSPECT$INSPECT_SECTION_NAME",
+            T_INSPECT.INSPECT_USER_ID AS "T_INSPECT$INSPECT_USER_ID",
+            T_INSPECT.INSPECT_USER_NAME AS "T_INSPECT$INSPECT_USER_NAME",
+            T_SLIP_MNG.SLIP_NO AS EXCLUSIVE_SLIP_NO,
+            T_SLIP_MNG.LAST_UPD_DATE AS EXCLUSIVE_LAST_UPD_DATE,
+            T_ACCEPTANCE.TAX_RATE,
+            T_ACCEPTANCE.TOTAL_AMOUNT,
+            T_ORDER.TITLE_NAME,
+            T_ORDER.PAY_CONDITION_CD,
+            T_ORDER.PAY_CONDITION_NAME,
+            ${@ps.common.util.ItemSettingUtil@getItemSettingSelectSQL("T_ACCEPTANCE")}
+        FROM
+            T_RECEIVE_MNG
+        INNER JOIN T_ORDER
+        ON  T_ORDER.ORDER_NO = T_RECEIVE_MNG.ORDER_NO
+            AND  T_ORDER.NEW_APP_FLG = '1'
+            AND  T_ORDER.DELETE_FLG = '0'
+        INNER JOIN T_ACCEPTANCE
+        ON  T_ACCEPTANCE.ACCEPT_SEQ = T_RECEIVE_MNG.NEW_ACCEPTANCE_SEQ
+            AND T_ACCEPTANCE.DELETE_FLG = '0'
+        INNER JOIN T_ARRIVAL
+        ON  T_ARRIVAL.ARRIVAL_SEQ = T_RECEIVE_MNG.NEW_ARRIVAL_SEQ
+            AND T_ARRIVAL.DELETE_FLG = '0'
+        LEFT JOIN T_INSPECT
+        ON  T_INSPECT.INSPECT_SEQ = T_RECEIVE_MNG.NEW_INSPECT_SEQ
+            AND T_INSPECT.DELETE_FLG = '0'
+        LEFT JOIN T_SLIP_MNG
+        ON  T_SLIP_MNG.SLIP_NO = T_ORDER.ORDER_NO
+            AND T_SLIP_MNG.DELETE_FLG = '0'
+        WHERE
+            T_RECEIVE_MNG.DELIV_KEY_NO = #{delivKeyNo}
+    </select>
+
+<!-- （２）「承認」、「差し戻し」ボタンクリック時、SQL仕様 2012/8/23  15:41:00 -->
+<!-- 
+            １．承認の更新（承認共通更新仕様を参照）                                                                    
+            ２．検収の更新                                                                 
+                ２.１画面.承認状態区分 = '1':承認中 OR '4':差戻しの場合、検収の更新を行う                                                               
+                ２.２画面.承認状態区分 = '3':最終承認済の場合、検収承認の完了処理を行う(検収共通更新仕様を参照)                                                               
+ -->
+ 
+ 
+ <!-- （３）検収の更新仕様 -->
+ <!-- １.「承認」ボタンクリック時、下記の更新処理を行う
+                    １-１.受入管理テーブルの更新を行う   2012/8/23  15:43:00-->
+     <update id="approvalReceiveMng" parameterType="fw.domain.slip.receive.acceptance.AcceptApplication">
+        UPDATE T_RECEIVE_MNG
+        SET
+            <if test="@org.apache.commons.lang.StringUtils@isNotBlank(correctInd)">
+                <choose>
+                <when test="correctInd==&quot;1&quot;">
+                    DELIV_STATUS = '4102',
+                </when>
+                <otherwise>
+                    DELIV_STATUS = '4202',
+                </otherwise>
+                </choose>
+            </if>
+            LAST_UPD_DATE='${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}',
+            LAST_UPD_COMPANY_CD = '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}',
+            LAST_UPD_SECTION_CD ='${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}',
+            LAST_UPD_USER_ID ='${@fw.security.SecurityUtil@getUserIdByEscapeSql()}'
+        WHERE
+             DELIV_KEY_NO = #{delivKeyNo}
+    </update>
+    <!-- １-２.検収テーブルの更新を行う 2012-08-23 15:58 -->
+    <update id="approvalAcceptance" parameterType="fw.domain.slip.receive.acceptance.AcceptApplication">
+        UPDATE T_ACCEPTANCE
+        SET
+            ACCEPT_STATUS = '02',
+            LAST_UPD_DATE='${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}',
+            LAST_UPD_COMPANY_CD = '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}',
+            LAST_UPD_SECTION_CD ='${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}',
+            LAST_UPD_USER_ID ='${@fw.security.SecurityUtil@getUserIdByEscapeSql()}'
+        WHERE
+             ACCEPT_SEQ = #{accept.identify.acceptSeqNo.sequenceNo}
+    </update>
+    <!-- １-３.検収テーブルの赤データ更新を行う -->
+    <update id="approvalAcceptanceRedData" parameterType="fw.domain.slip.receive.acceptance.AcceptApplication">
+        UPDATE T_ACCEPTANCE
+        SET
+            ACCEPT_STATUS = '02',
+            LAST_UPD_DATE='${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}',
+            LAST_UPD_COMPANY_CD = '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}',
+            LAST_UPD_SECTION_CD ='${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}',
+            LAST_UPD_USER_ID ='${@fw.security.SecurityUtil@getUserIdByEscapeSql()}'
+        WHERE
+            RB_SEQ = #{accept.identify.acceptSeqNo.sequenceNo}
+            AND RB_IND = '1'
+            AND DELIV_KEY_NO = #{accept.delivKeyNo.delivKeyNo}
+    </update>
+<!-- ２．「差戻し」ボタンクリック時、SQL仕様  2012-08-23 16:03 -->
+     <update id="remandReceiveMng" parameterType="fw.domain.slip.receive.acceptance.AcceptApplication">
+        UPDATE T_RECEIVE_MNG
+        SET
+            <if test="@org.apache.commons.lang.StringUtils@isNotBlank(accept.correctInd.correctInd)">
+                <choose>
+                    <when test="accept.correctInd.correctInd==&quot;1&quot;">
+                        DELIV_STATUS = '4103',
+                    </when>
+                    <otherwise>
+                        DELIV_STATUS = '4203',
+                    </otherwise>
+                </choose>
+            </if>
+            LAST_UPD_DATE='${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}',
+            LAST_UPD_COMPANY_CD = '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}',
+            LAST_UPD_SECTION_CD ='${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}',
+            LAST_UPD_USER_ID ='${@fw.security.SecurityUtil@getUserIdByEscapeSql()}'
+        WHERE
+             DELIV_KEY_NO = #{accept.delivKeyNo.delivKeyNo}
+    </update>  
+    <!-- ２-２.検収テーブルの更新を行う -->
+    <update id="remandAcceptance" parameterType="fw.domain.slip.receive.acceptance.AcceptApplication">
+        UPDATE T_ACCEPTANCE
+        SET
+            ACCEPT_STATUS = '03',
+            LAST_UPD_DATE='${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}',
+            LAST_UPD_COMPANY_CD = '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}',
+            LAST_UPD_SECTION_CD ='${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}',
+            LAST_UPD_USER_ID ='${@fw.security.SecurityUtil@getUserIdByEscapeSql()}'
+        WHERE
+             ACCEPT_SEQ = #{accept.identify.acceptSeqNo.sequenceNo}
+    </update>
+    <!-- ２-３.検収テーブルの赤データ更新を行う -->
+    <update id="remandAcceptanceRedData" parameterType="fw.domain.slip.receive.acceptance.AcceptApplication">
+        UPDATE T_ACCEPTANCE
+        SET
+            ACCEPT_STATUS = '03',
+            LAST_UPD_DATE='${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}',
+            LAST_UPD_COMPANY_CD = '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}',
+            LAST_UPD_SECTION_CD ='${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}',
+            LAST_UPD_USER_ID ='${@fw.security.SecurityUtil@getUserIdByEscapeSql()}'
+        WHERE
+            RB_SEQ = #{accept.identify.acceptSeqNo.sequenceNo}
+            AND RB_IND = '1'
+            AND DELIV_KEY_NO = #{accept.delivKeyNo.delivKeyNo}
+     </update>
+<!-- ￥￥￥￥￥￥￥￥￥￥￥￥ PSAPR092検収承認（個別）  END￥￥￥￥￥￥￥￥￥￥￥￥￥￥￥￥￥￥-->
+</mapper>

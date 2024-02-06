@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<flow xmlns="http://www.springframework.org/schema/webflow"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.springframework.org/schema/webflow
+        http://www.springframework.org/schema/webflow/spring-webflow-2.0.xsd"
+    parent="base">
+   
+    <var name="identify" class="fw.domain.slip.order.order.OrderIdentify" />
+
+    <input name="searchCondition" />
+    <input name="isCurrentPageSearch" />
+    <input name="isQuickLinkSearch" />
+    <decision-state id="isSearchByKey">
+       <if test="flowScope.isCurrentPageSearch" then="searchByKey" else="searchByCondition" />
+    </decision-state>
+    
+    <action-state id="searchByCondition">
+        <evaluate expression="PSORD121Service.init(searchCondition)" result="flowScope.itemList" />
+        <transition to="PSORD121"/> 
+    </action-state>
+
+    <action-state  id="searchByKey" >
+        <evaluate expression="PSORD121Service.page(searchCondition)" result="flowScope.itemList" />
+        <transition to="PSORD121"/>
+    </action-state>
+
+    <view-state id="PSORD121" model="itemList" view="ord/print/PSORD121">
+       <transition on="order" validate="false">
+            <evaluate expression="PSORD121Service.order(searchCondition)" result="flowScope.itemList"/>
+        </transition>
+        <transition on="page" validate="false">
+             <evaluate expression="PSORD121Service.page(searchCondition)" result="flowScope.itemList"/> 
+        </transition>
+        <transition on="detailValidate" validate="true">
+            <set name="identify.orderSeq" value="requestParameters.orderSeq"/>
+            <set name="identify.lastUpdDate" value="requestParameters.lastUpdDate"/>
+            <set name="flashScope.isShowDetail" value="true"/>
+        </transition>
+         <!-- 印刷ボタン押下する場合 -->
+         <transition on="print" validate="true" to="searchByKey">
+            <evaluate expression="PSORD121Service.print(itemList)" />
+            <set name="flashScope.isSuccess" value="true"></set>
+        </transition>
+        <!-- 詳細押下する場合 -->
+        <transition on="detail" to="PSORD090TOP" validate="false" />
+        <!-- BACK押下する場合 -->
+        <transition on="back" to="home" validate="false" />
+    </view-state>
+    <!-- 詳細フロー -->
+    <subflow-state id="PSORD090TOP" subflow="ord/order/PSORD090TOP">
+        <input name="orderIdentify" value="identify" />
+    </subflow-state>
+    
+
+</flow>

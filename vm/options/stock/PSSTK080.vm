@@ -1,0 +1,332 @@
+<!doctype html>
+<html lang="ja">
+<head>
+#set($commonTitle = "#customSpringMessage('INVENTORY_RESULT_INPUT_LIST')")
+<title>$commonTitle</title><!--棚卸結果入力一覧-->
+<meta http-equiv="Content-type" content="text/html; charset=UTF-8">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Content-script-type" content="text/javascript">
+<link id="CSS_FONT" rel="stylesheet" href="../../include/FontS.css" type="text/css">
+<link rel="stylesheet" href="../../include/Layout.css" type="text/css">
+<link rel="stylesheet" href="../../include/Color.css" type="text/css">
+<link rel="stylesheet" href="../../include/searchbox.css" type="text/css">
+<link rel="stylesheet" href="../../include/ime.css" type="text/css">
+<script language="javascript" type="text/javascript" src="../../include/common.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/check.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/date.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/searchbox.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/jquery-1.7.2.min.js"></script>
+<script language="javascript" type="text/javascript">
+<!--
+#set($allSearchGrant = $LoginUser.hasAuth(${AuthNoConstant.getValue("INVENTORY_READ_ALLSEARCH_GRANT")}))## 全社棚卸参照権限
+#set($updateGrant = $LoginUser.hasAuth(${AuthNoConstant.getValue("INVENTORY_UPDATE_GRANT")}))## 棚卸更新権限
+#set($searchViewStateID = 'PSSTK080')
+#set($listViewStateID = 'PSSTK081')
+#parse("./common/common_js.vm")
+var pinName="PSSTK080_Pin";
+## ビューが初めて表示される直前に発生します。
+function onLoad(){
+    bodyLoad();
+    var alertMessage="$!alertMessage";
+    if(alertMessage!=""){
+        alert(alertMessage);
+    }
+    var errorMsg="$!errorMessage";
+    if(errorMsg!=""){
+        setErrorMessage("ERRORDIV",errorMsg,"DATAAREA");
+        return;
+    }
+    var isDownload="#jsEscape($!isDownLoadValidate)";
+    if(isDownload=="true"){
+        iframeChange("${flowExecutionUrl}&_eventId=download","pageid","PSSTK080","HIDDENAREA");
+        return;
+    }
+    var isShowInfo="#jsEscape($isShowInfo)";
+    if(isShowInfo=="true"){
+        top.iframeChange("${flowExecutionUrl}&_eventId=showUploadResult");
+        return;
+    }
+    if(isShowInfo=="false"){
+        #set($params = ["#customSpringMessage('INVENTORY_VOL')"])
+        alert("#customMessageArgs('I002',$params)");
+        return;
+    }
+    var isPrintSuccess="#jsEscape($isPrintSuccess)";
+    if(isPrintSuccess=="true"){
+        alert("#customMessageArgs('I032',[])");
+        return;
+    }
+    var isShowList="#jsEscape($isShowList)";
+    if(isShowList=="true"){
+        iframeChange("${flowExecutionUrl}&_eventId=search","pageid","PSSTK080");
+        return;
+    }
+}
+## 「検索」ボタンをクリックしたとき発生します。
+function execSearch(){
+    setItemDisabled("itemClassM","itemClassS");
+    buttonDisable();
+    getObj("BodyForm").target="_self";
+    getObj("BodyForm").action="${flowExecutionUrl}&_eventId=validate";
+    getObj("BodyForm").submit();
+}
+## 「検索条件をクリアする」ボタンをクリックしたとき発生します。
+function clearSearch(){
+    resetProductClassBySession('itemClassL', 'itemClassM', 'itemClassS', '$!searchCondition.itemClassL', '$!searchCondition.itemClassM', '$!searchCondition.itemClassS', '');
+}
+## 「アップロード」ボタンをクリックしたとき発生します。
+function doUpload(){
+    if(getObj("file").value!=""){
+        #set($params = ["#customSpringMessage('INVENTORY_RESULT_INPUT_LIST')","#customSpringMessage('ACTION_UPLOAD')"])
+        if(!confirm("#customMessageArgs('W001',$params)")){
+            return;
+        }
+        setItemDisabled("itemClassM","itemClassS");
+        buttonDisable();
+        setTimeout(buttonUsable,1000);
+        getObj("BodyForm").action="${flowExecutionUrl}&_eventId=upload";
+        getObj("BodyForm").submit();
+    }else{
+        document.getElementById("TR_ERROR").style.display = "";
+        document.getElementById("DATAAREA").contentWindow.document.body.innerText = "";
+        #set($params = ["#customSpringMessage('UPLOAD_FILE')"])
+        document.getElementById("ERRORDIV").innerHTML="#customMessageArgs('E002',$params)";
+    }
+}
+## 「初期値設定」ボタンをクリックしたとき発生します。
+function doValueSetting(){
+    var dataArea = document.getElementById("DATAAREA").contentWindow;
+    if(dataArea != null&&typeof(eval(dataArea.doValueSetting))!="undefined"){
+        dataArea.doValueSetting();
+    }
+}
+## 「棚卸差異表印刷」ボタンをクリックしたときに発生します。
+function doPrint(){
+    #set($params=["#customSpringMessage('INVENTORY_DIFF_LIST')","#customSpringMessage('PRINT')"]);
+    if(!confirm("#customMessageArgs('W001',$params)")){
+        return;
+    }
+    setItemDisabled("itemClassM","itemClassS");
+    buttonDisable();
+    setTimeout(buttonUsable,1000);
+    getObj("BodyForm").action="${flowExecutionUrl}&_eventId=print";
+    getObj("BodyForm").submit();
+}
+## 「更新」ボタンをクリックしたときに発生します。
+function doUpdate(){
+    var dataArea=document.getElementById("DATAAREA").contentWindow;
+    if(dataArea!=null&&typeof(eval(dataArea.doUpdate))!="undefined"){
+        dataArea.doUpdate();
+    }
+}
+## 「ダウンロード」ボタンをクリックしたとき発生します。
+function doDownload(){
+    setItemDisabled("itemClassM","itemClassS");
+    getObj("TR_ERROR").style.display = "none";
+    getObj("ERRORDIV").innerHTML="";
+    buttonDisable();
+    setTimeout(buttonUsable,1000);
+    getObj("BodyForm").target="HIDDENAREA";
+    getObj("BodyForm").action="${flowExecutionUrl}&_eventId=downloadValidate";
+    getObj("BodyForm").submit();
+}
+//-->
+</script>
+</head>
+<body topmargin="0" leftmargin="0" marginwidth="0" marginheight="0" align="center" width="100%" height="100%" onload="onLoad();" style="overflow-y:hidden;">
+<form id="BodyForm" name="Body" method="post" enctype="multipart/form-data">
+    <iframe id="CALENDARBOX" class="CALENDARBOX" framespacing="0"scrolling="no" frameborder="0" src="../../sbxCalendar/body.vm"></iframe>
+    #customFormHiddenInput("pageid" "PSSTK080")
+    <table class="NoBorder" width="100%" height="100%">
+        <tr>
+            <td id="SEARCH_AREA" class="SearchArea"><!--onLoadで変更-->
+                #set($authNoFlag = $LoginUser.hasAuth(${AuthNoConstant.getValue("INVENTORY_UPDATE_GRANT")}))## 棚卸更新権限
+                #parse("./common/common_title_tran_with_personal_setting_new.vm")
+                <table width="100%">
+                    <tr id="SEARCH_AREA2">
+                        <td id="Adjust">
+                            <!--検索条件入力部-->
+                            <table class="NoBorder" width="100%">
+                                <tr>
+                                    <td nowrap align="left" colspan="4">
+                                        #customSpringMessage('PSSTK080_HEADER_COMMENT')
+                                    </td>
+                                </tr>
+                                $!PSSTK080PageCreaterForSearch.build('_td_style_left','class="FontSmallBold" align="right"', '_td_style_right', 'class="FontSmall" align="left"', '_item_style','Small')
+                                #set($isSectionPlaceCd = false)
+                                #set($isFirstItem = true)
+                                #foreach($!item in $!PSSTK080PageCreaterForSearch.getItemListForBody())
+                                    #set($currentOneRowFlag = $!PSSTK080PageCreaterForSearch.getOneRowFlag($!item))
+                                    #if($isFirstItem)
+                                        $!PSSTK080PageCreaterForSearch.printTRtag()
+                                    #elseif($currentOneRowFlag)
+                                        $!PSSTK080PageCreaterForSearch.printTDtag()
+                                        $!PSSTK080PageCreaterForSearch.printTRtagClose()
+                                        #set($isFirstItem = true)
+                                        $!PSSTK080PageCreaterForSearch.printTRtag()
+                                    #end
+                                    #if($!item.getColumnName()=="T_INVENTORY.INV_YEAR_MONTH")
+                                        #set($!item.itemDefinitionDetail.inputMethod.mustEnterFlg.mustEnterFlg='1')## 必須項目記号付与
+                                        $!PSSTK080PageCreaterForSearch.printDefault($!item,
+                                              "_item_style", "SmallAnk"
+                                            , "_event", "onblur='dateOnBlurYYYYMM(this);' onfocus='dateOnFocus(this);'"
+                                        )
+                                    #elseif($!item.getColumnName()=="T_INVENTORY.SECTION_PLACE_CD")
+                                        #set($!item.itemDefinitionDetail.inputMethod.mustEnterFlg.mustEnterFlg='1')## 必須項目記号付与
+                                      #if($!allSearchGrant)## 全社棚卸参照権限
+                                        $!PSSTK080PageCreaterForSearch.printSpecial("SECTION_PLACE", "m33_inputSectionPlace", $!item
+                                            , 'popupPageid', 'PSSTK080'
+                                            , '_masterCdIme', 'noIME'
+                                            , '_termFlag', '0'
+                                        )
+                                        #set($isSectionPlaceCd = true)
+                                      #end
+                                    #elseif($!item.getColumnName()=="T_INVENTORY.STOCK_PLACE_CD")
+                                        #set($!item.itemDefinitionDetail.inputMethod.mustEnterFlg.mustEnterFlg='1')## 必須項目記号付与
+                                      #if($!allSearchGrant)## 全社棚卸参照権限
+                                        $!PSSTK080PageCreaterForSearch.printSpecial("STOCK_PLACE", "m35_inputStockPlace", $!item
+                                            , 'popupPageid', 'PSSTK080'
+                                            , '_masterCdIme', 'noIME'
+                                            , '_referenceRangeFlg', '1'
+                                            , '_termFlag', '1'
+                                        )
+                                      #else
+                                        $!PSSTK080PageCreaterForSearch.printSpecial("STOCK_PLACE", "m35_inputStockPlace", $!item
+                                            , 'popupPageid', 'PSSTK080'
+                                            , '_masterCdIme', 'noIME'
+                                            , '_referenceRangeFlg', '2'
+                                            , '_termFlag', '1'
+                                        )
+                                      #end
+                                    #elseif($!item.getColumnName()=="T_INVENTORY.ITEM_CLASS_S")
+                                        $!PSSTK080PageCreaterForSearch.printSpecial("m29_inputItemProductClassSelect", $!item) 
+                                    #elseif($!item.getColumnName()=="T_INVENTORY.ITEM_CD")
+                                        $!PSSTK080PageCreaterForSearch.printSpecial("m11_inputItemCodeOnly", $!item
+                                            , 'popupPageid', 'PSSTK080'
+                                            , '_masterCdIme', 'Small noIME'
+                                        )
+                                    #elseif($!item.getColumnName()=="T_INVENTORY.ITEM_NAME")
+                                        $!PSSTK080PageCreaterForSearch.printDefault($!item)
+                                    #elseif($!item.getColumnName()=="T_INVENTORY.KATASHIKI")
+                                        $!PSSTK080PageCreaterForSearch.printDefault($!item)
+                                    #elseif($!item.getColumnName()=="T_INVENTORY.MANUFACT_CD")
+                                        $!PSSTK080PageCreaterForSearch.printSpecial("MANUFACT", "m09_inputManufact", $!item
+                                            , 'popupPageid', 'PSSTK080'
+                                            , '_masterCdIme', 'noIME'
+                                        )
+                                    #else
+                                        $!PSSTK080PageCreaterForSearch.printDefault($!item)
+                                    #end
+                                    #if($currentOneRowFlag)
+                                        $!PSSTK080PageCreaterForSearch.printTRtagClose()
+                                        #set($isFirstItem = true)
+                                    #else
+                                        #if($isFirstItem)
+                                            #set($isFirstItem = false)
+                                        #else
+                                            $!PSSTK080PageCreaterForSearch.printTRtagClose()
+                                            #set($isFirstItem = true)
+                                        #end
+                                    #end
+                                #end
+                                #if(!$isSectionPlaceCd)
+                                    #customFormHiddenInput("sectionPlaceCd" "$!searchCondition.sectionPlaceCd")
+                                    #customFormHiddenInput("sectionPlaceName" "$!searchCondition.sectionPlaceName")
+                                #end
+                                #if(!$isFirstItem)
+                                    $!PSSTK080PageCreaterForSearch.printTDtag()
+                                    $!PSSTK080PageCreaterForSearch.printTRtagClose()
+                                #end
+                                <tr>
+                                    <td nowrap class="FontSmallBold" align="right">
+                                    </td>
+                                    <td nowrap class="FontSmall" align="left" colspan="3">
+                                        #customFormRadioButtons("searchCondition.searchInd" $INV_RESULTS_INPUT_SEARCH_IND "" 'class="FontSmall"')<!--状態-->
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td nowrap class="FontComment" align="left" colspan="4">
+                                        #customSpringMessage('PSSTK080_FOOTER_COMMENT')<!--＊:前方一致 / ％:中間一致 / なし:完全一致-->
+                                    </td>
+                                </tr>
+                            </table>
+                            <!--検索条件入力部-->
+                        </td>
+                        <td nowrap class="FontSmallBold" align="right" valign="top">
+                            #customSpringMessage('DISPLAY_COUNT')<!--表示件数-->&nbsp;
+                            #customFormRadioButtons("searchCondition.searchCondition.page.pageRecorders" $pageRecordersList "" "")
+                            <br>
+                            <input type="button" onclick="javascript:execSearch();" class="LargeButton" value="#customSpringMessage('ACTION_SEARCH')"><!--検索-->
+                            <br>
+                            <br>
+                            <a href="javascript:clear();clearSearch();">#customSpringMessage('ACTION_CLEAR_SEARCH_CRITERIA')<!--検索条件をクリアする--></a>&nbsp;
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+        <tr id="UPLOAD_AREA">
+            <td class="UploadArea">
+                <table class="NoBorder" width="100%" style="margin:auto;">
+                    <tr>
+                        <td align="left">
+                            <table width="100%">
+                                <td align="left">
+                                    #if($!updateGrant)
+                                    <table>
+                                        <tr>
+                                            <td class="FontMini DarkBlue">
+                                                #customSpringMessage('UPLOAD_FILE')：&nbsp;<input class="Small" id="file" name="file" type="file" size="80">
+                                                
+                                            </td>
+                                            <td align="left">
+                                                <input class="SmallButton" type="button" value="#customSpringMessage('ACTION_UPLOAD')" onclick="doUpload()">
+                                            </td>
+                                        </tr>
+                                    </table>
+                                    #end
+                                </td>
+                                <td align="center"></td>
+                                <td align="right">
+                                    <table>
+                                        <tr>
+                                        #if($!updateGrant)
+                                            <td id="valueSetting" style="display:none">
+                                                <input class="SmallButton" type="button" value="#customSpringMessage("ACTION_SET_INITIAL_VALUE")" onclick="doValueSetting();">
+                                            </td>
+                                        #end
+                                            <td id="print">
+                                                <input class="SmallButton" type="button" value="#customSpringMessage("ACTION_INV_DIFF_LIST_PRINT")" onclick="doPrint();">
+                                            </td>
+                                        #if($!updateGrant)
+                                            <td id="update" style="display:none">
+                                                <input class="SmallButton" type="button" value="#customSpringMessage("UPDATE")" onclick="doUpdate();">
+                                            </td>
+                                        #end
+                                            <td id="download">
+                                                <input class="SmallButton" type="button" value="#customSpringMessage('ACTION_DOWNLOAD')" onclick="doDownload()">
+                                            </td>
+                                        </tr>
+                                    </table>
+                                </td>
+                            </table>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+        <tr id ="TR_ERROR" style="display:none;">
+            <td class="error" style="height:0px;">
+                <div id="ERRORDIV">$!errorMessage</div>
+            </td>
+        </tr>
+        <tr>
+            <td class="NoBorder" style="height:auto;">
+                <iframe id="DATAAREA" name="DATAAREA" class="DataArea" framespacing="0" frameborder="0" src="../../layout/default.vm" scrolling="no" frameborder="no"></iframe>
+            </td>
+        </tr>
+    </table>
+<iframe id="HIDDENAREA" name="HIDDENAREA" framespacing="0" frameborder="0" src="" scrolling="no" frameborder="no" style="display:none"></iframe>
+</form>
+</body>
+</html>

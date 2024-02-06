@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<flow xmlns="http://www.springframework.org/schema/webflow"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.springframework.org/schema/webflow
+        http://www.springframework.org/schema/webflow/spring-webflow-2.0.xsd"
+    parent="base">
+
+    <var name="domain" class="fw.domain.slip.payreq.payreq.payvoucherpeference.PayVoucherPeferenceItem" />
+    <var name="identify" class="fw.domain.slip.payreq.payreq.payvoucherpeference.Identify" />
+    <var name="identify050" class="fw.domain.slip.payreq.payreq.payreqinput.PayReqIdentify" />
+    
+    <input name="processFlg" />
+    <input name="searchCondition" />
+    <input name="isCurrentPageSearch" />
+    <decision-state id="isSearchByKey">
+       <if test="flowScope.isCurrentPageSearch" then="searchByKey" else="searchByCondition" />
+    </decision-state>
+    <action-state id="searchByCondition">
+    <evaluate expression="PSPAY143Service.init(searchCondition)" result="flowScope.itemList" />
+        <transition to="PSPAY143"/> 
+    </action-state>
+
+    <action-state  id="searchByKey" >
+        <evaluate expression="PSPAY143Service.page(searchCondition)" result="flowScope.itemList" />
+        <transition to="PSPAY143"/>
+    </action-state>
+
+    <view-state id="PSPAY143" view="pay/ref/PSPAY143" model="domain">
+       <transition on="order" validate="false">
+            <evaluate expression="PSPAY143Service.order(searchCondition)" 
+                 result="flowScope.itemList" />
+        </transition>
+        <transition on="page" validate="false">
+             <evaluate expression="PSPAY143Service.page(searchCondition)" 
+                result="flowScope.itemList" /> 
+        </transition>
+        <transition on="back" to="home" validate="false" />
+        <!-- 詳細 -->
+        <transition on="detailValidate" validate="false">
+            <set name="identify050.payReqSeq" value="requestParameters.paySeq"/>
+            <set name="identify050.lastUpdDate" value="requestParameters.lastUpdDate"/>
+            <set name="flashScope.isShowDetail" value="true"></set>
+        </transition>
+        <transition on="detail" to="PSPAY050TOP" validate="false" />
+    </view-state>
+    
+    <subflow-state id="PSPAY050TOP" subflow="pay/claim/PSPAY050TOP">
+        <input name="payReqIdentify" value="identify050" />
+    </subflow-state>
+</flow>

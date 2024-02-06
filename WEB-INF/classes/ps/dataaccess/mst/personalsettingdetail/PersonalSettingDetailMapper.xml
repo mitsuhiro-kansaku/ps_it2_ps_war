@@ -1,0 +1,175 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="ps.dataaccess.mst.personalsettingdetail.PersonalSettingDetailMapper">
+
+    <resultMap type="fw.domain.mst.resource.customize.personalsetting.PersonalSettingItem" 
+        id="PersonalSettingItem_Map">
+        <id column="LOCK_FLG" property="lock"/>
+        <id column="ELEMENT_NAME" property="itemName"/>
+        <id column="DSP_ORDER" property="orderNo"/>
+        <id column="COMBINE_FLG" property="combineFlg"/>
+        <id column="ONE_COLUMN_DSP_FLG" property="oneColumnDspFlg"/>
+        <id column="DSP_FLG" property="display"/>
+        <id column="USER_ID" property="personalSettingIdentify.userId"/>
+        <id column="FUNC_ID" property="personalSettingIdentify.funcId"/>
+        <id column="ELEMENT_SEQ" property="personalSettingIdentify.elementSeq"/>
+        <id column="VOUCHER_TYPE" property="personalSettingIdentify.voucherType"/>
+        <id column="LAST_UPD_DATE" property="personalSettingIdentify.lastUpdDate"/>
+    </resultMap>
+    <select id="listPersonalSettingItem"
+        resultMap="PersonalSettingItem_Map">
+         SELECT DISTINCT S_PERSONAL_SETTING.LOCK_FLG,
+                CASE WHEN M1.ELEMENT_NAME IS NOT NULL
+                THEN M1.ELEMENT_NAME
+                ELSE M2.ELEMENT_NAME
+                END AS "ELEMENT_NAME",
+                S_PERSONAL_SETTING.DSP_ORDER,
+                S_PERSONAL_SETTING.DSP_FLG,
+                S_PERSONAL_SETTING.COMBINE_FLG,
+                S_PERSONAL_SETTING.ONE_COLUMN_DSP_FLG,
+                S_PERSONAL_SETTING.USER_ID,
+                S_PERSONAL_SETTING.FUNC_ID,
+                S_PERSONAL_SETTING.ELEMENT_SEQ,
+                S_PERSONAL_SETTING.VOUCHER_TYPE,
+                S_PERSONAL_SETTING.LAST_UPD_DATE
+          FROM S_PERSONAL_SETTING
+          INNER JOIN S_ELEMENT_CONFIG ON S_PERSONAL_SETTING.ELEMENT_SEQ =
+                                        S_ELEMENT_CONFIG.ELEMENT_SEQ
+          <!-- ＩＴ３-00097-000 2013/06/14 ADD SBO_pangzhen START -->
+          INNER JOIN S_VOUCHER_CONFIG ON S_PERSONAL_SETTING.ELEMENT_SEQ = S_VOUCHER_CONFIG.ELEMENT_SEQ
+                                        AND S_PERSONAL_SETTING.VOUCHER_TYPE = S_VOUCHER_CONFIG.VOUCHER_TYPE
+                                        AND S_VOUCHER_CONFIG.USE_FLG = '1'
+          <!-- ＩＴ３-00097-000 2013/06/14 ADD SBO_pangzhen -END- -->
+          LEFT JOIN S_ELEMENT_NAME M1 ON S_ELEMENT_CONFIG.ELEMENT_NAME_CD =
+                                        M1.ELEMENT_NAME_CD
+                                        <!-- 強化-01709-000 2013/06/03 DEL SBO_CHENCHENG START -->
+                                        <!-- AND M1.LANGUAGE_IND = #{companyUseLanguageInd} -->
+                                        <!-- 強化-01709-000 2013/06/03 DEL SBO_CHENCHENG -END- -->
+                                        <!-- 強化-01709-000 2013/06/03 ADD SBO_CHENCHENG START -->
+                                        AND M1.LANGUAGE_IND = #{useLanguageInd}
+                                        <!-- 強化-01709-000 2013/06/03 ADD SBO_CHENCHENG -END- -->
+          LEFT JOIN S_ELEMENT_NAME M2 ON S_ELEMENT_CONFIG.ELEMENT_NAME_CD =
+                                        M2.ELEMENT_NAME_CD
+                                        AND M1.LANGUAGE_IND = #{systemLanguageInd}
+          <where>
+              S_PERSONAL_SETTING.USER_ID = '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}'
+          AND S_PERSONAL_SETTING.COMPANY_CD = '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}'
+          AND S_PERSONAL_SETTING.FUNC_ID = #{funcId}
+          AND S_PERSONAL_SETTING.VOUCHER_TYPE = #{voucherType, jdbcType=VARCHAR}
+          AND S_PERSONAL_SETTING.USE_FLG = '1'
+         </where> 
+         ORDER BY S_PERSONAL_SETTING.DSP_ORDER
+    </select>
+
+    <delete id="delete" parameterType="fw.domain.mst.resource.customize.personalsetting.PersonalSettingIdentify">
+        DELETE FROM
+                S_PERSONAL_SETTING
+         WHERE
+                S_PERSONAL_SETTING.USER_ID = #{userId, jdbcType=VARCHAR}
+           AND S_PERSONAL_SETTING.FUNC_ID = #{funcId, jdbcType=VARCHAR}
+           AND S_PERSONAL_SETTING.COMPANY_CD = '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}'
+           AND S_PERSONAL_SETTING.VOUCHER_TYPE = #{voucherType, jdbcType=VARCHAR}
+           AND S_PERSONAL_SETTING.USE_FLG = '1'
+    </delete>
+
+    <insert id="insert" parameterType="fw.domain.mst.resource.customize.personalsetting.PersonalSettingManagement">
+        INSERT INTO   S_PERSONAL_SETTING
+        (
+             COMPANY_CD,
+             USER_ID,
+             FUNC_ID,
+             ELEMENT_SEQ,
+             VOUCHER_TYPE,
+             PERSONAL_SET_SEQ,
+             DSP_FLG,
+             DSP_ORDER,
+             COMBINE_FLG,
+             LOCK_FLG,
+             ONE_COLUMN_DSP_FLG,
+             USE_FLG,
+             LAST_UPD_DATE,
+             LAST_UPD_COMPANY_CD,
+             LAST_UPD_SECTION_CD,
+             LAST_UPD_USER_ID,
+             REG_DATE,
+             REG_COMPANY_CD,
+             REG_SECTION_CD,
+             REG_USER_ID
+        )VALUES(
+            '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}',
+            #{personalSettingIdentify.userId, jdbcType=VARCHAR},
+            #{personalSettingIdentify.funcId, jdbcType=VARCHAR},
+            #{personalSettingIdentify.elementSeq, jdbcType=VARCHAR},
+            #{personalSettingIdentify.voucherType, jdbcType=VARCHAR},
+            S_PERSONAL_SETTING_SEQ.NEXTVAL,
+            #{displayMethod.displayFlag.displayFlag, jdbcType=VARCHAR},
+            #{displayMethod.displayOrder.displayOrder, jdbcType=VARCHAR},
+            #{displayMethod.combineFlag.combineFlag, jdbcType=VARCHAR},
+            #{displayMethod.lockFlag.lockFlag, jdbcType=VARCHAR},
+            #{displayMethod.oneColumnDisplayFlag.oneColumnDisplayFlag, jdbcType=VARCHAR},
+             '1',
+            '${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}',
+             '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}',
+             '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}',
+             '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}',
+             '${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}',
+             '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}',
+             '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}',
+             '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}'
+               )
+    </insert>
+    
+    <insert id="insertDefault" parameterType="fw.domain.mst.resource.customize.personalsetting.PersonalSettingManagement">
+        INSERT INTO   S_PERSONAL_SETTING
+        (
+             COMPANY_CD,
+             USER_ID,
+             FUNC_ID,
+             ELEMENT_SEQ,
+             VOUCHER_TYPE,
+             PERSONAL_SET_SEQ,
+             DSP_FLG,
+             DSP_ORDER,
+             COMBINE_FLG,
+             LOCK_FLG,
+             ONE_COLUMN_DSP_FLG,
+             USE_FLG,
+             LAST_UPD_DATE,
+             LAST_UPD_COMPANY_CD,
+             LAST_UPD_SECTION_CD,
+             LAST_UPD_USER_ID,
+             REG_DATE,
+             REG_COMPANY_CD,
+             REG_SECTION_CD,
+             REG_USER_ID
+        )SELECT
+             '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}',
+             #{userId, jdbcType=VARCHAR},
+             FUNC_ID,
+             ELEMENT_SEQ,
+             VOUCHER_TYPE,
+             S_PERSONAL_SETTING_SEQ.NEXTVAL,
+             DSP_FLG,
+             DSP_ORDER,
+             COMBINE_FLG,
+             LOCK_FLG,
+             ONE_COLUMN_DSP_FLG,
+             USE_FLG,
+             '${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}',
+             '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}',
+             '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}',
+             '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}',
+             '${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}',
+             '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}',
+             '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}',
+             '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}'
+              FROM S_PERSONAL_SETTING
+              WHERE USER_ID = '-100'
+              AND FUNC_ID = #{funcId}
+              AND VOUCHER_TYPE = #{voucherType, jdbcType=VARCHAR}
+              AND S_PERSONAL_SETTING.USE_FLG = '1'
+    </insert>
+    
+</mapper>

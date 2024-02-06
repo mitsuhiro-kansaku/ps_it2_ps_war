@@ -1,0 +1,659 @@
+<!doctype html>
+<html LANG="ja">
+<head>
+## 納期照会一覧
+<title>#customSpringMessage('DELIV_REFE')</title>
+<meta http-equiv="Content-type" content="text/html; charset=UTF-8">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Content-script-type" content="text/javascript">
+<link id="CSS_FONT" rel="stylesheet" href="../../include/FontS.css" type="text/css">
+<link rel="stylesheet" href="../../include/Layout.css" type="text/css">
+<link rel="stylesheet" href="../../include/Color.css" type="text/css">
+<link rel="stylesheet" href="../../include/searchbox.css" type="text/css">
+<script language="javascript" type="text/javascript" src="../../include/jquery-1.7.2.min.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/jquery.tablefix.js"></script>
+<script language="javascript" TYPE="text/javascript" src="../../include/common.js"></script>
+<script language="javascript" TYPE="text/javascript" src="../../include/check.js"></script>
+<script language="javascript" TYPE="text/javascript" src="../../include/date.js"></script>
+<script language="javascript" TYPE="text/javascript" src="../../include/tablesort.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/searchbox.js"></script>
+<script language="javascript" TYPE="text/javascript">
+<!--
+
+#parse("./common/common_js.vm")
+var oldPage;
+function onLoad() {
+    parentButtonEnable();
+    dataLoadHasPage();
+    var isSuccess = '#jsEscape($!isSuccess)';
+    if(isSuccess == 'true'){
+        #set( $infoParam = ["#customSpringMessage('NEW_CHECK')"])
+        alert('#customMessageArgs("I002",$infoParam)');
+    }
+    var isPrintSuccess = '#jsEscape($!isPrintSuccess)';
+    if(isPrintSuccess == 'true'){
+        alert('#customMessageArgs("I032","")');
+    }
+    var alertMessage = "$!alertMessage";
+    if (alertMessage != ""){
+        buttonUsableForList(alertMessage);
+        alert(alertMessage);
+    }
+    paging();
+    var errorMsg = "$!errorMessage";
+    if (errorMsg != ""){
+        return;
+    }
+    var isShowDetail = '#jsEscape($!isShowDetail)';
+    if(isShowDetail == 'true'){
+        poppage('${flowExecutionUrl}&_eventId=detail', 'DETAIL', '800', '700');
+    }
+    var isShowAnswerDetail = '#jsEscape($!isShowAnswerDetail)';
+    if(isShowAnswerDetail == 'true'){
+        poppage('${flowExecutionUrl}&_eventId=answerDetail', 'DETAIL', '800', '700');
+    }
+}
+
+//chkHead
+$(function(){
+    $(document).delegate('#ParentCheck','change',function() {
+        var chk = $(this).prop("checked");
+        var status = 0;
+        $("input:[type=checkbox][name^=status_]").prop("checked",chk);
+
+        if(chk){
+            $("input:[type=checkbox][name^=status_]").each(function(){
+                var num = $(this).attr("id").substring(6);
+                $("tr:[id=Row_"+num + "]").css("background-color","#ffff99");
+                status = 1;
+            });
+        }else{
+            
+            $("tr:[id^=Row_]").each(function(){
+                var count = $(this).attr("id").substring(4);
+                if(!$("#printCheck_" + count + ":checked").val()){
+                    if (Number(count) % 2 != 0) {
+                        $(this).css("background-color","#ffffff");
+                    } else {
+                        $(this).css("background-color","#dce4ef");
+                    }
+                }
+            });
+        }
+        $("input:[type=hidden][id^=delivSearchItemList][id$=checkStatus]").val(status);
+    });
+});
+//print全選択
+$(function(){
+    $(document).delegate('#ParentPrintCheck','change',function() {
+        var chk = $(this).prop("checked");
+        $("input:[type=checkbox][name$=printCheckStatus]").prop("checked",chk);
+        if(chk){
+            $("input:[type=checkbox][name$=printCheckStatus]").each(function(){
+                var num = $(this).attr("id").substring(11);
+                $("tr:[id=Row_"+num + "]").css("background-color","#ffff99");
+            });
+        }else{
+             $("tr:[id^=Row_]").each(function(){
+                var count = $(this).attr("id").substring(4);
+                
+                if(!$("#check_"+count +":checked").val()){
+                    if (Number(count) % 2 != 0) {
+                        $(this).css("background-color","#ffffff");
+                    } else {
+                        $(this).css("background-color","#dce4ef");
+                    }
+                }
+            });
+        }
+    });
+});
+
+//check one 
+function chkData(obj, index){
+    var status = 0;
+    if(obj.checked == true){
+        $("tr:[id=Row_" + index + "]").css("backgroundColor","#ff9");
+        status = 1;
+    }else if(!$("#check_"+index +":checked").val() && !$("#printCheck_"+index +":checked").val()){
+        if (index % 2 != 0) {
+            $("tr:[id=Row_" + index + "]").css("backgroundColor","#fff");
+        } else {
+            $("tr:[id=Row_" + index + "]").css("backgroundColor","#dce4ef");
+        }
+    }
+    if(obj.name.match(/^status_[0-9]+/)){
+        $("input:[type=hidden][id^='delivSearchItemList[" + index + "]'][id$=checkStatus]").val(status);
+    }
+}
+function update() {
+    //parent.getObj("ERRORAREA").src="../../layout/error.vm";
+    var count=0;
+    #foreach($!delivSearchItem in $!itemList.delivSearchItemList)
+        var checkName = "delivSearchItemList["+$velocityCount+"].identify.orderIdentify.checkStatus";
+        if(getObj(checkName)!=null && getObj(checkName).value=="1"){
+            count++;
+        }
+    #end
+    if(count==0){
+        #set( $delivSearchInfoParam1 = ["#customSpringMessage('DELIV_REFE')"])
+        alert("#nothingSelectedMessage()");
+    }else{
+        #set( $delivSearchInfoParam2 = ["#customSpringMessage('DELIV_REFE')","#customSpringMessage('NEW_CHECK')"])
+        if( !confirm("#customMessageArgs("W001",$delivSearchInfoParam2)") ) {
+            return;
+        }
+        parentButtonDisable();
+        getObj('BodyForm').action = "${flowExecutionUrl}&_eventId=newConfirm";
+        getObj('BodyForm').submit();
+    }
+}
+function doDownload() {
+        getObj('BodyForm').action = "${flowExecutionUrl}&_eventId=download";
+        getObj('BodyForm').submit();
+}
+
+// いずれかの選択チェックボックスがONの場合
+function pageChange(pageNnm, pageno){
+    var count=0;
+    #foreach($!delivSearchItem in $!itemList.delivSearchItemList)
+        var checkName = "delivSearchItemList["+$velocityCount+"].identify.orderIdentify.checkStatus";
+        if(getObj(checkName)!=null && getObj(checkName).value=="1"){
+            count++;
+        }
+    #end
+    if(count!=0){
+       if( !confirm("#customMessageArgs("W004","")") ) {
+           parent.document.Body.PageNo.value = oldPage;
+           return false;
+       }
+    }
+    parent.iframeChange('${flowExecutionUrl}&_eventId=page','pageNow',pageNnm);
+    return true;
+}
+function paging(){
+    #if($searchCondition)
+        parent.setText("COUNT","#jsEscape($!searchCondition.searchCondition.page.totalRows)");
+        parent.setText("PAGECOUNT","#jsEscape($!searchCondition.searchCondition.page.totalPages)");
+
+        parent.document.Body.PageNo.options.length = "#jsEscape($!searchCondition.searchCondition.page.totalPages)";
+        for(i=1; i<=parent.document.Body.PageNo.options.length; i++) {
+            parent.document.Body.PageNo.options[i-1] = new Option(i,i);
+        }
+        var pageNow=parseInt("#jsEscape($!searchCondition.searchCondition.page.pageNow)");
+        parent.document.Body.PageNo.selectedIndex = pageNow-1;
+        parent.document.Body.PageNo.onchange= new Function(" var num=parent.document.Body.PageNo.selectedIndex+1;pageChange(num)");
+
+        #if($!searchCondition.searchCondition.page.hasPreviousPage=="true")
+            parent.document.Body.PageFirst.style.display="none";
+            parent.document.Body.PageFirstOn.style.display="";
+            parent.document.Body.PageFirstOn.onclick = new Function("pageChange(1)");
+            parent.document.Body.PagePrev.style.display="none";
+            parent.document.Body.PagePrevOn.style.display="";
+            parent.document.Body.PagePrevOn.onclick = new Function("var num=parseInt('#jsEscape($!searchCondition.searchCondition.page.pageNow)')-1;pageChange(num)");
+         #else
+            parent.document.Body.PageFirst.style.display="";
+            parent.document.Body.PageFirstOn.style.display="none";
+            parent.document.Body.PagePrev.style.display="";
+            parent.document.Body.PagePrevOn.style.display="none";
+         #end
+             
+         #if($!searchCondition.searchCondition.page.hasNextPage=="true")
+            parent.document.Body.PageNext.style.display="none";
+            parent.document.Body.PageNextOn.style.display="";
+            parent.document.Body.PageNextOn.onclick = new Function("var num=parseInt('#jsEscape($!searchCondition.searchCondition.page.pageNow)')+1;pageChange(num)");
+            parent.document.Body.PageLast.style.display="none";
+            parent.document.Body.PageLastOn.style.display="";
+            parent.document.Body.PageLastOn.onclick = new Function("pageChange(#jsEscape($!{searchCondition.searchCondition.page.totalPages}))");
+         #else
+            parent.document.Body.PageNext.style.display="";
+            parent.document.Body.PageNextOn.style.display="none";
+            parent.document.Body.PageLast.style.display="";
+            parent.document.Body.PageLastOn.style.display="none";
+         #end
+         oldPage = parseInt(parent.document.Body.PageNo.value);
+    #end
+}
+/**
+* 注文詳細クリック
+* param orderSeq シーケンス番号
+*/
+function openDetail(orderSeq,lastUpdDate) {
+    parent.iframeChange("${flowExecutionUrl}&_eventId=detailValidate","orderSeq",orderSeq,"lastUpdDate",lastUpdDate,"HIDDENAREA");
+}
+
+//前回回答日(納期回答詳細)
+function openDlvAns(orderNo,orderSeq,lastUpdDate,preDelivRespDate, exclusiveSlipNo, exclusiveLastUpdDate){
+    parent.iframeChange("${flowExecutionUrl}&_eventId=answerDetailValidate","orderNo",orderNo,"orderSeq",orderSeq,"lastUpdDate",lastUpdDate,"preDelivRespDate",preDelivRespDate,"HIDDENAREA");
+}
+
+function print(){
+    //parent.getObj("ERRORAREA").src="../../layout/error.vm";
+    
+    if ($("input:checked[type=checkbox][name$=printCheckStatus]").length == 0){
+        #set( $delivSearchInfoParam1 = ["#customSpringMessage('DELIV_REFE')"])
+        alert("#nothingSelectedMessage()");
+    } else {
+        // 確認メッセージ
+        #set( $mPrint = "#customSpringMessage('PRINT')" )
+        #set( $mActionRun = "#customSpringMessage('ACTION_RUN')" )
+        if( !confirm('#customMessageArgs("W001",[$mPrint, $mActionRun])') ) {
+            return;
+        } 
+        parentButtonDisable();
+        // 印刷の場合
+        getObj("BodyForm").action = "${flowExecutionUrl}&_eventId=print";
+        getObj('BodyForm').submit();
+    }
+}
+//-->
+</script>
+
+</head>
+#if($isBuyer == 'false')
+##依頼元業務
+    <body id="BODY"  topmargin="0" leftmargin="0" marginwidth="0" marginheight="0" align="left" onload="onLoad();setTablefix('#TABLEFIX', 1, 2+$!PSDLV011PageCreaterForList.printLockColumn());">
+#else
+##購買業務
+    <body id="BODY"  topmargin="0" leftmargin="0" marginwidth="0" marginheight="0" align="left" onload="onLoad();setTablefix('#TABLEFIX', 1, 4+$!PSDLV016PageCreaterForList.printLockColumn());">
+#end
+#if($!errorMessage && $!errorMessage!="")
+<div id="error" name="error" class="error">
+    $!errorMessage
+</div>
+#end
+<form name="BodyForm" id="BodyForm" method="post">
+#foreach($!delivSearchItem in $!itemList.delivSearchItemList)
+    #customFormHiddenInput("delivSearchItemList[$velocityCount].identify.orderIdentify.checkStatus" "")
+    #customFormHiddenInput("delivSearchItemList[$velocityCount].identify.orderIdentify.exclusiveSlipId.slipNo" "$!delivSearchItem.identify.orderIdentify.exclusiveSlipId.slipNo")
+    #customFormHiddenInput("delivSearchItemList[$velocityCount].identify.orderIdentify.exclusiveSlipId.lastUpdDate" "$!delivSearchItem.identify.orderIdentify.exclusiveSlipId.lastUpdDate")
+#end
+#if($!itemList.delivSearchItemList && ($!itemList.delivSearchItemList.size() > 0))
+<table id="TABLEFIX" class="ListArea" width="100%">
+    <thead>
+        <tr id="Header">
+            ## No.
+            <th class="BoxHeaderCenter FontSmall">No.</th>
+            #if($isBuyer != "false")
+            <th class="BoxHeaderCenter">
+                <input name="ParentPrintCheck" id="ParentPrintCheck" type="checkbox"/>
+            </th>
+            #end
+            ## 詳細
+            <th class="BoxHeaderCenter FontSmall">#customSpringMessage('DETAIL')</th>
+            #if($isBuyer != "false")
+            <th id="CheckCol_H" label="chk" class="BoxHeaderCenter FontSmall">
+                <input name="ParentCheck" id="ParentCheck" type="checkbox">
+            </th>
+            #end
+            #if($isBuyer == "false")
+                ## 依頼元業務
+                #foreach($!item in $!PSDLV011PageCreaterForList.getItemListForBody(0))
+                    #set($currentOneColumnFlag = $!PSDLV011PageCreaterForList.getOneColumnFlag($!item))
+                    #if($velocityCount == 0)
+                        $!PSDLV011PageCreaterForList.printTHtag($!item,'class="BoxHeaderCenter FontSmall"')
+                    #elseif($currentOneColumnFlag)
+                        $!PSDLV011PageCreaterForList.printBRtag($!item)
+                    #else
+                        $!PSDLV011PageCreaterForList.printTHtagClose()
+                        $!PSDLV011PageCreaterForList.printTHtag($!item,'class="BoxHeaderCenter FontSmall"')
+                    #end
+                    #if($!item.getColumnName()=="T_ORDER.ORDER_NO")
+                        $!PSDLV011PageCreaterForList.printHead($!item)
+                    #elseif($!item.getColumnName()=="T_ORDER.ORDER_FIRST_DATE")
+                        $!PSDLV011PageCreaterForList.printHead($!item)
+                    #elseif($!item.getColumnName()=="T_ORDER.TITLE_NAME")
+                        $!PSDLV011PageCreaterForList.printHead($!item)
+                    #elseif($!item.getColumnName()=="T_ORDER.ITEM_CD")
+                        $!PSDLV011PageCreaterForList.printHead($!item)
+                    #elseif($!item.getColumnName()=="T_ORDER.ITEM_NAME")
+                        $!PSDLV011PageCreaterForList.printHead($!item)
+                    #elseif($!item.getColumnName()=="T_ORDER.SUP_CD")
+                        $!PSDLV011PageCreaterForList.printHead($!item)
+                    #elseif($!item.getColumnName()=="T_ORDER.SUP_ABBR_NAME")
+                        $!PSDLV011PageCreaterForList.printHead($!item)
+                    #elseif($!item.getColumnName()=="T_ORDER.ORDER_DELIV_DATE")
+                        $!PSDLV011PageCreaterForList.printHead($!item)
+                    #elseif($!item.getColumnName()=="T_ORDER.ORDER_VOL")
+                        $!PSDLV011PageCreaterForList.printHead($!item)
+                    #elseif($!item.getColumnName()=="T_ORDER.UNIT_NAME")
+                        $!PSDLV011PageCreaterForList.printHead($!item)
+                    #elseif($!item.getColumnName()=="DUMMY.RCV_REMAIN_AMOUNT")
+                        $!PSDLV011PageCreaterForList.printHead($!item)
+                    #elseif($!item.getColumnName()=="T_ORDER.DELIV_PLACE_CD")
+                        $!PSDLV011PageCreaterForList.printHead($!item)
+                    #elseif($!item.getColumnName()=="T_ORDER.DELIV_PLACE_NAME")
+                        $!PSDLV011PageCreaterForList.printHead($!item)
+                    #elseif($!item.getColumnName()=="T_DLV_EST_MNG.RESP_LIMIT_DATE")
+                        $!PSDLV011PageCreaterForList.printHead($!item)
+                    #elseif($!item.getColumnName()=="T_DLV_EST_MNG.INQ_RESP_DATE")
+                        $!PSDLV011PageCreaterForList.printHead($!item)
+                    #elseif($!item.getColumnName()=="T_DLV_EST_MNG.INQ_RESP_IND")
+                        $!PSDLV011PageCreaterForList.printHead($!item)
+                    #elseif($!item.getColumnName()=="T_DLV_EST_DTL.EST_DELIV_DATE")
+                         $!PSDLV011PageCreaterForList.printHead($!item)
+                    #elseif($!item.getColumnName()=="T_DLV_EST_DTL.EST_DELIV_VOL")
+                        $!PSDLV011PageCreaterForList.printHead($!item)
+                    #elseif($!item.getColumnName()=="T_DLV_EST_MNG.INQ_RESP_COMMENT")
+                        $!PSDLV011PageCreaterForList.printHead($!item)
+                    #elseif($!item.getColumnName()=="T_ORDER.REQ_SECTION_CD")
+                        $!PSDLV011PageCreaterForList.printHead($!item)
+                    #elseif($!item.getColumnName()=="T_ORDER.REQ_SECTION_NAME")
+                        $!PSDLV011PageCreaterForList.printHead($!item)
+                    #elseif($!item.getColumnName()=="T_ORDER.REQ_USER_ID")
+                        $!PSDLV011PageCreaterForList.printHead($!item)
+                    #elseif($!item.getColumnName()=="T_ORDER.REQ_USER_NAME")
+                        $!PSDLV011PageCreaterForList.printHead($!item)
+                    #elseif($!item.getColumnName()=="T_ORDER.BUYER_SECTION_CD")
+                        $!PSDLV011PageCreaterForList.printHead($!item)
+                    #elseif($!item.getColumnName()=="T_ORDER.BUYER_SECTION_NAME")
+                        $!PSDLV011PageCreaterForList.printHead($!item)
+                    #elseif($!item.getColumnName()=="T_ORDER.BUYER_USER_ID")
+                        $!PSDLV011PageCreaterForList.printHead($!item)
+                    #elseif($!item.getColumnName()=="T_ORDER.BUYER_USER_NAME")
+                        $!PSDLV011PageCreaterForList.printHead($!item)
+                    #elseif($!item.getColumnName()=="T_ORDER.EDI_IND")
+                        $!PSDLV011PageCreaterForList.printHead($!item)
+                    #elseif($!item.getColumnName()=="DUMMY.INQ_RESP_DATE")
+                        $!PSDLV011PageCreaterForList.printHead($!item)
+                    #elseif($!item.getColumnName()=="DUMMY.EST_DELIV_DATE")
+                        $!PSDLV011PageCreaterForList.printHead($!item)
+                    #elseif($!item.getColumnName()=="DUMMY.EST_DELIV_VOL")
+                        $!PSDLV011PageCreaterForList.printHead($!item)
+                    #elseif($!item.getColumnName()=="DUMMY.INQ_RESP_COMMENT")
+                        $!PSDLV011PageCreaterForList.printHead($!item)
+                    #else
+                        $!PSDLV011PageCreaterForList.printHead($!item)
+                    #end
+                #end
+                $!PSORD016PageCreaterForList.printTHtagClose()
+            #else
+                #foreach($!item in $!PSDLV016PageCreaterForList.getItemListForBody(0))
+                    #set($currentOneColumnFlag = $!PSDLV016PageCreaterForList.getOneColumnFlag($!item))
+                    #if($velocityCount == 0)
+                        $!PSDLV016PageCreaterForList.printTHtag($!item,'class="BoxHeaderCenter FontSmall"')
+                    #elseif($currentOneColumnFlag)
+                        $!PSDLV016PageCreaterForList.printBRtag($!item)
+                    #else
+                        $!PSDLV016PageCreaterForList.printTHtagClose()
+                        $!PSDLV016PageCreaterForList.printTHtag($!item,'class="BoxHeaderCenter FontSmall"')
+                    #end
+                    #if($!item.getColumnName()=="T_ORDER.ORDER_NO")
+                        $!PSDLV016PageCreaterForList.printHead($!item)
+                    #elseif($!item.getColumnName()=="T_ORDER.ORDER_FIRST_DATE")
+                        $!PSDLV016PageCreaterForList.printHead($!item)
+                    #elseif($!item.getColumnName()=="T_ORDER.TITLE_NAME")
+                        $!PSDLV016PageCreaterForList.printHead($!item)
+                    #elseif($!item.getColumnName()=="T_ORDER.ITEM_CD")
+                        $!PSDLV016PageCreaterForList.printHead($!item)
+                    #elseif($!item.getColumnName()=="T_ORDER.ITEM_NAME")
+                        $!PSDLV016PageCreaterForList.printHead($!item)
+                    #elseif($!item.getColumnName()=="T_ORDER.SUP_CD")
+                        $!PSDLV016PageCreaterForList.printHead($!item)
+                    #elseif($!item.getColumnName()=="T_ORDER.SUP_ABBR_NAME")
+                        $!PSDLV016PageCreaterForList.printHead($!item)
+                    #elseif($!item.getColumnName()=="T_ORDER.ORDER_DELIV_DATE")
+                        $!PSDLV016PageCreaterForList.printHead($!item)
+                    #elseif($!item.getColumnName()=="T_ORDER.ORDER_VOL")
+                        $!PSDLV016PageCreaterForList.printHead($!item)
+                    #elseif($!item.getColumnName()=="T_ORDER.UNIT_NAME")
+                        $!PSDLV016PageCreaterForList.printHead($!item)
+                    #elseif($!item.getColumnName()=="DUMMY.RCV_REMAIN_AMOUNT")
+                        $!PSDLV016PageCreaterForList.printHead($!item)
+                    #elseif($!item.getColumnName()=="T_ORDER.DELIV_PLACE_CD")
+                        $!PSDLV016PageCreaterForList.printHead($!item)
+                    #elseif($!item.getColumnName()=="T_ORDER.DELIV_PLACE_NAME")
+                        $!PSDLV016PageCreaterForList.printHead($!item)
+                    #elseif($!item.getColumnName()=="T_DLV_EST_MNG.RESP_LIMIT_DATE")
+                        $!PSDLV016PageCreaterForList.printHead($!item)
+                    #elseif($!item.getColumnName()=="T_DLV_EST_MNG.INQ_RESP_DATE")
+                        $!PSDLV016PageCreaterForList.printHead($!item)
+                    #elseif($!item.getColumnName()=="T_DLV_EST_MNG.INQ_RESP_IND")
+                        $!PSDLV016PageCreaterForList.printHead($!item)
+                    #elseif($!item.getColumnName()=="T_DLV_EST_DTL.EST_DELIV_DATE")
+                         $!PSDLV016PageCreaterForList.printHead($!item)
+                    #elseif($!item.getColumnName()=="T_DLV_EST_DTL.EST_DELIV_VOL")
+                        $!PSDLV016PageCreaterForList.printHead($!item)
+                    #elseif($!item.getColumnName()=="T_DLV_EST_MNG.INQ_RESP_COMMENT")
+                        $!PSDLV016PageCreaterForList.printHead($!item)
+                    #elseif($!item.getColumnName()=="T_ORDER.REQ_SECTION_CD")
+                        $!PSDLV016PageCreaterForList.printHead($!item)
+                    #elseif($!item.getColumnName()=="T_ORDER.REQ_SECTION_NAME")
+                        $!PSDLV016PageCreaterForList.printHead($!item)
+                    #elseif($!item.getColumnName()=="T_ORDER.REQ_USER_ID")
+                        $!PSDLV016PageCreaterForList.printHead($!item)
+                    #elseif($!item.getColumnName()=="T_ORDER.REQ_USER_NAME")
+                        $!PSDLV016PageCreaterForList.printHead($!item)
+                    #elseif($!item.getColumnName()=="T_ORDER.BUYER_SECTION_CD")
+                        $!PSDLV016PageCreaterForList.printHead($!item)
+                    #elseif($!item.getColumnName()=="T_ORDER.BUYER_SECTION_NAME")
+                        $!PSDLV016PageCreaterForList.printHead($!item)
+                    #elseif($!item.getColumnName()=="T_ORDER.BUYER_USER_ID")
+                        $!PSDLV016PageCreaterForList.printHead($!item)
+                    #elseif($!item.getColumnName()=="T_ORDER.BUYER_USER_NAME")
+                        $!PSDLV016PageCreaterForList.printHead($!item)
+                    #elseif($!item.getColumnName()=="T_ORDER.EDI_IND")
+                        $!PSDLV016PageCreaterForList.printHead($!item)
+                    #elseif($!item.getColumnName()=="DUMMY.INQ_RESP_DATE")
+                        $!PSDLV016PageCreaterForList.printHead($!item)
+                    #elseif($!item.getColumnName()=="DUMMY.EST_DELIV_DATE")
+                        $!PSDLV016PageCreaterForList.printHead($!item)
+                    #elseif($!item.getColumnName()=="DUMMY.EST_DELIV_VOL")
+                        $!PSDLV016PageCreaterForList.printHead($!item)
+                    #elseif($!item.getColumnName()=="DUMMY.INQ_RESP_COMMENT")
+                        $!PSDLV016PageCreaterForList.printHead($!item)
+                    #else
+                        $!PSDLV016PageCreaterForList.printHead($!item)
+                    #end
+                #end
+               $!PSDLV016PageCreaterForList.printTHtagClose()
+            #end
+        </tr>
+    </thead>
+    <tbody>
+        #set($row = -1)
+        #foreach($!delivSearchItem in $!itemList.delivSearchItemList)
+        #set($row = $row + 1)
+        <tr id="Row_$velocityCount" #if($velocityCount % 2 == 0) bgcolor="#dce4ef" #else bgcolor="#ffffff" #end>
+            <td class="BoxDetailCenter FontList">#set( $no = $velocityCount + 1 )$no</td>
+            #if($isBuyer != 'false')
+            <td class="BoxDetailCenter">
+                #if($delivSearchItem.isPrintable())
+                    #springBind("itemList.delivSearchItemList[$velocityCount].identify.orderIdentify.printCheckStatus")
+                    <input type="checkbox" id="printCheck_$velocityCount" onclick="chkData(this,$velocityCount)" name="$status.expression" >
+                    <input type="hidden" name="_$status.expression" value="on">
+                #else
+                    &nbsp;
+                #end
+            </td> 
+            #end 
+            <td class="BoxDetailCenter">
+                <img class="Icon" src="../../image/btnDetailDisp.gif" onclick="openDetail('#jsEscapeInHTML($!delivSearchItem.identify.orderIdentify.orderSeq)','#jsEscapeInHTML($!delivSearchItem.identify.orderIdentify.lastUpdDate)');">
+            </td>
+            #if($isBuyer != 'false')
+            <td id="CheckCol_$velocityCount" class="BoxDetailCenter FontList">
+                #if($delivSearchItem.isNew())
+                    <input type="checkbox" id="check_$velocityCount" onclick="chkData(this,$velocityCount)" class="Icon" name="status_$velocityCount">
+                #else
+                    &nbsp;
+                #end
+            </td>
+            #end 
+            #if($isBuyer == 'false')
+                ##依頼元業務
+                #foreach($!item in $!PSDLV011PageCreaterForList.getItemListForBody($velocityCount))
+                    #set($currentOneColumnFlag = $!PSDLV011PageCreaterForList.getOneColumnFlag($!item))
+                    #if($velocityCount == 0)
+                        $!PSDLV011PageCreaterForList.printTDtag('class="BoxDetailLeft FontList"')
+                    #elseif(!$currentOneColumnFlag)
+                        $!PSDLV011PageCreaterForList.printTDtagClose()
+                        $!PSDLV011PageCreaterForList.printTDtag('class="BoxDetailLeft FontList"')
+                    #end
+                    #if($!item.getColumnName()=="T_ORDER.ORDER_NO")
+                        $!PSDLV011PageCreaterForList.printDefault($!item,"_data_style",'align="center" class="FontSlipNo"')
+                    #elseif($!item.getColumnName()=="T_DLV_EST_MNG.INQ_RESP_IND")
+                        $!PSDLV011PageCreaterForList.printSpecial('s29_list_data_status',$!item,"_data_style",'align="center" class="FontMiniAnkBold"')
+                    #elseif($!item.getColumnName()=="T_DLV_EST_DTL.EST_DELIV_DATE")
+                        $!PSDLV011PageCreaterForList.printDefault($!item,"_data_style",'align="center" class="FontList"')
+                    #elseif($!item.getColumnName()=="T_DLV_EST_DTL.EST_DELIV_VOL")
+                        $!PSDLV011PageCreaterForList.printDefault($!item,"_data_style",'align="right" class="FontList"')
+                    #elseif($!item.getColumnName()=="T_ORDER.ORDER_FIRST_DATE")
+                        $!PSDLV011PageCreaterForList.printDefault($!item,"_data_style",'align="center"')
+                    #elseif($!item.getColumnName()=="T_ORDER.TITLE_NAME")
+                        $!PSDLV011PageCreaterForList.printDefault($!item)
+                    #elseif($!item.getColumnName()=="T_ORDER.ITEM_CD")
+                        $!PSDLV011PageCreaterForList.printDefault($!item)
+                    #elseif($!item.getColumnName()=="T_ORDER.ITEM_NAME")
+                        $!PSDLV011PageCreaterForList.printDefault($!item)
+                    #elseif($!item.getColumnName()=="T_ORDER.SUP_CD")
+                        $!PSDLV011PageCreaterForList.printDefault($!item,"_data_style",'align="center"')
+                    #elseif($!item.getColumnName()=="T_ORDER.SUP_NAME")
+                        $!PSDLV011PageCreaterForList.printDefault($!item)
+                    #elseif($!item.getColumnName()=="T_ORDER.ORDER_DELIV_DATE")
+                        $!PSDLV011PageCreaterForList.printDefault($!item,"_data_style",'align="center"')
+                    #elseif($!item.getColumnName()=="T_ORDER.UNIT_NAME")
+                        $!PSDLV011PageCreaterForList.printDefault($!item,"_data_Unit_style",'align="center"')
+                    #elseif($!item.getColumnName()=="T_ORDER.ORDER_VOL")
+                        $!PSDLV011PageCreaterForList.printDefault($!item,"_data_style",'align="right"')
+                    #elseif($!item.getColumnName()=="T_ORDER.UNIT_NAME")
+                        $!PSDLV011PageCreaterForList.printDefault($!item)
+                    #elseif($!item.getColumnName()=="DUMMY.RCV_REMAIN_AMOUNT")
+                        $!PSDLV011PageCreaterForList.printDefault($!item,"_data_style",'align="right"')
+                    #elseif($!item.getColumnName()=="T_ORDER.DELIV_PLACE_CD")
+                        $!PSDLV011PageCreaterForList.printDefault($!item,"_data_style",'align="center"')
+                    #elseif($!item.getColumnName()=="T_ORDER.DELIV_PLACE_NAME")
+                        $!PSDLV011PageCreaterForList.printDefault($!item)
+                    #elseif($!item.getColumnName()=="T_DLV_EST_MNG.RESP_LIMIT_DATE")
+                        $!PSDLV011PageCreaterForList.printDefault($!item,"_data_style",'align="center"')
+                    #elseif($!item.getColumnName()=="T_DLV_EST_MNG.INQ_RESP_DATE")
+                        $!PSDLV011PageCreaterForList.printSpecial("s30_list_inqRespDate", $!item,"_data_style",'align="center"')
+                    #elseif($!item.getColumnName()=="T_DLV_EST_MNG.INQ_RESP_COMMENT")
+                        $!PSDLV011PageCreaterForList.printDefault($!item)
+                    #elseif($!item.getColumnName()=="T_ORDER.REQ_SECTION_CD")
+                        $!PSDLV011PageCreaterForList.printDefault($!item,"_data_style",'align="center"')
+                    #elseif($!item.getColumnName()=="T_ORDER.REQ_SECTION_NAME")
+                        $!PSDLV011PageCreaterForList.printDefault($!item)
+                    #elseif($!item.getColumnName()=="T_ORDER.REQ_USER_ID")
+                        $!PSDLV011PageCreaterForList.printDefault($!item,"_data_style",'align="center"')
+                    #elseif($!item.getColumnName()=="T_ORDER.REQ_USER_NAME")
+                        $!PSDLV011PageCreaterForList.printDefault($!item)
+                    #elseif($!item.getColumnName()=="T_ORDER.BUYER_SECTION_CD")
+                        $!PSDLV011PageCreaterForList.printDefault($!item,"_data_style",'align="center"')
+                    #elseif($!item.getColumnName()=="T_ORDER.BUYER_SECTION_NAME")
+                        $!PSDLV011PageCreaterForList.printDefault($!item)
+                    #elseif($!item.getColumnName()=="T_ORDER.BUYER_USER_ID")
+                        $!PSDLV011PageCreaterForList.printDefault($!item,"_data_style",'align="center"')
+                    #elseif($!item.getColumnName()=="T_ORDER.BUYER_USER_NAME")
+                        $!PSDLV011PageCreaterForList.printDefault($!item)
+                    #elseif($!item.getColumnName()=="T_DLV_EST_MNG.RESP_CONFIRM_FLG")
+                    ##新着
+                        $!PSDLV011PageCreaterForList.printSpecial("s37_showIfTrue", $!item,"_data_style",'align="center"')
+                    #elseif($!item.getColumnName()=="T_ORDER.EDI_IND")
+                        $!PSDLV011PageCreaterForList.printSpecial("s25_codeName",$!item,'EDI_IND','',"_data_style",'align="center"')
+                    #elseif($!item.getColumnName()=="DUMMY.INQ_RESP_DATE")
+                        $!PSDLV011PageCreaterForList.printDefault($!item,"_data_style",'align="center"')
+                    #elseif($!item.getColumnName()=="DUMMY.EST_DELIV_DATE")
+                        $!PSDLV011PageCreaterForList.printDefault($!item,"_data_style",'align="center"')
+                    #elseif($!item.getColumnName()=="DUMMY.EST_DELIV_VOL")
+                        $!PSDLV011PageCreaterForList.printDefault($!item,"_data_style",'align="right"')
+                    #elseif($!item.getColumnName()=="DUMMY.INQ_RESP_COMMENT")
+                        $!PSDLV011PageCreaterForList.printDefault($!item,"_data_style",'align="left"')
+                    #else
+                        $!PSDLV011PageCreaterForList.printDefault($!item)
+                    #end
+                #end
+                $!PSDLV011PageCreaterForList.printTDtagClose()
+            #else
+                #foreach($!item in $!PSDLV016PageCreaterForList.getItemListForBody($velocityCount))
+                    #set($currentOneColumnFlag = $!PSDLV016PageCreaterForList.getOneColumnFlag($!item))
+                    #if($velocityCount == 0)
+                        $!PSDLV016PageCreaterForList.printTDtag('class="BoxDetailLeft FontList"')
+                    #elseif(!$currentOneColumnFlag)
+                        $!PSDLV016PageCreaterForList.printTDtagClose()
+                        $!PSDLV016PageCreaterForList.printTDtag('class="BoxDetailLeft FontList"')
+                    #end
+                    #if($!item.getColumnName()=="T_ORDER.ORDER_NO")
+                        $!PSDLV016PageCreaterForList.printDefault($!item,"_data_style",'align="center" class="FontSlipNo"')
+                    #elseif($!item.getColumnName()=="T_DLV_EST_MNG.INQ_RESP_IND")
+                        $!PSDLV016PageCreaterForList.printSpecial('s29_list_data_status',$!item,"_data_style",'align="center" class="FontMiniAnkBold"')
+                    #elseif($!item.getColumnName()=="T_DLV_EST_DTL.EST_DELIV_DATE")
+                        $!PSDLV016PageCreaterForList.printDefault($!item,"_data_style",'align="center" class="FontList"')
+                    #elseif($!item.getColumnName()=="T_DLV_EST_DTL.EST_DELIV_VOL")
+                        $!PSDLV016PageCreaterForList.printDefault($!item,"_data_style",'align="right" class="FontList"')
+                    #elseif($!item.getColumnName()=="T_ORDER.ORDER_FIRST_DATE")
+                        $!PSDLV016PageCreaterForList.printDefault($!item,"_data_style",'align="center"')
+                    #elseif($!item.getColumnName()=="T_ORDER.TITLE_NAME")
+                        $!PSDLV016PageCreaterForList.printDefault($!item)
+                    #elseif($!item.getColumnName()=="T_ORDER.ITEM_CD")
+                        $!PSDLV016PageCreaterForList.printDefault($!item)
+                    #elseif($!item.getColumnName()=="T_ORDER.ITEM_NAME")
+                        $!PSDLV016PageCreaterForList.printDefault($!item)
+                    #elseif($!item.getColumnName()=="T_ORDER.SUP_CD")
+                        $!PSDLV016PageCreaterForList.printDefault($!item,"_data_style",'align="center"')
+                    #elseif($!item.getColumnName()=="T_ORDER.SUP_NAME")
+                        $!PSDLV016PageCreaterForList.printDefault($!item)
+                    #elseif($!item.getColumnName()=="T_ORDER.ORDER_DELIV_DATE")
+                        $!PSDLV016PageCreaterForList.printDefault($!item,"_data_style",'align="center"')
+                    #elseif($!item.getColumnName()=="T_ORDER.UNIT_NAME")
+                        $!PSDLV016PageCreaterForList.printDefault($!item,"_data_Unit_style",'align="center"')
+                    #elseif($!item.getColumnName()=="T_ORDER.ORDER_VOL")
+                        $!PSDLV016PageCreaterForList.printDefault($!item,"_data_style",'align="right"')
+                    #elseif($!item.getColumnName()=="T_ORDER.UNIT_NAME")
+                        $!PSDLV016PageCreaterForList.printDefault($!item)
+                    #elseif($!item.getColumnName()=="DUMMY.RCV_REMAIN_AMOUNT")
+                        $!PSDLV016PageCreaterForList.printDefault($!item,"_data_style",'align="right"')
+                    #elseif($!item.getColumnName()=="T_ORDER.DELIV_PLACE_CD")
+                        $!PSDLV016PageCreaterForList.printDefault($!item,"_data_style",'align="center"')
+                    #elseif($!item.getColumnName()=="T_ORDER.DELIV_PLACE_NAME")
+                        $!PSDLV016PageCreaterForList.printDefault($!item)
+                    #elseif($!item.getColumnName()=="T_DLV_EST_MNG.RESP_LIMIT_DATE")
+                        $!PSDLV016PageCreaterForList.printDefault($!item,"_data_style",'align="center"')
+                    #elseif($!item.getColumnName()=="T_DLV_EST_MNG.INQ_RESP_DATE")
+                        $!PSDLV016PageCreaterForList.printSpecial("s30_list_inqRespDate", $!item,"_data_style",'align="center"')
+                    #elseif($!item.getColumnName()=="T_DLV_EST_MNG.INQ_RESP_COMMENT")
+                        $!PSDLV016PageCreaterForList.printDefault($!item)
+                    #elseif($!item.getColumnName()=="T_ORDER.REQ_SECTION_CD")
+                        $!PSDLV016PageCreaterForList.printDefault($!item,"_data_style",'align="center"')
+                    #elseif($!item.getColumnName()=="T_ORDER.REQ_SECTION_NAME")
+                        $!PSDLV016PageCreaterForList.printDefault($!item)
+                    #elseif($!item.getColumnName()=="T_ORDER.REQ_USER_ID")
+                        $!PSDLV016PageCreaterForList.printDefault($!item,"_data_style",'align="center"')
+                    #elseif($!item.getColumnName()=="T_ORDER.REQ_USER_NAME")
+                        $!PSDLV016PageCreaterForList.printDefault($!item)
+                    #elseif($!item.getColumnName()=="T_ORDER.BUYER_SECTION_CD")
+                        $!PSDLV016PageCreaterForList.printDefault($!item,"_data_style",'align="center"')
+                    #elseif($!item.getColumnName()=="T_ORDER.BUYER_SECTION_NAME")
+                        $!PSDLV016PageCreaterForList.printDefault($!item)
+                    #elseif($!item.getColumnName()=="T_ORDER.BUYER_USER_ID")
+                        $!PSDLV016PageCreaterForList.printDefault($!item,"_data_style",'align="center"')
+                    #elseif($!item.getColumnName()=="T_ORDER.BUYER_USER_NAME")
+                        $!PSDLV016PageCreaterForList.printDefault($!item)
+                    #elseif($!item.getColumnName()=="T_DLV_EST_MNG.RESP_CONFIRM_FLG")
+                        $!PSDLV016PageCreaterForList.printSpecial("s37_showIfTrue", $!item,"_data_style",'align="center"')
+                    #elseif($!item.getColumnName()=="T_ORDER.EDI_IND")
+                        $!PSDLV016PageCreaterForList.printSpecial("s25_codeName",$!item,'EDI_IND','',"_data_style",'align="center"')
+                    #elseif($!item.getColumnName()=="DUMMY.INQ_RESP_DATE")
+                        $!PSDLV016PageCreaterForList.printDefault($!item,"_data_style",'align="center"')
+                    #elseif($!item.getColumnName()=="DUMMY.EST_DELIV_DATE")
+                        $!PSDLV016PageCreaterForList.printDefault($!item,"_data_style",'align="center"')
+                    #elseif($!item.getColumnName()=="DUMMY.EST_DELIV_VOL")
+                        $!PSDLV016PageCreaterForList.printDefault($!item,"_data_style",'align="right"')
+                    #elseif($!item.getColumnName()=="DUMMY.INQ_RESP_COMMENT")
+                        $!PSDLV016PageCreaterForList.printDefault($!item,"_data_style",'align="left"')
+                    #else
+                        $!PSDLV016PageCreaterForList.printDefault($!item)
+                    #end
+                #end
+            #end
+            $!PSDLV016PageCreaterForList.printTDtagClose()
+            </tr>
+        #end
+    </tbody>
+</table>
+#end
+<br>
+<table id="WAIT" class="NoBorder" style="display:none;width:100%;"><tr><td style="text-align:center;"><br><br>
+<img src="../../image/wait.gif"><br><span class="FontMini"><br>#customSpringMessage('SEARCH_MESSAGE')</span></td></tr></table><!--問い合わせ中...-->
+</form>
+</body>
+</html>

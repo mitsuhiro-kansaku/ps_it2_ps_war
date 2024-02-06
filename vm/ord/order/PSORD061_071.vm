@@ -1,0 +1,648 @@
+<!doctype html>
+<html LANG="ja">
+<head>
+#if("true" == "$!hasOrdered")
+    #if("$!searchCondition.status" == "05")
+        #set($commonTitle = "#customSpringMessage('ORDER_LIST')(#customSpringMessage('PRICE_UNDEC_LIST_MONTH'))")
+    #else
+        #set($commonTitle = "#customSpringMessage('SCREEN_ORDER_LIST_ORDERED')")
+    #end
+#else
+    #if("$!searchCondition.status" == "")
+        #set($commonTitle = "#customSpringMessage('SCREEN_ORDER_LIST_NOT_YET')")
+    #else
+        #set($commonTitle = "#customSpringMessage('ORDER_LIST')(#out($!searchCondition.status_PageValue))")
+    #end
+#end
+<title>#out($commonTitle)</title> ## 注文一覧
+<meta http-equiv="Content-type" content="text/html; charset=UTF-8">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Content-script-type" content="text/javascript">
+<link id="CSS_FONT" rel="stylesheet" href="../../include/FontS.css" type="text/css">
+<link id="CSS_CORNERS" rel="stylesheet" href="../../include/Layout.css" type="text/css">
+<link id="CSS_CORNERS" rel="stylesheet" href="../../include/Color.css" type="text/css">
+<script language="javascript" type="text/javascript" src="../../include/jquery-1.7.2.min.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/jquery.tablefix.js"></script>
+<script language="javascript" TYPE="text/javascript" src="../../include/common.js"></script>
+<script language="javascript" TYPE="text/javascript" src="../../include/check.js"></script>
+<script language="javascript" TYPE="text/javascript" src="../../include/date.js"></script>
+<script language="javascript" TYPE="text/javascript" src="../../include/tablesort.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/searchbox.js"></script>
+<script language="javascript" TYPE="text/javascript">
+<!--
+
+#parse("./common/common_js.vm")
+
+function onLoad() {
+
+    dataLoadHasPage();
+
+    var isSuccessForApplyCancel = '#jsEscape($!isSuccessForApplyCancel)';
+    if(isSuccessForApplyCancel == 'true'){
+        #set( $mmOrder = "#customSpringMessage('PUR_ORDER')" )
+        alert("#customMessageArgs("I031",[$mmOrder])");
+    }
+
+    var isSuccessForDelete = '#jsEscape($!isSuccessForDelete)';
+    if(isSuccessForDelete == 'true'){
+        #set( $mmOrder = "#customSpringMessage('PUR_ORDER')" )
+        alert("#customMessageArgs("I003",[$mmOrder])");
+    }
+
+    var alertMessage = "$!alertMessage";
+    if (alertMessage != ""){
+        buttonUsableForList(alertMessage);
+        alert(alertMessage);
+    }
+
+    var errorMsg = "$!errorMessage";
+    if (errorMsg != ""){
+        return;
+    }
+
+    //注文詳細
+    var isShowDetail = "#jsEscape($isShowDetail)";
+    if (isShowDetail == 'true'){
+           poppage("${flowExecutionUrl}&_eventId=detail",'DETAIL','800','700');
+    }
+
+    //編集
+    var isShowOrderEdit = "#jsEscape($isShowOrderEdit)";
+    if (isShowOrderEdit == 'true'){
+           top.iframeChange("${flowExecutionUrl}&_eventId=orderInput","eventType","edit");
+    }
+
+    //再申請
+    var isShowOrderReApply = "#jsEscape($isShowOrderReApply)";
+    if (isShowOrderReApply == 'true'){
+           top.iframeChange("${flowExecutionUrl}&_eventId=orderInput","eventType","reApply");
+    }
+
+    //注文変更
+    var isShowOrderModify = "#jsEscape($isShowOrderModify)";
+    if (isShowOrderModify == 'true'){
+           top.iframeChange("${flowExecutionUrl}&_eventId=orderInput","eventType","update");
+    }
+
+    //見積状況
+    var isShowQuotInfo = "#jsEscape($isShowQuotInfo)";
+    if (isShowQuotInfo == 'true'){
+        top.iframeChange("${flowExecutionUrl}&_eventId=quotInfo");
+    }
+
+    //取消・打切
+    var isShowActionCancel = "#jsEscape($isShowActionCancel)";
+    if (isShowActionCancel == 'true'){
+           top.iframeChange("${flowExecutionUrl}&_eventId=orderInput","eventType","stop");
+    }
+}
+
+//削除
+function exec(orderSeq,preSeq,lastUpdDate,exclusiveSlipNo,exclusiveLastUpdDate) {
+    #set( $mmOrder = "#customSpringMessage('PUR_ORDER')" )
+    #set( $delete = "#customSpringMessage('ACTION_DELETE')" )
+    if( !confirm("#customMessageArgs("W001",[$mmOrder,$delete])") ) {
+        return;
+    }
+    buttonDisable();
+    parent.iframeChange("${flowExecutionUrl}&_eventId=delete",'orderSeq',orderSeq,'preSeq',preSeq,'lastUpdDate',lastUpdDate,'exclusiveSlipId.slipNo', exclusiveSlipNo,'exclusiveSlipId.lastUpdDate', exclusiveLastUpdDate);
+
+}
+
+//申請中止
+function openCancel(orderSeq,preSeq,lastUpdDate,exclusiveSlipNo,exclusiveLastUpdDate) {
+    #set( $mmOrder = "#customSpringMessage('PUR_ORDER')" )
+    #set( $reqStop = "#customSpringMessage('REQ_STOP')" )
+    if( !confirm("#customMessageArgs("W001",[$mmOrder,$reqStop])") ) {
+        return;
+    }
+    buttonDisable();
+    parent.iframeChange("${flowExecutionUrl}&_eventId=applyCancel",'orderSeq',orderSeq,'preSeq',preSeq,'lastUpdDate',lastUpdDate,'exclusiveSlipId.slipNo', exclusiveSlipNo,'exclusiveSlipId.lastUpdDate', exclusiveLastUpdDate);
+}
+
+//注文詳細
+function openDetail(orderSeq,lastUpdDate) {
+    parent.iframeChange('${flowExecutionUrl}&_eventId=detailValidate&orderSeq='+orderSeq+'&lastUpdDate='+lastUpdDate,'HIDDENAREA');
+}
+
+//編集
+function openOrderEdit(orderSeq,lastUpdDate,eventType,exclusiveSlipNo,exclusiveLastUpdDate) {
+    buttonDisable();
+    parent.iframeChange("${flowExecutionUrl}&_eventId=orderEditValidate",
+    		"orderSeq",orderSeq,
+    		"lastUpdDate",lastUpdDate,
+            "exclusiveSlipId.slipNo",exclusiveSlipNo,
+            "exclusiveSlipId.lastUpdDate",exclusiveLastUpdDate,
+    		"eventType",eventType,
+    		"HIDDENAREA");
+}
+
+//再申請
+function openOrderReApply(orderSeq,lastUpdDate,eventType,exclusiveSlipNo,exclusiveLastUpdDate) {
+    buttonDisable();
+    parent.iframeChange("${flowExecutionUrl}&_eventId=orderReApplyValidate",
+    		"orderSeq",orderSeq,
+    		"lastUpdDate",lastUpdDate,
+            "exclusiveSlipId.slipNo",exclusiveSlipNo,
+            "exclusiveSlipId.lastUpdDate",exclusiveLastUpdDate,
+    		"eventType",eventType,
+    		"HIDDENAREA");
+}
+
+//注文変更
+function openOrderModify(orderSeq,lastUpdDate,eventType,exclusiveSlipNo,exclusiveLastUpdDate) {
+    buttonDisable();
+    parent.iframeChange("${flowExecutionUrl}&_eventId=orderModifyValidate",
+    		"orderSeq",orderSeq,
+    		"lastUpdDate",lastUpdDate,
+    		"exclusiveSlipId.slipNo",exclusiveSlipNo,
+    		"exclusiveSlipId.lastUpdDate",exclusiveLastUpdDate,
+    		"eventType",eventType,
+    		"HIDDENAREA");
+}
+
+//見積状況
+function openQuotInfo( orderSeq, lastUpdDate, quotReqSeq, quotLastUpdDate ) {
+    buttonDisable();
+    parent.iframeChange("${flowExecutionUrl}&_eventId=quoteInfoValidate","orderSeq",orderSeq,"lastUpdDate",lastUpdDate,"quotReqSeq",quotReqSeq,"quotLastUpdDate",quotLastUpdDate,'HIDDENAREA');
+}
+
+//取消・打切
+function openActionCancel(orderSeq,lastUpdDate,eventType,exclusiveSlipNo,exclusiveLastUpdDate) {
+    buttonDisable();
+    parent.iframeChange("${flowExecutionUrl}&_eventId=actionCancelValidate",
+    		"orderSeq",orderSeq,
+    		"lastUpdDate",lastUpdDate,
+    		"exclusiveSlipId.slipNo",exclusiveSlipNo,
+    		"exclusiveSlipId.lastUpdDate",exclusiveLastUpdDate,
+    		"eventType",eventType,
+    		"HIDDENAREA");
+}
+
+//-->
+</script>
+</head>
+#if($!itemList.orderListItemList && ($!itemList.orderListItemList.size() > 0))
+#if("true" == "$!hasOrdered")
+<!--注文一覧（発注済）-->
+<body id="BODY" topmargin="0" leftmargin="0" marginwidth="0" marginheight="0" align="left"   onload="onLoad();setTablefix('#TABLEFIX', 1, 3+$!PSORD071PageCreaterForList.printLockColumn());">
+#else
+<!--注文一覧（未発注）-->
+<body id="BODY" topmargin="0" leftmargin="0" marginwidth="0" marginheight="0" align="left"   onload="onLoad();setTablefix('#TABLEFIX', 1, 3+$!PSORD061PageCreaterForList.printLockColumn());">
+#end
+#else
+<body id="BODY" topmargin="0" leftmargin="0" marginwidth="0" marginheight="0" align="left"   onload="onLoad();">
+#end
+#if($!errorMessage && $!errorMessage!="")
+<div class="error">
+    $!errorMessage
+</div>
+#end
+#if($!itemList.orderListItemList && ($!itemList.orderListItemList.size() > 0))
+<table id="TABLEFIX" class="ListArea" width="100%">
+    <thead>
+        <tr id="Header">
+            <th class="BoxHeaderCenter FontSmall">No.<!--No.--></th>
+            <th class="BoxHeaderCenter FontSmall">#customSpringMessage("DETAIL")</th> ## 詳細
+            <th class="BoxHeaderCenter FontSmall">#customSpringMessage("ACTION")</th> ## 処理
+            <!--注文一覧（発注済）-->
+            #if("true" == "$!hasOrdered")
+               #foreach($!item in $!PSORD071PageCreaterForList.getItemListForBody(0))
+                #set($currentOneColumnFlag = $!PSORD071PageCreaterForList.getOneColumnFlag($!item))
+                #if($velocityCount == 0)
+                    $!PSORD071PageCreaterForList.printTHtag($!item,'class="BoxHeaderCenter FontSmall"')
+                #elseif($currentOneColumnFlag)
+                    $!PSORD071PageCreaterForList.printBRtag($!item)
+                #else
+                    $!PSORD071PageCreaterForList.printTHtagClose()
+                    $!PSORD071PageCreaterForList.printTHtag($!item,'class="BoxHeaderCenter FontSmall"')
+                #end
+                #if($!item.getColumnName()=="T_ORDER.ORDER_NO")
+                    $!PSORD071PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName()=="T_ORDER.ORDER_STATUS")
+                    $!PSORD071PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName()=="T_ORDER.REQ_TYPE_IND")
+                    $!PSORD071PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName()=="T_ORDER.INFO_CD")
+                    $!PSORD071PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName()=="T_ORDER.ORDER_FIRST_DATE")
+                    $!PSORD071PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName()=="T_ORDER.ORDER_DATE")
+                    $!PSORD071PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName()=="T_ORDER.SUP_CONFIRM_FLG")
+                    $!PSORD071PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName()=="T_ORDER.BUYER_COMMENT")
+                    $!PSORD071PageCreaterForList.printHead("COMMENT",$!item)
+                #elseif($!item.getColumnName()=="T_ATTACH_MNG.ATTACH_SCOPE")
+                    $!PSORD071PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName()=="T_ORDER.TITLE_NAME")
+                    $!PSORD071PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName()=="T_ORDER.SUP_CD")
+                    $!PSORD071PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName()=="T_ORDER.SUP_ABBR_NAME")
+                    $!PSORD071PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName()=="T_ORDER.SUBCON_IND")
+                    $!PSORD071PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName()=="T_ORDER.EDI_IND")
+                    $!PSORD071PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName()=="T_ORDER.ITEM_CD")
+                    $!PSORD071PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName()=="T_ORDER.ITEM_NAME")
+                    $!PSORD071PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName()=="T_ORDER.CURRENCY_CD")
+                    $!PSORD071PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName()=="T_ORDER.ORDER_VOL")
+                    $!PSORD071PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName()=="T_ORDER.UNIT_NAME")
+                    $!PSORD071PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName()=="DUMMY.RCV_REMAIN_AMOUNT")
+                    $!PSORD071PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName()=="T_ORDER.UNIT_PRICE")
+                    $!PSORD071PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName()=="T_ORDER.ORDER_AMOUNT")
+                    $!PSORD071PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName()=="T_ORDER.UNIT_PRICE_IND")
+                    $!PSORD071PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName()=="T_ORDER.PRICE_DEC_DATE")
+                    $!PSORD071PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName()=="T_ORDER.ORDER_DELIV_DATE")
+                    $!PSORD071PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName()=="T_ORDER.DELIV_PLACE_CD")
+                    $!PSORD071PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName()=="T_ORDER.DELIV_PLACE_NAME")
+                    $!PSORD071PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName()=="T_ORDER.REQ_SECTION_CD")
+                    $!PSORD071PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName()=="T_ORDER.REQ_SECTION_NAME")
+                    $!PSORD071PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName()=="T_ORDER.REQ_USER_ID")
+                    $!PSORD071PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName()=="T_ORDER.REQ_USER_NAME")
+                    $!PSORD071PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName()=="T_ORDER.BUYER_SECTION_CD")
+                    $!PSORD071PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName()=="T_ORDER.BUYER_SECTION_NAME")
+                    $!PSORD071PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName()=="T_ORDER.BUYER_USER_ID")
+                    $!PSORD071PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName()=="T_ORDER.BUYER_USER_NAME")
+                    $!PSORD071PageCreaterForList.printHead($!item)
+               #else
+                    $!PSORD071PageCreaterForList.printHead($!item)
+                #end
+            #end
+            $!PSORD071PageCreaterForList.printTHtagClose()
+            #else
+            <!--注文一覧（未発注）-->
+            #foreach($!item in $!PSORD061PageCreaterForList.getItemListForBody(0))
+                #set($currentOneColumnFlag = $!PSORD061PageCreaterForList.getOneColumnFlag($!item))
+                #if($velocityCount == 0)
+                    $!PSORD061PageCreaterForList.printTHtag($!item,'class="BoxHeaderCenter FontSmall"')
+                #elseif($currentOneColumnFlag)
+                    $!PSORD061PageCreaterForList.printBRtag($!item)
+                #else
+                    $!PSORD061PageCreaterForList.printTHtagClose()
+                    $!PSORD061PageCreaterForList.printTHtag($!item,'class="BoxHeaderCenter FontSmall"')
+                #end
+                #if($!item.getColumnName()=="T_ORDER.ORDER_NO")
+                    $!PSORD061PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName()=="T_ORDER.ORDER_STATUS")
+                    $!PSORD061PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName()=="T_ORDER.REQ_TYPE_IND")
+                    $!PSORD061PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName()=="T_ORDER.INFO_CD")
+                      $!PSORD061PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName()=="T_ORDER.ORDER_INPUT_DATE")
+                    $!PSORD061PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName()=="T_ORDER.ORDER_FIRST_DATE")
+                    $!PSORD061PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName()=="T_ORDER.BUYER_COMMENT")
+                    $!PSORD061PageCreaterForList.printHead("COMMENT",$!item)
+                #elseif($!item.getColumnName()=="T_ATTACH_MNG.ATTACH_SCOPE")
+                    $!PSORD061PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName()=="T_ORDER.TITLE_NAME")
+                    $!PSORD061PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName()=="T_ORDER.SUP_CD")
+                    $!PSORD061PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName()=="T_ORDER.SUP_ABBR_NAME")
+                    $!PSORD061PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName()=="T_ORDER.PAY_CONDITION_NAME")
+                    $!PSORD061PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName()=="T_ORDER.SUBCON_IND")
+                    $!PSORD061PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName()=="T_ORDER.EDI_IND")
+                    $!PSORD061PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName()=="T_ORDER.ITEM_CD")
+                    $!PSORD061PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName()=="T_ORDER.ITEM_NAME")
+                    $!PSORD061PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName()=="T_ORDER.CURRENCY_CD")
+                    $!PSORD061PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName()=="T_ORDER.ORDER_VOL")
+                    $!PSORD061PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName()=="T_ORDER.UNIT_NAME")
+                    $!PSORD061PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName()=="DUMMY.RCV_REMAIN_AMOUNT")
+                    $!PSORD061PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName()=="T_ORDER.UNIT_PRICE")
+                    $!PSORD061PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName()=="T_ORDER.ORDER_AMOUNT")
+                    $!PSORD061PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName()=="T_ORDER.UNIT_PRICE_IND")
+                    $!PSORD061PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName()=="T_ORDER.PRICE_DEC_DATE")
+                    $!PSORD061PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName()=="T_ORDER.ORDER_DELIV_DATE")
+                    $!PSORD061PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName()=="T_ORDER.DELIV_PLACE_CD")
+                    $!PSORD061PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName()=="T_ORDER.DELIV_PLACE_NAME")
+                    $!PSORD061PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName()=="T_ORDER.REQ_SECTION_CD")
+                    $!PSORD061PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName()=="T_ORDER.REQ_SECTION_NAME")
+                    $!PSORD061PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName()=="T_ORDER.REQ_USER_ID")
+                    $!PSORD061PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName()=="T_ORDER.REQ_USER_NAME")
+                    $!PSORD061PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName()=="T_ORDER.BUYER_SECTION_CD")
+                    $!PSORD061PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName()=="T_ORDER.BUYER_SECTION_NAME")
+                    $!PSORD061PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName()=="T_ORDER.BUYER_USER_ID")
+                    $!PSORD061PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName()=="T_ORDER.BUYER_USER_NAME")
+                    $!PSORD061PageCreaterForList.printHead($!item)
+               #else
+                    $!PSORD061PageCreaterForList.printHead($!item)
+                #end
+            #end
+            $!PSORD061PageCreaterForList.printTHtagClose()
+            #end
+        </tr>
+    </thead>
+    <tbody>
+        #foreach($!orderListItem in $!itemList.orderListItemList)
+            <tr id="Row_$velocityCount" #if($velocityCount % 2 == 0) bgcolor="#dce4ef" #else bgcolor="#ffffff" #end>
+                    <td class="BoxDetailCenter FontList"> #set( $index = $velocityCount + 1 ) $index</td>
+                    <td class="BoxDetailCenter">
+                    ## 詳細
+                    <img class="Icon" src="../../image/btnDetailDisp.gif" onclick="openDetail('#jsEscapeInHTML($!orderListItem.orderIdentify.orderSeq)','#jsEscapeInHTML($!orderListItem.orderIdentify.lastUpdDate)');">
+                </td>
+                <td class="BoxDetailCenter">
+                    ## 処理
+                    #if($LoginUser.hasAuth(${AuthNoConstant.getValue("ORDER_UPDATE_GRANT")}))
+                        ## 完納でない場合
+                        #if(!$!orderListItem.recivedAll)
+                            ## 注文ステータスが「04:一時保存」の場合
+                            #if($!orderListItem.status == "04")
+                                ## 編集
+                                #if($!orderListItem.quotRequestStatus.notExistsAdoEndQuot)
+                                    <input type="button" class="SmallButton" value="#customSpringMessage('ACTION_EDIT')" onclick="openOrderEdit('#jsEscapeInHTML($!orderListItem.orderIdentify.orderSeq)','#jsEscapeInHTML($!orderListItem.orderIdentify.lastUpdDate)','edit','#jsEscapeInHTML($!orderListItem.orderIdentify.exclusiveSlipId.slipNo)','#jsEscapeInHTML($!orderListItem.orderIdentify.exclusiveSlipId.lastUpdDate)')">
+                                #else
+                                    <input type="button" class="SmallButton" value="#customSpringMessage('QUOT_STATUS')" onclick="openQuotInfo('#jsEscapeInHTML($!orderListItem.orderIdentify.orderSeq)','#jsEscapeInHTML($!orderListItem.orderIdentify.lastUpdDate)','#jsEscapeInHTML($!orderListItem.quotRequestStatus.quotReqSeq)','#jsEscapeInHTML($!orderListItem.quotRequestStatus.lastUpdDate)')">
+                                #end
+                            ## 削除
+                            <input type="button" class="SmallButton" value="#customSpringMessage('ACTION_DELETE')" onclick="javascript:exec('#jsEscapeInHTML($!orderListItem.orderIdentify.orderSeq)','#jsEscapeInHTML($!orderListItem.orderIdentify.preSeq)','#jsEscapeInHTML($!orderListItem.orderIdentify.lastUpdDate)','#jsEscapeInHTML($!orderListItem.orderIdentify.exclusiveSlipId.slipNo)','#jsEscapeInHTML($!orderListItem.orderIdentify.exclusiveSlipId.lastUpdDate)');">
+                        #end
+                            ## 注文ステータスが「05:注文済」の場合
+                            #if($!orderListItem.status == "05")
+                                #if($!orderListItem.quotRequestStatus.notExistsAdoEndQuot )
+                                    ## 価格未定品ではない、もしくは、有効な見積が存在しない場合
+                                    ## 注文変更
+                                    <input type="button" class="SmallButton" value="#customSpringMessage('ORDER_MODIFY')" onclick="openOrderModify('#jsEscapeInHTML($!orderListItem.orderIdentify.orderSeq)','#jsEscapeInHTML($!orderListItem.orderIdentify.lastUpdDate)','update','#jsEscapeInHTML($!orderListItem.orderIdentify.exclusiveSlipId.slipNo)','#jsEscapeInHTML($!orderListItem.orderIdentify.exclusiveSlipId.lastUpdDate)')">
+                                #else
+                                    ## 価格未定品で、有効な見積が存在する場合
+                                    ## 見積状況
+                                    <input type="button" class="SmallButton" value="#customSpringMessage('QUOT_STATUS')" onclick="openQuotInfo('#jsEscapeInHTML($!orderListItem.orderIdentify.orderSeq)','#jsEscapeInHTML($!orderListItem.orderIdentify.lastUpdDate)','#jsEscapeInHTML($!orderListItem.quotRequestStatus.quotReqSeq)','#jsEscapeInHTML($!orderListItem.quotRequestStatus.lastUpdDate)')">
+                                #end
+                                ## 取消/打切
+                                <input type="button" class="SmallButton" value="#customSpringMessage('ACTION_CANCEL')/#customSpringMessage('ORDER_STOP')" onclick="openActionCancel('#jsEscapeInHTML($!orderListItem.orderIdentify.orderSeq)','#jsEscapeInHTML($!orderListItem.orderIdentify.lastUpdDate)','stop','#jsEscapeInHTML($!orderListItem.orderIdentify.exclusiveSlipId.slipNo)','#jsEscapeInHTML($!orderListItem.orderIdentify.exclusiveSlipId.lastUpdDate)')">
+                            #end
+                        ## 価格未定品の場合
+                        #elseif(!$!orderListItem.priceDecided)
+                            ## 注文ステータスが「05:注文済」の場合
+                            #if($!orderListItem.status == "05")
+                                #if($!orderListItem.quotRequestStatus.notExistsAdoEndQuot )
+                                    ## 価格未定品ではない、もしくは、有効な見積が存在しない場合
+                                    ## 注文変更
+                                    <input type="button" class="SmallButton" value="#customSpringMessage('ORDER_MODIFY')" onclick="openOrderModify('#jsEscapeInHTML($!orderListItem.orderIdentify.orderSeq)','#jsEscapeInHTML($!orderListItem.orderIdentify.lastUpdDate)','update','#jsEscapeInHTML($!orderListItem.orderIdentify.exclusiveSlipId.slipNo)','#jsEscapeInHTML($!orderListItem.orderIdentify.exclusiveSlipId.lastUpdDate)')">
+                                #else
+                                    ## 価格未定品で、有効な見積が存在する場合
+                                    ## 見積状況
+                                    <input type="button" class="SmallButton" value="#customSpringMessage('QUOT_STATUS')" onclick="openQuotInfo('#jsEscapeInHTML($!orderListItem.orderIdentify.orderSeq)','#jsEscapeInHTML($!orderListItem.orderIdentify.lastUpdDate)','#jsEscapeInHTML($!orderListItem.quotRequestStatus.quotReqSeq)','#jsEscapeInHTML($!orderListItem.quotRequestStatus.lastUpdDate)')">
+                            #end
+                        #end
+                        #end
+                        ## 注文ステータスが「01:承認待ち」もしくは「03:差戻し」の場合
+                        #if($!orderListItem.status == "01" || $!orderListItem.status == "03")
+                            ## 情報区分コードが「0504:取消」「0505:打切」でない場合
+                            #if($!orderListItem.infoCd != "0504" && $!orderListItem.infoCd != "0505")
+                                ## 再申請
+                                #if($!orderListItem.quotRequestStatus.notExistsAdoEndQuot)
+                                    <input type="button" class="SmallButton" value="#customSpringMessage('RE_REQ')" onclick="openOrderReApply('#jsEscapeInHTML($!orderListItem.orderIdentify.orderSeq)','#jsEscapeInHTML($!orderListItem.orderIdentify.lastUpdDate)','reApply','#jsEscapeInHTML($!orderListItem.orderIdentify.exclusiveSlipId.slipNo)','#jsEscapeInHTML($!orderListItem.orderIdentify.exclusiveSlipId.lastUpdDate)')">
+                                #else
+                                    <input type="button" class="SmallButton" value="#customSpringMessage('QUOT_STATUS')" onclick="openQuotInfo('#jsEscapeInHTML($!orderListItem.orderIdentify.orderSeq)','#jsEscapeInHTML($!orderListItem.orderIdentify.lastUpdDate)','#jsEscapeInHTML($!orderListItem.quotRequestStatus.quotReqSeq)','#jsEscapeInHTML($!orderListItem.quotRequestStatus.lastUpdDate)')">
+                            #end
+                            #end
+                            ##申請中止
+                            <input type="button" class="SmallButton Red" value="#customSpringMessage('REQ_STOP')" onclick="javascript:openCancel('#jsEscapeInHTML($!orderListItem.orderIdentify.orderSeq)','#jsEscapeInHTML($!orderListItem.orderIdentify.preSeq)','#jsEscapeInHTML($!orderListItem.orderIdentify.lastUpdDate)','#jsEscapeInHTML($!orderListItem.orderIdentify.exclusiveSlipId.slipNo)','#jsEscapeInHTML($!orderListItem.orderIdentify.exclusiveSlipId.lastUpdDate)');">
+                        #end
+                    #end
+                    </td>
+                    ## 注文一覧（発注済）
+                    #if("true" == "$!hasOrdered")
+                       #foreach($!item in $!PSORD071PageCreaterForList.getItemListForBody($velocityCount))
+                            #set($currentOneColumnFlag = $!PSORD071PageCreaterForList.getOneColumnFlag($!item))
+                            #if($velocityCount == 0)
+                                 $!PSORD071PageCreaterForList.printTDtag('class="BoxDetailLeft FontList"')
+                            #elseif(!$currentOneColumnFlag)
+                                 $!PSORD071PageCreaterForList.printTDtagClose()
+                                 $!PSORD071PageCreaterForList.printTDtag('class="BoxDetailLeft FontList"')
+                           #end
+                            #if($!item.getColumnName()=="T_ORDER.ORDER_NO")
+                                $!PSORD071PageCreaterForList.printDefault($!item, '_data_style', 'class="FontSlipNo"')
+                            #elseif($!item.getColumnName()=="T_ORDER.ORDER_STATUS")
+                                 #if($!orderListItem.status=="03")
+                                    $!PSORD071PageCreaterForList.printSpecial("s25_codeName", $!item, 'ORDER_STATUS', '','_data_style', 'class="Red FontMiniAnkBold"')
+                                #else
+                                   $!PSORD071PageCreaterForList.printSpecial("s25_codeName", $!item, 'ORDER_STATUS','','_data_style','class="FontMiniAnkBold"')
+                                #end
+                            #elseif($!item.getColumnName()=="T_ORDER.REQ_TYPE_IND")
+                                 $!PSORD071PageCreaterForList.printSpecial("s25_codeName", $!item, 'REQ_TYPE_IND','')
+                            #elseif($!item.getColumnName()=="T_ORDER.INFO_CD")
+                                 $!PSORD071PageCreaterForList.printSpecial("s25_codeName", $!item, 'INFO_ID','')
+                            #elseif($!item.getColumnName()=="T_ORDER.ORDER_FIRST_DATE")
+                                $!PSORD071PageCreaterForList.printDefault($!item)
+                            #elseif($!item.getColumnName()=="T_ORDER.ORDER_DATE")
+                                $!PSORD071PageCreaterForList.printDefault($!item)
+                            #elseif($!item.getColumnName()=="T_ORDER.SUP_CONFIRM_FLG")
+                            ## 取引先確認
+                                #if("$orderListItem.edi"=="1")
+                                $!PSORD071PageCreaterForList.printDefault($!item)
+                                #end
+                            #elseif($!item.getColumnName()=="T_ORDER.BUYER_COMMENT")
+                                $!PSORD071PageCreaterForList.printDefault($!item)
+                            #elseif($!item.getColumnName()=="T_ATTACH_MNG.ATTACH_SCOPE")
+                                $!PSORD071PageCreaterForList.printSpecial("s09_attach", $!item)
+                            #elseif($!item.getColumnName()=="T_ORDER.TITLE_NAME")
+                                $!PSORD071PageCreaterForList.printDefault($!item)
+                            #elseif($!item.getColumnName()=="T_ORDER.SUP_CD")
+                                $!PSORD071PageCreaterForList.printDefault($!item)
+                            #elseif($!item.getColumnName()=="T_ORDER.SUP_ABBR_NAME")
+                                $!PSORD071PageCreaterForList.printDefault($!item)
+                            #elseif($!item.getColumnName()=="T_ORDER.SUP_ABBR_NAME")
+                                $!PSORD071PageCreaterForList.printDefault($!item)
+                            #elseif($!item.getColumnName()=="T_ORDER.SUBCON_IND")
+                                #if("$orderListItem.subconInd"=="1")
+                                <div>$!orderListItem.subconInd_PageValue</div>
+                                #end
+                            #elseif($!item.getColumnName()=="T_ORDER.EDI_IND")
+                                 $!PSORD071PageCreaterForList.printSpecial("s25_codeName", $!item, 'EDI_IND','')
+                            #elseif($!item.getColumnName()=="T_ORDER.ITEM_CD")
+                                $!PSORD071PageCreaterForList.printDefault($!item)
+                            #elseif($!item.getColumnName()=="T_ORDER.ITEM_NAME")
+                                $!PSORD071PageCreaterForList.printDefault($!item)
+                            #elseif($!item.getColumnName()=="T_ORDER.CURRENCY_CD")
+                                $!PSORD071PageCreaterForList.printDefault($!item)
+                            #elseif($!item.getColumnName()=="T_ORDER.ORDER_VOL")
+                                $!PSORD071PageCreaterForList.printDefault($!item)
+                            #elseif($!item.getColumnName()=="T_ORDER.UNIT_NAME")
+                                $!PSORD071PageCreaterForList.printDefault($!item)
+                            #elseif($!item.getColumnName()=="DUMMY.RCV_REMAIN_AMOUNT")
+                                $!PSORD071PageCreaterForList.printDefault($!item)
+                            #elseif($!item.getColumnName()=="T_ORDER.UNIT_PRICE")
+                                $!PSORD071PageCreaterForList.printSpecial("s27_list_data_currency",$!item,'_data_style','class="FontCurrSmall" align="right"')
+                            #elseif($!item.getColumnName()=="T_ORDER.ORDER_AMOUNT")
+                                $!PSORD071PageCreaterForList.printSpecial("s27_list_data_currency",$!item,'_data_style','class="FontCurrSmall" align="right"')
+                            #elseif($!item.getColumnName()=="T_ORDER.UNIT_PRICE_IND")
+                                 $!PSORD071PageCreaterForList.printSpecial("s25_codeName", $!item, 'UNIT_PRICE_IND','')
+                            #elseif($!item.getColumnName()=="T_ORDER.PRICE_DEC_DATE")
+                                $!PSORD071PageCreaterForList.printDefault($!item)
+                            #elseif($!item.getColumnName()=="T_ORDER.ORDER_DELIV_DATE")
+                                $!PSORD071PageCreaterForList.printDefault($!item)
+                            #elseif($!item.getColumnName()=="T_ORDER.DELIV_PLACE_CD")
+                                $!PSORD071PageCreaterForList.printDefault($!item)
+                            #elseif($!item.getColumnName()=="T_ORDER.DELIV_PLACE_NAME")
+                                $!PSORD071PageCreaterForList.printDefault($!item)
+                            #elseif($!item.getColumnName()=="T_ORDER.REQ_SECTION_CD")
+                                $!PSORD071PageCreaterForList.printDefault($!item)
+                            #elseif($!item.getColumnName()=="T_ORDER.REQ_SECTION_NAME")
+                                $!PSORD071PageCreaterForList.printDefault($!item)
+                            #elseif($!item.getColumnName()=="T_ORDER.REQ_USER_ID")
+                                $!PSORD071PageCreaterForList.printDefault($!item)
+                            #elseif($!item.getColumnName()=="T_ORDER.REQ_USER_NAME")
+                                $!PSORD071PageCreaterForList.printDefault($!item)
+                            #elseif($!item.getColumnName()=="T_ORDER.BUYER_SECTION_CD")
+                                $!PSORD071PageCreaterForList.printDefault($!item)
+                            #elseif($!item.getColumnName()=="T_ORDER.BUYER_SECTION_NAME")
+                                $!PSORD071PageCreaterForList.printDefault($!item)
+                            #elseif($!item.getColumnName()=="T_ORDER.BUYER_USER_ID")
+                                $!PSORD071PageCreaterForList.printDefault($!item)
+                            #elseif($!item.getColumnName()=="T_ORDER.BUYER_USER_NAME")
+                                $!PSORD071PageCreaterForList.printDefault($!item)
+                              #else
+                                $!PSORD071PageCreaterForList.printDefault($!item)
+                            #end
+                      #end
+                     $!PSORD071PageCreaterForList.printTDtagClose()
+                    #else
+                    ## 注文一覧（未発注）
+                       #foreach($!item in $!PSORD061PageCreaterForList.getItemListForBody($velocityCount))
+                            #set($currentOneColumnFlag = $!PSORD061PageCreaterForList.getOneColumnFlag($!item))
+                            #if($velocityCount == 0)
+                                 $!PSORD061PageCreaterForList.printTDtag('class="BoxDetailLeft FontList"')
+                            #elseif(!$currentOneColumnFlag)
+                                 $!PSORD061PageCreaterForList.printTDtagClose()
+                                 $!PSORD061PageCreaterForList.printTDtag('class="BoxDetailLeft FontList"')
+                           #end
+                            #if($!item.getColumnName()=="T_ORDER.ORDER_NO")
+                                $!PSORD061PageCreaterForList.printDefault($!item, '_data_style', 'class="FontSlipNo"')
+                            #elseif($!item.getColumnName()=="T_ORDER.ORDER_STATUS")
+                                 #if($!orderListItem.status=="03")
+                                    $!PSORD061PageCreaterForList.printSpecial("s25_codeName", $!item, 'ORDER_STATUS', '','_data_style', 'class="Red FontMiniAnkBold"')
+                                #else
+                                   $!PSORD061PageCreaterForList.printSpecial("s25_codeName", $!item, 'ORDER_STATUS','','_data_style','class="FontMiniAnkBold"')
+                                #end
+                            #elseif($!item.getColumnName()=="T_ORDER.REQ_TYPE_IND")
+                                $!PSORD061PageCreaterForList.printSpecial("s25_codeName", $!item, 'REQ_TYPE_IND','')
+                            #elseif($!item.getColumnName()=="T_ORDER.INFO_CD")
+                                $!PSORD061PageCreaterForList.printSpecial("s25_codeName", $!item, 'INFO_ID','')
+                            #elseif($!item.getColumnName()=="T_ORDER.ORDER_INPUT_DATE")
+                                $!PSORD061PageCreaterForList.printDefault($!item)
+                            #elseif($!item.getColumnName()=="T_ORDER.ORDER_FIRST_DATE")
+                                $!PSORD061PageCreaterForList.printDefault($!item)
+                            #elseif($!item.getColumnName()=="T_ORDER.BUYER_COMMENT")
+                               $!PSORD061PageCreaterForList.printDefault($!item)
+                            #elseif($!item.getColumnName()=="T_ATTACH_MNG.ATTACH_SCOPE")
+                                $!PSORD061PageCreaterForList.printSpecial("s09_attach", $!item)
+                            #elseif($!item.getColumnName()=="T_ORDER.TITLE_NAME")
+                                $!PSORD061PageCreaterForList.printDefault($!item)
+                            #elseif($!item.getColumnName()=="T_ORDER.SUP_CD")
+                                $!PSORD061PageCreaterForList.printDefault($!item)
+                            #elseif($!item.getColumnName()=="T_ORDER.SUP_ABBR_NAME")
+                                $!PSORD061PageCreaterForList.printDefault($!item)
+                            #elseif($!item.getColumnName()=="T_ORDER.SUBCON_IND")
+                                #if("$orderListItem.subconInd"=="1")
+                                <div>$!orderListItem.subconInd_PageValue</div>
+                                #end
+                            #elseif($!item.getColumnName()=="T_ORDER.EDI_IND")
+                                $!PSORD061PageCreaterForList.printSpecial("s25_codeName", $!item, 'EDI_IND','')
+                            #elseif($!item.getColumnName()=="T_ORDER.ITEM_CD")
+                                $!PSORD061PageCreaterForList.printDefault($!item)
+                            #elseif($!item.getColumnName()=="T_ORDER.ITEM_NAME")
+                                $!PSORD061PageCreaterForList.printDefault($!item)
+                            #elseif($!item.getColumnName()=="T_ORDER.CURRENCY_CD")
+                                $!PSORD061PageCreaterForList.printDefault($!item)
+                            #elseif($!item.getColumnName()=="T_ORDER.ORDER_VOL")
+                                $!PSORD061PageCreaterForList.printDefault($!item)
+                            #elseif($!item.getColumnName()=="T_ORDER.UNIT_NAME")
+                                $!PSORD061PageCreaterForList.printDefault($!item)
+                            #elseif($!item.getColumnName()=="DUMMY.RCV_REMAIN_AMOUNT")
+                                $!PSORD061PageCreaterForList.printDefault($!item)
+                            #elseif($!item.getColumnName()=="T_ORDER.UNIT_PRICE")
+                                 $!PSORD061PageCreaterForList.printSpecial("s27_list_data_currency",$!item,'_data_style','class="FontCurrSmall" align="right"')
+                            #elseif($!item.getColumnName()=="T_ORDER.ORDER_AMOUNT")
+                                 $!PSORD061PageCreaterForList.printSpecial("s27_list_data_currency",$!item,'_data_style','class="FontCurrSmall" align="right"')
+                            #elseif($!item.getColumnName()=="T_ORDER.UNIT_PRICE_IND")
+                                $!PSORD061PageCreaterForList.printSpecial("s25_codeName", $!item, 'UNIT_PRICE_IND','')
+                            #elseif($!item.getColumnName()=="T_ORDER.PRICE_DEC_DATE")
+                                $!PSORD061PageCreaterForList.printDefault($!item)
+                            #elseif($!item.getColumnName()=="T_ORDER.ORDER_DELIV_DATE")
+                                $!PSORD061PageCreaterForList.printDefault($!item)
+                            #elseif($!item.getColumnName()=="T_ORDER.DELIV_PLACE_CD")
+                                $!PSORD061PageCreaterForList.printDefault($!item)
+                            #elseif($!item.getColumnName()=="T_ORDER.DELIV_PLACE_NAME")
+                                $!PSORD061PageCreaterForList.printDefault($!item)
+                            #elseif($!item.getColumnName()=="T_ORDER.REQ_SECTION_CD")
+                                $!PSORD061PageCreaterForList.printDefault($!item)
+                            #elseif($!item.getColumnName()=="T_ORDER.REQ_SECTION_NAME")
+                                $!PSORD061PageCreaterForList.printDefault($!item)
+                            #elseif($!item.getColumnName()=="T_ORDER.REQ_USER_ID")
+                                $!PSORD061PageCreaterForList.printDefault($!item)
+                            #elseif($!item.getColumnName()=="T_ORDER.REQ_USER_NAME")
+                                $!PSORD061PageCreaterForList.printDefault($!item)
+                            #elseif($!item.getColumnName()=="T_ORDER.BUYER_SECTION_CD")
+                                $!PSORD061PageCreaterForList.printDefault($!item)
+                            #elseif($!item.getColumnName()=="T_ORDER.BUYER_SECTION_NAME")
+                                $!PSORD061PageCreaterForList.printDefault($!item)
+                            #elseif($!item.getColumnName()=="T_ORDER.BUYER_USER_ID")
+                                $!PSORD061PageCreaterForList.printDefault($!item)
+                            #elseif($!item.getColumnName()=="T_ORDER.BUYER_USER_NAME")
+                                $!PSORD061PageCreaterForList.printDefault($!item)
+                              #else
+                                $!PSORD061PageCreaterForList.printDefault($!item)
+                            #end
+                      #end
+                    #end
+            </tr>
+        #end
+    </tbody>
+</table>
+#end
+<br>
+<table id="WAIT" class="NoBorder" style="display:none;width:100%;"><tr><td style="text-align:center;"><br><br>
+<img src="../../image/wait.gif"><br><span class="FontMini"><br>#customSpringMessage('SEARCH_MESSAGE')</span></td></tr></table><!--問い合わせ中...-->
+</body>
+</html>

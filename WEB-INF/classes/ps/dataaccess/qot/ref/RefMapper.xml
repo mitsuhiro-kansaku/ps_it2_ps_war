@@ -1,0 +1,1262 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="ps.dataaccess.qot.ref.RefMapper">
+    <sql id="listKeyIdentitySearchOtherWhereCondition">
+        ${@ps.common.util.ItemSettingUtil@getItemSettingWhereSQL('3')}
+        AND T_QUOT_REQUEST.QUOT_TYPE_IND IN ('1','4')
+        AND T_QUOT_REQUEST.NEW_FLG = '1'
+        AND T_QUOT_REQUEST.DELETE_FLG = '0'
+        AND NOT EXISTS (
+            SELECT
+                T_SLIP_MNG.SLIP_NO
+            FROM
+                T_SLIP_MNG
+            WHERE
+                T_QUOT_REQUEST.QUOT_REQ_NO = T_SLIP_MNG.APL_NO AND
+                T_SLIP_MNG.DELETE_FLG = '0' AND
+                T_SLIP_MNG.SLIP_STATUS IN ('0211','0212'
+                <if test="@org.apache.commons.lang.StringUtils@isBlank(cancelByRequester)">
+                ,'0107'
+                </if>
+                )
+        )
+        AND NOT EXISTS (
+            SELECT
+                T_SLIP_MNG.SLIP_NO
+            FROM
+                T_SLIP_MNG
+            WHERE
+                T_QUOT_REQUEST.PUR_APL_NO IS NOT NULL AND
+                T_QUOT_REQUEST.QUOT_REQ_NO = T_SLIP_MNG.SLIP_NO AND
+                T_SLIP_MNG.DELETE_FLG = '0' AND
+                T_SLIP_MNG.SLIP_STATUS IN ('0211','0212'
+                <if test="@org.apache.commons.lang.StringUtils@isBlank(cancelByRequester)">
+                ,'0505','0506','0611','0612','0613','0501','0502','0503'
+                </if>
+                )
+        )
+        AND NOT EXISTS (
+            SELECT
+                T_SLIP_MNG.SLIP_NO
+            FROM
+                T_SLIP_MNG
+            WHERE
+                T_QUOT_REQUEST.PUR_APL_NO IS NOT NULL AND
+                T_QUOT_REQUEST.QUOT_REQ_NO = T_SLIP_MNG.APL_NO AND
+                T_SLIP_MNG.DELETE_FLG = '0' AND
+                T_SLIP_MNG.SLIP_STATUS IN ('0211','0212'
+                <if test="@org.apache.commons.lang.StringUtils@isBlank(cancelByRequester)">
+                ,'0505','0506','0611','0612','0613','0501','0502','0503'
+                </if>
+                )
+        )
+        <if test="eatherStatusNotEmpty">
+            AND (
+        </if>
+        <if test="quotReqStatusNotEmpty">
+            (T_QUOT_REQUEST.QUOT_REQ_STATUS IN
+            <foreach collection="quotReqStatusListForQuery" item="reqStatus" open="(" separator="," close=")">
+                #{reqStatus, jdbcType=VARCHAR}
+            </foreach>
+            AND T_QUOT_REQUEST.QUOT_ADO_STATUS IS NULL)
+        </if>
+        <if test="bothStatusNotEmpty">
+            OR
+        </if>
+        <if test="quotAdoStatusNotEmpty">
+            T_QUOT_REQUEST.QUOT_ADO_STATUS IN
+            <foreach collection="quotAdoStatusList" item="adoStatus" open="(" separator="," close=")">
+                #{adoStatus, jdbcType=VARCHAR}
+            </foreach>
+        </if>
+        <if test="eatherStatusNotEmpty">
+            )
+        </if>
+        <if test="notShowOrderedItem and fromKubun!='PSORD'">
+            AND (
+                    (
+                        T_QUOT_REQUEST.PUR_APL_NO IS NULL AND T_PUR_APL.PUR_APL_SEQ IS NULL
+                    )
+                    OR
+                    (
+                            T_QUOT_REQUEST.PUR_APL_NO IS NOT NULL
+                        AND NOT EXISTS
+                        (
+                            SELECT
+                                T_QUOT_REQ_DTL.QUOT_REQ_SEQ
+                            FROM
+                                T_QUOT_REQ_DTL
+                            INNER JOIN T_ORDER ON
+                                    T_ORDER.ORDER_NO= T_QUOT_REQ_DTL.QUOT_REQ_DTL_NO
+                                AND T_ORDER.NEW_FLG = '1'
+                                AND T_ORDER.DELETE_FLG = '0'
+                            WHERE
+                                T_QUOT_REQ_DTL.QUOT_REQ_SEQ = T_QUOT_REQUEST.QUOT_REQ_SEQ
+                        )
+                    )
+                    OR
+                    (
+                            T_QUOT_REQUEST.PUR_APL_NO IS NOT NULL
+                        AND EXISTS
+                        (
+                            SELECT
+                                T_QUOT_REQ_DTL.QUOT_REQ_SEQ
+                            FROM
+                                T_QUOT_REQ_DTL
+                            INNER JOIN T_ORDER ON
+                                    T_ORDER.ORDER_NO= T_QUOT_REQ_DTL.QUOT_REQ_DTL_NO
+                                AND T_ORDER.NEW_FLG = '1'
+                                AND T_ORDER.DELETE_FLG = '0'
+                                AND T_ORDER.UNIT_PRICE_IND = '0'
+                                AND T_ORDER.INFO_CD in
+                                    ('${@fw.common.constant.CodeNameConstant@INFO_ID_CONFIRM}', '${@fw.common.constant.CodeNameConstant@INFO_ID_EDIT}')
+                            WHERE
+                                T_QUOT_REQ_DTL.QUOT_REQ_SEQ = T_QUOT_REQUEST.QUOT_REQ_SEQ
+                        )
+                    )
+                )
+        </if>
+        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(priceReqFlg)">
+            AND
+                (
+                     T_QUOT_ACQ_APL.PRICE_REQ_FLG = '1'
+                 OR
+                     EXISTS
+                     (
+                         SELECT
+                             T_PUR_APL.PUR_APL_SEQ
+                         FROM
+                             T_PUR_APL
+                         INNER JOIN T_PUR_REQUEST
+                            ON T_PUR_REQUEST.PUR_APL_SEQ = T_PUR_APL.PUR_APL_SEQ
+                           AND T_PUR_REQUEST.DELETE_FLG = 0
+                         WHERE
+                              (T_PUR_APL.PUR_APL_NO = T_QUOT_REQUEST.QUOT_REQ_NO
+                              OR T_PUR_REQUEST.PUR_REQ_NO = T_QUOT_REQUEST.QUOT_REQ_NO)
+                             AND T_PUR_APL.DELETE_FLG = '0'
+                             AND T_PUR_APL.NEW_FLG = '1'
+                             AND T_PUR_APL.PRICE_REQ_FLG = '1'
+                     )
+                )
+        </if>
+        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(priceRegisterdFlg)">
+            AND EXISTS (
+               SELECT
+                   M_PUR_PRICE.QUOT_REQ_NO
+               FROM
+                   M_PUR_PRICE
+               WHERE
+                   M_PUR_PRICE.QUOT_REQ_NO = T_QUOT_REQUEST.QUOT_REQ_NO
+            )
+        </if>
+        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(quotRespEndDateFrom.dateOfymd)
+                 || @org.apache.commons.lang.StringUtils@isNotBlank(quotRespEndDateTo.dateOfymd)">
+            AND EXISTS (
+               SELECT
+                   T_QUOT_RESPONSE.QUOT_RESP_SEQ
+               FROM
+                   T_QUOT_RESPONSE
+               WHERE
+                   T_QUOT_RESPONSE.QUOT_REQ_NO = T_QUOT_REQUEST.QUOT_REQ_NO
+               AND T_QUOT_RESPONSE.QUOT_REQ_VERSION = T_QUOT_REQUEST.QUOT_REQ_VERSION
+               AND T_QUOT_RESPONSE.DELETE_FLG = '0'
+               AND T_QUOT_RESPONSE.QUOT_WITHDRAW_ID = '0'
+               <![CDATA[
+               AND T_QUOT_RESPONSE.QUOT_ADO_IND <> '2'
+               ]]>
+               <if test="@org.apache.commons.lang.StringUtils@isNotBlank(quotRespEndDateFrom.dateOfymd)">
+               <![CDATA[
+               AND T_QUOT_RESPONSE.QUOT_RESP_END_DATE >= #{quotRespEndDateFrom.dateOfymd}
+               ]]>
+               </if>
+               <if test="@org.apache.commons.lang.StringUtils@isNotBlank(quotRespEndDateTo.dateOfymd)">
+               <![CDATA[
+               AND T_QUOT_RESPONSE.QUOT_RESP_END_DATE <= #{quotRespEndDateTo.dateOfymd}
+               ]]>
+               </if>
+            )
+        </if>
+        AND T_QUOT_REQUEST.BUYER_COMPANY_CD = '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}'
+        AND T_QUOT_REQUEST.BUYER_SECTION_CD = '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}'
+        <if test="quickLinkCountFlag">
+            AND T_QUOT_REQUEST.BUYER_USER_ID = '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}'
+        </if>
+        <if test="newFlag">
+            AND EXISTS(
+                SELECT T_QUOT_REQ_SUP.QUOT_REQ_SEQ
+                FROM T_QUOT_REQ_SUP
+                LEFT JOIN T_QUOT_RESPONSE
+                     ON T_QUOT_REQ_SUP.QUOT_REQ_NO = T_QUOT_RESPONSE.QUOT_REQ_NO
+                     AND T_QUOT_REQ_SUP.QUOT_REQ_VERSION = T_QUOT_RESPONSE.QUOT_REQ_VERSION
+                     AND T_QUOT_RESPONSE.DELETE_FLG = '0'
+                 WHERE
+                    T_QUOT_REQUEST.QUOT_REQ_SEQ = T_QUOT_REQ_SUP.QUOT_REQ_SEQ
+                    AND T_QUOT_REQ_SUP.QUOT_REQ_VERSION = T_QUOT_REQUEST.QUOT_REQ_VERSION
+                    AND T_QUOT_REQ_SUP.DELETE_FLG = '0'
+                    AND T_QUOT_RESPONSE.RESP_CONF_FLG = '0'
+            )
+        </if>
+        <trim prefix=" AND ( " prefixOverrides="OR " suffix=" ) ">
+        <if test="quotAcqRequestChecked">
+            (T_QUOT_REQUEST.QUOT_TYPE_IND &lt;&gt; '4'
+            AND T_QUOT_REQUEST.PUR_APL_NO IS NULL)
+        </if>
+        <if test="purRequestChecked">
+            OR (T_QUOT_REQUEST.QUOT_TYPE_IND &lt;&gt; '4'
+            AND T_QUOT_REQUEST.QUOT_ACQ_APL_NO IS NULL)
+        </if>
+        <if test="quotRequestChecked">
+            OR T_QUOT_REQUEST.QUOT_TYPE_IND = '4'
+        </if>
+        </trim>
+        AND EXISTS (
+            SELECT T_QUOT_REQ_DTL.QUOT_REQ_SEQ
+            FROM T_QUOT_REQ_DTL
+            WHERE
+                T_QUOT_REQUEST.QUOT_REQ_SEQ = T_QUOT_REQ_DTL.QUOT_REQ_SEQ
+            AND T_QUOT_REQ_DTL.QUOT_REQ_VERSION = T_QUOT_REQUEST.QUOT_REQ_VERSION
+            AND T_QUOT_REQ_DTL.DELETE_FLG = '0'
+            ${@ps.common.util.ItemSettingUtil@getItemSettingWhereSQL('4')}
+        )
+        AND EXISTS (
+            SELECT T_QUOT_REQ_SUP.QUOT_REQ_SEQ
+            FROM T_QUOT_REQ_SUP
+            WHERE
+                T_QUOT_REQUEST.QUOT_REQ_SEQ = T_QUOT_REQ_SUP.QUOT_REQ_SEQ
+            AND T_QUOT_REQ_SUP.QUOT_REQ_VERSION = T_QUOT_REQUEST.QUOT_REQ_VERSION
+            AND T_QUOT_REQ_SUP.DELETE_FLG = '0'
+            ${@ps.common.util.ItemSettingUtil@getItemSettingWhereSQL('5')}
+        )
+    </sql>
+
+    <sql id="listFrom">
+        T_QUOT_REQUEST
+        LEFT JOIN
+            (
+                SELECT  QUOT_ACQ_APL_NO
+                ,       PRICE_REQ_FLG
+                ,       QUOT_ACQ_APL_SEQ
+                FROM    T_QUOT_ACQ_APL
+                WHERE   NEW_APP_FLG = '1'
+                AND     NEW_FLG = '1'
+                AND     DELETE_FLG = '0'
+            ) T_QUOT_ACQ_APL
+        ON
+            T_QUOT_REQUEST.QUOT_ACQ_APL_NO = T_QUOT_ACQ_APL.QUOT_ACQ_APL_NO
+        <if test="fromKubun=='PSORD'">
+            INNER JOIN ( 
+                SELECT QUOT_REQ_NO,MAX( QUOT_REQ_VERSION ) AS QUOT_REQ_VERSION
+                FROM T_QUOT_REQUEST GROUP BY QUOT_REQ_NO ) A
+                ON T_QUOT_REQUEST.QUOT_REQ_NO = A.QUOT_REQ_NO
+                AND T_QUOT_REQUEST.QUOT_REQ_VERSION = A.QUOT_REQ_VERSION
+            INNER JOIN T_QUOT_REQ_DTL
+                ON T_QUOT_REQ_DTL.QUOT_REQ_SEQ= T_QUOT_REQUEST.QUOT_REQ_SEQ
+            INNER JOIN T_ORDER
+                ON T_ORDER.ORDER_NO= T_QUOT_REQ_DTL.QUOT_REQ_DTL_NO
+                AND T_ORDER.NEW_FLG='1'
+                AND T_ORDER.UNIT_PRICE_IND='0'
+                AND T_ORDER.INFO_CD in
+                        ('${@fw.common.constant.CodeNameConstant@INFO_ID_CONFIRM}', '${@fw.common.constant.CodeNameConstant@INFO_ID_EDIT}')
+        </if>
+        <if test="notShowOrderedItem">
+            LEFT JOIN
+                (
+                    SELECT  QUOT_REQ_NO
+                    ,       PUR_APL_SEQ
+                    FROM    T_PUR_APL
+                    WHERE   DELETE_FLG = '0'
+                    AND     NEW_FLG = '1'
+                ) T_PUR_APL
+            ON
+                T_QUOT_REQUEST.QUOT_REQ_NO = T_PUR_APL.QUOT_REQ_NO
+        </if>
+        
+    </sql>
+
+    <select id="listKeyIdentitySearch"
+        parameterType="fw.domain.slip.quot.quotstatus.purreqstatuslist.reqstatuslist.QuotStatusSearchCondition"
+        resultType="fw.domain.slip.quot.quotstatus.purreqstatuslist.reqstatuslist.QuotStatusIdentify">
+        SELECT
+            T_QUOT_REQUEST.QUOT_REQ_SEQ as "quotReqSeq",
+            T_QUOT_REQUEST.PRE_SEQ as "preSeq"
+        FROM
+            <include refid="listFrom"/>
+        <where>
+            <include refid="listKeyIdentitySearchOtherWhereCondition"/>
+        </where>
+        ORDER BY ${searchCondition.columnOrder.columnOrder()}
+    </select>
+
+    <resultMap type="fw.domain.slip.quot.quotstatus.purreqstatuslist.reqstatuslist.QuotStatusItem"
+        id="QuotStatusItem_Map">
+    </resultMap>
+
+    <select id="listPageQuotStatusItem"
+        parameterType="fw.domain.mst.searchcondition.SearchCondition"
+        resultMap="QuotStatusItem_Map">
+        SELECT
+            T_QUOT_REQUEST.QUOT_REQ_SEQ as "quotStatusIdentify.quotReqSeq" ,
+            T_QUOT_REQUEST.PRE_SEQ as "quotStatusIdentify.preSeq",
+            T_QUOT_REQUEST.LAST_UPD_DATE as "quotStatusIdentify.lastUpdDate",
+            T_QUOT_REQUEST.QUOT_REQ_NO as "quotReqNo",
+            T_QUOT_REQUEST.QUOT_REQ_STATUS as "quotReqStatus" ,
+            T_QUOT_REQUEST.QUOT_ADO_STATUS as "quotAdoStatus" ,
+            T_QUOT_REQUEST.TITLE_NAME as "titleName",
+            T_QUOT_REQUEST.QUOT_TYPE_IND as "input.quotTypeInd",
+            T_QUOT_REQUEST.QUOT_ACQ_APL_NO as "input.quotAcqAplNo",
+            T_QUOT_REQUEST.PUR_APL_NO as "input.purAplNo",
+            T_QUOT_REQUEST.FOR_SUPPRIER_COMMENT as "forSupprierComment",
+            T_QUOT_REQUEST.QUOT_RESP_LIMIT_DATE as "quotRespLimitDate.dateOfymd",
+            T_QUOT_REQUEST.ITEM_CLASS_L_NAME as "itemClassNameL",
+            T_QUOT_REQUEST.ITEM_CLASS_M_NAME as "itemClassNameM",
+            T_QUOT_REQUEST.ITEM_CLASS_S_NAME as "itemClassNameS",
+            T_QUOT_REQUEST.REQ_USER_ID as "reqUserId",
+            T_QUOT_REQUEST.REQ_USER_NAME as "reqUserName",
+            T_QUOT_REQUEST.REQ_SECTION_CD as "reqSectionCd" ,
+            T_QUOT_REQUEST.REQ_SECTION_NAME as "reqSectionName" ,
+            T_QUOT_REQUEST.DELIV_PLACE_CD as "delivPlaceCd" ,
+            T_QUOT_REQUEST.DELIV_PLACE_NAME as "delivPlaceName" ,
+            T_QUOT_REQUEST.BUYER_SECTION_CD as "buyerSectionCd" ,
+            T_QUOT_REQUEST.BUYER_SECTION_NAME as "buyerSectionName" ,
+            T_QUOT_REQUEST.BUYER_USER_ID as "buyerUserId",
+            T_QUOT_REQUEST.BUYER_USER_NAME as "buyerUserName",
+            T_ATTACH_MNG_A.ATTACH_FILE_NAME as "attachFileName1",
+            T_ATTACH_MNG_A.ATTACH_SCOPE as "attachScope1",
+            T_ATTACH_MNG_B.ATTACH_FILE_NAME as "attachFileName2" ,
+            T_ATTACH_MNG_B.ATTACH_SCOPE as "attachScope2" ,
+            CASE
+                WHEN T_QUOT_REQUEST.QUOT_TYPE_IND = '4' THEN NULL
+                WHEN T_QUOT_ACQ_APL.PRICE_REQ_FLG = '1' THEN '1'
+                WHEN EXISTS
+                     (
+                         SELECT
+                             T_PUR_APL.PUR_APL_SEQ
+                         FROM
+                             T_PUR_APL
+                         INNER JOIN T_PUR_REQUEST
+                            ON T_PUR_REQUEST.PUR_APL_SEQ = T_PUR_APL.PUR_APL_SEQ
+                           AND T_PUR_REQUEST.DELETE_FLG = 0
+                         WHERE
+                              (T_PUR_APL.PUR_APL_NO = T_QUOT_REQUEST.QUOT_REQ_NO
+                              OR T_PUR_REQUEST.PUR_REQ_NO = T_QUOT_REQUEST.QUOT_REQ_NO)
+                             AND T_PUR_APL.DELETE_FLG = '0'
+                             AND T_PUR_APL.NEW_FLG = '1'
+                             AND T_PUR_APL.PRICE_REQ_FLG = '1'
+                     ) THEN '1'
+                ELSE '0'
+            END as "priceReqFlg",
+            ${@ps.common.util.ItemSettingUtil@getItemSettingSelectSQLDomainAliasNonBinary("T_QUOT_REQUEST","quotReqExtItem")}
+        FROM
+            <include refid="listFrom"/>
+            LEFT JOIN
+                T_ATTACH_MNG T_ATTACH_MNG_A
+            ON
+                T_QUOT_REQUEST.ATTACH_FILE_SEQ1 = T_ATTACH_MNG_A.ATTACH_FILE_SEQ
+            AND T_ATTACH_MNG_A.DELETE_FLG = '0'
+            LEFT JOIN
+                T_ATTACH_MNG T_ATTACH_MNG_B
+            ON
+                T_QUOT_REQUEST.ATTACH_FILE_SEQ2 = T_ATTACH_MNG_B.ATTACH_FILE_SEQ
+            AND T_ATTACH_MNG_B.DELETE_FLG = '0'
+        <where>
+            <include refid="listKeyIdentitySearchOtherWhereCondition"/>
+            AND T_QUOT_REQUEST.QUOT_REQ_SEQ IN
+            <foreach collection="searchCondition.page.keyDomainEntityList" item="keyList"  open="(" separator="," close=")">
+                #{keyList.quotReqSeq}
+            </foreach>
+        </where>
+        ORDER BY ${searchCondition.columnOrder.columnOrder()}
+    </select>
+
+    <select id="listPageQuotReqSupItem"
+        parameterType="fw.domain.mst.searchcondition.SearchCondition"
+        resultType="fw.domain.slip.quot.quotstatus.purreqstatuslist.reqstatuslist.QuotReqSupItem">
+        SELECT
+            T_QUOT_REQ_SUP.QUOT_REQ_SEQ as "quotReqSeq" ,
+            T_QUOT_REQ_SUP.QUOT_REQ_DATE as "quotReqDate.dateOfymd" ,
+            T_QUOT_REQ_SUP.SUP_CD as "supCd" ,
+            T_QUOT_REQ_SUP.SUP_ABBR_NAME as "supAbbrName" ,
+            CASE 
+                WHEN T_QUOT_RESPONSE.QUOT_RESP_SEQ IS NOT NULL THEN '02'
+                ELSE '01'
+            END as "quotSupStatus",
+            T_QUOT_RESPONSE.QUOT_ADO_IND as "quotAdoInd",
+            <!-- 2016/02/10 ADD RIKI_KOBAYASHI START -->
+            T_QUOT_RESPONSE.QUOT_RESP_DATE as "quotRespDate.dateOfymd"
+            <!-- 2016/02/10 ADD RIKI_KOBAYASHI END -->
+        FROM T_QUOT_REQ_SUP
+        LEFT JOIN T_QUOT_RESPONSE
+        ON T_QUOT_REQ_SUP.QUOT_REQ_NO = T_QUOT_RESPONSE.QUOT_REQ_NO
+        AND T_QUOT_REQ_SUP.QUOT_REQ_VERSION = T_QUOT_RESPONSE.QUOT_REQ_VERSION
+        AND T_QUOT_REQ_SUP.QUOT_SUP_LINE_NO = T_QUOT_RESPONSE.QUOT_SUP_LINE_NO
+        WHERE
+            T_QUOT_REQ_SUP.QUOT_REQ_SEQ IN
+            <foreach collection="page.keyDomainEntityList" item="keyList"  open="(" separator="," close=")">
+                #{keyList.quotReqSeq}
+            </foreach>
+        ORDER BY T_QUOT_REQ_SUP.QUOT_REQ_SEQ ASC,
+            T_QUOT_REQ_SUP.QUOT_SUP_LINE_NO ASC
+    </select>
+
+    <select id="listPageQuotReqDtlItem"
+        parameterType="fw.domain.mst.searchcondition.SearchCondition"
+        resultType="fw.domain.slip.quot.quotstatus.purreqstatuslist.reqstatuslist.QuotReqDtlItem">
+        SELECT
+            T_QUOT_REQ_DTL.QUOT_REQ_SEQ as "quotReqSeq" ,
+            T_QUOT_REQ_DTL.ITEM_CD as "itemCd",
+            T_QUOT_REQ_DTL.ITEM_NAME as "itemName" ,
+            T_QUOT_REQ_DTL.QUOT_REQ_VOL as "quotReqVol.vol" ,
+            T_QUOT_REQ_DTL.UNIT_NAME as "unitName" ,
+            T_QUOT_REQ_DTL.CURRENCY_CD as "currencyCd" ,
+            T_QUOT_REQ_DTL.UNIT_PRICE as "unitPrice.amount",
+            T_QUOT_REQ_DTL.QUOT_REQ_AMOUNT as "quotReqAmount.amount",
+            T_QUOT_REQ_DTL.REQ_DELIV_DATE as "reqDelivDate.dateOfymd",
+            T_ATTACH_MNG.ATTACH_FILE_NAME as "attachFileName",
+            T_ATTACH_MNG.ATTACH_SCOPE as "attachScope",
+            T_SLIP_MNG.SLIP_NO as "exclusiveSlipId.slipNo",
+            T_SLIP_MNG.LAST_UPD_DATE as "exclusiveSlipId.lastUpdDate"
+        FROM
+            T_QUOT_REQ_DTL
+        LEFT JOIN
+            T_ATTACH_MNG
+        ON
+            T_QUOT_REQ_DTL.ATTACH_FILE_SEQ  = T_ATTACH_MNG.ATTACH_FILE_SEQ
+        AND T_ATTACH_MNG.DELETE_FLG = '0'
+        LEFT JOIN
+            T_SLIP_MNG
+        ON
+            T_QUOT_REQ_DTL.QUOT_REQ_DTL_NO = T_SLIP_MNG.SLIP_NO
+        AND T_SLIP_MNG.DELETE_FLG = '0'
+        WHERE
+            T_QUOT_REQ_DTL.QUOT_REQ_SEQ IN
+            <foreach collection="page.keyDomainEntityList" item="keyList"  open="(" separator="," close=")">
+                #{keyList.quotReqSeq}
+            </foreach>
+        ORDER BY
+            T_QUOT_REQ_DTL.QUOT_REQ_SEQ ASC,
+            T_QUOT_REQ_DTL.QUOT_REQ_DTL_NO ASC
+    </select>
+
+    <update id="updateByReq" parameterType="fw.domain.slip.quot.quotstatus.purreqstatuslist.reqstatuslist.QuotStatusIdentify">
+        UPDATE T_QUOT_REQUEST
+        SET DELETE_FLG = '1',
+            NEW_FLG = '0',
+            LAST_UPD_DATE = '${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}',
+            LAST_UPD_COMPANY_CD = '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}',
+            LAST_UPD_SECTION_CD = '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}',
+            LAST_UPD_USER_ID = '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}'
+        WHERE QUOT_REQ_SEQ = #{quotReqSeq}
+    </update>
+
+    <update id="updateByPre" parameterType="fw.domain.slip.quot.quotstatus.purreqstatuslist.reqstatuslist.QuotStatusIdentify">
+        UPDATE T_QUOT_REQUEST
+        SET
+            NEW_FLG = '1',
+            LAST_UPD_DATE = '${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}',
+            LAST_UPD_COMPANY_CD = '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}',
+            LAST_UPD_SECTION_CD = '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}',
+            LAST_UPD_USER_ID = '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}'
+        WHERE
+            QUOT_REQ_SEQ = #{preSeq}
+    </update>
+
+    <!-- 見積依頼情報取得SQL -->
+
+        <resultMap type="fw.domain.slip.quot.quotstatus.purreqstatuslist.PurReqStatus" id="PurReqStatus_Map">
+        <id column="QUOT_REQ_SEQ" property="purReqStatusSummary.quotReqSeqNo"/>
+        <id column="QUOT_REQ_NO" property="purReqStatusSummary.quotReqNo"/>
+        <id column="QUOT_REQ_VERSION" property="purReqStatusSummary.historyNo"/>
+        <id column="QUOT_ACQ_APL_NO" property="purReqStatusSummary.quotAcqAplNo"/>
+        <id column="PUR_APL_NO" property="purReqStatusSummary.purAplNo"/>
+        <id column="QUOT_REQ_STATUS" property="purReqStatusSummary.quotReqStatus"/>
+        <id column="QUOT_ADO_STATUS" property="purReqStatusSummary.quotAdoStatus"/>
+        <id column="REQ_COMPANY_CD" property="purReqStatusSummary.reqUser.reqUser.section.company.companyCd"/>
+        <id column="REQ_SECTION_CD" property="purReqStatusSummary.reqUser.reqUser.section.sectionCd"/>
+        <id column="REQ_SECTION_NAME" property="purReqStatusSummary.reqUser.reqUser.section.sectionName"/>
+        <id column="REQ_USER_ID" property="purReqStatusSummary.reqUser.reqUser.userID"/>
+        <id column="REQ_USER_NAME" property="purReqStatusSummary.reqUser.reqUser.userName"/>
+        <id column="REQ_USER_EXTENSION_NO" property="purReqStatusSummary.reqUser.reqUser.extNo.extensionNo"/>
+        <id column="REQ_USER_TEL_NO" property="purReqStatusSummary.reqUser.reqUser.externalNo.externalNo"/>
+        <id column="QUOT_RESP_LIMIT_DATE" property="purReqStatusSummary.respLimitDate.dateOfymd"/>
+        <id column="DELIV_PLACE_CD" property="purReqStatusSummary.delivPlace.delivPlaceCd"/>
+        <id column="ITEM_CLASS_L_NAME" property="quotReqInfo.itemKind.itemClassLName"/>
+        <id column="ITEM_CLASS_M_NAME" property="quotReqInfo.itemKind.itemClassMName"/>
+        <id column="ITEM_CLASS_S_NAME" property="quotReqInfo.itemKind.itemClassSName"/>
+        <id column="TITLE_NAME" property="quotReqInfo.titleName"/>
+        <id column="DELIV_PLACE_NAME" property="purReqStatusSummary.delivPlace.delivPlaceName"/>
+        <id column="FOR_SUPPRIER_COMMENT" property="quotReqInfo.forSupplderComment"/>
+        <id column="ATTACH_FILE_NAME1" property="quotReqInfo.attachFileLinkList.attachFileLink1.fileName"/>
+        <id column="ATTACH_FILE_NAME2" property="quotReqInfo.attachFileLinkList.attachFileLink2.fileName"/>
+        <id column="ATTACH_FILE_SEQ1" property="quotReqInfo.attachFileLinkList.attachFileLink1.seqNo"/>
+        <id column="ATTACH_FILE_SEQ2" property="quotReqInfo.attachFileLinkList.attachFileLink2.seqNo"/>
+        <id column="ATTACH_SCOPE1" property="quotReqInfo.attachFileLinkList.attachRange1.attachRange"/>
+        <id column="ATTACH_SCOPE2" property="quotReqInfo.attachFileLinkList.attachRange2.attachRange"/>
+        <id column="ATTACH_FILE_NAME3" property="quotAdoAcq.quotAdo.rangeByAttachFile.attachFile.fileName"/>
+        <id column="ATTACH_FILE_SEQ3" property="quotAdoAcq.quotAdo.rangeByAttachFile.attachFile.seqNo"/>
+        <id column="QUOT_REQ_AMOUNT_TOTAL" property="quotReqInfo.hopeAmount.amount"/>
+        <id column="CURRENCY_CD" property="quotReqInfo.currency.currencyCd"/>
+        <id column="CURRENCY_MARK" property="quotReqInfo.currency.currencyMark"/>
+        <id column="BACK_APP_COMMENTS" property="purReqStatusSummary.backComment"/>
+        <id column="QUOT_ADO_SEQ" property="quotAdoAcq.quotAdo.quotAdoSeqNo"/>
+        <id column="QUOT_ADO_COMMENT" property="quotAdoAcq.quotAdo.adoComment.comment"/>
+        <id column="APP_ROUTE_NO" property="quotAdoAcq.application.approute.appRouteNo"/>
+        <id column="LAST_UPD_DATE" property="purReqStatusSummary.lastUpdDate"/>
+        <id column="SLIP_STATUS" property="purReqStatusSummary.slipStatus"/>
+        <id column="EXT_TXT_1" property="quotReqInfo.detailExtItem.extendTxt.extendTxt1"/>
+        <id column="EXT_TXT_2" property="quotReqInfo.detailExtItem.extendTxt.extendTxt2"/>
+        <id column="EXT_TXT_3" property="quotReqInfo.detailExtItem.extendTxt.extendTxt3"/>
+        <id column="EXT_TXT_4" property="quotReqInfo.detailExtItem.extendTxt.extendTxt4"/>
+        <id column="EXT_TXT_5" property="quotReqInfo.detailExtItem.extendTxt.extendTxt5"/>
+        <id column="EXT_TXT_6" property="quotReqInfo.detailExtItem.extendTxt.extendTxt6"/>
+        <id column="EXT_TXT_7" property="quotReqInfo.detailExtItem.extendTxt.extendTxt7"/>
+        <id column="EXT_TXT_8" property="quotReqInfo.detailExtItem.extendTxt.extendTxt8"/>
+        <id column="EXT_TXT_9" property="quotReqInfo.detailExtItem.extendTxt.extendTxt9"/>
+        <id column="EXT_TXT_10" property="quotReqInfo.detailExtItem.extendTxt.extendTxt10"/>
+        <id column="EXT_AREA_1" property="quotReqInfo.detailExtItem.extendArea.extendArea1"/>
+        <id column="EXT_AREA_2" property="quotReqInfo.detailExtItem.extendArea.extendArea2"/>
+        <id column="EXT_AREA_3" property="quotReqInfo.detailExtItem.extendArea.extendArea3"/>
+        <id column="EXT_AREA_4" property="quotReqInfo.detailExtItem.extendArea.extendArea4"/>
+        <id column="EXT_AREA_5" property="quotReqInfo.detailExtItem.extendArea.extendArea5"/>
+        <id column="EXT_DATE_1" property="quotReqInfo.detailExtItem.extendDate.extendDate1.dateOfymd"/>
+        <id column="EXT_DATE_2" property="quotReqInfo.detailExtItem.extendDate.extendDate2.dateOfymd"/>
+        <id column="EXT_DATE_3" property="quotReqInfo.detailExtItem.extendDate.extendDate3.dateOfymd"/>
+        <id column="EXT_DATE_4" property="quotReqInfo.detailExtItem.extendDate.extendDate4.dateOfymd"/>
+        <id column="EXT_DATE_5" property="quotReqInfo.detailExtItem.extendDate.extendDate5.dateOfymd"/>
+        <id column="EXT_INT_1" property="quotReqInfo.detailExtItem.extendInt.extendInt1.value"/>
+        <id column="EXT_INT_2" property="quotReqInfo.detailExtItem.extendInt.extendInt2.value"/>
+        <id column="EXT_INT_3" property="quotReqInfo.detailExtItem.extendInt.extendInt3.value"/>
+        <id column="EXT_INT_4" property="quotReqInfo.detailExtItem.extendInt.extendInt4.value"/>
+        <id column="EXT_INT_5" property="quotReqInfo.detailExtItem.extendInt.extendInt5.value"/>
+        <id column="EXT_INT_6" property="quotReqInfo.detailExtItem.extendInt.extendInt6.value"/>
+        <id column="EXT_INT_7" property="quotReqInfo.detailExtItem.extendInt.extendInt7.value"/>
+        <id column="EXT_INT_8" property="quotReqInfo.detailExtItem.extendInt.extendInt8.value"/>
+        <id column="EXT_INT_9" property="quotReqInfo.detailExtItem.extendInt.extendInt9.value"/>
+        <id column="EXT_INT_10" property="quotReqInfo.detailExtItem.extendInt.extendInt10.value"/>
+        <id column="EXT_DEC_1" property="quotReqInfo.detailExtItem.extendDec.extendDec1.value"/>
+        <id column="EXT_DEC_2" property="quotReqInfo.detailExtItem.extendDec.extendDec2.value"/>
+        <id column="EXT_DEC_3" property="quotReqInfo.detailExtItem.extendDec.extendDec3.value"/>
+        <id column="EXT_DEC_4" property="quotReqInfo.detailExtItem.extendDec.extendDec4.value"/>
+        <id column="EXT_DEC_5" property="quotReqInfo.detailExtItem.extendDec.extendDec5.value"/>
+        <id column="EXT_SEL_1" property="quotReqInfo.detailExtItem.extendSel.extendSel1"/>
+        <id column="EXT_SEL_2" property="quotReqInfo.detailExtItem.extendSel.extendSel2"/>
+        <id column="EXT_SEL_3" property="quotReqInfo.detailExtItem.extendSel.extendSel3"/>
+        <id column="EXT_SEL_4" property="quotReqInfo.detailExtItem.extendSel.extendSel4"/>
+        <id column="EXT_SEL_5" property="quotReqInfo.detailExtItem.extendSel.extendSel5"/>
+        <id column="EXT_SEL_6" property="quotReqInfo.detailExtItem.extendSel.extendSel6"/>
+        <id column="EXT_SEL_7" property="quotReqInfo.detailExtItem.extendSel.extendSel7"/>
+        <id column="EXT_SEL_8" property="quotReqInfo.detailExtItem.extendSel.extendSel8"/>
+        <id column="EXT_SEL_9" property="quotReqInfo.detailExtItem.extendSel.extendSel9"/>
+        <id column="EXT_SEL_10" property="quotReqInfo.detailExtItem.extendSel.extendSel10"/>
+        <id column="EXT_CHK_1" property="quotReqInfo.detailExtItem.extendChk.extendChk1"/>
+        <id column="EXT_CHK_2" property="quotReqInfo.detailExtItem.extendChk.extendChk2"/>
+        <id column="EXT_CHK_3" property="quotReqInfo.detailExtItem.extendChk.extendChk3"/>
+        <id column="EXT_CHK_4" property="quotReqInfo.detailExtItem.extendChk.extendChk4"/>
+        <id column="EXT_CHK_5" property="quotReqInfo.detailExtItem.extendChk.extendChk5"/>
+        <id column="EXT_FILE_1" property="quotReqInfo.detailExtItem.extendFile.extendFile1.fileName"/>
+        <id column="EXT_FILE_2" property="quotReqInfo.detailExtItem.extendFile.extendFile2.fileName"/>
+        <id column="EXT_FILE_3" property="quotReqInfo.detailExtItem.extendFile.extendFile3.fileName"/>
+        <id column="EXT_FILE_BINARY_1" property="quotReqInfo.detailExtItem.extendFile.extendFile1.binary"/>
+        <id column="EXT_FILE_BINARY_2" property="quotReqInfo.detailExtItem.extendFile.extendFile2.binary"/>
+        <id column="EXT_FILE_BINARY_3" property="quotReqInfo.detailExtItem.extendFile.extendFile3.binary"/>
+        <id column="EXT_MST_1" property="quotReqInfo.detailExtItem.extendMst.extendMst1.mstKey"/>
+        <id column="EXT_MST_2" property="quotReqInfo.detailExtItem.extendMst.extendMst2.mstKey"/>
+        <id column="EXT_MST_3" property="quotReqInfo.detailExtItem.extendMst.extendMst3.mstKey"/>
+        <id column="EXT_MST_4" property="quotReqInfo.detailExtItem.extendMst.extendMst4.mstKey"/>
+        <id column="EXT_MST_5" property="quotReqInfo.detailExtItem.extendMst.extendMst5.mstKey"/>
+        <id column="EXT_MST_6" property="quotReqInfo.detailExtItem.extendMst.extendMst6.mstKey"/>
+        <id column="EXT_MST_7" property="quotReqInfo.detailExtItem.extendMst.extendMst7.mstKey"/>
+        <id column="EXT_MST_8" property="quotReqInfo.detailExtItem.extendMst.extendMst8.mstKey"/>
+        <id column="EXT_MST_NAME_1" property="quotReqInfo.detailExtItem.extendMst.extendMst1.mstName"/>
+        <id column="EXT_MST_NAME_2" property="quotReqInfo.detailExtItem.extendMst.extendMst2.mstName"/>
+        <id column="EXT_MST_NAME_3" property="quotReqInfo.detailExtItem.extendMst.extendMst3.mstName"/>
+        <id column="EXT_MST_NAME_4" property="quotReqInfo.detailExtItem.extendMst.extendMst4.mstName"/>
+        <id column="EXT_MST_NAME_5" property="quotReqInfo.detailExtItem.extendMst.extendMst5.mstName"/>
+        <id column="EXT_MST_NAME_6" property="quotReqInfo.detailExtItem.extendMst.extendMst6.mstName"/>
+        <id column="EXT_MST_NAME_7" property="quotReqInfo.detailExtItem.extendMst.extendMst7.mstName"/>
+        <id column="EXT_MST_NAME_8" property="quotReqInfo.detailExtItem.extendMst.extendMst8.mstName"/>
+    </resultMap>
+    <select id="searchquotrequestList" resultMap="PurReqStatus_Map">
+        SELECT      T_QUOT_REQUEST.QUOT_REQ_SEQ,
+                    T_QUOT_REQUEST.QUOT_REQ_NO,
+                    T_QUOT_REQUEST.QUOT_REQ_VERSION,
+                    T_QUOT_REQUEST.QUOT_ACQ_APL_NO,
+                    T_QUOT_REQUEST.PUR_APL_NO,
+                    T_QUOT_REQUEST.QUOT_REQ_STATUS,
+                    T_QUOT_REQUEST.QUOT_ADO_STATUS,
+                    T_QUOT_REQUEST.REQ_COMPANY_CD,
+                    T_QUOT_REQUEST.REQ_SECTION_CD,
+                    T_QUOT_REQUEST.REQ_SECTION_NAME,
+                    T_QUOT_REQUEST.REQ_USER_ID,
+                    T_QUOT_REQUEST.REQ_USER_NAME,
+                    T_QUOT_REQUEST.REQ_USER_EXTENSION_NO,
+                    T_QUOT_REQUEST.REQ_USER_TEL_NO,
+                    T_QUOT_REQUEST.QUOT_RESP_LIMIT_DATE,
+                    T_QUOT_REQUEST.DELIV_PLACE_CD,
+                    T_QUOT_REQUEST.ITEM_CLASS_L_NAME,
+                    T_QUOT_REQUEST.ITEM_CLASS_M_NAME,
+                    T_QUOT_REQUEST.ITEM_CLASS_S_NAME,
+                    T_QUOT_REQUEST.TITLE_NAME,
+                    T_QUOT_REQUEST.DELIV_PLACE_NAME,
+                    T_QUOT_REQUEST.FOR_SUPPRIER_COMMENT,
+                    T_QUOT_REQUEST.LAST_UPD_DATE,
+                    T_ATTACH_MNG_A.ATTACH_FILE_NAME AS ATTACH_FILE_NAME1,
+                    T_ATTACH_MNG_B.ATTACH_FILE_NAME AS ATTACH_FILE_NAME2,
+                    T_ATTACH_MNG_A.ATTACH_FILE_SEQ AS ATTACH_FILE_SEQ1,
+                    T_ATTACH_MNG_B.ATTACH_FILE_SEQ AS ATTACH_FILE_SEQ2,
+                    T_ATTACH_MNG_A.ATTACH_SCOPE AS ATTACH_SCOPE1,
+                    T_ATTACH_MNG_B.ATTACH_SCOPE AS ATTACH_SCOPE2,
+                    T_ATTACH_MNG_C.ATTACH_FILE_NAME AS ATTACH_FILE_NAME3,
+                    T_ATTACH_MNG_C.ATTACH_FILE_SEQ AS ATTACH_FILE_SEQ3,
+                    T_QUOT_REQ_DTL_TOTAL.QUOT_REQ_AMOUNT_TOTAL,
+                    T_QUOT_ADO_REQUEST.QUOT_ADO_SEQ,
+                    T_QUOT_ADO_REQUEST.APP_ROUTE_NO,
+                    T_QUOT_REQUEST.QUOT_ADO_COMMENT,
+                    ${@ps.common.util.ItemSettingUtil@getItemSettingSelectSQL("T_QUOT_REQUEST")}
+        FROM        T_QUOT_REQUEST
+        LEFT JOIN   T_ATTACH_MNG T_ATTACH_MNG_A 
+        ON          T_QUOT_REQUEST.ATTACH_FILE_SEQ1 = T_ATTACH_MNG_A.ATTACH_FILE_SEQ
+        LEFT JOIN   T_ATTACH_MNG T_ATTACH_MNG_B 
+        ON          T_QUOT_REQUEST.ATTACH_FILE_SEQ2 = T_ATTACH_MNG_B.ATTACH_FILE_SEQ
+        LEFT JOIN   (
+                    SELECT      SUM(T_QUOT_REQ_DTL.QUOT_REQ_AMOUNT) AS QUOT_REQ_AMOUNT_TOTAL,
+                                T_QUOT_REQ_DTL.QUOT_REQ_SEQ
+                    FROM        T_QUOT_REQ_DTL
+                    WHERE       T_QUOT_REQ_DTL.QUOT_REQ_SEQ = #{quotReqSeq}
+                    GROUP BY    T_QUOT_REQ_DTL.QUOT_REQ_SEQ) T_QUOT_REQ_DTL_TOTAL
+        ON          T_QUOT_REQUEST.QUOT_REQ_SEQ = T_QUOT_REQ_DTL_TOTAL.QUOT_REQ_SEQ
+        LEFT JOIN   T_QUOT_ADO_REQUEST
+        ON          T_QUOT_ADO_REQUEST.DELETE_FLG = '0'
+        AND         T_QUOT_ADO_REQUEST.QUOT_REQ_SEQ = T_QUOT_REQUEST.QUOT_REQ_SEQ
+        LEFT JOIN   T_ATTACH_MNG T_ATTACH_MNG_C 
+        ON          T_QUOT_ADO_REQUEST.ATTACH_FILE_SEQ = T_ATTACH_MNG_C.ATTACH_FILE_SEQ
+        WHERE       T_QUOT_REQUEST.QUOT_REQ_SEQ = #{quotReqSeq}
+        AND         T_QUOT_REQUEST.NEW_FLG = '1'
+        AND         T_QUOT_REQUEST.DELETE_FLG = '0'
+    </select>
+
+    <!-- 見積取得申請情報取得SQL -->
+    <resultMap type="fw.domain.slip.quot.quotreq.quotdetail.QuotReqInfo" id="QuotAcqApl_Map">
+        <id column="FOR_BUYER_COMMENT" property="forBuyerComment"/>
+        <id column="SUP_COMPANY_CD" property="hopeSupplier.hopeSupplier.supCompanyCd"/>
+        <id column="SUP_CD" property="hopeSupplier.hopeSupplier.supCd"/>
+        <id column="SUP_ABBR_NAME" property="hopeSupplier.hopeSupplier.supplierName.supplierAbbrName"/>
+        <id column="SUBCON_IND" property="hopeSupplier.hopeSupplier.subcon.subconInd"/>
+        <id column="PRICE_REQ_FLG" property="priceRegisterFlg.priceRegisterFlg"/>
+    </resultMap>
+    <select id="searchquotacqaplList" resultMap="QuotAcqApl_Map">
+        SELECT T_QUOT_ACQ_APL.FOR_BUYER_COMMENT,
+               T_QUOT_ACQ_APL.SUP_COMPANY_CD,
+               T_QUOT_ACQ_APL.SUP_CD,
+               T_QUOT_ACQ_APL.SUP_ABBR_NAME,
+               T_QUOT_ACQ_APL.PRICE_REQ_FLG
+          FROM T_QUOT_ACQ_APL
+         WHERE T_QUOT_ACQ_APL.QUOT_ACQ_APL_NO = #{quotAcqAplNo}
+           AND T_QUOT_ACQ_APL.NEW_FLG = '1' AND T_QUOT_ACQ_APL.NEW_APP_FLG = '1'
+           AND T_QUOT_ACQ_APL.DELETE_FLG = '0'
+
+    </select>
+
+    <!-- 見積依頼明細情報の取得 -->
+    <resultMap type="fw.domain.slip.quot.quotreq.quotdetail.QuotReqInfoItem" id="QutoReqDtl_Map">
+        <id column="QUOT_REQ_DTL_NO" property="quotReqItemIdentify.detailedNumber"/>
+        <id column="CURRENCY_CD" property="currency.currencyCd"/>
+        <id column="CURRENCY_MARK" property="currency.currencyMark"/>
+        <id column="QUOT_REQ_AMOUNT" property="amount.amount"/>
+        <id column="ITEM_CD" property="itemCd"/>
+        <id column="ITEM_NAME" property="itemName"/>
+        <id column="KATASHIKI" property="katashiki"/>
+        <id column="MANUFACT_CD" property="manufact.manufactCd"/>
+        <id column="MANUFACT_NAME" property="manufact.manufactName"/>
+        <id column="REQ_DELIV_DATE" property="delivDate.dateOfymd"/>
+        <id column="UNIT_PRICE" property="unitPrice.amount.amount"/>
+        <id column="QUOT_REQ_VOL" property="vol.vol"/>
+        <id column="UNIT_NAME" property="unitName"/>
+        <id column="ATTACH_FILE_NAME" property="attachFileLink.fileName"/>
+        <id column="ATTACH_FILE_SEQ" property="attachFileLink.seqNo"/>
+        <id column="ATTACH_SCOPE" property="attachRange.attachRange"/>
+        <id column="EXCLUSIVE_SLIP_NO" property="exclusiveSlipId.slipNo"/>
+        <id column="EXCLUSIVE_LAST_UPD_DATE" property="exclusiveSlipId.lastUpdDate"/>
+        <id column="EXT_TXT_1" property="detailExtItem.extendTxt.extendTxt1"/>
+        <id column="EXT_TXT_2" property="detailExtItem.extendTxt.extendTxt2"/>
+        <id column="EXT_TXT_3" property="detailExtItem.extendTxt.extendTxt3"/>
+        <id column="EXT_TXT_4" property="detailExtItem.extendTxt.extendTxt4"/>
+        <id column="EXT_TXT_5" property="detailExtItem.extendTxt.extendTxt5"/>
+        <id column="EXT_TXT_6" property="detailExtItem.extendTxt.extendTxt6"/>
+        <id column="EXT_TXT_7" property="detailExtItem.extendTxt.extendTxt7"/>
+        <id column="EXT_TXT_8" property="detailExtItem.extendTxt.extendTxt8"/>
+        <id column="EXT_TXT_9" property="detailExtItem.extendTxt.extendTxt9"/>
+        <id column="EXT_TXT_10" property="detailExtItem.extendTxt.extendTxt10"/>
+        <id column="EXT_AREA_1" property="detailExtItem.extendArea.extendArea1"/>
+        <id column="EXT_AREA_2" property="detailExtItem.extendArea.extendArea2"/>
+        <id column="EXT_AREA_3" property="detailExtItem.extendArea.extendArea3"/>
+        <id column="EXT_AREA_4" property="detailExtItem.extendArea.extendArea4"/>
+        <id column="EXT_AREA_5" property="detailExtItem.extendArea.extendArea5"/>
+        <id column="EXT_DATE_1" property="detailExtItem.extendDate.extendDate1.dateOfymd"/>
+        <id column="EXT_DATE_2" property="detailExtItem.extendDate.extendDate2.dateOfymd"/>
+        <id column="EXT_DATE_3" property="detailExtItem.extendDate.extendDate3.dateOfymd"/>
+        <id column="EXT_DATE_4" property="detailExtItem.extendDate.extendDate4.dateOfymd"/>
+        <id column="EXT_DATE_5" property="detailExtItem.extendDate.extendDate5.dateOfymd"/>
+        <id column="EXT_INT_1" property="detailExtItem.extendInt.extendInt1.value"/>
+        <id column="EXT_INT_2" property="detailExtItem.extendInt.extendInt2.value"/>
+        <id column="EXT_INT_3" property="detailExtItem.extendInt.extendInt3.value"/>
+        <id column="EXT_INT_4" property="detailExtItem.extendInt.extendInt4.value"/>
+        <id column="EXT_INT_5" property="detailExtItem.extendInt.extendInt5.value"/>
+        <id column="EXT_INT_6" property="detailExtItem.extendInt.extendInt6.value"/>
+        <id column="EXT_INT_7" property="detailExtItem.extendInt.extendInt7.value"/>
+        <id column="EXT_INT_8" property="detailExtItem.extendInt.extendInt8.value"/>
+        <id column="EXT_INT_9" property="detailExtItem.extendInt.extendInt9.value"/>
+        <id column="EXT_INT_10" property="detailExtItem.extendInt.extendInt10.value"/>
+        <id column="EXT_DEC_1" property="detailExtItem.extendDec.extendDec1.value"/>
+        <id column="EXT_DEC_2" property="detailExtItem.extendDec.extendDec2.value"/>
+        <id column="EXT_DEC_3" property="detailExtItem.extendDec.extendDec3.value"/>
+        <id column="EXT_DEC_4" property="detailExtItem.extendDec.extendDec4.value"/>
+        <id column="EXT_DEC_5" property="detailExtItem.extendDec.extendDec5.value"/>
+        <id column="EXT_SEL_1" property="detailExtItem.extendSel.extendSel1"/>
+        <id column="EXT_SEL_2" property="detailExtItem.extendSel.extendSel2"/>
+        <id column="EXT_SEL_3" property="detailExtItem.extendSel.extendSel3"/>
+        <id column="EXT_SEL_4" property="detailExtItem.extendSel.extendSel4"/>
+        <id column="EXT_SEL_5" property="detailExtItem.extendSel.extendSel5"/>
+        <id column="EXT_SEL_6" property="detailExtItem.extendSel.extendSel6"/>
+        <id column="EXT_SEL_7" property="detailExtItem.extendSel.extendSel7"/>
+        <id column="EXT_SEL_8" property="detailExtItem.extendSel.extendSel8"/>
+        <id column="EXT_SEL_9" property="detailExtItem.extendSel.extendSel9"/>
+        <id column="EXT_SEL_10" property="detailExtItem.extendSel.extendSel10"/>
+        <id column="EXT_CHK_1" property="detailExtItem.extendChk.extendChk1"/>
+        <id column="EXT_CHK_2" property="detailExtItem.extendChk.extendChk2"/>
+        <id column="EXT_CHK_3" property="detailExtItem.extendChk.extendChk3"/>
+        <id column="EXT_CHK_4" property="detailExtItem.extendChk.extendChk4"/>
+        <id column="EXT_CHK_5" property="detailExtItem.extendChk.extendChk5"/>
+        <id column="EXT_FILE_1" property="detailExtItem.extendFile.extendFile1.fileName"/>
+        <id column="EXT_FILE_2" property="detailExtItem.extendFile.extendFile2.fileName"/>
+        <id column="EXT_FILE_3" property="detailExtItem.extendFile.extendFile3.fileName"/>
+        <id column="EXT_FILE_BINARY_1" property="detailExtItem.extendFile.extendFile1.binary"/>
+        <id column="EXT_FILE_BINARY_2" property="detailExtItem.extendFile.extendFile2.binary"/>
+        <id column="EXT_FILE_BINARY_3" property="detailExtItem.extendFile.extendFile3.binary"/>
+        <id column="EXT_MST_1" property="detailExtItem.extendMst.extendMst1.mstKey"/>
+        <id column="EXT_MST_2" property="detailExtItem.extendMst.extendMst2.mstKey"/>
+        <id column="EXT_MST_3" property="detailExtItem.extendMst.extendMst3.mstKey"/>
+        <id column="EXT_MST_4" property="detailExtItem.extendMst.extendMst4.mstKey"/>
+        <id column="EXT_MST_5" property="detailExtItem.extendMst.extendMst5.mstKey"/>
+        <id column="EXT_MST_6" property="detailExtItem.extendMst.extendMst6.mstKey"/>
+        <id column="EXT_MST_7" property="detailExtItem.extendMst.extendMst7.mstKey"/>
+        <id column="EXT_MST_8" property="detailExtItem.extendMst.extendMst8.mstKey"/>
+        <id column="EXT_MST_NAME_1" property="detailExtItem.extendMst.extendMst1.mstName"/>
+        <id column="EXT_MST_NAME_2" property="detailExtItem.extendMst.extendMst2.mstName"/>
+        <id column="EXT_MST_NAME_3" property="detailExtItem.extendMst.extendMst3.mstName"/>
+        <id column="EXT_MST_NAME_4" property="detailExtItem.extendMst.extendMst4.mstName"/>
+        <id column="EXT_MST_NAME_5" property="detailExtItem.extendMst.extendMst5.mstName"/>
+        <id column="EXT_MST_NAME_6" property="detailExtItem.extendMst.extendMst6.mstName"/>
+        <id column="EXT_MST_NAME_7" property="detailExtItem.extendMst.extendMst7.mstName"/>
+        <id column="EXT_MST_NAME_8" property="detailExtItem.extendMst.extendMst8.mstName"/>
+
+    </resultMap>
+    <select id="searchquotreqdtlList" resultMap="QutoReqDtl_Map">
+        SELECT
+            T_QUOT_REQ_DTL.QUOT_REQ_DTL_NO,
+            T_QUOT_REQ_DTL.CURRENCY_CD,
+            T_QUOT_REQ_DTL.QUOT_REQ_AMOUNT,
+            T_QUOT_REQ_DTL.ITEM_CD,
+            T_QUOT_REQ_DTL.ITEM_NAME,
+            T_QUOT_REQ_DTL.KATASHIKI,
+            T_QUOT_REQ_DTL.MANUFACT_CD,
+            T_QUOT_REQ_DTL.MANUFACT_NAME,
+            T_QUOT_REQ_DTL.REQ_DELIV_DATE,
+            T_QUOT_REQ_DTL.UNIT_PRICE,
+            T_QUOT_REQ_DTL.QUOT_REQ_VOL,
+            T_QUOT_REQ_DTL.UNIT_NAME,
+            T_ATTACH_MNG.ATTACH_FILE_NAME,
+            T_ATTACH_MNG.ATTACH_FILE_SEQ,
+            T_ATTACH_MNG.ATTACH_SCOPE,
+            T_SLIP_MNG.SLIP_NO AS EXCLUSIVE_SLIP_NO,
+            T_SLIP_MNG.LAST_UPD_DATE AS EXCLUSIVE_LAST_UPD_DATE,
+            ${@ps.common.util.ItemSettingUtil@getItemSettingSelectSQL("T_QUOT_REQ_DTL")}
+        FROM
+            T_QUOT_REQ_DTL
+        LEFT JOIN
+            T_ATTACH_MNG
+        ON
+            T_QUOT_REQ_DTL.ATTACH_FILE_SEQ = T_ATTACH_MNG.ATTACH_FILE_SEQ
+        LEFT JOIN
+            T_SLIP_MNG
+        ON
+            T_QUOT_REQ_DTL.QUOT_REQ_DTL_NO = T_SLIP_MNG.SLIP_NO
+        WHERE
+            T_QUOT_REQ_DTL.QUOT_REQ_SEQ = #{quotReqSeq}
+        ORDER BY
+            T_QUOT_REQ_DTL.QUOT_REQ_DTL_NO
+    </select>
+
+    <!-- 伝票ステータス取得SQL -->
+    <select id="getSlipStatus" resultType="String">
+        SELECT      T_SLIP_MNG.SLIP_STATUS
+        FROM        T_SLIP_MNG
+        WHERE       T_SLIP_MNG.DELETE_FLG = '0'
+        AND         T_SLIP_MNG.SLIP_NO = #{quotReqDtlNo}
+    </select>
+
+    <!-- 見積回答情報の取得 -->
+    <resultMap type="fw.domain.slip.quot.quotresp.quotrespdetail.QuotSupplierResp" id="QuotReqSup_Map">
+        <id column="QUOT_RESP_SEQ" property="quotRespSeqNo"/>
+        <id column="QUOT_WITHDRAW_ID" property="status"/>
+        <id column="RESP_CONF_FLG" property="respConfFlg"/>
+        <id column="QUOT_ADO_IND" property="ado"/>
+        <id column="RESP_OPEN_FLG" property="respOpen"/>
+        <id column="QUOT_RESP_END_DATE" property="quotEndDate.dateOfymd"/>
+        <id column="QUOT_RESP_DATE" property="respDate.dateOfymd"/>
+        <id column="QUOT_RESP_COMMENT" property="respComments"/>
+        <id column="QUOT_SUP_LINE_NO" property="quotSupplierLineNo"/>
+        <id column="QUOT_SUP_STATUS" property="quotReqSupplierStatus"/>
+        <id column="CORRECT_CD" property="correctCd"/>
+        <id column="EDI_IND" property="ediInd"/>
+        <id column="QUOT_REQ_SEND_IND" property="dataInd.quotReqSendInd.sendInd"/>
+        <id column="SUP_CD" property="supplier.supCd"/>
+        <id column="SUP_COMPANY_CD" property="supplier.supCompanyCd"/>
+        <id column="SUP_ABBR_NAME" property="supplier.supplierName.supplierAbbrName"/>
+        <id column="SUBCON_IND" property="supplier.subcon.subconInd"/>
+        <id column="QUOT_REQ_DATE" property="quotReqDate.dateOfymd"/>
+        <id column="QUOT_RESP_AMOUNT_TOTAL" property="respAmount.amount"/>
+        <id column="CURRENCY_CD" property="currency.currencyCd"/>
+        <id column="CURRENCY_MARK" property="currency.currencyMark"/>
+        <id column="LAST_UPD_DATE" property="lastUpdDate"/>
+        <id column="SUP_LAST_UPD_DATE" property="supLastUpdDate"/>
+
+    </resultMap>
+    <select id="searchquotreqsupList" resultMap="QuotReqSup_Map">
+        SELECT T_QUOT_RESPONSE.QUOT_RESP_SEQ,
+           T_QUOT_RESPONSE.QUOT_WITHDRAW_ID,
+           T_QUOT_RESPONSE.RESP_CONF_FLG,
+           T_QUOT_RESPONSE.QUOT_ADO_IND,
+           T_QUOT_RESPONSE.RESP_OPEN_FLG,
+           T_QUOT_RESPONSE.QUOT_RESP_END_DATE,
+           T_QUOT_RESPONSE.QUOT_RESP_DATE,
+           T_QUOT_RESPONSE.QUOT_RESP_COMMENT,
+           T_QUOT_RESPONSE.LAST_UPD_DATE,
+           T_QUOT_REQ_SUP.QUOT_SUP_LINE_NO,
+           T_QUOT_REQ_SUP.QUOT_SUP_STATUS,
+           T_QUOT_REQ_SUP.CORRECT_CD,
+           T_QUOT_REQ_SUP.EDI_IND,
+           T_QUOT_REQ_SUP.QUOT_REQ_SEND_IND,
+           T_QUOT_REQ_SUP.SUP_CD,
+           T_QUOT_REQ_SUP.SUP_COMPANY_CD,
+           T_QUOT_REQ_SUP.SUP_ABBR_NAME,
+           T_QUOT_REQ_SUP.SUBCON_IND,
+           T_QUOT_REQ_SUP.QUOT_REQ_DATE,
+           T_QUOT_REQ_SUP.LAST_UPD_DATE AS "SUP_LAST_UPD_DATE",
+           T_QUOT_RESP_DTL_TOTAL.QUOT_RESP_AMOUNT_TOTAL
+      FROM T_QUOT_REQ_SUP
+      LEFT JOIN T_QUOT_RESPONSE ON T_QUOT_REQ_SUP.QUOT_REQ_NO =
+                                   T_QUOT_RESPONSE.QUOT_REQ_NO
+                               AND T_QUOT_REQ_SUP.QUOT_REQ_VERSION =
+                                   T_QUOT_RESPONSE.QUOT_REQ_VERSION
+                               AND T_QUOT_REQ_SUP.QUOT_SUP_LINE_NO =
+                                   T_QUOT_RESPONSE.QUOT_SUP_LINE_NO
+                               AND T_QUOT_RESPONSE.DELETE_FLG = '0'
+      LEFT JOIN (SELECT SUM(T_QUOT_RESP_DTL.QUOT_RESP_AMOUNT) AS QUOT_RESP_AMOUNT_TOTAL,
+         T_QUOT_RESP_DTL.QUOT_RESP_SEQ
+         FROM T_QUOT_RESP_DTL
+         GROUP BY T_QUOT_RESP_DTL.QUOT_RESP_SEQ) T_QUOT_RESP_DTL_TOTAL
+         ON T_QUOT_RESPONSE.QUOT_RESP_SEQ = T_QUOT_RESP_DTL_TOTAL.QUOT_RESP_SEQ
+     WHERE T_QUOT_REQ_SUP.QUOT_REQ_SEQ = #{quotReqSeq}
+       AND T_QUOT_REQ_SUP.DELETE_FLG = '0'
+     ORDER BY T_QUOT_REQ_SUP.QUOT_SUP_LINE_NO
+    </select>
+
+    <!-- 見積依頼テーブル更新SQL　　（見積完了） -->
+    <update id="updateQuotRequestCompletion">
+        UPDATE
+            T_QUOT_REQUEST
+        SET
+            QUOT_REQ_STATUS = '21',
+            QUOT_ADO_STATUS = null,
+            LAST_UPD_DATE = '${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}',
+            LAST_UPD_COMPANY_CD = '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}',
+            LAST_UPD_SECTION_CD = '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}',
+            LAST_UPD_USER_ID = '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}'
+        WHERE
+            QUOT_REQ_SEQ = #{quotReqSeq}
+    </update>
+
+    <!-- 見積依頼テーブル更新SQL　　（回答採用申請） -->
+    <update id="updateQuotRequestAdoption">
+        UPDATE T_QUOT_REQUEST
+           SET QUOT_ADO_STATUS     = '11',
+               QUOT_ADO_COMMENT    = #{quotAdoComment},
+               LAST_UPD_DATE       = '${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}',
+               LAST_UPD_COMPANY_CD = '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}',
+               LAST_UPD_SECTION_CD = '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}',
+               LAST_UPD_USER_ID    = '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}'
+         WHERE QUOT_REQ_SEQ = #{quotReqSeq}
+    </update>
+    <!-- 見積依頼テーブル更新SQL　　（回答情報　新着確認　更新）（取消） -->
+    <update id="updateQuotRequestConfirmation">
+        UPDATE T_QUOT_REQUEST
+           SET LAST_UPD_DATE       = '${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}',
+               LAST_UPD_COMPANY_CD = '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}',
+               LAST_UPD_SECTION_CD = '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}',
+               LAST_UPD_USER_ID    = '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}'
+         WHERE QUOT_REQ_SEQ = #{quotReqSeq}
+    </update>
+
+    <update id="updateQuotRequestCancel">
+        UPDATE T_QUOT_REQUEST
+           SET QUOT_REQ_STATUS     = #{quotReqStatus},
+               LAST_UPD_DATE       = '${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}',
+               LAST_UPD_COMPANY_CD = '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}',
+               LAST_UPD_SECTION_CD = '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}',
+               LAST_UPD_USER_ID    = '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}'
+         WHERE QUOT_REQ_SEQ = #{quotReqSeq}
+    </update>
+
+    <!-- 見積依頼取引先テーブル更新SQL　　（見積完了）（取消） -->
+    <update id="updateQuotReqsupCompletion">
+        UPDATE T_QUOT_REQ_SUP
+           SET CORRECT_CD           = '3',
+            QUOT_REQ_SEND_IND = CASE WHEN QUOT_REQ_SEND_IND = '1' THEN '1' ELSE '9' END,
+               QUOT_CANCEL_SEND_IND =
+               CASE WHEN QUOT_REQ_SEND_IND = '0' THEN '9'
+               WHEN EDI_IND = '1' THEN '0' ELSE '9' END,
+               LAST_UPD_DATE        = '${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}',
+               LAST_UPD_COMPANY_CD  = '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}',
+               LAST_UPD_SECTION_CD  = '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}',
+               LAST_UPD_USER_ID     = '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}'
+         WHERE QUOT_REQ_SEQ = #{quotReqSeq}
+           AND QUOT_SUP_LINE_NO = #{quotSupLineNo}
+           AND T_QUOT_REQ_SUP.CORRECT_CD != '3'
+    </update>
+    <!-- 見積回答テーブル更新SQL　　（見積完了） -->
+    <update id="updateQuotResponseCompletion">
+        UPDATE T_QUOT_RESPONSE
+           SET QUOT_ADO_IND        = '2',
+               LAST_UPD_DATE       = '${@fw.common.util.AppUtil@getSysDate("yyyyMMddHHmmssSSS")}',
+               LAST_UPD_COMPANY_CD = '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}',
+               LAST_UPD_SECTION_CD = '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}',
+               LAST_UPD_USER_ID    = '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}'
+         WHERE QUOT_RESP_SEQ = #{quotRespSeq}
+    </update>
+    <!-- 見積依頼取引先テーブル更新SQL　　（回答採用申請） -->
+    <update id="updateQuotReqsupAdoption">
+        UPDATE T_QUOT_REQ_SUP
+           SET QUOT_ADO_SEND_IND    =
+               CASE WHEN EDI_IND = '1' THEN '2' ELSE '9' END,
+               LAST_UPD_DATE        = '${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}',
+               LAST_UPD_COMPANY_CD  = '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}',
+               LAST_UPD_SECTION_CD  = '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}',
+               LAST_UPD_USER_ID     = '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}'
+         WHERE QUOT_REQ_SEQ = #{quotReqSeq}
+           AND QUOT_SUP_LINE_NO = #{quotSupLineNo}
+    </update>
+    <!-- 見積回答テーブル更新SQL　（回答採用申請）-->
+    <update id="updateQuotResponseAdoption">
+        UPDATE T_QUOT_RESPONSE
+           SET QUOT_ADO_IND        = #{quotAdoInd},
+               LAST_UPD_DATE       = '${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}',
+               RESP_CONF_FLG       = '1',
+               LAST_UPD_COMPANY_CD = '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}',
+               LAST_UPD_SECTION_CD = '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}',
+               LAST_UPD_USER_ID    = '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}'
+         WHERE QUOT_RESP_SEQ = #{quotRespSeq}
+    </update>
+    <!-- 見積回答テーブル更新SQL　（回答開示）-->
+    <update id="updateQuotResponseDisclosure">
+        UPDATE T_QUOT_RESPONSE
+           SET RESP_OPEN_FLG       = #{quotOpenFlg},
+               LAST_UPD_DATE       = '${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}',
+               LAST_UPD_COMPANY_CD = '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}',
+               LAST_UPD_SECTION_CD = '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}',
+               LAST_UPD_USER_ID    = '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}'
+         WHERE QUOT_RESP_SEQ = #{quotRespSeq}
+    </update>
+    <!-- 見積回答テーブル更新SQL　（新着確認）-->
+    <update id="updateQuotResponseConfirmation">
+        UPDATE T_QUOT_RESPONSE
+           SET RESP_CONF_FLG       = '1',
+               LAST_UPD_DATE       = '${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}',
+               LAST_UPD_COMPANY_CD = '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}',
+               LAST_UPD_SECTION_CD = '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}',
+               LAST_UPD_USER_ID    = '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}'
+         WHERE QUOT_REQ_NO         = #{quotReqNo}
+           AND QUOT_REQ_VERSION    = #{quotReqVersion}
+           AND RESP_CONF_FLG       = '0'
+    </update>
+    <!-- 以前の承認依頼情報を更新SQL-->
+    <update id="updateQuotAdoRequest">
+        UPDATE T_QUOT_ADO_REQUEST
+           SET DELETE_FLG          = '1',
+               LAST_UPD_DATE       = '${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}',
+               LAST_UPD_COMPANY_CD = '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}',
+               LAST_UPD_SECTION_CD = '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}',
+               LAST_UPD_USER_ID    = '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}'
+         WHERE QUOT_REQ_SEQ        = #{quotReqSeq}
+           AND DELETE_FLG          = '0'
+    </update>
+    <!-- 見積採否承認テーブルに登録SQL-->
+    <insert id="insertQuotAdoRequest">
+        INSERT INTO T_QUOT_ADO_REQUEST(
+                QUOT_ADO_SEQ,
+                QUOT_REQ_SEQ,
+                ATTACH_FILE_SEQ,
+                APP_ROUTE_NO,
+                APP_ROUTE_NAME,
+                DELETE_FLG,
+                AUTO_DELETE_FLG,
+                AUTO_DELETE_DATE,
+                LAST_UPD_DATE,
+                LAST_UPD_COMPANY_CD,
+                LAST_UPD_SECTION_CD,
+                LAST_UPD_USER_ID,
+                REG_DATE,
+                REG_COMPANY_CD,
+                REG_SECTION_CD,
+                REG_USER_ID
+           )
+        VALUES
+           (
+               #{quotAdoReqSeq},
+               #{quotReqSeq},
+               #{attachFileSeq},
+               #{appRouteNo},
+               #{appRouteName},
+               '0',
+               '0',
+               '',
+               '${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}',
+               '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}',
+               '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}',
+               '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}',
+               '${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}',
+               '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}',
+               '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}',
+               '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}')
+    </insert>
+
+    <!-- 添付管理から添付ファイル取得SQL -->
+    <select id="searchFileFromAttach" resultType="fw.domain.slip.common.attachfile.AttachFile">
+        SELECT T_ATTACH_MNG.ATTACH_FILE_NAME as "fileName",
+               T_ATTACH_MNG.ATTACH_FILE as "data"
+          FROM T_ATTACH_MNG
+         WHERE T_ATTACH_MNG.ATTACH_FILE_SEQ = #{attachFileSeq}
+    </select>
+    <!-- 見積回答添付から添付ファイル取得SQL -->
+    <select id="searchFileFromQuotRespAttach" resultType="fw.domain.slip.common.attachfile.AttachFile">
+        SELECT T_QUOT_RESP_ATTACH.ATTACH_FILE_NAME as "fileName",
+               T_QUOT_RESP_ATTACH.ATTACH_FILE as "data"
+          FROM T_QUOT_RESP_ATTACH
+         WHERE T_QUOT_RESP_ATTACH.ATTACH_FILE_SEQ = #{attachFileSeq}
+    </select>
+
+    <select id="searchOrderPriceInd" resultType="hashMap">
+        SELECT      T_ORDER.ORDER_SEQ AS "orderSeq",
+                    T_ORDER.ORDER_STATUS AS "orderStatus",
+                    T_ORDER.INFO_CD AS "infoCd",
+                    T_ORDER.UNIT_PRICE_IND AS "orderPriceInd",
+                    T_ORDER.LAST_UPD_DATE AS "lastUpdDate"
+        FROM        T_ORDER
+        WHERE       T_ORDER.ORDER_NO ${@fw.common.util.SearchModeUtil@getSql("1","quotReqNo")}
+        AND         T_ORDER.NEW_FLG = '1'
+        AND         T_ORDER.DELETE_FLG = '0'
+    </select>
+
+    <select id="downloadCount"
+        parameterType="fw.domain.slip.quot.quotstatus.purreqstatuslist.reqstatuslist.QuotStatusSearchCondition"
+        resultType="java.lang.Long">
+        SELECT COUNT(*)
+        FROM
+            <include refid="listFrom"/>
+            INNER JOIN
+                T_QUOT_REQ_DTL QUOT_REQ_DTL
+            ON
+                QUOT_REQ_DTL.QUOT_REQ_SEQ= T_QUOT_REQUEST.QUOT_REQ_SEQ
+            AND QUOT_REQ_DTL.QUOT_REQ_VERSION = T_QUOT_REQUEST.QUOT_REQ_VERSION
+            AND QUOT_REQ_DTL.DELETE_FLG = '0'
+       <where>
+           <include refid="listKeyIdentitySearchOtherWhereCondition"/>
+       </where>
+    </select>
+
+    <select id="download"
+        parameterType="fw.domain.slip.quot.quotstatus.purreqstatuslist.reqstatuslist.QuotStatusSearchCondition"
+        resultType="fw.domain.slip.quot.quotstatus.purreqstatuslist.reqstatuslist.QuotStatusDownloadItem">
+        WITH QUOT_REQUEST_IDENTIFY as
+        (
+            <include refid="downloadIdentify"/>
+        )
+        SELECT
+            T_QUOT_REQUEST.QUOT_REQ_SEQ as "quotReqSeq",
+            T_QUOT_REQUEST.QUOT_REQ_NO as "quotReqNo",
+            T_QUOT_REQUEST.QUOT_REQ_STATUS as "quotReqStatus",
+            T_QUOT_REQUEST.QUOT_ADO_STATUS as "quotAdoStatus",
+            CASE
+                WHEN T_QUOT_REQUEST.QUOT_TYPE_IND = '4' THEN NULL
+                WHEN T_QUOT_ACQ_APL.PRICE_REQ_FLG = '1' THEN '1'
+                WHEN V_PRICE_REQ_FLG.QUOT_REQ_SEQ IS NOT NULL THEN '1'
+                ELSE '0'
+            END as "priceReqFlg",
+            T_QUOT_REQUEST.FOR_SUPPRIER_COMMENT as "forSupprierComment",
+            T_QUOT_REQUEST.TITLE_NAME as "titleName",
+            T_QUOT_REQUEST.QUOT_TYPE_IND as "input.quotTypeInd",
+            T_QUOT_REQUEST.QUOT_ACQ_APL_NO as "input.quotAcqAplNo",
+            T_QUOT_REQUEST.PUR_APL_NO as "input.purAplNo",
+            QUOT_REQ_DTL.ITEM_CD as "itemCd",
+            QUOT_REQ_DTL.ITEM_NAME as "itemName",
+            QUOT_REQ_DTL.QUOT_REQ_VOL as "quotReqVol.vol",
+            QUOT_REQ_DTL.UNIT_NAME as "unitName",
+            QUOT_REQ_DTL.CURRENCY_CD as "currencyCd",
+            QUOT_REQ_DTL.UNIT_PRICE as "unitPrice.amount",
+            QUOT_REQ_DTL.QUOT_REQ_AMOUNT as "quotReqAmount.amount",
+            QUOT_REQ_DTL.REQ_DELIV_DATE as "reqDelivDate.dateOfymd",
+            T_QUOT_REQUEST.QUOT_RESP_LIMIT_DATE as "quotRespLimitDate.dateOfymd",
+            T_QUOT_REQUEST.ITEM_CLASS_L_NAME as "itemClassNameL",
+            T_QUOT_REQUEST.ITEM_CLASS_M_NAME as "itemClassNameM",
+            T_QUOT_REQUEST.ITEM_CLASS_S_NAME as "itemClassNameS",
+            T_QUOT_REQUEST.REQ_SECTION_CD as "reqSectionCd",
+            T_QUOT_REQUEST.REQ_SECTION_NAME as "reqSectionName",
+            T_QUOT_REQUEST.REQ_USER_ID as "reqUserId",
+            T_QUOT_REQUEST.REQ_USER_NAME as "reqUserName",
+            T_QUOT_REQUEST.DELIV_PLACE_CD as "delivPlaceCd",
+            T_QUOT_REQUEST.DELIV_PLACE_NAME as "delivPlaceName",
+            T_QUOT_REQUEST.BUYER_SECTION_CD as "buyerSectionCd",
+            T_QUOT_REQUEST.BUYER_SECTION_NAME as "buyerSectionName",
+            T_QUOT_REQUEST.BUYER_USER_ID as "buyerUserId",
+            T_QUOT_REQUEST.BUYER_USER_NAME as "buyerUserName",
+            QUOT_REQ_DTL.QUOT_REQ_DTL_NO as "quotReqDtlNo",
+            ${@ps.common.util.ItemSettingUtil@getItemSettingSelectSQLDomainAliasNonBinary("T_QUOT_REQUEST","quotReqExtItem")}
+        FROM
+            <include refid="listFrom"/>
+            INNER JOIN
+                (
+                    SELECT  QUOT_REQ_DTL_NO
+                    ,       QUOT_REQ_SEQ
+                    ,       QUOT_REQ_VERSION
+                    ,       ITEM_CD
+                    ,       ITEM_NAME
+                    ,       QUOT_REQ_VOL
+                    ,       UNIT_NAME
+                    ,       CURRENCY_CD
+                    ,       UNIT_PRICE
+                    ,       QUOT_REQ_AMOUNT
+                    ,       REQ_DELIV_DATE 
+                    FROM    T_QUOT_REQ_DTL
+                    WHERE   DELETE_FLG = '0'                
+                ) QUOT_REQ_DTL
+            ON
+                QUOT_REQ_DTL.QUOT_REQ_SEQ = T_QUOT_REQUEST.QUOT_REQ_SEQ
+            AND QUOT_REQ_DTL.QUOT_REQ_VERSION = T_QUOT_REQUEST.QUOT_REQ_VERSION
+        INNER JOIN  QUOT_REQUEST_IDENTIFY
+        ON          T_QUOT_REQUEST.QUOT_REQ_SEQ = QUOT_REQUEST_IDENTIFY.QUOT_REQ_SEQ
+        LEFT JOIN   (
+            SELECT  DISTINCT 
+                    QUOT_REQ_SEQ
+            FROM
+            (
+                SELECT  QUOT_REQUEST_IDENTIFY.QUOT_REQ_SEQ
+                FROM    QUOT_REQUEST_IDENTIFY
+                WHERE   EXISTS 
+                (
+                    SELECT      T_PUR_APL.PUR_APL_SEQ
+                    FROM        T_PUR_APL
+                    INNER JOIN  T_PUR_REQUEST
+                    ON          T_PUR_REQUEST.PUR_APL_SEQ = T_PUR_APL.PUR_APL_SEQ
+                    WHERE       T_PUR_REQUEST.DELETE_FLG = 0
+                    AND         T_PUR_APL.DELETE_FLG = '0'
+                    AND         T_PUR_APL.NEW_FLG = '1'
+                    AND         T_PUR_APL.PRICE_REQ_FLG = '1'
+                    AND         (
+                                    T_PUR_APL.PUR_APL_NO = QUOT_REQUEST_IDENTIFY.QUOT_REQ_NO
+                                OR  T_PUR_REQUEST.PUR_REQ_NO = QUOT_REQUEST_IDENTIFY.QUOT_REQ_NO
+                                )
+                )
+            ) 
+        ) V_PRICE_REQ_FLG
+        ON          T_QUOT_REQUEST.QUOT_REQ_SEQ = V_PRICE_REQ_FLG.QUOT_REQ_SEQ
+        <where>
+            <include refid="listKeyIdentitySearchOtherWhereCondition"/>
+        </where>
+        ORDER BY "quotReqNo", "quotReqSeq", "quotReqDtlNo"
+    </select>
+
+    <sql id="downloadIdentify">
+        SELECT DISTINCT
+                QUOT_REQ_SEQ
+        ,       QUOT_REQ_NO
+        FROM (
+            SELECT      T_QUOT_REQUEST.QUOT_REQ_SEQ
+            ,           T_QUOT_REQUEST.QUOT_REQ_NO
+            ,           QUOT_REQ_DTL.QUOT_REQ_DTL_NO
+            FROM
+                <include refid="listFrom"/>
+            INNER JOIN  
+            (
+                SELECT  QUOT_REQ_SEQ
+                ,       QUOT_REQ_VERSION
+                ,       QUOT_REQ_DTL_NO
+                FROM    T_QUOT_REQ_DTL
+                WHERE   DELETE_FLG = '0'
+            ) QUOT_REQ_DTL
+            ON          QUOT_REQ_DTL.QUOT_REQ_SEQ= T_QUOT_REQUEST.QUOT_REQ_SEQ
+            AND         QUOT_REQ_DTL.QUOT_REQ_VERSION = T_QUOT_REQUEST.QUOT_REQ_VERSION
+            <where>
+                <include refid="listKeyIdentitySearchOtherWhereCondition"/>
+            </where>
+            ORDER BY    QUOT_REQ_SEQ
+            ,           QUOT_REQ_NO
+            ,           QUOT_REQ_DTL_NO
+        ) WHERE  ROWNUM &lt;=${@fw.common.util.PropertiesUtil@getLong("DOWNLOAD_MAXCNT")}
+    </sql>
+
+    <select id="searchQuotSupplierRespDetailList" resultType="fw.domain.slip.quot.quotresp.quotrespdetail.QuotSupplierRespDetail">
+        SELECT
+            T_QUOT_REQ_SUP_QUOT_REQ_DATE.QUOT_REQ_DATE_MIN AS "quotReqDate.dateOfymd",
+            T_QUOT_REQ_SUP.SUP_CD AS "supCd",
+            T_QUOT_REQ_SUP.SUP_ABBR_NAME AS "supAbbrName",
+            T_QUOT_RESPONSE.QUOT_ADO_IND AS "quotAdoInd",
+            T_QUOT_RESP_DTL.QUOT_RESP_DELIV_DATE AS "quotRespDelivDate.dateOfymd",
+            T_QUOT_RESP_DTL.TAX_IND AS "taxInd",
+            T_QUOT_RESP_DTL.UNIT_PRICE AS "unitPrice.amount.amount",
+            T_QUOT_RESP_DTL.QUOT_RESP_VOL AS "quotRespVol.vol",
+            T_QUOT_RESP_DTL.QUOT_RESP_AMOUNT AS "quotRespAmount.amount",
+            T_QUOT_RESP_DTL.ORDER_LT AS "orderLt"
+            ,T_QUOT_RESP_DTL.CURRENCY_CD AS "currencyCd",
+            <!-- 2016/02/10 ADD RIKI_KOBAYASHI START -->
+            T_QUOT_RESPONSE.QUOT_RESP_DATE AS "quotRespDate.dateOfymd"
+            <!-- 2016/02/10 ADD RIKI_KOBAYASHI END -->
+        FROM
+            T_QUOT_REQ_SUP
+            LEFT JOIN
+            (
+            SELECT
+                MIN(T_QUOT_REQ_SUP_IN.QUOT_REQ_DATE) AS QUOT_REQ_DATE_MIN,
+                QUOT_REQ_SEQ
+            FROM
+                T_QUOT_REQ_SUP T_QUOT_REQ_SUP_IN
+            GROUP BY
+                T_QUOT_REQ_SUP_IN.QUOT_REQ_SEQ
+            ) T_QUOT_REQ_SUP_QUOT_REQ_DATE ON
+            T_QUOT_REQ_SUP.QUOT_REQ_SEQ = T_QUOT_REQ_SUP_QUOT_REQ_DATE.QUOT_REQ_SEQ
+            LEFT JOIN
+            T_QUOT_RESPONSE ON
+            T_QUOT_REQ_SUP.QUOT_REQ_NO = T_QUOT_RESPONSE.QUOT_REQ_NO AND
+            T_QUOT_REQ_SUP.QUOT_REQ_VERSION = T_QUOT_RESPONSE.QUOT_REQ_VERSION AND
+            T_QUOT_REQ_SUP.QUOT_SUP_LINE_NO = T_QUOT_RESPONSE.QUOT_SUP_LINE_NO AND
+            T_QUOT_RESPONSE.DELETE_FLG = '0'
+            LEFT JOIN
+            T_QUOT_RESP_DTL ON
+            T_QUOT_RESPONSE.QUOT_RESP_SEQ = T_QUOT_RESP_DTL.QUOT_RESP_SEQ AND
+            T_QUOT_REQ_SUP.QUOT_SUP_LINE_NO = T_QUOT_RESP_DTL.QUOT_SUP_LINE_NO AND
+            T_QUOT_RESP_DTL.QUOT_REQ_DTL_NO = #{quotReqDtlNo} AND
+            T_QUOT_RESP_DTL.DELETE_FLG = '0'
+        WHERE
+            T_QUOT_REQ_SUP.QUOT_REQ_SEQ = #{quotReqSeq} AND
+            T_QUOT_REQ_SUP.DELETE_FLG = '0'
+        ORDER BY
+            T_QUOT_REQ_SUP.QUOT_SUP_LINE_NO
+    </select>
+
+    <sql id="pageHeader">
+       SELECT * FROM (
+    </sql>
+    <sql id="pageRoot">
+        ) WHERE  ROWNUM &lt;=${@fw.common.util.PropertiesUtil@getLong("DOWNLOAD_MAXCNT")}
+    </sql>
+</mapper>

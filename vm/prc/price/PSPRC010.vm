@@ -1,0 +1,309 @@
+<!doctype html>
+<html LANG="ja">
+<head>
+#if("$!searchCondition.appStatusInd" == "" || "$!searchCondition.appStatusInd" == "ALL")
+    #set($commonTitle = "#customSpringMessage('M_PRICE_LIST')")
+#else
+    #set($commonTitle = "#customSpringMessage('M_PRICE_LIST')(#out($!searchCondition.appStatusInd_PageValue))")
+#end
+<title>#out($commonTitle)</title> ## 価格マスタ一覧
+<META http-equiv="Content-type" content="text/html; charset=UTF-8">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Content-script-type" CONTENT="text/javascript">
+<link rel="stylesheet" href="../../include/searchbox.css" type="text/css">
+<link id="CSS_FONT" rel="stylesheet" href="../../include/FontS.css" type="text/css">
+<link rel="stylesheet" href="../../include/Layout.css" type="text/css">
+<link rel="stylesheet" href="../../include/Color.css" type="text/css">
+<link rel="stylesheet" href="../../include/ime.css" type="text/css">
+<script language="javascript" type="text/javascript" src="../../include/common.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/check.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/date.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/searchbox.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/jquery-1.7.2.min.js"></script>
+<script language="javascript" type="text/javascript">
+<!--
+#set($searchViewStateID='PSPRC010')
+#set($listViewStateID='PSPRC011')
+
+## +++++ 強化-00832-000 2013/05/02 ADD SBO_wangzf START +++++
+#set($authNoFlag=$LoginUser.hasAuth(${AuthNoConstant.getValue("MASTER_PRICE_UPDATE_GRANT")}))
+## +++++ 強化-00832-000 2013/05/02 ADD SBO_wangzf START +++++
+
+var maxSearchHeight = 160;
+var minSearchHeight = 30;
+
+var pinName="PSPRC010_Pin";
+#parse("./common/common_js.vm")
+
+function onLoad(){
+    setFocusForInput();
+     var statusFlag = "#jsEscape($!status)";
+    var linkFlag = false;
+    if(statusFlag != ""){
+        linkFlag = true;
+    }    
+    
+    bodyLoad();
+    var alertMessage = "$!alertMessage";
+    if (alertMessage != ""){
+        alert(alertMessage);
+    }
+    var supplierName = "#jsEscape($!supplierName)";
+    if (supplierName != ""){
+        getObj('supplierName').value = supplierName;
+        getObj('supplierName').focus();
+    }
+    
+    var errorMsg = "$!errorMessage";
+    if (errorMsg != ""){
+       setErrorMessage("ERRORDIV", errorMsg, "DATAAREA");
+        return;
+    }
+     var isDownload = "#jsEscape($!isDownLoadValidate)";
+     if (isDownload == 'true') {
+        iframeChange("${flowExecutionUrl}&_eventId=download","pageid","SPNEW021","HIDDENAREA");
+     } else {
+        var isShowList = '#jsEscape($isShowList)';
+        if(isShowList == 'true'){
+            iframeChange("${flowExecutionUrl}&_eventId=search","pageid","PSPRC010");
+            statusFlag= false;
+        } 
+        var isShowInfo = "#jsEscape($isShowInfo)";
+        if (isShowInfo == 'true'){
+            top.iframeChange("${flowExecutionUrl}&_eventId=showUploadResult");
+        }
+        if( linkFlag && statusFlag != ""){
+           iframeChange("${flowExecutionUrl}&_eventId=search","pageid","PSPRC010");
+        }
+    }
+}
+
+function doSearch() { 
+    getObj('appStatusInd').value ="";  
+    setItemDisabled("itemClassM","itemClassS");
+    getObj("Body").target="_self";
+    ## +++++ 強化-00041-000 2013/03/25 ADD SBO_KANGJW START +++++
+    buttonDisable();
+    ## +++++ 強化-00041-000 2013/03/25 ADD SBO_KANGJW -END- +++++
+    getObj("Body").action = "${flowExecutionUrl}&_eventId=validate";  
+    getObj("Body").submit();
+}
+function doDownload() {
+    setItemDisabled("itemClassM","itemClassS");
+    //メッセージは空設定
+    getObj("TR_ERROR").style.display = "none";
+    getObj("ERRORDIV").innerHTML="";
+    getObj("Body").target = "HIDDENAREA";
+    buttonDisable();
+    setTimeout(buttonUsable,1000);
+    getObj("Body").action = "${flowExecutionUrl}&_eventId=downloadValidate";
+    
+    getObj("Body").submit();
+}
+
+function openDetailNew() {
+    getObj("Body").target="_self";
+    ## +++++ 強化-00041-000 2013/03/25 ADD SBO_KANGJW START +++++
+    buttonDisable();
+    ## +++++ 強化-00041-000 2013/03/25 ADD SBO_KANGJW -END- +++++
+    getObj('Body').action='${flowExecutionUrl}&_eventId=new';
+    getObj('Body').submit();
+}
+
+function clearSupplierName() {
+        getObj('supplierName').value='';
+}
+//-->
+</script>
+</head>
+<body topmargin="0" leftmargin="0" marginwidth="0" marginheight="0" align="center" width="100%" height="100%" onload="onLoad();" style="overflow-y:hidden;">
+<form id="Body" name="Body" action="${flowExecutionUrl}&_eventId=validate" method="post" enctype="multipart/form-data"><!-- target="DATAAREA" -->
+    <!-- ＊＊＊＊＊　カレンダーボックス　＊＊＊＊＊ -->
+    #customFormHiddenInput("itemCd.hidden" "$!defaultSearchCondition.itemCd")
+    #customFormHiddenInput("itemName.hidden" "$!defaultSearchCondition.itemName")
+    #customFormHiddenInput("katashiki.hidden" "$!defaultSearchCondition.katashiki")
+    #customFormHiddenInput("supplierCd.hidden" "$!defaultSearchCondition.supplierCd")
+    #customFormHiddenInput("supplierName.hidden" "$!defaultSearchCondition.supplierName")
+    #customFormHiddenInput("nextUpdateYMFrom.dateOfym.hidden" "$!defaultSearchCondition.nextUpdateYMFrom.dateOfym")
+    #customFormHiddenInput("nextUpdateYMTo.dateOfym.hidden" "$!defaultSearchCondition.nextUpdateYMTo.dateOfym")
+    #customFormHiddenInput("buyerUserId.hidden" "$!defaultSearchCondition.buyerUserId")
+    #customFormHiddenInput("priceMngUserId.hidden" "$!defaultSearchCondition.priceMngUserId")
+    #customFormHiddenInput("catalogInd.hidden" "$!defaultSearchCondition.catalogInd")
+    #customFormHiddenInput("validStartDateForm.dateOfymd.hidden" "$!defaultSearchCondition.validStartDateForm.dateOfymd")
+    #customFormHiddenInput("validStartDateTo.dateOfymd.hidden" "$!defaultSearchCondition.validStartDateTo.dateOfymd")
+    #customFormHiddenInput("validEndDateForm.dateOfymd.hidden" "$!defaultSearchCondition.validEndDateForm.dateOfymd")
+    #customFormHiddenInput("validEndDateTo.dateOfymd.hidden" "$!defaultSearchCondition.validEndDateTo.dateOfymd")
+    #customFormHiddenInput("searchCondition.termFlg.hidden" "$!defaultSearchCondition.searchCondition.termFlg")
+    #customFormHiddenInput("isClassify" "false")
+    #customFormHiddenInput("appStatusInd" "$!status")
+    <iframe id="CALENDARBOX" class="CALENDARBOX" framespacing="0"scrolling="no" frameborder="0" src="../../sbxCalendar/body.vm"></iframe>
+<!--検索部テーブル開始-->
+    <table class="NoBorder" width="100%" height="100%">
+        <tr>
+            <td id="SEARCH_AREA" class="SearchArea"><!-- onLoadで変更 -->
+                  #parse("./common/common_title.vm")
+                <table width="100%">
+                    <tr id="SEARCH_AREA2">
+                        <td id="Adjust" align="right" valign="top">
+                            <!-- 検索条件入力部 -->
+                            <table class="NoBorder" width="100%">
+                                <tr><td align="left" colspan="4" nowrap>#customSpringMessage('PSPRC010_HEADER_COMMENT')</td></tr>
+                            
+                            <tr>
+                                 <td nowrap class="FontSmallBold" align="right">#customSpringMessage('PRODUCT_CLASS')</td><!--品名分類-->
+                                 <td class="FontSmallBold" align="left" nowrap colspan="3">
+                                    #customProductClassSelect("searchCondition.itemClassL","searchCondition.itemClassM","searchCondition.itemClassS")
+                                 </td>
+                            </tr>
+                                 <tr>
+                                    <td nowrap class="FontSmallBold" align="right">#customSpringMessage('ITEM_CD')
+                                       <span class="FontComment">＊</span><!-- 品名コード-->
+                                    </td>
+                                    <td nowrap align="left">
+                                        #springFormInput("searchCondition.itemCd" "class='Small noIME' maxlength=25 type='text' size=44 value='$!searchCondition.itemCd'")
+                                        ## ----- 強化-01232-000 2013/05/02 DEL SBO_CHENCHENG START -----
+                                        ## -----<img class="Icon"name="" src="../../image/btnLupe.gif" onclick="itemPopup.setObject(getObj('itemCd'));masterSearch('../../src/itemPopup/search?pageid=itemPopupSearch&popupPageid=PSPRC010','itemPopup','850','600');">
+                                        ## ----- 強化-01232-000 2013/05/02 DEL SBO_CHENCHENG -END- -----
+                                        ## +++++ 強化-01232-000 2013/05/02 ADD SBO_CHENCHENG START +++++
+                                        <img class="Icon"name="" src="../../image/btnLupe.gif" onclick="itemPopup.setObject(getObj('itemCd'),getObj('itemName'));masterSearch('../../src/itemPopup/search?pageid=itemPopupSearch&popupPageid=PSPRC010','itemPopup','850','600');">
+                                        ## +++++ 強化-01232-000 2013/05/02 ADD SBO_CHENCHENG -END- +++++
+                                    </td>
+                                 </tr>
+                                 <tr>
+                                    <td nowrap class="FontSmallBold" align="right">#customSpringMessage('ITEM_NAME')
+                                        <span class="FontComment">％</span><!-- 品名-->
+                                    </td>
+                                    <td nowrap align="left">
+                                  ## +++++ 強化-01379-000 2013/05/14 ADD SBO_wangzf START +++++
+                                    #springFormInput("searchCondition.itemName" "class='Small onIME' maxLength=60 size=80")
+                                  ## +++++ 強化-01379-000 2013/05/14 ADD SBO_wangzf END +++++
+                                  ## ----- 強化-01379-000 2013/05/14 DEL SBO_wangzf START -----
+                                  ## #springFormInput("searchCondition.itemName" "class='Small onIME' maxLength=60 size=35")
+                                  ## ----- 強化-01379-000 2013/05/14 DEL SBO_wangzf START -----
+                                    </td>
+                                 </tr>
+                                 <tr>
+                                    <td nowrap class="FontSmallBold" align="right">#customSpringMessage('KATASHIKI')
+                                        <span class="FontComment">％</span><!-- 型式-->
+                                    </td>
+                                    <td nowrap align="left">
+                                        #springFormInput("searchCondition.katashiki" "class='Small inIME' maxLength=60 size=60")
+                                        
+                                    </td>
+                                 </tr>
+                                 <tr>
+                                    <td nowrap class="FontSmallBold" align="right">#customSpringMessage('SUPPLIER')
+                                    </td><!-- 取引先-->
+                                    <td nowrap align="left">
+                                        
+                                        #springFormInput("searchCondition.supplierCd" "class='Small noIME' maxlength=12 type='text' size=20 ondblclick='' onchange='clearSupplierName();'
+                                            onfocus='this.select();if(nowWarning==this) { closeWarningBox();}' onmouseover='reDrowWbx(this);' value='$!searchCondition.supplierCd'")
+                                        #springFormInput("searchCondition.supplierName" "class='SmallDsp' maxLength='30' size='71' readonly='readonly' tabIndex='-1'" "true" "")
+                                        <img class="Icon" name="" src="../../image/btnLupe.gif" onclick="supplierPopup.setObject(getObj('supplierCd'),getObj('supplierName'),getObj('supplierName'));masterSearch('../../src/supplierPopup/search?pageid=supplierPopupSearch&popupPageid=PSPRC010','supplierPopup','700','500');">
+                                    </td>
+                                    <td nowrap class="FontSmallBold" align="right">#customSpringMessage('NEXT_UPD_YM')
+                                    </td><!-- 次回見直時期-->
+                                    <td nowrap align="left">
+                                         #springFormInput("searchCondition.nextUpdateYMFrom.dateOfymFormat" "maxLength=6 size=12 class='SmallAnk noIME' onblur='dateOnBlurYYYYMM(this);' onfocus='dateOnFocus(this);'")
+                                        <span class="FontSmall">&nbsp;&nbsp;&nbsp;～&nbsp;&nbsp;&nbsp;</span>
+                                         #springFormInput("searchCondition.nextUpdateYMTo.dateOfymFormat" "maxLength=6 size=12 class='SmallAnk noIME' onblur='dateOnBlurYYYYMM(this);' onfocus='dateOnFocus(this);'")
+                                   </td>
+                                 </tr>
+                                 <tr>
+                                    <td nowrap class="FontSmallBold" align="right">#customSpringMessage('BUYER_USER_NAME')
+                                    </td><!-- 購買担当者名-->
+                                    <td nowrap class="FontSmallBold" align="left">
+                                        #customFormSingleSelect("searchCondition.buyerUserId" $userNameList "class='Small'")
+                                    </td>
+                                    
+                                    <td nowrap class="FontSmallBold" align="right">#customSpringMessage('PRICE_MNG_USER_NAME')
+                                    </td><!-- 価格管理者名-->
+                                    <td nowrap class="FontSmallBold" align="left">
+                                        #customFormSingleSelect("searchCondition.priceMngUserId" $userNameList "class='Small'")
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td class="FontSmallBold" align="right">#customSpringMessage('CATALOG_IND')
+                                    </td><!-- カタログ区分-->
+                                    <td nowrap  class="FontSmall"align="left">
+                                        #customFormRadioButtons("searchCondition.catalogInd" $cataLogIndList "" "")
+                                    </td>
+                                </tr>
+                                <tr>
+                                     <td nowrap class="FontSmallBold" align="right">#customSpringMessage('VALID_START_DATE')<!-- 有効期間（開始）--></td>
+                                     <td nowrap class="FontSmallBold" align="left">
+                                       #springFormInput("searchCondition.validStartDateForm.dateOfymdFormat" "maxLength=8 size=12 class='SmallAnk noIME' onblur='dateOnBlur(this);' onfocus='dateOnFocus(this);' ")
+                                     <img class="Icon" src="../../image/btnCalendar.gif" onclick="initSearchBox(1,getObj('validStartDateForm.dateOfymdFormat'));">
+                                      &nbsp;～&nbsp;
+                                       #springFormInput("searchCondition.validStartDateTo.dateOfymdFormat" "maxLength=8 size=12 class='SmallAnk noIME' onblur='dateOnBlur(this);' onfocus='dateOnFocus(this);' ")
+                                     <img class="Icon" src="../../image/btnCalendar.gif" onclick="initSearchBox(1,getObj('validStartDateTo.dateOfymdFormat'));">
+                                      </td>
+                                      <td nowrap class="FontSmallBold" align="right">#customSpringMessage('VALID_END_DATE')<!-- 有効期間（終了）--></td>
+                                      <td nowrap class="FontSmallBold" align="left">
+                                        #springFormInput("searchCondition.validEndDateForm.dateOfymdFormat" "maxLength=8 size=12 class='SmallAnk noIME' onblur='dateOnBlur(this);' onfocus='dateOnFocus(this);' ")
+                                         <img class="Icon" src="../../image/btnCalendar.gif" onclick="initSearchBox(1,getObj('validEndDateForm.dateOfymdFormat'));">
+                                          &nbsp;～&nbsp;
+                                        #springFormInput("searchCondition.validEndDateTo.dateOfymdFormat" "maxLength=8 size=12 class='SmallAnk noIME' onblur='dateOnBlur(this);' onfocus='dateOnFocus(this);' ")
+                                        <img class="Icon" src="../../image/btnCalendar.gif" onclick="initSearchBox(1,getObj('validEndDateTo.dateOfymdFormat'));">
+                                       </td>
+                               </tr>
+                                <tr>    
+                                    <td class="FontSmallBold" align="right"></td>
+                                    <td nowrap class="FontSmallBold" align="left" COLSPAN="2">
+                                        #customFormRadioButtons("searchCondition.searchCondition.termFlg" $termFlagList "" "")
+                                    </td>
+                                    <td class="FontSmallBold" align="right"></td>
+                                </tr>
+                                <tr>
+                                    <td class="FontComment" align="left" colspan="4">
+                                        #customSpringMessage('PSPRC010_FOOTER_COMMENT') ## ＊:前方一致 / ％:中間一致 / なし:完全一致
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                        <td nowrap class="FontSmallBold" align="right" valign="top">
+                            <br>
+                            <br>
+                            <br>
+                            <!-- ＊＊＊＊＊　検索実行　＊＊＊＊＊ -->
+                            <input type="button" class="LargeButton" value="#customSpringMessage('ACTION_SEARCH')" onclick="javascript:doSearch()"/>
+                            <br>
+                            ## +++++ 強化-00928-000 2013/06/24 ADD SBO_lichao START +++++
+                            ##<br><a href="javascript:clear('Adjust');" id="clearSearch">#customSpringMessage('ACTION_CLEAR_SEARCH_CRITERIA')<!-- 検索条件をクリアする --></a>
+                            <br><a href="javascript:clear();" id="clearSearch">#customSpringMessage('ACTION_CLEAR_SEARCH_CRITERIA')<!-- 検索条件をクリアする --></a>
+                            ## +++++ 強化-00928-000 2013/06/24 ADD SBO_lichao -END- +++++
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+        <tr id="UPLOAD_AREA">
+            <td class="UploadArea">
+                #parse("./common/common_download.vm")
+            </td>
+        </tr>
+        <tr id ="TR_ERROR" style="display:none;"><td class="error" style="height:0px;">
+            <div id="ERRORDIV">$!errorMessage </div>
+        </td></tr>
+        <tr>
+            <td class="NoBorder" style="height:auto;">
+                <iframe id="DATAAREA" name="DATAAREA" framespacing="0" frameborder="0" src="../../layout/default.vm" scrolling="no" frameborder="no" style="position:static;width:100%;border:0px solid #999999;height:100%;z-index:0;"></iframe>
+            </td>
+        </tr>
+    </table>
+<iframe id="HIDDENAREA" name="HIDDENAREA" framespacing="0" frameborder="0" src="" scrolling="no" frameborder="no" style="display:none"></iframe>
+</form>
+<script type="text/javascript">
+    document.getElementById("clearSearch").onclick = function (){
+        var itemL = document.getElementById("itemClassL");
+        var itemM = document.getElementById("itemClassM");
+        var itemS = document.getElementById("itemClassS");
+        itemL.selectedIndex = 0;
+        itemM.selectedIndex = 0;
+        itemS.selectedIndex = 0;
+        itemM.disabled = true;
+        itemS.disabled = true;
+    }
+</script>
+</body>
+</html>

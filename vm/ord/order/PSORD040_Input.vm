@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta http-equiv="Content-type" content="text/html; charset=UTF-8">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Content-script-type" CONTENT="text/javascript">
+<link rel="stylesheet" href="../../include/Layout.css" type="text/css">
+<link id="CSS_FONT" rel="stylesheet" href="../../include/FontS.css" type="text/css">
+<link rel="stylesheet" href="../../include/searchbox.css" type="text/css">
+<link rel="stylesheet" href="../../include/Color.css" type="text/css">
+<link rel="stylesheet" href="../../include/ime.css" type="text/css">
+<script language="javascript" type="text/javascript" src="../../include/common.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/check.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/date.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/searchbox.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/jquery-1.7.2.min.js"></script>
+<script language="javascript" type="text/javascript">
+<!--
+top.backUrl="${flowExecutionUrl}&_eventId=back";
+top.homeUrl="${flowExecutionUrl}&_eventId=home";
+#set($isActiveProfileBudget = "#isActiveProfile('budget')")
+#parse("./common/common_js.vm")
+#parse("./ord/order/PSORD040_js.vm")
+//-->
+</script>
+</head>
+<body class="CreateArea" onload="onload();">
+<form id="Body" name="Body" method="post" enctype="multipart/form-data">
+    <table class="HomeBox" height="100%">
+        <tr>
+            <td style="padding: 16px 16px 16px 16px;">
+                <iframe id="CALENDARBOX" class="CALENDARBOX" framespacing="0"scrolling="no" frameborder="0" src="../../sbxCalendar/body.vm"></iframe>
+                <table class="NoBorder">
+                    <tr>
+                        <td align="left">
+                <table class="NoBorder" width="98%">
+                    <tr>
+                        <td>
+                            <u><img src="../../image/mrkCircle.gif"><span id="StepTitle" class="FontStepTitle"><script>document.write(parent.document.title);</script></span></u><br><br>
+                            <span id="STEPMSG" class="FontSmallBold DarkBlue">#customSpringMessage('PSORD040_HEADER_COMMENT')
+                            </span>
+                            <br>
+                        </td>
+                        <td align="right" valign="middle" id="Submit1" nowrap>
+                            #if($!eventType == 'page' || ($!eventType == 'register' && !$!domain.isAdoFlg()))
+                            <input name="Button1" type="button" class="LargeButton Red" value="#customSpringMessage('REQ_RETURN')" onclick="remand();" disabled><!--依頼元差戻し-->
+                            #end
+                            #if($!domain.isTampSaveBtnDsp())
+                            <input name="Button1" type="button" class="LargeButton" value="#customSpringMessage('TEMPORARY_PRESERVATION')" onclick="tempSave();" disabled><!--一時保存-->
+                            #end
+                            <input name="Button2" type="button" class="LargeButton" value="#customSpringMessage('ACTION_REGISTER')" onclick="apply();" disabled><!--登　録-->
+                            #if($!domain.reqInd.reqInd == "3" && $!domain.isQuotStatus() && $!domain.ordPriceSearchDsp== "1"
+                                && $!eventType != 'stop')
+                                <input name="Button2" type="button" class="LargeButton" value="価格参照" onclick="pricePopup.setObject(getObj('purAplManagement.loadSection.loadSection.company.companyCd'),getObj('accounting.orderAmount.orderVolume.orderVol.volFormat'));
+                                masterSearch('../../src/pricePopup/search?pageid=pricePopupSearch&popupPageid=PSORD040',
+                                           'PriceSearch',
+                                           '850',
+                                           '600');"  disabled>
+                            #end
+                        </td>
+                    </tr>
+                     <tr id ="TR_ERROR" style="display:none;"><td colspan='2' class="error" style="height:0px;">
+                        $!errorMessage
+                    </td></tr>
+                </table>
+                <table class="Box1G ListBorderWidth" width="100%">
+                    <tbody class="Box1G ListBorderWidth">
+                        #if($!eventType == 'update'
+                            || ($!eventType == 'reApply' && $!domain.correctInd.correctInd == '2'))
+                            #parse("./ord/order/PSORD040_Update.vm")
+                        #elseif($!eventType == 'stop')
+                            #parse("./ord/order/PSORD040_Stop.vm")
+                        #else
+                            #parse("./ord/order/PSORD040_Insert.vm")
+                        #end
+                        <script language="javascript" type="text/javascript">
+                        dispUnitPriceInd();
+                        </script>
+                    </tbody>
+                </table>
+                #if($!eventType == 'page' || ($!eventType == 'register' && !$!domain.isAdoFlg()))
+                <br>
+                    <table class="Box1G ListBorderWidth" width="100%">
+                    <tbody class="Box1G ListBorderWidth">
+                        <tr>
+                            <td class="Box1H FontBoxHeader">#customSpringMessage('RETURN_REASON')</td><!--差戻し理由-->
+                            <td class="Box1D" colspan="2">
+                                #springFormTextarea("domain.appManagement.backApp.backAppReason.backReason.comment" "style='width:98%;' rows='4' maxLength='200' class='Small'")
+                            </td>
+                        </tr>
+                        <tr>
+                            <td class="Box1H FontBoxHeader">#customSpringMessage('RETURN_DESTINATION')</td><!--差戻し先-->
+                            #if($!existsBackAppUser)
+                                <td class="Box1D"  colspan="2">
+                                #customFormHiddenInput("appManagement.backApp.backAppFirstUser.userID" "$!domain.appManagement.backApp.backAppFirstUser.userID")
+                                <span nowrap class="FontSmall">#out($!domain.user.reqUser.reqUser.userName)</span>
+                                </td>
+                            #else
+                                <td class="Box1D"  colspan="2">
+                                    #customFormSingleSelect("domain.appManagement.backApp.backAppFirstUser.userID" $backAppUserList "class='Small'")
+                                    <span class="FontWarn">#customSpringMessage("APL_USER_COMMENT")</span>
+                                </td>
+                            #end
+
+                        </tr>
+                    </tbody>
+                </table>
+                #end
+                <br>
+                <table class="NoBorder" width="98%">
+                    <tr>
+                        <td>#customSpringMessage('PSORD040_FOOTER_COMMENT')</td>## ※印の項目は、必須入力です。
+                        <td align="right" nowrap>
+                            #if($!eventType == 'page' || ($!eventType == 'register' && !$!domain.isAdoFlg()))
+                            <input name="Button1" type="button" class="LargeButton Red" value="#customSpringMessage('REQ_RETURN')" onclick="remand();" disabled><!--依頼元差戻し-->
+                            #end
+                            #if($!domain.isTampSaveBtnDsp())
+                            <input name="Button1" type="button" class="LargeButton" value="#customSpringMessage('TEMPORARY_PRESERVATION')" onclick="tempSave();" disabled><!--一時保存-->
+                            #end
+                            <input name="Button2" type="button" class="LargeButton" value="#customSpringMessage('ACTION_REGISTER')" onclick="apply();" disabled><!--登　録-->
+                            #if($!domain.reqInd.reqInd == "3" && $!domain.isQuotStatus() && $!domain.ordPriceSearchDsp== "1"
+                                && $!eventType != 'stop')
+                                <input name="Button2" type="button" class="LargeButton" value="価格参照" onclick="pricePopup.setObject(getObj('purAplManagement.loadSection.loadSection.company.companyCd'),getObj('accounting.orderAmount.orderVolume.orderVol.volFormat'));
+                                masterSearch('../../src/pricePopup/search?pageid=pricePopupSearch&popupPageid=PSORD040',
+                                           'PriceSearch',
+                                           '850',
+                                           '600');" disabled>
+                            #end
+                        </td>
+                    </tr>
+                </table>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+</form>
+</body>
+</html>

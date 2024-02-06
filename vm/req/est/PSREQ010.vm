@@ -1,0 +1,1064 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<title>
+## ----- 強化-00334-000 2013/03/23 DEL SBO_pangzhen START -----
+## #if ($!pagePattern == "new" || $!pagePattern ==  "history" || $!pagePattern ==  "edit")
+## ----- 強化-00334-000 2013/03/23 DEL SBO_pangzhen -END- -----
+## +++++ 強化-00334-000 2013/03/23 ADD SBO_pangzhen START +++++
+#if ($!pagePattern == "new" || $!pagePattern ==  "history" || $!pageFrom == "")
+## +++++ 強化-00334-000 2013/03/23 ADD SBO_pangzhen -END- +++++
+#customSpringMessage("QUOT_ACQ_REQ_INPUT")
+## ----- 強化-00334-000 2013/03/23 DEL SBO_pangzhen START -----
+## #elseif ($!pagePattern == "back" || $!pagePattern ==  "reApply")
+## ----- 強化-00334-000 2013/03/23 DEL SBO_pangzhen -END- -----
+## +++++ 強化-00334-000 2013/03/23 ADD SBO_pangzhen START +++++
+#elseif ($!pagePattern == "back" || $!pagePattern ==  "reApply" || $!pagePattern ==  "edit")
+## +++++ 強化-00334-000 2013/03/23 ADD SBO_pangzhen -END- +++++
+#customSpringMessage("QUOT_ACQ_REQ_CORRECT")
+#end
+</title>
+<meta http-equiv="Content-type" content="text/html; charset=UTF-8">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Content-script-type" content="text/javascript">
+
+<link rel="stylesheet" href="../../include/Layout.css" type="text/css">
+<link id="CSS_FONT" rel="stylesheet" href="../../include/FontS.css" type="text/css">
+<link rel="stylesheet" href="../../include/searchbox.css" type="text/css">
+<link rel="stylesheet" href="../../include/Color.css" type="text/css">
+<link rel="stylesheet" href="../../include/ime.css" type="text/css">
+<script language="javascript" type="text/javascript" src="../../include/common.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/check.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/date.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/searchbox.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/jquery-1.7.2.min.js"></script>
+<script language="javascript" type="text/javascript">
+<!--
+
+#parse("./common/common_js.vm")
+var chgUserId = "";
+var preItemCode = "";
+var isClickable = false;
+//変更前の納入先コード
+var delivPlaceCd_x = "";
+var manufacCd_x = "";
+
+display();
+function onLoad() {
+    setFocusForInput();
+    setItemDisplay();
+    disSupplierAbbrName();
+
+    setAppRouteByAmount('A',
+                        getObj('totalAmount.amountFormat').value,
+                        getObj('quotAcqReqItemList[0].currency.currencyCd').value);
+    setChgUserIdValue();
+
+    setManufactDisplay();
+
+    #if("$!alertMessage" != "" && "$!isSuccess" == "" && "$!errorMessage" == "" )
+        #if($!alertMessage.indexOf("E035") != -1)
+            alert("$!alertMessage");
+        #else
+
+            #if($!pagePattern == "new" || $!pagePattern ==  "history" || $!pageFrom == "")
+                if (confirm("$!alertMessage"))
+                    getObj("Body").action="${flowExecutionUrl}&_eventId=apply&checkPass=1";
+                    buttonDisable();
+                    getObj("Body").submit();
+                    return;
+            #elseif($!pagePattern == "back" || $!pagePattern ==  "reApply" || $!pagePattern ==  "edit")
+                if (confirm("$!alertMessage"))
+                    getObj("Body").action="${flowExecutionUrl}&_eventId=applyAgain&checkPass=1";
+                    buttonDisable();
+                    getObj("Body").submit();
+                    return;
+            #end
+
+        #end
+    #end
+
+    var errorMsg = "$!errorMessage";
+    if (errorMsg != ""){
+        document.getElementById("TR_ERROR").style.display = "";
+        isClickable = true;
+        return;
+    }
+    #set($param = "#customSpringMessage('QUOT_ACQ_REQ')" )
+
+    var pattern = '#jsEscape($!pagePattern)';
+    var isSuccess = '#jsEscape($!isSuccess)';
+    var istempSuccess = '#jsEscape($!isTempSuccess)';
+    var from = '#jsEscape($!pageFrom)';
+
+    if(isSuccess == 'true'){
+        if(pattern == 'back' || pattern == 'reApply' || pattern == 'edit') {
+            alert('#customMessageArgs("I002",[$param])'+'\n\n#customSpringMessage('QUOT_ACQ_APL_NO'):$!domain.quotAcqReqIdentify.quotAcqAplNo.quotAcqAplNo');
+        } else {
+            alert('#customMessageArgs("I005",[$param])'+'\n\n#customSpringMessage('QUOT_ACQ_APL_NO'):$!domain.quotAcqReqIdentify.quotAcqAplNo.quotAcqAplNo');
+        }
+        buttonDisable();
+        if('PSREQ031' == from) {
+            top.iframeChange('${flowExecutionUrl}&_eventId=back');
+        } else if('PSREQ051' == from) {
+            top.iframeChange('${flowExecutionUrl}&_eventId=back');
+        } else if('PSREQ061' == from) {
+            top.iframeChange('${flowExecutionUrl}&_eventId=back');
+        } else if('PSREQ062' == from) {
+            top.iframeChange('${flowExecutionUrl}&_eventId=backlist');
+        } else {
+            top.iframeChange('${flowExecutionUrl}&_eventId=showdetail','pageid','PSREQ010','pattern','new', 'from','#jsEscape($!pageFrom)','isInitIndividualApr','true' );
+        }
+        return;
+    } else {
+        if(istempSuccess == 'true'){
+           alert('#customMessageArgs("I030",[$param])'+'\n\n#customSpringMessage('QUOT_ACQ_APL_NO'):$!domain.quotAcqReqIdentify.quotAcqAplNo.quotAcqAplNo');
+           buttonDisable();
+           top.iframeChange('${flowExecutionUrl}&_eventId=showdetail','pageid','PSREQ010','pattern','edit', 'quotAcqAplSeq','#jsEscape($!domain.quotAcqReqIdentify.quotAcqAplSeqNo)','from','#jsEscape($!pageFrom)');
+           return;
+        }
+    }
+
+    isClickable = true;
+}
+
+function disSupplierAbbrName() {
+    if(getObj("hopeSupplier.hopeSupplier.supCd").value == ''){
+        getObj("hopeSupplier.hopeSupplier.supplierName.supplierAbbrName").readOnly = false;
+        getObj("hopeSupplier.hopeSupplier.supplierName.supplierAbbrName").style.backgroundColor = 'white';
+
+    } else {
+        getObj("hopeSupplier.hopeSupplier.supplierName.supplierAbbrName").readOnly = true;
+        getObj("hopeSupplier.hopeSupplier.supplierName.supplierAbbrName").style.backgroundColor = '#ECECEC';
+    }
+}
+
+function display(){
+    ## ----- 強化-00334-000 2013/03/23 DEL SBO_pangzhen START -----
+    ## #if ($!pagePattern == "back" || $!pagePattern ==  "reApply")
+    ## ----- 強化-00334-000 2013/03/23 DEL SBO_pangzhen -END- -----
+    ## +++++ 強化-00334-000 2013/03/23 ADD SBO_pangzhen START +++++
+    #if ($!pagePattern == "back" || $!pagePattern ==  "reApply" || $!pagePattern ==  "edit")
+    ## +++++ 強化-00334-000 2013/03/23 ADD SBO_pangzhen -END- +++++
+        //objs = document.getElementsByName("Button2");
+        //objs[0].value = "#customSpringMessage('RE_REQ')";
+        //objs[1].value = "#customSpringMessage('RE_REQ')";
+        top.document.title = "#customSpringMessage('QUOT_ACQ_REQ_CORRECT')";
+    #end
+    ## ----- 強化-00334-000 2013/03/23 DEL SBO_pangzhen START -----
+    ## #if ($!pagePattern == "new" || $!pagePattern ==  "history" || $!pagePattern ==  "edit")
+    ## ----- 強化-00334-000 2013/03/23 DEL SBO_pangzhen -END- -----
+    ## +++++ 強化-00334-000 2013/03/23 ADD SBO_pangzhen START +++++
+    #if ($!pagePattern == "new" || $!pagePattern ==  "history" || $!pageFrom == "")
+    ## +++++ 強化-00334-000 2013/03/23 ADD SBO_pangzhen -END- +++++
+        top.document.title = "#customSpringMessage('QUOT_ACQ_REQ_INPUT')";
+    #end
+    #if ($!pagePattern == "new")
+     top.backUrl="${flowExecutionUrl}&_eventId=home";
+    #end
+    #if ($!pageFrom == "")
+     top.backUrl="${flowExecutionUrl}&_eventId=home";
+    #end
+}
+
+function exec_pre() {
+    if(!isClickable) {
+        return;
+    }
+
+	if(isFresh() == true) {
+		return;
+	}
+    ## +++++ 強化-00041-000 2013/03/22 ADD SBO_KANGJW START +++++
+    buttonDisable();
+    ## +++++ 強化-00041-000 2013/03/22 ADD SBO_KANGJW END +++++
+
+    setUnitCdEnable();
+    setFileDeleteFlg();
+    getObj("Body").action="${flowExecutionUrl}&_eventId=tempSave";
+    getObj("Body").submit();
+
+}
+
+function execReApply() {
+    if(!isClickable) {
+        return;
+    }
+
+	if(isFresh() == true) {
+		return;
+	}
+    #set( $quotreq = "#customSpringMessage('QUOT_ACQ_REQ')" )
+    #set( $update = "#customSpringMessage('UPDATE')" )
+    if( !confirm('#customMessageArgs("W001",[$quotreq,$update])') ) {
+        return;
+    }
+
+    ## +++++ 強化-00041-000 2013/03/22 ADD SBO_KANGJW START +++++
+    buttonDisable();
+    ## +++++ 強化-00041-000 2013/03/22 ADD SBO_KANGJW END +++++
+
+    setUnitCdEnable();
+    setFileDeleteFlg();
+    getObj("Body").action="${flowExecutionUrl}&_eventId=applyAgain";
+    getObj("Body").submit();
+}
+
+function exec() {
+    if(!isClickable) {
+        return;
+    }
+
+	if(isFresh() == true) {
+		return;
+	}
+    #set( $quotreq = "#customSpringMessage('QUOT_ACQ_REQ')" )
+    #set( $register = "#customSpringMessage('ACTION_REGISTER')" )
+    if( !confirm('#customMessageArgs("W001",[$quotreq,$register])') ) {
+        return;
+    }
+
+    ## +++++ 強化-00041-000 2013/03/22 ADD SBO_KANGJW START +++++
+    buttonDisable();
+    ## +++++ 強化-00041-000 2013/03/22 ADD SBO_KANGJW END +++++
+
+
+    setUnitCdEnable();
+    ## IT2-01185-000 2013/03/14 MODIFY SBO_SOKOU START
+    setFileDeleteFlg();
+    ## IT2-01185-000 2013/03/14 MODIFY SBO_SOKOU END
+    getObj("Body").action="${flowExecutionUrl}&_eventId=apply";
+    getObj("Body").submit();
+}
+
+function isFresh() {
+	var isSuccess = '#jsEscape($!isSuccess)';
+    var istempSuccess = '#jsEscape($!isTempSuccess)';
+	if(isSuccess == 'true'
+		|| istempSuccess == 'true') {
+		return true;
+	} else {
+	    return false;
+	}
+}
+
+function addDetail() {
+
+    ## +++++ 強化-00041-000 2013/03/22 ADD SBO_KANGJW START +++++
+    buttonDisable();
+    ## +++++ 強化-00041-000 2013/03/22 ADD SBO_KANGJW END +++++
+
+    setUnitCdEnable();
+    setFileDeleteFlg();
+    getObj("Body").action="${flowExecutionUrl}&_eventId=addDetail";
+    getObj("Body").submit();
+}
+
+function deleteDetail(index) {
+    setUnitCdEnable();
+    setFileDeleteFlg();
+    getObj("Body").action="${flowExecutionUrl}&_eventId=deleteDetail&detailIndex="+index;
+    getObj("Body").submit();
+}
+
+
+function downloadFile(seqNo,index, detailindex) {
+    iframeChange("${flowExecutionUrl}&_eventId=download",'seqNo',seqNo, 'index',index, 'detailindex',detailindex);
+}
+function downloadExt(filename, file) {
+    iframeChange("${flowExecutionUrl}&_eventId=downloadext", 'filename', filename, 'file', file);
+}
+function pasteItem(name) {
+    objs = document.getElementsByName(name);
+    #foreach($!quotAcqReqItem in $!domain.quotAcqReqItemList)
+        getObj('quotAcqReqItemList[$velocityCount].hopeDlvEst.hopeDlvEst.dateOfymdFormat').value = objs[0].value;
+    #end
+}
+
+## ----- DEL 2013/04/24 DAIKO_KANEKO START -----
+#*
+function amountByAjax() {
+    $.post(
+        "../../buyPriceController/itemAmount",
+        {
+            #foreach($!quotReqItem in $!domain.quotAcqReqItemList)
+                "amountArray[$velocityCount].amountFormat":getObj('quotAcqReqItemList[$velocityCount].hopeAmount.hopeAmount.amountFormat').value,
+            #end
+            currencyCd:getObj('quotAcqReqItemList[0].currency.currencyCd').value
+        },
+        function(data){
+            getObj('orderAmount').innerHTML = data.amount.amountFormat;
+            getObj('totalAmount.amountFormat').value = data.amount.amountFormat;
+        }
+    );
+}
+*#
+## ----- DEL 2013/04/24 DAIKO_KANEKO END -----
+
+## +++++ ADD 2013/04/24 DAIKO_KANEKO START +++++
+function amountByAjax(index) {
+    if(getObj('quotAcqReqItemList['+index+'].hopePrice.hopePrice.amountFormat').value=="") {
+        getObj('currencyMark['+index+']').innerHTML = "";
+        getObj('hopeAmount['+index+']').innerHTML = "";
+        getObj('quotAcqReqItemList['+index+'].hopeAmount.hopeAmount.amountFormat').value = '';
+    }
+
+    if (getObj('quotAcqReqItemList['+index+'].hopeVol.hopeVol.volFormat').value=="") {
+        getObj('currencyMark['+index+']').innerHTML = "";
+        getObj('hopeAmount['+index+']').innerHTML = "";
+        getObj('quotAcqReqItemList['+index+'].hopeAmount.hopeAmount.amountFormat').value = '';
+    }
+
+    //金額設定
+    if (getObj('quotAcqReqItemList['+index+'].hopePrice.hopePrice.amountFormat').value != "" &&
+        getObj('quotAcqReqItemList['+index+'].hopeVol.hopeVol.volFormat').value != "") {
+
+        getObj('currencyMark['+index+']').innerHTML = "#out($!currentMark)";
+
+        $.ajax({
+            type: "POST",
+            async:false,
+            url:"../../buyPriceController/calculateAmount",
+            data: {
+                "price.amountFormat":getObj('quotAcqReqItemList['+index+'].hopePrice.hopePrice.amountFormat').value,
+                "vol.volFormat":getObj('quotAcqReqItemList['+index+'].hopeVol.hopeVol.volFormat').value,
+                currencyCd:getObj('quotAcqReqItemList['+index+'].currency.currencyCd').value
+            },
+            success:function(data){
+                getObj('quotAcqReqItemList['+index+'].hopeAmount.hopeAmount.amountFormat').value = data.amount.amountFormat;
+
+                if (data.amount.amountFormat != "") {
+                    getObj('hopeAmount['+index+']').innerHTML = data.amount.amountFormat;
+                }
+
+                getObj('quotAcqReqItemList['+index+'].hopePrice.hopePrice.amountFormat').value = data.price.amountFormat;
+            }
+         });
+     }
+
+    $.ajax({
+        type: "POST",
+        async:false,
+        url:"../../buyPriceController/itemAmount",
+        data: {
+            #foreach($!quotReqItem in $!domain.quotAcqReqItemList)
+                "amountArray[$velocityCount].amountFormat":getObj('quotAcqReqItemList[$velocityCount].hopeAmount.hopeAmount.amountFormat').value,
+            #end
+            currencyCd:getObj('quotAcqReqItemList[0].currency.currencyCd').value
+        },
+        success:function(data){
+            getObj('orderAmount').innerHTML = data.amount.amountFormat;
+            getObj('totalAmount.amountFormat').value = data.amount.amountFormat;
+            setAppRouteByAmount('A',
+                    getObj('totalAmount.amountFormat').value,
+                    getObj('quotAcqReqItemList[0].currency.currencyCd').value);
+        }
+    });
+}
+## +++++ ADD 2013/04/24 DAIKO_KANEKO -END- +++++
+
+function userSelectAfterProc() {
+    //メール更新
+    getObj('link.reqUser.reqUser.mailAddr.mail').innerHTML=getObj('reqUser.reqUser.mailAddr.mail').value;
+}
+
+ function supcdOnBlur() {
+    var supCd = getObj("hopeSupplier.hopeSupplier.supCd").value;
+    if(supCd == "") {
+        getObj("hopeSupplier.hopeSupplier.supplierName.supplierAbbrName").value = "";
+        disSupplierAbbrName();
+    } else {
+         $.ajax({
+            type: "POST",
+            async:false,
+            url:"../../getSupplierInfoOnBlur",
+            data: {
+                termFlag:'0',
+                companyCd:'#jsEscape($!userCompanyCd)',
+                supCd:supCd
+            },
+            success:function(data){
+                //設定
+                getObj("hopeSupplier.hopeSupplier.supplierName.supplierAbbrName").value = data.supAbbrName;
+                getObj("hopeSupplier.hopeSupplier.supplierName.supplierName").value = data.supName;
+
+            }
+         });
+
+   }
+ }
+
+ function itemOnblur(index) {
+    var itemCd = getObj("quotAcqReqItemList["+index+"].productRegistration.item.itemCd").value;
+    if(itemCd == preItemCode) {
+        return;
+    } else {
+        preItemCode = itemCd;
+    }
+
+    if(itemCd == ""){
+        getObj("quotAcqReqItemList["+index+"].productRegistration.item.itemName").value = "";
+        getObj("quotAcqReqItemList["+index+"].productRegistration.item.katashiki").value = "";
+        getObj("quotAcqReqItemList["+index+"].productRegistration.item.manufact.manufactCd").value = "";
+        getObj("quotAcqReqItemList["+index+"].productRegistration.item.manufact.manufactName").value = "";
+    } else {
+         $.ajax({
+            type: "POST",
+            async:false,
+            url:"../../getItemInfoOnBlur",
+            data: {
+                termFlag:'0',
+                companyCd:'#jsEscape($!userCompanyCd)',
+                sectionPlaceCd:'#jsEscape($!userSectPlaceCd)',
+                itemCd:itemCd
+            },
+            success:function(data){
+                //設定
+                getObj("quotAcqReqItemList["+index+"].productRegistration.item.itemName").value = data.itemName;
+                getObj("quotAcqReqItemList["+index+"].productRegistration.item.katashiki").value = data.katashiki;
+
+                if(data.itemCd != "") {
+                    getObj("quotAcqReqItemList["+index+"].productRegistration.item.manufact.manufactCd").value = data.manufactCd;
+                    getObj("quotAcqReqItemList["+index+"].productRegistration.item.manufact.manufactName").value = data.manufactName;
+                    getObj("quotAcqReqItemList["+index+"].productRegistration.item.unit.unitCd").value = data.unitCd;
+                }
+            }
+         });
+      }
+      setItemDisplay();
+ }
+
+ function itemSelectAfterProc() {
+   setItemDisplay();
+ }
+
+function setItemDisplay(){
+
+     var focusId = document.activeElement.id;
+
+     if (focusId != null && focusId != ""){
+         getObj(focusId).blur();
+     }
+
+#foreach($!quotReqItem in $!domain.quotAcqReqItemList)
+     if(getObj("quotAcqReqItemList[$velocityCount].productRegistration.item.itemCd").value == ''){
+         getObj("quotAcqReqItemList[$velocityCount].productRegistration.item.itemName").readOnly = false;
+         getObj("quotAcqReqItemList[$velocityCount].productRegistration.item.itemName").style.backgroundColor = 'white';
+         getObj("quotAcqReqItemList[$velocityCount].productRegistration.item.katashiki").readOnly = false;
+         getObj("quotAcqReqItemList[$velocityCount].productRegistration.item.katashiki").style.backgroundColor = 'white';
+         getObj("quotAcqReqItemList[$velocityCount].productRegistration.item.manufact.manufactCd").readOnly = false;
+         getObj("quotAcqReqItemList[$velocityCount].productRegistration.item.manufact.manufactCd").style.backgroundColor = 'white';
+
+         if(getObj("quotAcqReqItemList[$velocityCount].productRegistration.item.manufact.manufactCd").value == "") {
+             getObj("quotAcqReqItemList[$velocityCount].productRegistration.item.manufact.manufactName").readOnly = false;
+             getObj("quotAcqReqItemList[$velocityCount].productRegistration.item.manufact.manufactName").style.backgroundColor = 'white';
+         }
+
+         getObj("quotAcqReqItemList[$velocityCount].productRegistration.item.unit.unitCd").disabled = "";
+         getObj("img.quotAcqReqItemList[$velocityCount].productRegistration.item.manufact.manufactCd").disabled= "";
+     } else {
+         getObj("quotAcqReqItemList[$velocityCount].productRegistration.item.itemName").readOnly = true;
+         getObj("quotAcqReqItemList[$velocityCount].productRegistration.item.itemName").style.backgroundColor = '#ECECEC';;
+         getObj("quotAcqReqItemList[$velocityCount].productRegistration.item.katashiki").readOnly = true;
+         getObj("quotAcqReqItemList[$velocityCount].productRegistration.item.katashiki").style.backgroundColor = '#ECECEC';
+         getObj("quotAcqReqItemList[$velocityCount].productRegistration.item.manufact.manufactCd").readOnly = true;
+         getObj("quotAcqReqItemList[$velocityCount].productRegistration.item.manufact.manufactCd").style.backgroundColor = '#ECECEC';
+         getObj("quotAcqReqItemList[$velocityCount].productRegistration.item.manufact.manufactName").readOnly = true;
+         getObj("quotAcqReqItemList[$velocityCount].productRegistration.item.manufact.manufactName").style.backgroundColor = '#ECECEC';
+         getObj("quotAcqReqItemList[$velocityCount].productRegistration.item.unit.unitCd").disabled = true;
+         getObj("img.quotAcqReqItemList[$velocityCount].productRegistration.item.manufact.manufactCd").disabled= true;
+     }
+ #end
+
+     if (focusId != null && focusId != ""){
+         getObj(focusId).focus();
+     }
+ }
+
+function setFileDeleteFlg() {
+    var del1 = getObj("rangeByAttachFile1.attachFile.screenDelFlg").value;
+    var file1 = getObj("rangeByAttachFile1.attachFile.screenFile").value;
+    if("1" == del1 && file1.length > 0) {
+        getObj("rangeByAttachFile1.attachFile.screenDelFlg").value = "0";
+    }
+
+    var del2 = getObj("rangeByAttachFile2.attachFile.screenDelFlg").value;
+    var file2 = getObj("rangeByAttachFile2.attachFile.screenFile").value;
+    if("1" == del2 && file2.length > 0) {
+        getObj("rangeByAttachFile2.attachFile.screenDelFlg").value = "0";
+    }
+    #foreach($!quotReqItem in $!domain.quotAcqReqItemList)
+        var del = getObj("quotAcqReqItemList[$velocityCount].rangeByAttachFile.attachFile.screenDelFlg").value;
+        var file = getObj("quotAcqReqItemList[$velocityCount].rangeByAttachFile.attachFile.screenFile").value;
+        if("1" == del && file.length > 0) {
+            getObj("quotAcqReqItemList[$velocityCount].rangeByAttachFile.attachFile.screenDelFlg").value = "0";
+        }
+
+    #end
+}
+
+ function setUnitCdEnable() {
+  #foreach($!quotReqItem in $!domain.quotAcqReqItemList)
+    getObj("quotAcqReqItemList[$velocityCount].productRegistration.item.unit.unitCd").disabled = "";
+    //単位名設定
+    var selObj = getObj('quotAcqReqItemList[$velocityCount].productRegistration.item.unit.unitCd');
+    var selindex = selObj.selectedIndex;
+    if(!selObj.options[0].selected){
+        getObj('quotAcqReqItemList[$velocityCount].productRegistration.item.unit.unitName').value = selObj.options[selindex].text;
+    } else {
+        getObj('quotAcqReqItemList[$velocityCount].productRegistration.item.unit.unitName').value = "";
+    }
+  #end
+ }
+
+ function userOnblur() {
+    var userId = getObj("reqUser.reqUser.userID").value;
+    if(userId == "") {
+        getObj("reqUser.reqUser.section.sectionCd").value = "";
+        getObj("reqUser.reqUser.section.sectionName").value = "";
+        getObj("reqUser.reqUser.section.sectionPlace.sectionPlaceCd").value = "";
+        getObj("reqUser.reqUser.section.sectionPlace.sectionPlaceName").value = "";
+        getObj("reqUser.reqUser.userName").value = "";
+        getObj("reqUser.reqUser.externalNo.externalNo").value = "";
+        getObj("reqUser.reqUser.extNo.extensionNo").value = "";
+        getObj("reqUser.reqUser.mailAddr.mail").value = "";
+        getObj('link.reqUser.reqUser.mailAddr.mail').innerHTML="";
+        chgUserId = userId;
+    } else if (userId != chgUserId) {
+         chgUserId = userId;
+         $.ajax({
+            type: "POST",
+            async:false,
+            url:"../../getUserInfoOnBlur",
+            data: {
+                termFlag:'0',
+                companyCd:'#jsEscape($!userCompanyCd)',
+                referenceRangeFlg:'#jsEscape($!referenceRangeFlg)',
+                userPermissionFlg:'30',
+                userId:userId
+            },
+            success:function(data){
+                //設定
+                getObj("reqUser.reqUser.section.sectionCd").value = data.userIdentify.sectionCd;
+                getObj("reqUser.reqUser.section.sectionName").value = data.sectionName;
+                getObj("reqUser.reqUser.section.sectionPlace.sectionPlaceCd").value = data.sectionPlaceCd;
+                getObj("reqUser.reqUser.section.sectionPlace.sectionPlaceName").value = data.sectionPlaceName;
+                getObj("reqUser.reqUser.userName").value = data.userName;
+                getObj("reqUser.reqUser.externalNo.externalNo").value = data.externalNo;
+                getObj("reqUser.reqUser.extNo.extensionNo").value = data.extensionNo;
+                getObj("reqUser.reqUser.mailAddr.mail").value = data.mailAddr;
+                getObj('link.reqUser.reqUser.mailAddr.mail').innerHTML=data.mailAddr;
+            }
+         });
+
+   }
+ }
+
+
+ function deliveryPlaceOnBlur() {
+    var delivPlaceCd = getObj("delivPlace.delivPlaceCd").value;
+    if(delivPlaceCd == delivPlaceCd_x) {
+        return;
+    } else {
+        delivPlaceCd_x = delivPlaceCd;
+    }
+    if(delivPlaceCd == "") {
+        getObj("delivPlace.delivPlaceName").value = "";
+    } else {
+         $.ajax({
+            type: "POST",
+            async:false,
+            url:"../../getDeliveryPlaceOnBlur",
+            data: {
+                termFlag:'0',
+                companyCd:'#jsEscape($!userCompanyCd)',
+                delivPlaceCd:delivPlaceCd
+            },
+            success:function(data){
+                //設定
+                getObj("delivPlace.delivPlaceName").value = data.delivPlaceName;
+            }
+         });
+
+   }
+ }
+
+ function deliveryPlaceCodeGetfocus(obj){
+     delivPlaceCd_x  = obj.value;
+ }
+
+ function manufactOnBlur(index) {
+    var manufacCd = getObj("quotAcqReqItemList["+index+"].productRegistration.item.manufact.manufactCd").value;
+    if(manufacCd == manufacCd_x) {
+        return;
+    } else {
+        manufacCd_x = manufacCd;
+    }
+
+    var focusId = document.activeElement.id;
+    if(manufacCd == "") {
+        if(focusId != null && focusId != "") {
+            getObj(focusId).disabled = true;
+            getObj(focusId).disabled = false;
+        }
+        getObj("quotAcqReqItemList["+index+"].productRegistration.item.manufact.manufactName").value = "";
+        getObj("quotAcqReqItemList["+index+"].productRegistration.item.manufact.manufactName").readOnly = false;
+        getObj("quotAcqReqItemList["+index+"].productRegistration.item.manufact.manufactName").style.backgroundColor = 'white';
+        if(focusId != null && focusId != "") {
+            getObj(focusId).focus();
+        }
+    } else {
+         $.ajax({
+            type: "POST",
+            async:false,
+            url:"../../getManufactInfoOnBlur",
+            data: {
+                termFlag:'0',
+                manufactCd:manufacCd
+            },
+            success:function(data){
+                if(focusId != null && focusId != "") {
+                    getObj(focusId).disabled = true;
+                    getObj(focusId).disabled = false;
+                }
+                //設定
+                getObj("quotAcqReqItemList["+index+"].productRegistration.item.manufact.manufactName").value = data.manufactName;
+                getObj("quotAcqReqItemList["+index+"].productRegistration.item.manufact.manufactName").readOnly = true;
+                getObj("quotAcqReqItemList["+index+"].productRegistration.item.manufact.manufactName").style.backgroundColor = '#ECECEC';
+                if(focusId != null && focusId != "") {
+                    getObj(focusId).focus();
+                }
+            }
+         });
+   }
+ }
+
+function setManufactDisplay() {
+    #foreach($!quotReqItem in $!domain.quotAcqReqItemList)
+        var manufacCd = getObj("quotAcqReqItemList[$velocityCount].productRegistration.item.manufact.manufactCd");
+        var itemCd = getObj("quotAcqReqItemList[$velocityCount].productRegistration.item.itemCd");
+        if(manufacCd != undefined && itemCd != undefined) {
+            if(manufacCd.value == "" && itemCd.value == '') {
+                getObj("quotAcqReqItemList[$velocityCount].productRegistration.item.manufact.manufactName").readOnly = false;
+                getObj("quotAcqReqItemList[$velocityCount].productRegistration.item.manufact.manufactName").style.backgroundColor = 'white';
+            } else {
+                getObj("quotAcqReqItemList[$velocityCount].productRegistration.item.manufact.manufactName").readOnly = true;
+                getObj("quotAcqReqItemList[$velocityCount].productRegistration.item.manufact.manufactName").style.backgroundColor = '#ECECEC';
+            }
+        }
+    #end
+}
+
+function manufactSelectAfterProc() {
+    setManufactDisplay();
+}
+
+function setChgUserIdValue() {
+    chgUserId = getObj("reqUser.reqUser.userID").value;
+}
+
+function itemCodeGetfocus(obj) {
+    preItemCode = obj.value;
+}
+
+function manufactCodeGetfocus(obj) {
+    manufacCd_x = obj.value;
+}
+
+//-->
+</script>
+
+</head>
+<body class="CreateArea" onload="onLoad();">
+
+<form id="Body" name="Body" method="post" enctype="multipart/form-data">
+    #customFormHiddenInput("Wf1SectCd" "")
+    #customFormHiddenInput("Wf1RootNo" "")
+    #customFormHiddenInput("Wf1RootName" "")
+    #customFormHiddenInput("Wf2SectCd" "")
+    #customFormHiddenInput("Wf2RootNo" "")
+    #customFormHiddenInput("isClassify" "false")
+    #customFormHiddenInput("Wf2RootName" "")
+    #customFormHiddenInput("totalAmount.amountFormat" "$!domain.totalAmount.amountFormat")
+
+    <table class="HomeBox">
+        <tr>
+            <td style="padding: 16px 16px 16px 16px;">
+                <!-- カレンダーボックス  -->
+                <iframe id="CALENDARBOX" class="CALENDARBOX" framespacing="0" scrolling="no" frameborder="0" src="../../sbxCalendar/body.vm"></iframe>
+                <table>
+                    <tr>
+                        <td align="left">
+
+                            <table class="NoBorder" width="98%">
+                               <tr>
+                                  #if ($!pagePattern == "new" || $!pagePattern ==  "history" || $!pageFrom == "")
+                                    <td id="Title1">
+                                        <u><img src="../../image/mrkCircle.gif"><span id="StepTitle" class="FontStepTitle">#customSpringMessage("QUOT_ACQ_REQ_INPUT")</span></u><br><br>
+                                  #elseif ($!pagePattern == "back" || $!pagePattern ==  "reApply" || $!pagePattern ==  "edit")
+                                    <td id="Title2">
+                                        <u><img src="../../image/mrkCircle.gif"><span id="StepTitle" class="FontStepTitle">#customSpringMessage("QUOT_ACQ_REQ_CORRECT")</span></u><br><br>
+                                  #end
+                                    <span id="STEPMSG" class="FontSmallBold DarkBlue">#customSpringMessage("PSREQ010_HEADER_COMMENT")</span>
+                                    <br><br>
+                                    </td>
+
+                                   ## ----- 強化-00334-000 2013/03/23 DEL SBO_pangzhen START -----
+                                   ## #if ($!pagePattern == "new" || $!pagePattern ==  "history" || $!pagePattern ==  "edit")
+                                   ## ----- 強化-00334-000 2013/03/23 DEL SBO_pangzhen -END- -----
+                                   ## +++++ 強化-00334-000 2013/03/23 ADD SBO_pangzhen START +++++
+                                   ## +++++ ＩＴ３-00319-000 2013/07/23 ADD SBO_lichao START +++++
+                                   ## #if ($!pagePattern == "new" || $!pagePattern ==  "history" || $!pageFrom == "")
+                                   #if ($!pagePattern == "new" || $!pagePattern ==  "history" || $!pagePattern ==  "edit" || $!pageFrom == "")
+                                   ## +++++ ＩＴ３-00319-000 2013/07/23 ADD SBO_lichao -END- +++++
+                                   ## +++++ 強化-00334-000 2013/03/23 ADD SBO_pangzhen -END- +++++
+                                    <td align="right" valign="middle" id="Submit1" nowrap>
+                                        <input name="Button1" type="button" class="LargeButton" value="#customSpringMessage('TEMPORARY_PRESERVATION')" onclick="exec_pre();">&nbsp;&nbsp;<input name="Button2" type="button" class="LargeButton" value="#customSpringMessage('REQ')" onclick="javascript:exec();">
+                                    </td>
+                                    ## ----- 強化-00334-000 2013/03/23 DEL SBO_pangzhen START -----
+                                    ## #end
+                                    ## #if ($!pagePattern == "back" || $!pagePattern ==  "reApply")
+                                    ## ----- 強化-00334-000 2013/03/23 DEL SBO_pangzhen -END- -----
+                                    ## +++++ 強化-00334-000 2013/03/23 ADD SBO_pangzhen START +++++
+                                    ## +++++ ＩＴ３-00319-000 2013/07/23 ADD SBO_lichao START +++++
+                                    ## #elseif ($!pagePattern == "back" || $!pagePattern ==  "reApply" || $!pagePattern ==  "edit")
+                                    #elseif ($!pagePattern == "back" || $!pagePattern ==  "reApply")
+                                    ## +++++ ＩＴ３-00319-000 2013/07/23 ADD SBO_lichao -END- +++++
+                                    ## +++++ 強化-00334-000 2013/03/23 ADD SBO_pangzhen -END- +++++
+                                    <td align="right" valign="middle" id="Submit3" nowrap>
+                                        <input name="Button2" type="button" class="LargeButton" value="#customSpringMessage('RE_REQ')" onclick="execReApply();">
+                                    </td>
+                                    #end
+                                </tr>
+                                <tr id="status" style="display:none;">
+                                    <td>
+                                        <input id="sts" type="text">
+                                    </td>
+                                </tr>
+                                 <tr id ="TR_ERROR" style="display:none;"><td class="error" style="height:0px;">
+                                    $!errorMessage
+                                </td></tr>
+                            </table>
+
+
+                            <table class="Box1G ListBorderWidth" width="100%">
+                                <tbody class="Box1G ListBorderWidth">
+                                $!PSREQ010PageCreater.build('reg','_tr_style', '','_td_style_left','class="Box1H FontBoxHeader"','_td_style_right','class="Box1D"', '_label_style', 'FontSmallAnk')
+                                #set($isFirstItem = true)
+                                #foreach($!item in $!PSREQ010PageCreater.getItemListForBody())
+                                    #if($!item.getColumnName() == "T_QUOT_ACQ_APL.QUOT_ACQ_APL_NO")
+                                        #if(($!pagePattern!='new' && $!pagePattern!='history') || $!isSuccess == "true" || $!isTempSuccess == "true") ##2013.01.18 ADD DAIKO_MUTO
+                                        $!PSREQ010PageCreater.printSpecial('s00_label', $!item, '_item_style', 'nowrap class="FontSlipNo"')
+                                        #end ##2013.01.18 ADD DAIKO_MUTO
+                                    #elseif($!item.getColumnName() == "T_QUOT_ACQ_APL.REQ_DATE")
+                                         $!PSREQ010PageCreater.printSpecial("s00_label",$!item,'_item_style','class="Small"','_td_style_right', 'class="Box1D FontSmallAnk"')
+                                    #elseif($!item.getColumnName() == "T_QUOT_ACQ_APL.URGENT_IND")
+                                        $!PSREQ010PageCreater.printSpecial('s31_checkbox', $!item,'_elementcd','EMERGENCY', '_td_style_right', 'class="Box1D FontSmallAnk"')
+                                    #elseif($!item.getColumnName() == "T_QUOT_ACQ_APL.TITLE_NAME")
+                                        $!PSREQ010PageCreater.printDefault($!item)
+                                    #elseif($!item.getColumnName() == "T_QUOT_ACQ_APL.REQ_USER_ID")
+                                        ## 2013.02.08 DEL DAIKO_WANG
+                                        #*
+                                        $!PSREQ010PageCreater.printSpecial("CLIENT","m01_inputUser",$!item,'_termFlag','0', '_companyCd',$!userCompanyCd,'_sectionCd',$!userSectCd, '_sectionPlaceCd',$!userSectPlaceCd,
+                                        '_referenceRangeFlg', $!referenceRangeFlg, '_userPermissionFlg', '30',
+                                        '_userCdEvent', 'onblur="userOnblur()";')
+                                        *#
+                                        ## 2013.02.08 ADD DAIKO_WANG
+                                        ## ----- 強化-00538-000 2013/03/23 DEL SBO_lizhe START -----
+                                        ## $!PSREQ010PageCreater.printSpecial("CLIENT","m01_inputUser",$!item,'popupPageid','PSREQ010','_userCdEvent', 'onblur="userOnblur()";')
+                                        ## ----- 強化-00538-000 2013/03/23 DEL SBO_lizhe -END- -----
+                                        ## +++++ 強化-00538-000 2013/03/23 ADD SBO_lizhe START +++++
+                                        $!PSREQ010PageCreater.printSpecial("CLIENT","m01_inputUser",$!item,'popupPageid','PSREQ010','_userCdEvent', 'onblur="userOnblur()";', '_extensionNoEvent', 'onfocus="this.select();"')
+                                        ## +++++ 強化-00538-000 2013/03/23 ADD SBO_lizhe -END- +++++
+                                    #elseif($!item.getColumnName() == "T_QUOT_ACQ_APL.APP_ROUTE_NO")
+                                        #* ----- ＩＴ２-01166-000 2013/06/22 DEL SBO_shiyl
+                                        $!PSREQ010PageCreater.printSpecial("APP_ROUTE","m02_inputAppRoute",$!item,'_voucherType', 'A', '_item_style','class="Small" onchange="setAppRouteName();setShowButton();"','_companyCd',$!userCompanyCd,'_sectionCd',$!userSectCd)
+                                        *#
+                                        ## +++++ ＩＴ２-01166-000 2013/06/22 ADD SBO_shiyl START +++++
+                                        $!PSREQ010PageCreater.printSpecial("m02_inputAppRoute",$!item,'_voucherType', 'A', '_item_style','class="Small" onchange="setAppRouteName();setShowButton();"','_companyCd',$!userCompanyCd,'_sectionCd',$!userSectCd,'_currentAppRoute',"$!domain.approute.appRouteNo")
+                                        ## +++++ ＩＴ２-01166-000 2013/06/22 ADD SBO_shiyl -END- +++++
+                                    #elseif($!item.getColumnName() == "T_QUOT_ACQ_APL.DELIV_PLACE_CD")
+                                        $!PSREQ010PageCreater.printSpecial("DELIVERY_PLACE","m04_inputDelivery",$!item,'popupPageid','PSREQ010','_event', 'onblur="deliveryPlaceOnBlur()"; onfocus="deliveryPlaceCodeGetfocus(this);"')
+                                    #elseif($!item.getColumnName() == "T_QUOT_ACQ_APL.SUP_CD")
+                                        $!PSREQ010PageCreater.printSpecial("m21_inputSupplier2",$!item,"popupPageid","PSREQ010","_name_element_cd", "HOPE_SUPPLIER_NAME", '_event', 'onblur="supcdOnBlur()";')
+                                    #elseif($!item.getColumnName() == "T_QUOT_ACQ_APL.ITEM_CLASS_S")
+                                        #* ----- 2013/02/14 DEL DAIKO_YAMAGUCHI
+                                        $!PSREQ010PageCreater.printSpecial("ITEM_KIND","m06_inputItemKind",$!item, 'popupPageid','PSREQ010')
+                                        *#
+                                        ## +++++ 2013/02/14 ADD DAIKO_YAMAGUCHI START
+                                        #* ----- ＩＴ２-01166-000 2013/06/22 DEL SBO_shiyl
+                                        $!PSREQ010PageCreater.printSpecial("ITEM_KIND","m06_inputItemKind",$!item, 'popupPageid','PSREQ010','_sectionTypeCode','1')
+                                        *#
+                                        ## +++++ ＩＴ２-01166-000 2013/06/22 ADD SBO_shiyl START +++++
+                                        $!PSREQ010PageCreater.printSpecial("m06_inputItemKind",$!item, 'popupPageid','PSREQ010','_sectionTypeCode','1')
+                                        ## +++++ ＩＴ２-01166-000 2013/06/22 ADD SBO_shiyl -END- +++++
+                                        ## +++++ 2013/02/14 ADD DAIKO_YAMAGUCHI -END-
+                                    #elseif($!item.getColumnName() == "T_QUOT_ACQ_APL.QUOT_REQ_RESP_LIMIT_DATE")
+                                        $!PSREQ010PageCreater.printDefault($!item)
+                                    #elseif($!item.getColumnName() == "T_QUOT_ACQ_APL.ATTACH_FILE_SEQ1")
+                                        $!PSREQ010PageCreater.printSpecial("s01_file2",$!item,
+                                    '_td_style_left', 'class="Box1Hd FontBoxHeader"','_td_style_right', 'class="Box1Dd FontSmallAnk"')
+                                    #elseif($!item.getColumnName() == "T_QUOT_ACQ_APL.PRICE_REQ_FLG")
+                                        $!PSREQ010PageCreater.printSpecial('s31_checkbox', $!item,'_elementcd','HOPE','_td_style_right', 'class="Box1D FontSmallAnk"')
+                                     #elseif($!item.getColumnName() == "T_QUOT_ACQ_APL.FOR_BOSS_COMMENT")
+                                        $!PSREQ010PageCreater.printDefault($!item)
+                                     #elseif($!item.getColumnName() == "T_QUOT_ACQ_APL.FOR_BUYER_COMMENT")
+                                        $!PSREQ010PageCreater.printDefault($!item)
+                                     #elseif($!item.getColumnName() == "T_QUOT_ACQ_APL.FOR_SUPPRIER_COMMENT")
+                                        $!PSREQ010PageCreater.printDefault($!item)
+                                     #elseif($!item.getColumnName() == "T_QUOT_ACQ_APL.QUOT_ACQ_APL_VERSION")
+                                        $!PSREQ010PageCreater.printDefault($!item)
+                                     #else
+                                            $!PSREQ010PageCreater.printDefault($!item)
+                                    #end
+                                #end
+                                <!--希望金額合計-->
+                                 <tr id = "edit_mark1">
+                                    <td nowrap class="Box1H FontBoxHeader" >#customSpringMessage('HOPE_PRICE_TOTAL')</td>
+                                    <td nowrap class="Box1D FontCurrMiddle Brown">#out($currentMark)<span id="orderAmount" class="FontBigBold">#out($!domain.totalAmount.amountFormat)</span>
+
+                                    </td>
+                                 </tr>
+
+                               </tbody>
+                            </table>
+                            <br>
+                            <table class="NoBorder" width="100%">
+
+                                <tr>
+                                    <td>
+                                        <span class="CornerTopBrown"><span class="Corner1"></span> <span class="Corner2"></span> <span class="Corner3"></span><span class="Corner4"></span></span>
+                                        <div class="CornerMidBrown" width="100%">
+                                            <table>
+                                                <tbody>
+                                                    <tr>
+                                                        <td>
+                                                            &nbsp;<img src="../../image/mrkInfo.gif">&nbsp;
+                                                        </td>
+                                                        <td width="500px;" class="FontSmallBold DarkBlue" align="left">
+                                                            #customSpringMessage("DTL_ADD_COMMENT")<!-- 最大N社まで入力することができます。 -->
+                                                        </td>
+                                                        <td>
+                                                            <input type="button" class="SmallButton" value="#customSpringMessage('DETAIL_ADD')" onclick="addDetail();">
+                                                        </td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td>
+                                                            &nbsp;<img src="../../image/mrkInfo.gif">&nbsp;
+                                                        </td>
+                                                        <td width="500px;" class="FontSmallBold DarkBlue" align="left">
+
+                                                            #customSpringMessage("COMMENT_PASTE_INPUT_VALUE")
+                                                            <span class="FontBoxHeader">#customSpringMessage("DELIV_DATE")</span>
+                                                              <input class="MiddleAnk  noIME" id="aptDate" name="aptDate" type="text" maxlength="8" size="12" value=""
+                                                                onblur="dateOnBlur(this);"
+                                                                onfocus="dateOnFocus(this);">
+                                                                <img class="Icon"
+                                                                     src="../../image/btnCalendar.gif"
+                                                                     onclick="initSearchBox(1,getElementById('aptDate'));">
+                                                        </td>
+                                                        <td>
+                                                            <input class="SmallButton" type="button" value="#customSpringMessage('ACTION_PASTE')" onclick="pasteItem('aptDate');">
+                                                        </td>
+                                                    </tr>
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                        <span class="CornerBtmBrown"><span class="Corner4"></span> <span class="Corner3"></span> <span class="Corner1"></span><span class="Corner1"></span></span>
+                                    </td>
+                                </tr>
+                            </table>
+                            <br>
+
+                            <!-- detail部分 -->
+                            <table id="DetailTable" class="Box1G" width="100%">
+                            $!PSREQ010PageCreater.buildDetail('index&cancel')
+                              #foreach($!quotAcqReqItem in $!domain.quotAcqReqItemList)
+                              #customFormHiddenInput("quotAcqReqItemList[$velocityCount].exclusiveSlipId.slipNo" "$!quotAcqReqItem.exclusiveSlipId.slipNo")
+                              #customFormHiddenInput("quotAcqReqItemList[$velocityCount].exclusiveSlipId.lastUpdDate" "$!quotAcqReqItem.exclusiveSlipId.lastUpdDate")
+                              ## ----- IT2-01349-000 2013/04/09 DEL SBO_jiang START -----
+                              ## <tbody id="Detail$velocityCount" class="Box1H ListBorderWidth">
+                              ## ----- IT2-01349-000 2013/04/09 DEL SBO_jiang END -----
+                              ## +++++ IT2-01349-000 2013/04/09 ADD SBO_jiang START +++++
+                              <tbody id="Detail$velocityCount" class="ListBorderWidth">
+                              ## +++++ IT2-01349-000 2013/04/09 ADD SBO_jiang END +++++
+                                 #set($countindex=$velocityCount)
+                                  #set($listCount=$!PSREQ010PageCreater.getItemListForDetail($velocityCount).size())
+                                 #foreach($!item in $!PSREQ010PageCreater.getItemListForDetail($velocityCount))
+                                 #if(($velocityCount+1) == $listCount)<!-- 最後の一個データ-->
+                                    #set($td_style_left="class='Box1Hdt FontBoxHeader'")
+                                    #set($td_style_right="class='Box1Ddt FontSmallAnk'")
+                                 #else
+                                    #set($td_style_left="class='Box1Hd FontBoxHeader'")
+                                    #set($td_style_right="class='Box1Dd FontSmallAnk'")
+                                 #end
+                                    <!-- 品名コード -->
+                                    #if($!item.getColumnName()=="T_QUOT_ACQ_REQUEST.ITEM_CD")
+                                        #set($prif='itemOnblur(')
+                                        #set($post=');')
+                                        #set($onblur="$prif$countindex$post")
+                                        #* ----- ＩＴ２-01166-000 2013/06/22 DEL SBO_shiyl
+                                        $!PSREQ010PageCreater.printSpecial("ITEM_CD","m08_inputItem",$!item,'popupPageid','PSREQ010','_index',"$countindex",'_itemNameObj',"quotAcqReqItemList[$countindex].productRegistration.item.itemName",
+                                        '_katashikiObj',"quotAcqReqItemList[$countindex].productRegistration.item.katashiki",
+                                        '_manufactCdObj',"quotAcqReqItemList[$countindex].productRegistration.item.manufact.manufactCd",
+                                        '_manufactNameObject', "quotAcqReqItemList[$countindex].productRegistration.item.manufact.manufactName",
+                                        '_unitCdObject', "quotAcqReqItemList[$countindex].productRegistration.item.unit.unitCd",
+                                        '_setItemName', $onblur,
+                                        '_td_style_left', $td_style_left,'_td_style_right', $td_style_right)
+                                        *#
+                                        ## +++++ ＩＴ２-01166-000 2013/06/22 ADD SBO_shiyl START +++++
+                                        $!PSREQ010PageCreater.printSpecial("m08_inputItem",$!item,'popupPageid','PSREQ010','_index',"$countindex",'_itemNameObj',"quotAcqReqItemList[$countindex].productRegistration.item.itemName",
+                                        '_katashikiObj',"quotAcqReqItemList[$countindex].productRegistration.item.katashiki",
+                                        '_manufactCdObj',"quotAcqReqItemList[$countindex].productRegistration.item.manufact.manufactCd",
+                                        '_manufactNameObject', "quotAcqReqItemList[$countindex].productRegistration.item.manufact.manufactName",
+                                        '_unitCdObject', "quotAcqReqItemList[$countindex].productRegistration.item.unit.unitCd",
+                                        '_setItemName', $onblur,
+                                        '_event', 'onfocus = "itemCodeGetfocus(this);"',
+                                        '_td_style_left', $td_style_left,'_td_style_right', $td_style_right)
+                                        ## +++++ ＩＴ２-01166-000 2013/06/22 ADD SBO_shiyl -END- +++++
+                                    <!-- 品名 -->
+                                    #elseif($!item.getColumnName()=="T_QUOT_ACQ_REQUEST.ITEM_NAME")
+                                        $!PSREQ010PageCreater.printDefault($!item,
+                                    '_td_style_left', $td_style_left,'_td_style_right', $td_style_right)
+                                    <!-- 型式 -->
+                                    #elseif($!item.getColumnName()=="T_QUOT_ACQ_REQUEST.KATASHIKI")
+                                        $!PSREQ010PageCreater.printDefault($!item,
+                                    '_td_style_left', $td_style_left,'_td_style_right', $td_style_right)
+                                     <!--メーカー-->
+                                    #elseif($!item.getColumnName() == "T_QUOT_ACQ_REQUEST.MANUFACT_CD")
+                                        #set($prif='onblur="manufactOnBlur(')
+                                        #set($post=');"')
+                                        #set($onblur="$prif$countindex$post onfocus='manufactCodeGetfocus(this)'")
+                                        #* ----- ＩＴ２-01166-000 2013/06/22 DEL SBO_shiyl
+                                        $!PSREQ010PageCreater.printSpecial("MANUFACT",'m09_inputManufact',$!item,'popupPageid','PSREQ010','_event', $onblur,
+                                    '_td_style_left', $td_style_left,'_td_style_right', $td_style_right)
+                                        *#
+                                        ## +++++ ＩＴ２-01166-000 2013/06/22 ADD SBO_shiyl START +++++
+                                        $!PSREQ010PageCreater.printSpecial('m09_inputManufact',$!item,'popupPageid','PSREQ010','_event', $onblur,
+                                    '_td_style_left', $td_style_left,'_td_style_right', $td_style_right)
+                                        ## +++++ ＩＴ２-01166-000 2013/06/22 ADD SBO_shiyl -END- +++++
+                                    ## 2013/04/23 ADD DAIKO_KANEKO START
+                                    #elseif($!item.getColumnName() == "T_QUOT_ACQ_REQUEST.UNIT_PRICE")
+                                    <!-- 希望単価 -->
+                                        #set($eventOnblur1='onblur="editVal(this); amountByAjax(')
+                                        #set($eventOnblur2='); "')
+                                        #set($eventOnblur3=' onfocus="deleteComma(this);"')
+                                        #set($eventOnblur="$eventOnblur1$countindex$eventOnblur2$eventOnblur3")
+                                        $!PSREQ010PageCreater.printSpecial("s02_currency",$!item,'_event', $eventOnblur,
+                                    '_td_style_left', $td_style_left,'_td_style_right', $td_style_right)
+                                    ## 2013/04/23 ADD DAIKO_KANEKO -END-
+                                    <!--希望数量-->
+                                    #elseif($!item.getColumnName() == "T_QUOT_ACQ_REQUEST.REQ_VOL")
+                                        ## 2013/04/23 DEL DAIKO_KANEKO
+                                        ## $!PSREQ010PageCreater.printSpecial("s03_volUnit",$!item, '_event', 'onblur="editVal(this);" onfocus="deleteComma(this);"','_index',$countindex,                                     '_td_style_left', $td_style_left,'_td_style_right', $td_style_right)
+                                        ## 2013/04/23 ADD DAIKO_KANEKO START
+                                        #set($eventOnblur1='onblur="editVal(this); amountByAjax(')
+                                        #set($eventOnblur2='); "')
+                                        #set($eventOnblur3=' onfocus="deleteComma(this);"')
+                                        #set($eventOnblur="$eventOnblur1$countindex$eventOnblur2$eventOnblur3")
+                                        $!PSREQ010PageCreater.printSpecial("s03_volUnit",$!item, '_event', $eventOnblur,'_index',$countindex,
+                                    '_td_style_left', $td_style_left,'_td_style_right', $td_style_right)
+                                    ## 2013/04/23 ADD DAIKO_KANEKO -END-
+                                    <!-- 希望金額-->
+                                    #elseif($!item.getColumnName() == "T_QUOT_ACQ_REQUEST.REQ_AMOUNT")
+                                        ## 2013/04/23 DEL DAIKO_KANEKO START
+                                        ## $!PSREQ010PageCreater.printSpecial("s02_currency",$!item,'_event', 'onblur="editVal(this); amountByAjax();" onfocus="deleteComma(this);"',
+                                        ##'_td_style_left', $td_style_left,'_td_style_right', $td_style_right)
+                                        ## 2013/04/23 DEL DAIKO_KANEKO -END-
+                                        ## 2013/04/23 ADD DAIKO_KANEKO START
+                                        #set($currencyMarkId1='currencyMark[')
+                                        #set($currencyMarkId2=']')
+                                        #set($currencyMarkId="$currencyMarkId1$countindex$currencyMarkId2")
+                                        #set($hopeAmountId1='id="hopeAmount[')
+                                        #set($hopeAmountId2=']" class="FontCurrSmall"')
+                                        #set($hopeAmountId="$hopeAmountId1$countindex$hopeAmountId2")
+                                        $!PSREQ010PageCreater.printSpecial("s24_currency",$!item, '_td_style_left', $td_style_left,'_td_style_right', 'class="Box1Dd FontSmall"', '_item_style', $hopeAmountId, 'currencyMarkId', $currencyMarkId )
+                                        ## 2013/04/23 ADD DAIKO_KANEKO -END-
+                                    <!-- 希望納期-->
+                                    #elseif($!item.getColumnName() == "T_QUOT_ACQ_REQUEST.REQ_DELIV_DATE")
+                                        $!PSREQ010PageCreater.printDefault($!item,
+                                    '_td_style_left', $td_style_left,'_td_style_right', $td_style_right)
+                                    <!-- 通貨コード -->
+                                    #elseif($!item.getColumnName() == "T_QUOT_ACQ_REQUEST.CURRENCY_CD")
+                                        $!PSREQ010PageCreater.printSpecial("s00_label",$!item,'_item_style','class="FontSmall"',
+                                    '_td_style_left', $td_style_left,'_td_style_right', $td_style_right)
+                                    <!-- 添付ファイル-->
+                                    #elseif($!item.getColumnName() == "T_QUOT_ACQ_REQUEST.ATTACH_FILE_SEQ")
+                                        $!PSREQ010PageCreater.printSpecial("s04_file1",$!item, '_index',$countindex ,
+                                    '_td_style_left', $td_style_left,'_td_style_right', $td_style_right)
+                                    #else
+                                        $!PSREQ010PageCreater.printDefault($!item,'_td_style_left', $td_style_left,'_td_style_right', $td_style_right)
+                                    #end
+                               #end
+                               </tbody>
+                             #end
+
+                            </table>
+
+                            <br>
+                            <span class="CornerTopBrown"><span class="Corner1"></span> <span class="Corner2"></span> <span class="Corner3"></span><span class="Corner4"></span></span>
+                            <div class="CornerMidBrown" width="100%">
+                                <table>
+                                    <tbody>
+                                        <tr>
+                                            <td>
+                                                &nbsp;<img src="../../image/mrkInfo.gif">&nbsp;
+                                            </td>
+                                            <td class="FontSmallBold DarkBlue" align="left">
+                                                #customSpringMessage("DTL_ADD_COMMENT")
+                                                <input type="button" class="SmallButton" value="#customSpringMessage('DETAIL_ADD')" onclick="addDetail();">
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                            <span class="CornerBtmBrown"><span class="Corner4"></span> <span class="Corner3"></span> <span class="Corner1"></span><span class="Corner1"></span></span>
+                            <br>
+                            <table class="NoBorder" width="100%">
+                                <tr>
+                                    <td>
+                                        #customSpringMessage("PSREQ010_FOOTER_COMMENT")
+                                    </td>
+                                    ## ----- 強化-00334-000 2013/03/23 DEL SBO_pangzhen START -----
+                                    ## #if ($!pagePattern == "new" || $!pagePattern ==  "history" || $!pagePattern ==  "edit")
+                                    ## ----- 強化-00334-000 2013/03/23 DEL SBO_pangzhen -END- -----
+                                    ## +++++ 強化-00334-000 2013/03/23 ADD SBO_pangzhen START +++++
+                                    ## +++++ ＩＴ３-00319-000 2013/07/23 ADD SBO_lichao START +++++
+                                    ## #if ($!pagePattern == "new" || $!pagePattern ==  "history" || $!pageFrom == "")
+                                    #if ($!pagePattern == "new" || $!pagePattern ==  "history" || $!pagePattern ==  "edit" || $!pageFrom == "")
+                                    ## +++++ ＩＴ３-00319-000 2013/07/23 ADD SBO_lichao -END- +++++
+                                    ## +++++ 強化-00334-000 2013/03/23 ADD SBO_pangzhen -END- +++++
+                                    <td align="right" valign="middle" id="Submit2" nowrap>
+                                        <input name="Button1" type="button" class="LargeButton" value="#customSpringMessage('TEMPORARY_PRESERVATION')" onclick="exec_pre();">&nbsp;&nbsp;<input name="Button2" type="button" class="LargeButton" value="#customSpringMessage('REQ')" onclick="javascript:exec();">
+                                    </td>
+                                    ## ----- 強化-00334-000 2013/03/23 DEL SBO_pangzhen START -----
+                                    ## #end
+                                    ## #if ($!pagePattern == "back" || $!pagePattern ==  "reApply")
+                                    ## ----- 強化-00334-000 2013/03/23 DEL SBO_pangzhen -END- -----
+                                    ## +++++ 強化-00334-000 2013/03/23 ADD SBO_pangzhen START +++++
+                                    ## +++++ ＩＴ３-00319-000 2013/07/23 ADD SBO_lichao START +++++
+                                    ## #elseif ($!pagePattern == "back" || $!pagePattern ==  "reApply" || $!pagePattern ==  "edit")
+                                    #elseif ($!pagePattern == "back" || $!pagePattern ==  "reApply")
+                                    ## +++++ ＩＴ３-00319-000 2013/07/23 ADD SBO_lichao -END- +++++
+                                    ## +++++ 強化-00334-000 2013/03/23 ADD SBO_pangzhen -END- +++++
+                                    <td align="right" valign="middle" id="Submit4" nowrap>
+                                        <input name="Button2" type="button" class="LargeButton" value="#customSpringMessage('RE_REQ')" onclick="execReApply();">
+                                    </td>
+                                    #end
+
+                                </tr>
+                            </table>
+
+                        </td>
+                    </tr>
+                </table>
+
+            </td>
+        </tr>
+    </table>
+
+</form>
+
+</body>
+
+</html>

@@ -1,0 +1,1125 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="ps.dataaccess.mst.user.UserMapper">
+
+    <select id="searchCountUserByRole" parameterType="fw.domain.mst.userauthority.role.RoleIdentify" resultType="int">
+            SELECT
+                   count(1)
+            FROM   M_USER
+            WHERE  M_USER.ROLE_NO = #{roleNo}
+    </select>
+
+    <!-- SRC-00115-00 include化共通-->
+    <sql id="listKeyIdentityWhereCondition">
+        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(companyCd)">
+            AND M_USER.COMPANY_CD = #{companyCd, jdbcType=VARCHAR}
+        </if>
+        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(sectionCd)">
+            AND M_USER.SECTION_CD = #{sectionCd, jdbcType=VARCHAR}
+        </if>
+        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(userId)">
+            AND M_USER.USER_ID ${@fw.common.util.SearchModeUtil@getSearchSQL("fw.domain.mst.userauthority.user.UserSearchCondition","userId")}
+        </if>
+        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(userName)">
+            AND (user_lang_company.USER_NAME ${@fw.common.util.SearchModeUtil@getSearchSQL("fw.domain.mst.userauthority.user.UserSearchCondition","userName")}
+            OR user_lang_system.USER_NAME ${@fw.common.util.SearchModeUtil@getSearchSQL("fw.domain.mst.userauthority.user.UserSearchCondition","userName")})
+        </if>
+        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(validStartDateFrom.dateOfymd)">
+            AND M_USER.VALID_START_DATE >= #{validStartDateFrom.dateOfymd}
+        </if>
+        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(validStartDateTo.dateOfymd)">
+            <![CDATA[AND M_USER.VALID_START_DATE <= #{validStartDateTo.dateOfymd}]]>
+        </if>
+        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(validEndDateFrom.dateOfymd)">
+            AND M_USER.VALID_END_DATE >= #{validEndDateFrom.dateOfymd}
+        </if>
+        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(validEndDateTo.dateOfymd)">
+            <![CDATA[AND M_USER.VALID_END_DATE <= #{validEndDateTo.dateOfymd}]]>
+        </if>
+        <if test="@fw.domain.mst.searchcondition.SearchCondition@termFlgIsNotEmpty(searchCondition.termFlg)">
+            AND M_USER.TERM_FLG = #{searchCondition.termFlg, jdbcType=VARCHAR}
+        </if>
+    </sql>
+
+    <select id="listKeyIdentity" parameterType="fw.domain.mst.userauthority.user.UserSearchCondition" resultType="fw.domain.mst.userauthority.user.UserIdentify">
+         SELECT
+            M_USER.USER_ID AS userId,
+            M_USER.COMPANY_CD AS companyCd,
+            M_USER.SECTION_CD AS sectionCd,
+            CASE
+            WHEN user_lang_company.USER_NAME IS NOT NULL THEN
+             user_lang_company.USER_NAME
+            ELSE
+             user_lang_system.USER_NAME
+            END AS userName,
+            CASE
+            WHEN company_lang_company.COMPANY_NAME IS NOT NULL THEN
+             company_lang_company.COMPANY_NAME
+            ELSE
+             company_lang_system.COMPANY_NAME
+            END AS companyName,
+            CASE
+            WHEN M_SECTION_LANG_COMPANY.SECTION_NAME IS NOT NULL THEN
+                M_SECTION_LANG_COMPANY.SECTION_NAME
+            WHEN M_SECTION_LANG_SYSTEM.SECTION_NAME IS NOT NULL THEN
+                M_SECTION_LANG_SYSTEM.SECTION_NAME
+            WHEN section_lang_company.SECTION_NAME IS NOT NULL THEN
+                section_lang_company.SECTION_NAME
+            ELSE
+                section_lang_system.SECTION_NAME
+            END AS sectionName,
+            M_USER.LAST_UPD_DATE AS lastUpdDate
+        FROM M_USER
+        INNER JOIN M_COMPANY
+            ON  M_USER.COMPANY_CD=M_COMPANY.COMPANY_CD
+        INNER JOIN M_B_USER
+            ON M_USER.USER_ID=M_B_USER.USER_ID
+            AND M_USER.COMPANY_CD=M_B_USER.COMPANY_CD
+        LEFT JOIN M_B_USER_LANG user_lang_company
+        ON
+            M_USER.USER_ID=user_lang_company.USER_ID
+            AND M_USER.COMPANY_CD=user_lang_company.COMPANY_CD
+            AND user_lang_company.LANGUAGE_IND=M_COMPANY.COMPANY_USE_LANGUAGE_IND
+        LEFT JOIN M_B_USER_LANG user_lang_system
+        ON
+            M_USER.USER_ID=user_lang_system.USER_ID
+            AND M_USER.COMPANY_CD=user_lang_system.COMPANY_CD
+            AND user_lang_system.LANGUAGE_IND='${@fw.common.util.AppUtil@getSysLanguageByEscapeSql()}'
+        LEFT JOIN M_COMPANY_LANG  company_lang_company
+        ON
+            M_USER.COMPANY_CD=company_lang_company.COMPANY_CD
+            AND company_lang_company.LANGUAGE_IND=M_COMPANY.COMPANY_USE_LANGUAGE_IND
+        LEFT JOIN M_COMPANY_LANG company_lang_system
+        ON
+            M_USER.COMPANY_CD=company_lang_system.COMPANY_CD
+            AND company_lang_system.LANGUAGE_IND='${@fw.common.util.AppUtil@getSysLanguageByEscapeSql()}'
+        LEFT JOIN M_SECTION
+        ON
+            M_SECTION.SECTION_CD = M_USER.SECTION_CD
+            AND M_SECTION.COMPANY_CD = M_USER.COMPANY_CD
+            AND M_SECTION.VALID_START_DATE &lt;= '${@fw.common.util.AppUtil@getSysDate()}'
+            AND M_SECTION.Valid_End_Date >= '${@fw.common.util.AppUtil@getSysDate()}'
+        LEFT JOIN (SELECT COMPANY_CD,
+                    SECTION_CD,
+                    VALID_START_DATE,
+                    VALID_END_DATE,
+                    ROW_NUMBER() OVER (PARTITION BY COMPANY_CD, SECTION_CD ORDER BY VALID_START_DATE DESC) AS NO
+              FROM  M_SECTION) section
+        ON M_USER.COMPANY_CD = section.COMPANY_CD
+            AND M_USER.SECTION_CD = section.SECTION_CD
+            AND section.NO = '1'
+        LEFT JOIN M_SECTION_LANG M_SECTION_LANG_COMPANY
+        ON
+            M_SECTION.SECTION_CD = M_SECTION_LANG_COMPANY.SECTION_CD
+            AND M_SECTION.COMPANY_CD = M_SECTION_LANG_COMPANY.COMPANY_CD
+            AND M_SECTION_LANG_COMPANY.LANGUAGE_IND = M_COMPANY.COMPANY_USE_LANGUAGE_IND
+            AND M_SECTION_LANG_COMPANY.VALID_START_DATE  = M_SECTION.VALID_START_DATE
+            AND M_SECTION_LANG_COMPANY.Valid_End_Date = M_SECTION.Valid_End_Date
+        LEFT JOIN M_SECTION_LANG M_SECTION_LANG_SYSTEM
+            ON M_SECTION.SECTION_CD=M_SECTION_LANG_SYSTEM.SECTION_CD
+            AND M_SECTION.COMPANY_CD= M_SECTION_LANG_SYSTEM.COMPANY_CD
+            AND M_SECTION_LANG_SYSTEM.LANGUAGE_IND ='${@fw.common.util.AppUtil@getSysLanguageByEscapeSql()}'
+            AND M_SECTION_LANG_SYSTEM.VALID_START_DATE  = M_SECTION.VALID_START_DATE
+            AND M_SECTION_LANG_SYSTEM.Valid_End_Date  = M_SECTION.Valid_End_Date
+        LEFT JOIN M_SECTION_LANG section_lang_company
+        ON
+            section.SECTION_CD = section_lang_company.SECTION_CD
+            AND section.COMPANY_CD = section_lang_company.COMPANY_CD
+            AND section_lang_company.LANGUAGE_IND = M_COMPANY.COMPANY_USE_LANGUAGE_IND
+            AND section_lang_company.VALID_START_DATE  = section.VALID_START_DATE
+            AND section_lang_company.Valid_End_Date = section.Valid_End_Date
+        LEFT JOIN M_SECTION_LANG section_lang_system
+            ON section.SECTION_CD=section_lang_system.SECTION_CD
+            AND section.COMPANY_CD= section_lang_system.COMPANY_CD
+            AND section_lang_system.LANGUAGE_IND ='${@fw.common.util.AppUtil@getSysLanguageByEscapeSql()}'
+            AND section_lang_system.VALID_START_DATE  = section.VALID_START_DATE
+            AND section_lang_system.Valid_End_Date  = section.Valid_End_Date
+        <where>
+            <include refid="listKeyIdentityWhereCondition"/>
+        </where>
+         ORDER BY ${searchCondition.columnOrder.columnOrder()}
+    </select>
+
+    <select id="listPageItem" parameterType="fw.domain.mst.searchcondition.SearchCondition" resultType="fw.domain.mst.userauthority.user.UserItem">
+       SELECT
+        M_USER.USER_ID AS "userIdentify.userId",
+        M_USER.SECTION_CD AS "userIdentify.sectionCd",
+        M_USER.COMPANY_CD AS "userIdentify.companyCd",
+        M_USER.LAST_UPD_DATE as "userIdentify.lastUpdDate",
+        M_USER.TERM_FLG AS "termFlg",
+        M_USER.VALID_START_DATE  AS "validStartDate.dateOfymd",
+        M_USER.VALID_END_DATE AS "validEndDate.dateOfymd",
+        CASE
+            WHEN user_lang_company.USER_NAME IS NOT NULL THEN
+             user_lang_company.USER_NAME
+            ELSE
+             user_lang_system.USER_NAME
+            END AS userName,
+        CASE
+            WHEN company_lang_company.COMPANY_NAME IS NOT NULL THEN
+             company_lang_company.COMPANY_NAME
+            ELSE
+             company_lang_system.COMPANY_NAME
+            END AS companyName,
+        CASE
+            WHEN M_SECTION_LANG_COMPANY.SECTION_NAME IS NOT NULL THEN
+                M_SECTION_LANG_COMPANY.SECTION_NAME
+            WHEN M_SECTION_LANG_SYSTEM.SECTION_NAME IS NOT NULL THEN
+                M_SECTION_LANG_SYSTEM.SECTION_NAME
+            WHEN section_lang_company.SECTION_NAME IS NOT NULL THEN
+                section_lang_company.SECTION_NAME
+            ELSE
+                section_lang_system.SECTION_NAME
+            END AS sectionName
+        FROM M_USER
+        INNER JOIN M_COMPANY
+        ON M_USER.COMPANY_CD=M_COMPANY.COMPANY_CD
+        INNER JOIN M_B_USER
+        ON
+            M_USER.USER_ID=M_B_USER.USER_ID
+            AND M_USER.COMPANY_CD=M_B_USER.COMPANY_CD
+
+        LEFT JOIN M_B_USER_LANG user_lang_company
+        ON
+            M_USER.USER_ID=user_lang_company.USER_ID
+            AND M_USER.COMPANY_CD=user_lang_company.COMPANY_CD
+            AND user_lang_company.LANGUAGE_IND=M_COMPANY.COMPANY_USE_LANGUAGE_IND
+        LEFT JOIN M_B_USER_LANG user_lang_system
+        ON
+            M_USER.USER_ID=user_lang_system.USER_ID
+            AND M_USER.COMPANY_CD=user_lang_system.COMPANY_CD
+            AND user_lang_system.LANGUAGE_IND='${@fw.common.util.AppUtil@getSysLanguageByEscapeSql()}'
+        LEFT JOIN M_COMPANY_LANG  company_lang_company
+        ON
+            M_USER.COMPANY_CD=company_lang_company.COMPANY_CD
+            AND company_lang_company.LANGUAGE_IND=M_COMPANY.COMPANY_USE_LANGUAGE_IND
+        LEFT JOIN M_COMPANY_LANG company_lang_system
+        ON
+            M_USER.COMPANY_CD=company_lang_system.COMPANY_CD
+            AND company_lang_system.LANGUAGE_IND='${@fw.common.util.AppUtil@getSysLanguageByEscapeSql()}'
+        LEFT JOIN M_SECTION
+        ON
+            M_SECTION.SECTION_CD = M_USER.SECTION_CD
+            AND M_SECTION.COMPANY_CD = M_USER.COMPANY_CD
+            AND M_SECTION.VALID_START_DATE &lt;= '${@fw.common.util.AppUtil@getSysDate()}'
+            AND M_SECTION.Valid_End_Date >= '${@fw.common.util.AppUtil@getSysDate()}'
+        LEFT JOIN (SELECT COMPANY_CD,
+                    SECTION_CD,
+                    VALID_START_DATE,
+                    VALID_END_DATE,
+                    ROW_NUMBER() OVER (PARTITION BY COMPANY_CD, SECTION_CD ORDER BY VALID_START_DATE DESC) AS NO
+              FROM  M_SECTION) section
+        ON M_USER.COMPANY_CD = section.COMPANY_CD
+            AND M_USER.SECTION_CD = section.SECTION_CD
+            AND section.NO = '1'
+        LEFT JOIN M_SECTION_LANG M_SECTION_LANG_COMPANY
+        ON
+            M_SECTION.SECTION_CD = M_SECTION_LANG_COMPANY.SECTION_CD
+            AND M_SECTION.COMPANY_CD = M_SECTION_LANG_COMPANY.COMPANY_CD
+            AND M_SECTION_LANG_COMPANY.LANGUAGE_IND = M_COMPANY.COMPANY_USE_LANGUAGE_IND
+            AND M_SECTION_LANG_COMPANY.VALID_START_DATE  = M_SECTION.VALID_START_DATE
+            AND M_SECTION_LANG_COMPANY.Valid_End_Date = M_SECTION.Valid_End_Date
+        LEFT JOIN M_SECTION_LANG M_SECTION_LANG_SYSTEM
+            ON M_SECTION.SECTION_CD=M_SECTION_LANG_SYSTEM.SECTION_CD
+            AND M_SECTION.COMPANY_CD= M_SECTION_LANG_SYSTEM.COMPANY_CD
+            AND M_SECTION_LANG_SYSTEM.LANGUAGE_IND ='${@fw.common.util.AppUtil@getSysLanguageByEscapeSql()}'
+            AND M_SECTION_LANG_SYSTEM.VALID_START_DATE  = M_SECTION.VALID_START_DATE
+            AND M_SECTION_LANG_SYSTEM.Valid_End_Date  = M_SECTION.Valid_End_Date
+        LEFT JOIN M_SECTION_LANG section_lang_company
+        ON
+            section.SECTION_CD = section_lang_company.SECTION_CD
+            AND section.COMPANY_CD = section_lang_company.COMPANY_CD
+            AND section_lang_company.LANGUAGE_IND = M_COMPANY.COMPANY_USE_LANGUAGE_IND
+            AND section_lang_company.VALID_START_DATE = section.VALID_START_DATE
+            AND section_lang_company.Valid_End_Date = section.Valid_End_Date
+        LEFT JOIN M_SECTION_LANG section_lang_system
+        ON
+            section.SECTION_CD = section_lang_system.SECTION_CD
+            AND section.COMPANY_CD = section_lang_system.COMPANY_CD
+            AND section_lang_system.LANGUAGE_IND ='${@fw.common.util.AppUtil@getSysLanguageByEscapeSql()}'
+            AND section_lang_system.VALID_START_DATE = section.VALID_START_DATE
+            AND section_lang_system.Valid_End_Date = section.Valid_End_Date
+        <where>
+            (M_USER.USER_ID,M_USER.SECTION_CD,M_USER.COMPANY_CD) IN
+            <foreach collection="searchCondition.page.keyDomainEntityList" item="keyList"  open="(" separator="," close=")">
+                (#{keyList.userId},#{keyList.sectionCd},#{keyList.companyCd})
+            </foreach>
+            <include refid="listKeyIdentityWhereCondition"/>
+        </where>
+        ORDER BY ${searchCondition.columnOrder.columnOrder()}
+    </select>
+
+    <resultMap type="fw.domain.mst.userauthority.user.UserManagement" id="UserManagement_Map">
+        <id column="sectionName" property="userSectionInfo.userSection.sectionName"/>
+        <id column="isDefaultLoginSection" property="userSectionInfo.isDefaultLoginSection"/>
+        <id column="sectionCd" property="userSectionInfo.userSection.sectionCd"/>
+<!-- TODO 14/11/14 add パスワード暗号化 daiko t.watanabe start -->
+        <id column="PW_SALT" property="passwordSalt"/>
+        <id column="PW_CHANGED_TIME" property="passwordValidStartTime.dateOfymd"/>
+        <id column="PW_LOCKED_TIME" property="passwordLockStartTime.dateOfymd"/>
+        <id column="PW_FAILED_COUNT" property="passwordFailedCount"/>
+<!-- TODO 14/11/14 add パスワード暗号化 daiko t.watanabe end -->
+        <id column="officialName" property="userSectionInfo.official.officialName"/>
+        <id column="extensionNo" property="userSectionInfo.contact.extNo.extensionNo"/>
+        <id column="telNo" property="userSectionInfo.contact.telNo.telNo"/>
+        <id column="faxNo" property="userSectionInfo.contact.faxNo.faxNo"/>
+        <id column="roleNo" property="userSectionInfo.roleManagement.roleIdentify.roleNo"/>
+        <id column="roleName" property="userSectionInfo.roleManagement.roleName"/>
+        <id column="searchDefaultDays" property="userSectionInfo.searchDefaultDays.days"/>
+        <id column="termFlg" property="userSectionInfo.validity.term.termFlg"/>
+        <id column="startDate" property="userSectionInfo.validity.validityPeriod.period.startDate.dateOfymd"/>
+        <id column="endDate" property="userSectionInfo.validity.validityPeriod.period.endDate.dateOfymd"/>
+    </resultMap>
+
+    <select id="search" parameterType="fw.domain.mst.userauthority.user.UserIdentify" resultType="fw.domain.mst.userauthority.user.UserManagement" resultMap="UserManagement_Map">
+        SELECT
+            M_USER.COMPANY_CD AS "userIdentify.companyCd",
+            M_USER.USER_ID AS "userIdentify.userId",
+            CASE
+            WHEN user_lang_company.USER_NAME IS NOT NULL THEN
+             user_lang_company.USER_NAME
+            ELSE
+             user_lang_system.USER_NAME
+            END AS "userName",
+        M_COMPANY_LANG.COMPANY_NAME AS "companyName",
+        CASE
+            WHEN M_SECTION_LANG_COMPANY.SECTION_NAME IS NOT NULL THEN
+                M_SECTION_LANG_COMPANY.SECTION_NAME
+            WHEN M_SECTION_LANG_SYSTEM.SECTION_NAME IS NOT NULL THEN
+                M_SECTION_LANG_SYSTEM.SECTION_NAME
+            WHEN section_lang_company.SECTION_NAME IS NOT NULL THEN
+                section_lang_company.SECTION_NAME
+            ELSE
+                section_lang_system.SECTION_NAME
+            END AS "sectionName",
+            M_USER.SECTION_CD AS "sectionCd",
+            M_B_USER.PASSWORD AS "password",
+            M_B_USER.PASSWORD AS "passwordConfirmation",
+<!-- TODO 14/11/14 add パスワード暗号化 daiko t.watanabe start -->
+            M_B_USER.PW_SALT,
+            M_B_USER.PW_CHANGED_TIME,
+            M_B_USER.PW_LOCKED_TIME,
+            M_B_USER.PW_FAILED_COUNT,
+<!-- TODO 14/11/14 add パスワード暗号化 daiko t.watanabe end -->
+            M_USER.OFFICIAL_NAME AS "officialName",
+            M_USER.EXTENSION_NO AS "extensionNo",
+            M_USER.TEL_NO AS "telNo",
+            M_USER.FAX_NO AS "faxNo",
+            M_USER.ROLE_NO AS "roleNo",
+            M_USER.TERM_FLG AS "termFlg",
+            M_USER.SEARCH_DEFAULT_DAYS AS "searchDefaultDays",
+            M_USER.LAST_UPD_DATE AS "userIdentify.lastUpdDate",
+            M_USER.VALID_START_DATE AS "startDate",
+            M_USER.VALID_END_DATE AS "endDate",
+            M_B_USER.MAIL_ADDR AS "mailAddr.mail",
+            M_B_USER.USE_LANGUAGE_IND AS "languageInd.languageInd",
+            M_B_USER.DEFAULT_LOGIN_SECTION_CD AS "defaultLoginSectionCd",
+            M_B_USER.APPROVAL_MAIL_RCV_FLG AS "mailRcvFlg.mailRcvNotice",
+            M_B_USER.REJECT_MAIL_RCV_FLG AS "mailRcvFlg.mailRcvReject",
+            M_B_USER.RECEIPT_MAIL_RCV_FLG AS "mailRcvFlg.mailRcvReceipt",
+            CASE WHEN M_B_USER.DEFAULT_LOGIN_SECTION_CD=M_USER.SECTION_CD THEN '1' ELSE '0' END AS "isDefaultLoginSection",
+            M_COMPANY_LANG.COMPANY_NAME AS "companySummary.companyName",
+            M_COMPANY.COMPANY_USE_LANGUAGE_IND as "companySummary.languageInd",
+            M_ROLE.ROLE_NAME AS "roleName"
+        FROM  M_USER
+        INNER JOIN M_COMPANY
+            ON  M_USER.COMPANY_CD=M_COMPANY.COMPANY_CD
+        LEFT JOIN M_B_USER
+            ON M_USER.USER_ID=M_B_USER.USER_ID
+            AND M_USER.COMPANY_CD=M_B_USER.COMPANY_CD
+        LEFT JOIN M_B_USER_LANG user_lang_company
+        ON
+            M_USER.USER_ID=user_lang_company.USER_ID
+            AND M_USER.COMPANY_CD=user_lang_company.COMPANY_CD
+            AND user_lang_company.LANGUAGE_IND=M_COMPANY.COMPANY_USE_LANGUAGE_IND
+        LEFT JOIN M_B_USER_LANG user_lang_system
+        ON
+            M_USER.USER_ID=user_lang_system.USER_ID
+            AND M_USER.COMPANY_CD=user_lang_system.COMPANY_CD
+            AND user_lang_system.LANGUAGE_IND='${@fw.common.util.AppUtil@getSysLanguageByEscapeSql()}'
+        LEFT JOIN M_COMPANY_LANG
+        ON
+            M_USER.COMPANY_CD=M_COMPANY_LANG.COMPANY_CD
+            AND M_COMPANY_LANG.LANGUAGE_IND=M_COMPANY.COMPANY_USE_LANGUAGE_IND
+        LEFT JOIN M_SECTION
+         ON M_SECTION.SECTION_CD = M_USER.SECTION_CD
+            AND M_SECTION.COMPANY_CD = M_USER.COMPANY_CD
+            AND M_SECTION.VALID_START_DATE &lt;= '${@fw.common.util.AppUtil@getSysDate()}'
+            AND M_SECTION.Valid_End_Date >= '${@fw.common.util.AppUtil@getSysDate()}'
+        LEFT JOIN (SELECT COMPANY_CD,
+                    SECTION_CD,
+                    VALID_START_DATE,
+                    VALID_END_DATE,
+                    ROW_NUMBER() OVER (PARTITION BY COMPANY_CD, SECTION_CD ORDER BY VALID_START_DATE DESC) AS NO
+              FROM  M_SECTION) section
+        ON M_USER.COMPANY_CD = section.COMPANY_CD
+            AND M_USER.SECTION_CD = section.SECTION_CD
+            AND section.NO = '1'
+        LEFT JOIN M_SECTION_LANG M_SECTION_LANG_COMPANY
+        ON
+            M_SECTION.SECTION_CD = M_SECTION_LANG_COMPANY.SECTION_CD
+            AND M_SECTION.COMPANY_CD = M_SECTION_LANG_COMPANY.COMPANY_CD
+            AND M_SECTION_LANG_COMPANY.LANGUAGE_IND = M_COMPANY.COMPANY_USE_LANGUAGE_IND
+            AND M_SECTION_LANG_COMPANY.VALID_START_DATE  = M_SECTION.VALID_START_DATE
+            AND M_SECTION_LANG_COMPANY.Valid_End_Date = M_SECTION.Valid_End_Date
+        LEFT JOIN M_SECTION_LANG M_SECTION_LANG_SYSTEM
+        ON
+            M_SECTION.SECTION_CD = M_SECTION_LANG_SYSTEM.SECTION_CD
+            AND M_SECTION.COMPANY_CD = M_SECTION_LANG_SYSTEM.COMPANY_CD
+            AND M_SECTION_LANG_SYSTEM.LANGUAGE_IND ='${@fw.common.util.AppUtil@getSysLanguageByEscapeSql()}'
+            AND M_SECTION_LANG_SYSTEM.VALID_START_DATE = M_SECTION.VALID_START_DATE
+            AND M_SECTION_LANG_SYSTEM.Valid_End_Date = M_SECTION.Valid_End_Date
+        LEFT JOIN M_SECTION_LANG section_lang_company
+        ON
+            section.SECTION_CD = section_lang_company.SECTION_CD
+            AND section.COMPANY_CD = section_lang_company.COMPANY_CD
+            AND section_lang_company.LANGUAGE_IND = M_COMPANY.COMPANY_USE_LANGUAGE_IND
+            AND section_lang_company.VALID_START_DATE  = section.VALID_START_DATE
+            AND section_lang_company.Valid_End_Date = section.Valid_End_Date
+        LEFT JOIN M_SECTION_LANG section_lang_system
+        ON
+            section.SECTION_CD = section_lang_system.SECTION_CD
+            AND section.COMPANY_CD = section_lang_system.COMPANY_CD
+            AND section_lang_system.LANGUAGE_IND ='${@fw.common.util.AppUtil@getSysLanguageByEscapeSql()}'
+            AND section_lang_system.VALID_START_DATE = section.VALID_START_DATE
+            AND section_lang_system.Valid_End_Date = section.Valid_End_Date
+        LEFT JOIN M_ROLE
+              ON M_USER.ROLE_NO=M_ROLE.ROLE_NO
+              AND (M_USER.COMPANY_CD= M_ROLE.COMPANY_CD
+               OR M_ROLE.COMPANY_CD = '${@fw.common.constant.ApplicationConstant@COMPANY_CD_ALL}')
+        WHERE M_USER.USER_ID=#{userId, jdbcType=VARCHAR}
+            AND M_USER.COMPANY_CD=#{companyCd, jdbcType=VARCHAR}
+            AND M_USER.SECTION_CD=#{sectionCd, jdbcType=VARCHAR}
+    </select>
+    <select id="searchBUserCount" parameterType="fw.domain.mst.userauthority.user.UserIdentify" resultType="int">
+    SELECT
+    	COUNT(*)
+    FROM
+    	M_B_USER
+    WHERE
+    	COMPANY_CD=#{companyCd, jdbcType=VARCHAR} AND
+    	USER_ID=#{userId, jdbcType=VARCHAR}
+    </select>
+    <select id="searchAdd" parameterType="fw.domain.mst.userauthority.user.UserIdentify" resultType="fw.domain.mst.userauthority.user.UserManagement" resultMap="UserManagement_Map">
+        SELECT
+            M_USER.COMPANY_CD AS "userIdentify.companyCd",
+            M_USER.SECTION_CD AS "userIdentify.sectionCd",
+            M_USER.USER_ID AS "userIdentify.userId",
+            CASE
+            WHEN user_lang_company.USER_NAME IS NOT NULL THEN
+             user_lang_company.USER_NAME
+            ELSE
+             user_lang_system.USER_NAME
+            END AS "userName",
+            M_COMPANY_LANG.COMPANY_NAME AS "companyName",
+            M_COMPANY_LANG.COMPANY_NAME AS "companySummary.companyName",
+            M_B_USER.USE_LANGUAGE_IND AS "languageInd.languageInd",
+            M_USER.LAST_UPD_DATE AS "userIdentify.lastUpdDate",
+            M_B_USER.PASSWORD AS "password",
+            M_B_USER.PASSWORD AS "passwordConfirmation",
+            M_COMPANY.COMPANY_USE_LANGUAGE_IND as "companySummary.languageInd"
+        FROM  M_USER
+        INNER JOIN M_COMPANY
+            ON  M_USER.COMPANY_CD=M_COMPANY.COMPANY_CD
+        LEFT JOIN M_B_USER
+            ON M_USER.USER_ID=M_B_USER.USER_ID
+            AND M_USER.COMPANY_CD=M_B_USER.COMPANY_CD
+        LEFT JOIN M_B_USER_LANG user_lang_company
+        ON
+            M_USER.USER_ID=user_lang_company.USER_ID
+            AND M_USER.COMPANY_CD=user_lang_company.COMPANY_CD
+            AND user_lang_company.LANGUAGE_IND=M_COMPANY.COMPANY_USE_LANGUAGE_IND
+        LEFT JOIN M_B_USER_LANG user_lang_system
+        ON
+            M_USER.USER_ID=user_lang_system.USER_ID
+            AND M_USER.COMPANY_CD=user_lang_system.COMPANY_CD
+            AND user_lang_system.LANGUAGE_IND='${@fw.common.util.AppUtil@getSysLanguageByEscapeSql()}'
+        LEFT JOIN M_COMPANY_LANG
+        ON
+            M_USER.COMPANY_CD=M_COMPANY_LANG.COMPANY_CD
+            AND M_COMPANY_LANG.LANGUAGE_IND=M_COMPANY.COMPANY_USE_LANGUAGE_IND
+        WHERE M_USER.USER_ID=#{userId, jdbcType=VARCHAR}
+            AND M_USER.COMPANY_CD=#{companyCd, jdbcType=VARCHAR}
+            AND M_USER.SECTION_CD=#{sectionCd, jdbcType=VARCHAR}
+    </select>
+
+    <select id="searchExclusive" parameterType="fw.domain.mst.userauthority.user.UserIdentify" resultType="fw.domain.mst.userauthority.user.UserIdentify">
+        SELECT
+            M_USER.USER_ID AS userId,
+            M_USER.COMPANY_CD AS companyCd,
+            M_USER.SECTION_CD AS sectionCd,
+            M_USER.LAST_UPD_DATE AS lastUpdDate
+        FROM M_USER
+        LEFT JOIN M_B_USER
+            ON M_USER.USER_ID=M_B_USER.USER_ID
+            AND M_USER.COMPANY_CD=M_B_USER.COMPANY_CD
+        WHERE M_USER.USER_ID=#{userId, jdbcType=VARCHAR}
+            AND M_USER.COMPANY_CD=#{companyCd, jdbcType=VARCHAR}
+            <if test="@org.apache.commons.lang.StringUtils@isNotBlank(sectionCd)">
+            AND M_USER.SECTION_CD=#{sectionCd, jdbcType=VARCHAR}
+            </if>
+            AND M_USER.LAST_UPD_DATE = #{lastUpdDate, jdbcType=VARCHAR}
+    </select>
+
+     <select id="listUserManagement" parameterType="fw.domain.mst.userauthority.user.UserSearchCondition" resultType="fw.domain.mst.userauthority.user.UserManagement" resultMap="UserManagement_Map">
+        <include refid="pageHeader"/>
+        SELECT
+          M_USER.COMPANY_CD AS "userIdentify.companyCd",
+          M_USER.SECTION_CD AS "userIdentify.sectionCd",
+          M_USER.USER_ID AS "userIdentify.userId",
+          M_B_USER_LANG.USER_NAME AS "userName",
+          M_B_USER.MAIL_ADDR AS "mailAddr.mail",
+          M_B_USER_LANG.LANGUAGE_IND AS "languageInd.languageInd",
+          M_USER.OFFICIAL_NAME AS "officialName",
+          M_USER.EXTENSION_NO AS "extensionNo",
+          M_USER.TEL_NO AS "telNo",
+          M_USER.FAX_NO AS "faxNo",
+          M_USER.ROLE_NO AS "roleNo",
+          M_USER.SEARCH_DEFAULT_DAYS AS "searchDefaultDays",
+          M_USER.TERM_FLG AS "termFlg",
+          M_B_USER.DEFAULT_LOGIN_SECTION_CD AS "defaultLoginSectionCd",
+          M_USER.VALID_START_DATE AS "startDate",
+          M_USER.VALID_END_DATE AS "endDate",
+          M_B_USER.APPROVAL_MAIL_RCV_FLG AS "mailRcvFlg.mailRcvNotice",
+          M_B_USER.REJECT_MAIL_RCV_FLG AS "mailRcvFlg.mailRcvReject",
+          M_B_USER.RECEIPT_MAIL_RCV_FLG AS "mailRcvFlg.mailRcvReceipt",
+          M_ROLE.ROLE_NAME AS "roleName",
+          CASE WHEN M_SECTION_LANG.SECTION_NAME IS NOT NULL THEN
+               M_SECTION_LANG.SECTION_NAME
+          WHEN M_SECTION_LANG_SYSTEM.SECTION_NAME IS NOT NULL THEN
+               M_SECTION_LANG_SYSTEM.SECTION_NAME
+          WHEN section_lang.SECTION_NAME IS NOT NULL THEN
+               section_lang.SECTION_NAME
+          ELSE
+               section_lang_system.SECTION_NAME
+          END AS "sectionName",
+          '' AS "password"
+        FROM M_USER
+        INNER JOIN M_COMPANY
+            ON  M_USER.COMPANY_CD=M_COMPANY.COMPANY_CD
+        LEFT JOIN M_B_USER
+            ON M_USER.USER_ID=M_B_USER.USER_ID
+            AND M_USER.COMPANY_CD=M_B_USER.COMPANY_CD
+        LEFT JOIN M_B_USER_LANG
+            ON M_USER.USER_ID=M_B_USER_LANG.USER_ID
+            AND M_USER.COMPANY_CD=M_B_USER_LANG.COMPANY_CD
+        LEFT JOIN M_COMPANY_LANG
+            ON M_USER.COMPANY_CD=M_COMPANY_LANG.COMPANY_CD
+            AND M_COMPANY_LANG.LANGUAGE_IND=M_B_USER_LANG.LANGUAGE_IND
+        LEFT JOIN M_SECTION_LANG M_SECTION_LANG
+            ON M_USER.SECTION_CD=M_SECTION_LANG.SECTION_CD
+            AND M_USER.COMPANY_CD= M_SECTION_LANG.COMPANY_CD
+            AND M_SECTION_LANG.LANGUAGE_IND=M_COMPANY.COMPANY_USE_LANGUAGE_IND
+            AND M_SECTION_LANG.VALID_START_DATE &lt;= '${@fw.common.util.AppUtil@getSysDate()}'
+            AND M_SECTION_LANG.Valid_End_Date >= '${@fw.common.util.AppUtil@getSysDate()}'
+        LEFT JOIN (SELECT COMPANY_CD,
+                    SECTION_CD,
+                    SECTION_NAME,
+                    LANGUAGE_IND,
+                    ROW_NUMBER() OVER (PARTITION BY COMPANY_CD, SECTION_CD ORDER BY VALID_START_DATE DESC) AS NO
+              FROM  M_SECTION_LANG) section_lang
+        ON M_USER.COMPANY_CD = section_lang.COMPANY_CD
+            AND M_USER.SECTION_CD = section_lang.SECTION_CD
+            AND section_lang.LANGUAGE_IND=M_COMPANY.COMPANY_USE_LANGUAGE_IND
+            AND section_lang.NO = '1'
+        LEFT JOIN M_SECTION_LANG M_SECTION_LANG_SYSTEM
+            ON M_USER.SECTION_CD=M_SECTION_LANG_SYSTEM.SECTION_CD
+            AND M_USER.COMPANY_CD= M_SECTION_LANG_SYSTEM.COMPANY_CD
+            AND M_SECTION_LANG_SYSTEM.LANGUAGE_IND = '${@fw.common.util.AppUtil@getSysLanguageByEscapeSql()}'
+            AND M_SECTION_LANG_SYSTEM.VALID_START_DATE &lt;= '${@fw.common.util.AppUtil@getSysDate()}'
+            AND M_SECTION_LANG_SYSTEM.Valid_End_Date >= '${@fw.common.util.AppUtil@getSysDate()}'
+        LEFT JOIN (SELECT COMPANY_CD,
+                    SECTION_CD,
+                    SECTION_NAME,
+                    LANGUAGE_IND,
+                    ROW_NUMBER() OVER (PARTITION BY COMPANY_CD, SECTION_CD ORDER BY VALID_START_DATE DESC) AS NO
+              FROM  M_SECTION_LANG) section_lang_system
+        ON M_USER.COMPANY_CD = section_lang_system.COMPANY_CD
+            AND M_USER.SECTION_CD = section_lang_system.SECTION_CD
+            AND section_lang_system.LANGUAGE_IND = '${@fw.common.util.AppUtil@getSysLanguageByEscapeSql()}'
+            AND section_lang_system.NO = '1'
+        LEFT JOIN M_ROLE
+          ON M_USER.ROLE_NO=M_ROLE.ROLE_NO
+          AND (M_USER.COMPANY_CD= M_ROLE.COMPANY_CD
+           OR M_ROLE.COMPANY_CD = '${@fw.common.constant.ApplicationConstant@COMPANY_CD_ALL}')
+         <where>
+         <if test="@org.apache.commons.lang.StringUtils@isNotBlank(companyCd)">
+              AND M_USER.COMPANY_CD = #{companyCd, jdbcType=VARCHAR}
+        </if>
+        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(sectionCd)">
+              AND M_USER.SECTION_CD = #{sectionCd, jdbcType=VARCHAR}
+        </if>
+          <if test="@org.apache.commons.lang.StringUtils@isNotBlank(userId)">
+              AND M_USER.USER_ID ${@fw.common.util.SearchModeUtil@getSearchSQL("fw.domain.mst.userauthority.user.UserSearchCondition","userId")}
+        </if>
+        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(userName)">
+              AND M_B_USER_LANG.USER_NAME ${@fw.common.util.SearchModeUtil@getSearchSQL("fw.domain.mst.userauthority.user.UserSearchCondition","userName")}
+        </if>
+         <if test="@org.apache.commons.lang.StringUtils@isNotBlank(validStartDateFrom.dateOfymd)">
+             AND M_USER.VALID_START_DATE >= #{validStartDateFrom.dateOfymd}
+        </if>
+        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(validStartDateTo.dateOfymd)">
+            <![CDATA[AND M_USER.VALID_START_DATE <= #{validStartDateTo.dateOfymd}]]>
+        </if>
+        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(validEndDateFrom.dateOfymd)">
+            AND M_USER.VALID_END_DATE >= #{validEndDateFrom.dateOfymd}
+        </if>
+        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(validEndDateTo.dateOfymd)">
+          <![CDATA[AND M_USER.VALID_END_DATE <= #{validEndDateTo.dateOfymd}]]>
+        </if>
+         <if test="@fw.domain.mst.searchcondition.SearchCondition@termFlgIsNotEmpty(searchCondition.termFlg)">
+                  AND M_USER.TERM_FLG = #{searchCondition.termFlg, jdbcType=VARCHAR}
+          </if>
+        </where>
+         ORDER BY M_USER.USER_ID,M_USER.VALID_START_DATE DESC,M_B_USER_LANG.LANGUAGE_IND
+         <include refid="pageRoot"/>
+     </select>
+     <select id="downloadCount" parameterType="fw.domain.mst.userauthority.user.UserSearchCondition"
+     resultType="java.lang.Long" >
+        SELECT
+          COUNT(*)
+        FROM M_USER
+        INNER JOIN M_COMPANY
+            ON  M_USER.COMPANY_CD=M_COMPANY.COMPANY_CD
+        LEFT JOIN M_B_USER
+            ON M_USER.USER_ID=M_B_USER.USER_ID
+            AND M_USER.COMPANY_CD=M_B_USER.COMPANY_CD
+        LEFT JOIN M_B_USER_LANG
+            ON M_USER.USER_ID=M_B_USER_LANG.USER_ID
+            AND M_USER.COMPANY_CD=M_B_USER_LANG.COMPANY_CD
+        LEFT JOIN M_COMPANY_LANG
+            ON M_USER.COMPANY_CD=M_COMPANY_LANG.COMPANY_CD
+            AND M_COMPANY_LANG.LANGUAGE_IND=M_B_USER_LANG.LANGUAGE_IND
+        LEFT JOIN M_SECTION_LANG
+            ON M_USER.SECTION_CD=M_SECTION_LANG.SECTION_CD
+            AND M_USER.COMPANY_CD= M_SECTION_LANG.COMPANY_CD
+            AND M_SECTION_LANG.LANGUAGE_IND=M_B_USER_LANG.LANGUAGE_IND
+            AND M_SECTION_LANG.VALID_START_DATE &lt;= '${@fw.common.util.AppUtil@getSysDate()}'
+            AND M_SECTION_LANG.Valid_End_Date >= '${@fw.common.util.AppUtil@getSysDate()}'
+        LEFT JOIN M_ROLE
+          ON M_USER.ROLE_NO=M_ROLE.ROLE_NO
+          AND (M_USER.COMPANY_CD= M_ROLE.COMPANY_CD
+           OR M_ROLE.COMPANY_CD = '${@fw.common.constant.ApplicationConstant@COMPANY_CD_ALL}')
+         <where>
+         <if test="@org.apache.commons.lang.StringUtils@isNotBlank(companyCd)">
+              AND M_USER.COMPANY_CD = #{companyCd, jdbcType=VARCHAR}
+        </if>
+        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(sectionCd)">
+              AND M_USER.SECTION_CD = #{sectionCd, jdbcType=VARCHAR}
+        </if>
+          <if test="@org.apache.commons.lang.StringUtils@isNotBlank(userId)">
+              AND M_USER.USER_ID ${@fw.common.util.SearchModeUtil@getSearchSQL("fw.domain.mst.userauthority.user.UserSearchCondition","userId")}
+        </if>
+        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(userName)">
+              AND M_B_USER_LANG.USER_NAME ${@fw.common.util.SearchModeUtil@getSearchSQL("fw.domain.mst.userauthority.user.UserSearchCondition","userName")}
+        </if>
+         <if test="@org.apache.commons.lang.StringUtils@isNotBlank(validStartDateFrom.dateOfymd)">
+             AND M_USER.VALID_START_DATE >= #{validStartDateFrom.dateOfymd}
+        </if>
+        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(validStartDateTo.dateOfymd)">
+            <![CDATA[AND M_USER.VALID_START_DATE <= #{validStartDateTo.dateOfymd}]]>
+        </if>
+        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(validEndDateFrom.dateOfymd)">
+            AND M_USER.VALID_END_DATE >= #{validEndDateFrom.dateOfymd}
+        </if>
+        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(validEndDateTo.dateOfymd)">
+          <![CDATA[AND M_USER.VALID_END_DATE <= #{validEndDateTo.dateOfymd}]]>
+        </if>
+         <if test="@fw.domain.mst.searchcondition.SearchCondition@termFlgIsNotEmpty(searchCondition.termFlg)">
+                  AND M_USER.TERM_FLG = #{searchCondition.termFlg, jdbcType=VARCHAR}
+          </if>
+        </where>
+         ORDER BY ${searchCondition.columnOrder.columnOrder()}
+     </select>
+    <select id="listSubAppUsers" parameterType="fw.domain.mst.userauthority.user.UserIdentify" resultType="fw.domain.mst.userauthority.user.SubAppUser">
+            SELECT
+                M_CODE_NAME_LANG.CODE_NAME AS "appVoucherIndView",
+                M_CODE_NAME_LANG.CODE_VALUE AS "appVoucherInd",
+                M_SUB_APP_USERS.SUB_COMPANY_CD AS "companyCd" ,
+                M_SUB_APP_USERS.SUB_APP_USER_ID AS "userId",
+                M_SUB_APP_USERS.DSP_ORDER AS "dspOrder",
+                M_B_USER_LANG.USER_NAME AS "userName"
+            FROM M_CODE_NAME_LANG
+            LEFT JOIN  M_SUB_APP_USERS
+                ON M_CODE_NAME_LANG.CODE_VALUE=M_SUB_APP_USERS.APP_VOUCHER_IND
+                 AND M_SUB_APP_USERS.USER_ID=#{userId, jdbcType=VARCHAR}
+                 AND M_SUB_APP_USERS.COMPANY_CD=#{companyCd, jdbcType=VARCHAR}
+            LEFT JOIN M_B_USER_LANG
+                ON M_SUB_APP_USERS.SUB_APP_USER_ID=M_B_USER_LANG.USER_ID
+                AND M_CODE_NAME_LANG.LANGUAGE_IND=M_B_USER_LANG.LANGUAGE_IND
+                AND M_B_USER_LANG.COMPANY_CD =#{companyCd, jdbcType=VARCHAR}
+            WHERE
+                M_CODE_NAME_LANG.LANGUAGE_IND = '${@fw.security.SecurityUtil@getUseLanguageIndByEscapeSql()}'
+                AND M_CODE_NAME_LANG.CODE_KEY='APP_VOUCHER_IND'
+            ORDER BY M_CODE_NAME_LANG.CODE_VALUE,M_SUB_APP_USERS.DSP_ORDER
+    </select>
+
+    <select id="listUserLanguage" parameterType="fw.domain.mst.userauthority.user.UserIdentify" resultType="fw.domain.mst.userauthority.user.UserLanguage">
+        SELECT
+            M_B_USER.USER_ID AS "userIdentify.userId",
+            M_B_USER.COMPANY_CD AS "userIdentify.companyCd",
+            M_B_USER_LANG.LANGUAGE_IND AS "languageInd.languageInd",
+            M_B_USER_LANG.USER_NAME AS "userName"
+        FROM M_B_USER
+        INNER JOIN M_COMPANY
+            ON M_B_USER.COMPANY_CD=M_COMPANY.COMPANY_CD
+        LEFT JOIN M_B_USER_LANG
+             ON M_B_USER_LANG.USER_ID=M_B_USER.USER_ID
+             AND M_B_USER_LANG.COMPANY_CD=M_B_USER.COMPANY_CD
+             AND M_B_USER_LANG.LANGUAGE_IND!=M_COMPANY.COMPANY_USE_LANGUAGE_IND
+             AND M_B_USER.USER_ID=#{userId, jdbcType=VARCHAR}
+             AND M_B_USER.COMPANY_CD=#{companyCd, jdbcType=VARCHAR}
+        INNER JOIN M_CODE_NAME
+            ON M_B_USER_LANG.LANGUAGE_IND = M_CODE_NAME.CODE_VALUE
+            AND CODE_KEY = 'LANGUAGE_IND'
+        ORDER BY
+            M_CODE_NAME.DSP_ORDER
+    </select>
+
+    <select id="searchUserSections" parameterType="fw.domain.mst.userauthority.user.UserManagement" resultType="int">
+        SELECT COUNT(SECTION_CD)
+        FROM  M_USER
+        LEFT JOIN M_B_USER
+            ON M_USER.USER_ID=M_B_USER.USER_ID
+            AND M_USER.COMPANY_CD=M_B_USER.COMPANY_CD
+        LEFT JOIN M_B_USER_LANG
+            ON M_USER.USER_ID=M_B_USER_LANG.USER_ID
+            AND M_USER.COMPANY_CD=M_B_USER_LANG.COMPANY_CD
+            AND M_B_USER_LANG.LANGUAGE_IND=M_B_USER.USE_LANGUAGE_IND
+        WHERE
+           M_USER.USER_ID=#{userIdentify.userId, jdbcType=VARCHAR}
+            AND M_USER.COMPANY_CD=#{userIdentify.companyCd, jdbcType=VARCHAR}
+            AND M_USER.SECTION_CD=#{userSectionInfo.userSection.sectionCd, jdbcType=VARCHAR}
+    </select>
+
+    <insert id="insertUser" parameterType="fw.domain.mst.userauthority.user.UserManagement">
+           INSERT INTO M_USER
+            (
+                COMPANY_CD,
+                SECTION_CD,
+                USER_ID,
+                VALID_START_DATE,
+                VALID_END_DATE ,
+                OFFICIAL_NAME,
+                EXTENSION_NO,
+                TEL_NO,
+                FAX_NO,
+                ROLE_NO,
+                TERM_FLG,
+                LAST_UPD_DATE,
+                LAST_UPD_COMPANY_CD,
+                LAST_UPD_SECTION_CD,
+                LAST_UPD_USER_ID,
+                REG_DATE,
+                REG_COMPANY_CD,
+                REG_SECTION_CD,
+                REG_USER_ID
+             ) VALUES (
+                #{userIdentify.companyCd, jdbcType=VARCHAR},
+                #{userSectionInfo.userSection.sectionCd, jdbcType=VARCHAR},
+                #{userIdentify.userId, jdbcType=VARCHAR},
+                #{userSectionInfo.validity.validityPeriod.period.startDate.dateOfymd},
+                #{userSectionInfo.validity.validityPeriod.period.endDate.dateOfymd},
+                #{userSectionInfo.official.officialName, jdbcType=VARCHAR},
+                #{userSectionInfo.contact.extNo.extensionNo, jdbcType=VARCHAR},
+                #{userSectionInfo.contact.telNo.telNo, jdbcType=VARCHAR},
+                #{userSectionInfo.contact.faxNo.faxNo, jdbcType=VARCHAR},
+                <if test="userSectionInfo.roleManagement.roleIdentify.roleNo == '9999'">
+                    NULL,
+                </if>
+                <if test="userSectionInfo.roleManagement.roleIdentify.roleNo != '9999'">
+                    #{userSectionInfo.roleManagement.roleIdentify.roleNo, jdbcType=VARCHAR},
+                </if>
+                #{userSectionInfo.validity.term.termFlg, jdbcType=VARCHAR},
+                #{registInfo.lastUpdDate, jdbcType=VARCHAR},
+                #{registInfo.lastUpdCompanyCd, jdbcType=VARCHAR},
+                #{registInfo.lastUpdSectionCd, jdbcType=VARCHAR},
+                #{registInfo.lastUpdUserId, jdbcType=VARCHAR},
+                #{registInfo.regDate, jdbcType=VARCHAR},
+                #{registInfo.regCompanyCd, jdbcType=VARCHAR},
+                #{registInfo.regSectionCd, jdbcType=VARCHAR},
+                #{registInfo.regUserId, jdbcType=VARCHAR}
+             )
+    </insert>
+
+    <insert id="insertBUser" parameterType="fw.domain.mst.userauthority.user.UserManagement">
+         INSERT INTO M_B_USER
+         (
+            COMPANY_CD,
+            USER_ID,
+            USE_LANGUAGE_IND,
+            PASSWORD,
+<!-- TODO 14/11/14 add パスワード暗号化 daiko t.watanabe start -->
+            PW_SALT,
+            PW_CHANGED_TIME,
+            PW_LOCKED_TIME,
+            PW_FAILED_COUNT,
+<!-- TODO 14/11/14 add パスワード暗号化 daiko t.watanabe start -->
+            MAIL_ADDR,
+            DEFAULT_LOGIN_SECTION_CD,
+            REJECT_MAIL_RCV_FLG,
+            RECEIPT_MAIL_RCV_FLG,
+            APPROVAL_MAIL_RCV_FLG,
+            MNG_FLG,
+            TERM_FLG,
+            LAST_UPD_DATE,
+            LAST_UPD_COMPANY_CD,
+            LAST_UPD_SECTION_CD,
+            LAST_UPD_USER_ID,
+            REG_DATE,
+            REG_COMPANY_CD,
+            REG_SECTION_CD,
+            REG_USER_ID
+         ) VALUES (
+            #{userIdentify.companyCd, jdbcType=VARCHAR},
+            #{userIdentify.userId, jdbcType=VARCHAR},
+            #{languageInd.languageInd, jdbcType=VARCHAR},
+            #{password, jdbcType=VARCHAR},
+<!-- TODO 14/11/14 add パスワード暗号化 daiko t.watanabe start -->
+            #{passwordSalt, jdbcType=VARCHAR},
+            #{passwordValidStartTime.dateOfymd, jdbcType=VARCHAR},
+            NULL,
+            0,
+<!-- TODO 14/11/14 add パスワード暗号化 daiko t.watanabe end -->
+            #{mailAddr.mail, jdbcType=VARCHAR},
+            #{userSectionInfo.userSection.sectionCd, jdbcType=VARCHAR},
+            #{mailRcvFlg.mailRcvReject, jdbcType=VARCHAR},
+            #{mailRcvFlg.mailRcvReceipt, jdbcType=VARCHAR},
+            #{mailRcvFlg.mailRcvNotice, jdbcType=VARCHAR},
+            '0',
+            #{userSectionInfo.validity.term.termFlg, jdbcType=VARCHAR},
+            #{registInfo.lastUpdDate, jdbcType=VARCHAR},
+            #{registInfo.lastUpdCompanyCd, jdbcType=VARCHAR},
+            #{registInfo.lastUpdSectionCd, jdbcType=VARCHAR},
+            #{registInfo.lastUpdUserId, jdbcType=VARCHAR},
+            #{registInfo.regDate, jdbcType=VARCHAR},
+            #{registInfo.regCompanyCd, jdbcType=VARCHAR},
+            #{registInfo.regSectionCd, jdbcType=VARCHAR},
+            #{registInfo.regUserId, jdbcType=VARCHAR}
+         )
+    </insert>
+
+    <insert id="insertSubAppUser" parameterType="fw.domain.mst.userauthority.user.SubAppUser">
+         INSERT INTO M_SUB_APP_USERS
+         (
+            COMPANY_CD,
+            USER_ID,
+            APP_VOUCHER_IND,
+            SUB_COMPANY_CD ,
+            SUB_APP_USER_ID,
+            DSP_ORDER,
+            LAST_UPD_DATE,
+            LAST_UPD_COMPANY_CD,
+            LAST_UPD_SECTION_CD,
+            LAST_UPD_USER_ID,
+            REG_DATE,
+            REG_COMPANY_CD,
+            REG_SECTION_CD,
+            REG_USER_ID
+          ) VALUES (
+            #{userIdentify.companyCd, jdbcType=VARCHAR},
+            #{userIdentify.userId, jdbcType=VARCHAR},
+            #{appVoucherInd, jdbcType=VARCHAR},
+            #{companyCd, jdbcType=VARCHAR},
+            #{userId, jdbcType=VARCHAR},
+            #{dspOrder, jdbcType=VARCHAR},
+            #{registInfo.lastUpdDate, jdbcType=VARCHAR},
+            #{registInfo.lastUpdCompanyCd, jdbcType=VARCHAR},
+            #{registInfo.lastUpdSectionCd, jdbcType=VARCHAR},
+            #{registInfo.lastUpdUserId, jdbcType=VARCHAR},
+            #{registInfo.regDate, jdbcType=VARCHAR},
+            #{registInfo.regCompanyCd, jdbcType=VARCHAR},
+            #{registInfo.regSectionCd, jdbcType=VARCHAR},
+            #{registInfo.regUserId, jdbcType=VARCHAR}
+           )
+    </insert>
+
+    <insert id="insertUserLanguage" parameterType="fw.domain.mst.userauthority.user.UserLanguage">
+         INSERT INTO M_B_USER_LANG
+         (
+            COMPANY_CD,
+            USER_ID ,
+            LANGUAGE_IND ,
+            USER_NAME,
+            LAST_UPD_DATE,
+            LAST_UPD_COMPANY_CD,
+            LAST_UPD_SECTION_CD,
+            LAST_UPD_USER_ID,
+            REG_DATE,
+            REG_COMPANY_CD,
+            REG_SECTION_CD,
+            REG_USER_ID
+         ) VALUES (
+           #{userIdentify.companyCd, jdbcType=VARCHAR},
+           #{userIdentify.userId, jdbcType=VARCHAR},
+           #{languageInd.languageInd, jdbcType=VARCHAR},
+           #{userName, jdbcType=VARCHAR},
+           #{registInfo.lastUpdDate, jdbcType=VARCHAR},
+           #{registInfo.lastUpdCompanyCd, jdbcType=VARCHAR},
+           #{registInfo.lastUpdSectionCd, jdbcType=VARCHAR},
+           #{registInfo.lastUpdUserId, jdbcType=VARCHAR},
+           #{registInfo.regDate, jdbcType=VARCHAR},
+           #{registInfo.regCompanyCd, jdbcType=VARCHAR},
+           #{registInfo.regSectionCd, jdbcType=VARCHAR},
+           #{registInfo.regUserId, jdbcType=VARCHAR}
+        )
+    </insert>
+
+    <update id="updateDefaultLoginSection" parameterType="fw.domain.mst.userauthority.user.UserManagement">
+        UPDATE M_B_USER
+        SET
+            DEFAULT_LOGIN_SECTION_CD=#{userSectionInfo.userSection.sectionCd, jdbcType=VARCHAR},
+            LAST_UPD_DATE = #{registInfo.lastUpdDate, jdbcType=VARCHAR},
+            LAST_UPD_COMPANY_CD = #{registInfo.lastUpdCompanyCd, jdbcType=VARCHAR},
+            LAST_UPD_SECTION_CD = #{registInfo.lastUpdSectionCd, jdbcType=VARCHAR},
+            LAST_UPD_USER_ID = #{registInfo.lastUpdUserId, jdbcType=VARCHAR}
+        WHERE
+            USER_ID=#{userIdentify.userId, jdbcType=VARCHAR}
+            AND COMPANY_CD=#{userIdentify.companyCd, jdbcType=VARCHAR}
+    </update>
+    <update id="updateDefaultLoginSectionForUpload" parameterType="fw.domain.mst.userauthority.user.UserManagement">
+        UPDATE M_B_USER
+        SET
+            DEFAULT_LOGIN_SECTION_CD=#{defaultLoginSectionCd, jdbcType=VARCHAR},
+            LAST_UPD_DATE = #{registInfo.lastUpdDate, jdbcType=VARCHAR},
+            LAST_UPD_COMPANY_CD = #{registInfo.lastUpdCompanyCd, jdbcType=VARCHAR},
+            LAST_UPD_SECTION_CD = #{registInfo.lastUpdSectionCd, jdbcType=VARCHAR},
+            LAST_UPD_USER_ID = #{registInfo.lastUpdUserId, jdbcType=VARCHAR}
+        WHERE
+            USER_ID=#{userIdentify.userId, jdbcType=VARCHAR}
+            AND COMPANY_CD=#{userIdentify.companyCd, jdbcType=VARCHAR}
+    </update>
+
+    <update id="updateBUser" parameterType="fw.domain.mst.userauthority.user.UserManagement">
+        UPDATE M_B_USER
+        SET
+            COMPANY_CD= #{userIdentify.companyCd, jdbcType=VARCHAR},
+            USER_ID= #{userIdentify.userId, jdbcType=VARCHAR},
+            USE_LANGUAGE_IND=#{languageInd.languageInd, jdbcType=VARCHAR},
+<!-- TODO 14/11/14 mod パスワード暗号化 daiko t.watanabe start -->
+        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(password)">
+            PASSWORD = #{password, jdbcType=VARCHAR},
+            PW_SALT = #{passwordSalt, jdbcType=VARCHAR},
+            PW_CHANGED_TIME = #{passwordValidStartTime.dateOfymd, jdbcType=VARCHAR},
+            PW_LOCKED_TIME = NULL,
+            PW_FAILED_COUNT = 0,
+        </if>
+<!-- TODO 14/11/14 mod パスワード暗号化 daiko t.watanabe end -->
+            MAIL_ADDR=#{mailAddr.mail, jdbcType=VARCHAR},
+            REJECT_MAIL_RCV_FLG=#{mailRcvFlg.mailRcvReject, jdbcType=VARCHAR},
+            RECEIPT_MAIL_RCV_FLG=#{mailRcvFlg.mailRcvReceipt, jdbcType=VARCHAR},
+            APPROVAL_MAIL_RCV_FLG= #{mailRcvFlg.mailRcvNotice, jdbcType=VARCHAR},
+            TERM_FLG=#{userSectionInfo.validity.term.termFlg, jdbcType=VARCHAR},
+            LAST_UPD_DATE = #{registInfo.lastUpdDate, jdbcType=VARCHAR},
+            LAST_UPD_COMPANY_CD = #{registInfo.lastUpdCompanyCd, jdbcType=VARCHAR},
+            LAST_UPD_SECTION_CD = #{registInfo.lastUpdSectionCd, jdbcType=VARCHAR},
+            LAST_UPD_USER_ID = #{registInfo.lastUpdUserId, jdbcType=VARCHAR}
+          WHERE
+             USER_ID=#{userIdentify.userId, jdbcType=VARCHAR}
+            AND COMPANY_CD=#{userIdentify.companyCd, jdbcType=VARCHAR}
+    </update>
+
+<!-- 所属追加時のユーザ管理マスタ更新用 -->
+    <update id="updateBUserAddSection" parameterType="fw.domain.mst.userauthority.user.UserManagement">
+        UPDATE M_B_USER
+        SET
+            TERM_FLG=0,
+            LAST_UPD_DATE = #{registInfo.lastUpdDate, jdbcType=VARCHAR},
+            LAST_UPD_COMPANY_CD = #{registInfo.lastUpdCompanyCd, jdbcType=VARCHAR},
+            LAST_UPD_SECTION_CD = #{registInfo.lastUpdSectionCd, jdbcType=VARCHAR},
+            LAST_UPD_USER_ID = #{registInfo.lastUpdUserId, jdbcType=VARCHAR}
+          WHERE
+             USER_ID=#{userIdentify.userId, jdbcType=VARCHAR}
+            AND COMPANY_CD=#{userIdentify.companyCd, jdbcType=VARCHAR}
+    </update>
+    
+    <!-- 部門削除時のユーザ管理マスタ更新用 -->
+    <update id="updateBUserDelSection" parameterType="fw.domain.mst.userauthority.user.UserManagement">
+        UPDATE M_B_USER
+        SET
+            TERM_FLG=1,
+            LAST_UPD_DATE = #{registInfo.lastUpdDate, jdbcType=VARCHAR},
+            LAST_UPD_COMPANY_CD = #{registInfo.lastUpdCompanyCd, jdbcType=VARCHAR},
+            LAST_UPD_SECTION_CD = #{registInfo.lastUpdSectionCd, jdbcType=VARCHAR},
+            LAST_UPD_USER_ID = #{registInfo.lastUpdUserId, jdbcType=VARCHAR}
+          WHERE
+            USER_ID=#{userIdentify.userId, jdbcType=VARCHAR}
+            AND COMPANY_CD=#{userIdentify.companyCd, jdbcType=VARCHAR}
+    </update>
+
+    <update id="updateUser" parameterType="fw.domain.mst.userauthority.user.UserManagement">
+        UPDATE M_USER
+        SET
+            COMPANY_CD= #{userIdentify.companyCd, jdbcType=VARCHAR},
+            USER_ID= #{userIdentify.userId, jdbcType=VARCHAR},
+            SECTION_CD= #{userIdentify.sectionCd, jdbcType=VARCHAR},
+            VALID_START_DATE = #{userSectionInfo.validity.validityPeriod.period.startDate.dateOfymd},
+            VALID_END_DATE = #{userSectionInfo.validity.validityPeriod.period.endDate.dateOfymd},
+            OFFICIAL_NAME=#{userSectionInfo.official.officialName, jdbcType=VARCHAR},
+            EXTENSION_NO= #{userSectionInfo.contact.extNo.extensionNo, jdbcType=VARCHAR},
+            TEL_NO= #{userSectionInfo.contact.telNo.telNo, jdbcType=VARCHAR},
+            FAX_NO=#{userSectionInfo.contact.faxNo.faxNo, jdbcType=VARCHAR},
+            <if test="userSectionInfo.roleManagement.roleIdentify.roleNo == '9999'">
+            ROLE_NO = NULL,
+            </if>
+            <if test="userSectionInfo.roleManagement.roleIdentify.roleNo != '9999'">
+            ROLE_NO = #{userSectionInfo.roleManagement.roleIdentify.roleNo, jdbcType=VARCHAR} ,
+            </if>
+            SEARCH_DEFAULT_DAYS=#{userSectionInfo.searchDefaultDays.days, jdbcType=VARCHAR},
+            TERM_FLG =#{userSectionInfo.validity.term.termFlg, jdbcType=VARCHAR} ,
+            LAST_UPD_DATE = #{registInfo.lastUpdDate, jdbcType=VARCHAR},
+            LAST_UPD_COMPANY_CD = #{registInfo.lastUpdCompanyCd, jdbcType=VARCHAR},
+            LAST_UPD_SECTION_CD = #{registInfo.lastUpdSectionCd, jdbcType=VARCHAR},
+            LAST_UPD_USER_ID = #{registInfo.lastUpdUserId, jdbcType=VARCHAR}
+         WHERE
+            USER_ID=#{userIdentify.userId, jdbcType=VARCHAR}
+            AND COMPANY_CD=#{userIdentify.companyCd, jdbcType=VARCHAR}
+            AND SECTION_CD=#{userIdentify.sectionCd, jdbcType=VARCHAR}
+    </update>
+
+    <delete id="deleteBUser" parameterType="fw.domain.mst.userauthority.user.UserIdentify">
+        DELETE FROM M_B_USER
+        WHERE
+            USER_ID=#{userId, jdbcType=VARCHAR}
+            AND COMPANY_CD=#{companyCd, jdbcType=VARCHAR}
+    </delete>
+
+     <delete id="deleteUser" parameterType="fw.domain.mst.userauthority.user.UserIdentify">
+         DELETE FROM M_USER
+        WHERE
+            USER_ID=#{userId, jdbcType=VARCHAR}
+            AND COMPANY_CD=#{companyCd, jdbcType=VARCHAR}
+            AND SECTION_CD=#{sectionCd, jdbcType=VARCHAR}
+    </delete>
+
+    <delete id="deleteSubAppUser" parameterType="fw.domain.mst.userauthority.user.UserManagement">
+        DELETE FROM M_SUB_APP_USERS
+        WHERE
+            USER_ID=#{userIdentify.userId, jdbcType=VARCHAR}
+            AND COMPANY_CD=#{userIdentify.companyCd, jdbcType=VARCHAR}
+    </delete>
+
+    <delete id="deleteUserLanguage" parameterType="fw.domain.mst.userauthority.user.UserManagement">
+       DELETE FROM M_B_USER_LANG
+        WHERE
+            USER_ID=#{userIdentify.userId, jdbcType=VARCHAR}
+            AND COMPANY_CD=#{userIdentify.companyCd, jdbcType=VARCHAR}
+    </delete>
+    <delete id="deleteUserLanguageForUpload" parameterType="fw.domain.mst.userauthority.user.UserManagement">
+       DELETE FROM M_B_USER_LANG
+        WHERE
+            USER_ID=#{userIdentify.userId, jdbcType=VARCHAR}
+            AND COMPANY_CD=#{userIdentify.companyCd, jdbcType=VARCHAR}
+            AND LANGUAGE_IND = #{languageInd.languageInd, jdbcType=VARCHAR}
+    </delete>
+
+
+    <select id="searchCountBUser" parameterType="fw.domain.mst.userauthority.user.UserIdentify" resultType="int">
+        SELECT COUNT(SECTION_CD)
+         FROM  M_USER
+         LEFT JOIN M_B_USER
+            ON M_USER.USER_ID=M_B_USER.USER_ID
+            AND M_USER.COMPANY_CD=M_B_USER.COMPANY_CD
+         LEFT JOIN M_B_USER_LANG
+            ON M_USER.USER_ID=M_B_USER_LANG.USER_ID
+            AND M_USER.COMPANY_CD=M_B_USER_LANG.COMPANY_CD
+          LEFT JOIN M_SUB_APP_USERS
+          ON M_SUB_APP_USERS.COMPANY_CD= M_USER.COMPANY_CD
+          AND M_SUB_APP_USERS.USER_ID= M_USER.USER_ID
+         WHERE
+             M_USER.USER_ID=#{userId, jdbcType=VARCHAR}
+            AND  M_USER.COMPANY_CD=#{companyCd, jdbcType=VARCHAR}
+    </select>
+
+    <select id="searchCountUserSection" parameterType="fw.domain.mst.userauthority.user.UserIdentify" resultType="int">
+        SELECT COUNT(1) FROM M_USER
+        WHERE
+             COMPANY_CD=#{companyCd, jdbcType=VARCHAR}
+            AND USER_ID=#{userId, jdbcType=VARCHAR}
+    </select>
+
+    <select id="searchCountAppRoute" parameterType="fw.domain.mst.userauthority.user.UserIdentify" resultType="int">
+        SELECT COUNT(1)  FROM M_APP_ROUTE_DTL
+        WHERE
+            COMPANY_CD=#{companyCd, jdbcType=VARCHAR}
+            AND SECTION_CD=#{sectionCd, jdbcType=VARCHAR}
+            AND APP_USER_ID=#{userId, jdbcType=VARCHAR}
+    </select>
+
+    <select id="searchCountBySection" parameterType="fw.domain.mst.userauthority.user.UserIdentify" resultType="int">
+        SELECT COUNT(1) FROM M_USER
+        WHERE
+            COMPANY_CD=#{companyCd, jdbcType=VARCHAR}
+            AND SECTION_CD=#{sectionCd, jdbcType=VARCHAR}
+    </select>
+
+    <select id="searchDefaultLoginSectionCd" parameterType="fw.domain.mst.userauthority.user.UserManagement" resultType="String">
+        SELECT DEFAULT_LOGIN_SECTION_CD FROM M_B_USER
+        WHERE
+            USER_ID=#{userIdentify.userId, jdbcType=VARCHAR}
+            AND COMPANY_CD=#{userIdentify.companyCd, jdbcType=VARCHAR}
+    </select>
+    <!-- 個人設定 -->
+    <insert id="insertUserPersonalSetting"
+        parameterType="fw.domain.mst.userauthority.user.UserManagement">
+           INSERT into s_personal_setting (
+              SELECT
+               #{userIdentify.companyCd, jdbcType=VARCHAR},
+               #{userIdentify.userId, jdbcType=VARCHAR},
+               func_id,
+               element_seq,
+               voucher_type,
+               S_Personal_Setting_Seq.Nextval,
+               dsp_flg,
+               dsp_order,
+               combine_flg,
+               lock_flg,
+               one_column_dsp_flg,
+               use_flg,
+               #{registInfo.lastUpdDate, jdbcType=VARCHAR},
+               #{registInfo.lastUpdCompanyCd, jdbcType=VARCHAR},
+               #{registInfo.lastUpdSectionCd, jdbcType=VARCHAR},
+               #{registInfo.lastUpdUserId, jdbcType=VARCHAR},
+               #{registInfo.regDate, jdbcType=VARCHAR},
+               #{registInfo.regCompanyCd, jdbcType=VARCHAR},
+               #{registInfo.regSectionCd, jdbcType=VARCHAR},
+               #{registInfo.regUserId, jdbcType=VARCHAR}
+              FROM s_personal_setting
+              WHERE s_personal_setting.user_id = '-100'
+            )
+    </insert>
+    <delete id="deleteUserPersonalSetting"
+            parameterType="fw.domain.mst.userauthority.user.UserManagement">
+       DELETE FROM s_personal_setting
+        WHERE
+            USER_ID = #{userIdentify.userId, jdbcType=VARCHAR}
+        AND COMPANY_CD = #{userIdentify.companyCd, jdbcType=VARCHAR}
+    </delete>
+    <sql id="pageHeader">
+       SELECT * FROM (
+    </sql>
+    <sql id="pageRoot">
+        ) WHERE  ROWNUM &lt;=${@fw.common.util.PropertiesUtil@getLong("DOWNLOAD_MAXCNT")}
+    </sql>
+    <!-- ＩＴ２-01551-000 2013.06.27 ADD SBO_WANGXM START -->
+    <select id="searchCountUser" parameterType="fw.domain.mst.userauthority.user.UserManagement" resultType="int">
+        SELECT COUNT(1) FROM M_USER
+        WHERE
+             COMPANY_CD = #{userIdentify.companyCd, jdbcType=VARCHAR}
+            AND USER_ID = #{userIdentify.userId, jdbcType=VARCHAR}
+            AND TERM_FLG = '0'
+    </select>
+    <!-- ＩＴ２-01551-000 2013.06.27 ADD SBO_WANGXM -END- -->
+    <select id="searchPassword" parameterType="fw.domain.mst.userauthority.user.UserIdentify" resultType="fw.domain.mst.userauthority.user.UserManagement" resultMap="UserManagement_Map">
+        SELECT
+            M_B_USER.COMPANY_CD AS "userIdentify.companyCd",
+            M_B_USER.USER_ID AS "userIdentify.userId",
+            M_B_USER.PASSWORD AS "password",
+            M_B_USER.PW_SALT
+            FROM  M_B_USER
+        WHERE M_B_USER.USER_ID=#{userId, jdbcType=VARCHAR}
+            AND M_B_USER.COMPANY_CD=#{companyCd, jdbcType=VARCHAR}
+    </select>
+</mapper>

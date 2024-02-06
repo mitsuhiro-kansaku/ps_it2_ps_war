@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<flow xmlns="http://www.springframework.org/schema/webflow"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.springframework.org/schema/webflow
+        http://www.springframework.org/schema/webflow/spring-webflow-2.0.xsd"
+    parent="base">
+    
+   <input name="orderIdentify" />
+   <input name="isInitIndividualApr" />
+   <input name="SessionKey"/>
+    <input name="searchCondition" />
+   
+    <decision-state id="isInitIndividualApr">
+        <if test="flowScope.isExclusiveCheck != null and flowScope.isExclusiveCheck" then="PSAPR032" />
+        <if test="flowScope.isInitIndividualApr == null or flowScope.isInitIndividualApr" then="initIndividualApr" else="back" />
+    </decision-state>
+    
+    <action-state id="initIndividualApr">
+        <evaluate expression="PSAPR032Service.init(orderIdentify)"
+            result="flowScope.domain" />
+        <transition to="PSAPR032"/> 
+    </action-state>
+    
+    <view-state id="PSAPR032" view="apr/ord/PSAPR032" model="domain">
+        <transition on="approval" validate="true">
+             <evaluate expression="PSAPR032Service.approval(domain)"/>
+              <set name="flashScope.isSuccessForApproval" value="true"></set> 
+        </transition>
+        <transition on="sendBack" validate="true">
+             <evaluate expression="PSAPR032Service.sendBack(domain)"/> 
+             <set name="flashScope.isSuccessForsSendBack" value="true"></set> 
+        </transition>
+        <transition on="next" validate="false" to="isInitIndividualApr">
+             <evaluate expression="PSAPR032Service.next()" result="flowScope.orderIdentify"/> 
+             <set name="flashScope.isSuccessForApproval" value="false"></set> 
+             <set name="flashScope.isSuccessForSendBack" value="false"></set> 
+        </transition>
+        <transition on="page" validate="false" to="isInitIndividualApr">
+             <evaluate expression="PSAPR032Service.page()" result="flowScope.orderIdentify"/> 
+        </transition>
+        <transition on="download" validate="false">
+            <evaluate expression="PSAPR032Service.downloadByteFile()"/>
+        </transition>
+        <transition on="downloadext" validate="false">
+            <evaluate expression="PSAPR032Service.downloadFileExt(domain)"/>
+        </transition>
+        <!-- 承認者の追加  -->
+        <transition on="addAuthorizer" validate="false">
+             <evaluate expression="PSAPR032Service.addAuthorizer(domain)" result="flowScope.domain"/> 
+        </transition>
+        <!-- 承認者の削除  -->
+        <transition on="removeAuthorizer" validate="false">
+             <evaluate expression="PSAPR032Service.removeAuthorizer(domain)" result="flowScope.domain"/> 
+        </transition>
+    </view-state> 
+
+</flow> 

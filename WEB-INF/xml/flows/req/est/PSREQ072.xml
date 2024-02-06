@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<flow xmlns="http://www.springframework.org/schema/webflow"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.springframework.org/schema/webflow
+        http://www.springframework.org/schema/webflow/spring-webflow-2.0.xsd"
+    parent="base">
+
+    <var name="domain" class="fw.domain.slip.quot.quotstatus.quotreqstatuslist.QuoStatus" />
+    <!-- 見積取引先回答  -->
+    <var name="respItem" class="fw.domain.slip.quot.quotresp.quotrespdetail.QuotSupplierResp" />
+    <input name="identify" />
+    <input name="SessionKey" />
+    <on-start>
+        <evaluate expression="PSREQ072Service.init(identify)"
+            result="flowScope.domain" />
+    </on-start>
+
+    <view-state id="PSREQ072_top" view="req/est/PSREQ072" model="domain">
+        <transition on="PSREQ072_left" to="PSREQ072_left"/>
+        <!-- 再見積 -->
+        <transition on="quotReqInputValidate" validate="true">
+            <set name="flashScope.isShowQuotReqInput" value="true"/>
+        </transition>
+        <transition on="quoteAgain" to="PSREQ010Input"/>
+        <!-- 中止 -->
+        <transition on="cancel" validate="true">
+            <evaluate expression="PSREQ072Service.updateCancel(domain,identify)"/>
+            <set name="flashScope.isCancelSuccess" value="true"></set>
+        </transition>
+    </view-state> 
+    
+    <view-state id="PSREQ072_left" view="req/est/PSREQ072_left" >
+        <transition on="PSREQ072_right" to="PSREQ072"/>
+        <transition on="download" validate="false">
+            <evaluate expression="PSREQ072Service.downloadFromAttachMng(requestParameters.seqNo)" />
+        </transition>
+        <transition on="downloadext" validate="false">
+            <evaluate expression="PSREQ072Service.downloadFileExt(domain)"/>
+        </transition>
+    </view-state>
+    
+    <view-state id="PSREQ072" view="req/est/PSREQ072_right" model="domain">
+        <transition on="download" validate="false">
+            <evaluate expression="PSREQ072Service.downloadFromQuotRespAttach(requestParameters.seqNo)" />
+        </transition>
+        <transition on="answerDetailValidate" validate="true">
+            <set name="flashScope.isShowAnswerDetail" value="true"></set>
+        </transition>
+        <transition on="answerDetail" to="PSQOT080AnsDetail" validate="false" />
+        <transition on="purReqInputValidate" validate="true" >
+            <set name="respItem.quotSupplierLineNo" value="requestParameters.quotSupplierLineNo"/>
+            <set name="respItem.quotRespSeqNo" value="requestParameters.quotRespSeqNo"/>
+            <set name="flashScope.isShowPurReqInput" value="true"></set>
+        </transition>
+        <transition on="purReqInput" to="PSPUR010Input" validate="false" />
+        <transition on="PSREQ072Reflash" validate="false" to="PSREQ072_top">
+            <evaluate expression="PSREQ072Service.init(identify)" result="flowScope.domain"/>
+        </transition>
+    </view-state>
+    
+    <subflow-state id="PSQOT080AnsDetail" subflow="qot/ans/PSQOT080" >
+        <input name="quotReqNo" value="requestParameters.quotReqNo" />
+        <input name="lastUpdDate" value="requestParameters.lastUpdDate" />
+        <input name="isSearchByAll" value="true"/>
+    </subflow-state>
+    
+    <subflow-state id="PSREQ010Input" subflow="req/est/PSREQ010" >
+       <input name="isInitIndividualApr" value="true" />
+       <input name="SessionKey" value="SessionKey" />
+       <input name="identify" value="identify" />
+       <transition on="back" to="PSREQ072_top">
+          <evaluate expression="PSREQ072Service.init(identify)"
+              result="flowScope.domain" />
+       </transition>
+       <transition on="backlist" to="back"></transition>
+    </subflow-state>
+    
+    <subflow-state id="PSPUR010Input" subflow="pur/req/PSPUR010New" >
+        <input name="quotReqSeqNo" value="requestParameters.quotReqSeqNo" />
+        <input name="quotSupplierLineNo" value="requestParameters.quotSupplierLineNo" />
+        <input name="lastUpdDate" value="requestParameters.lastUpdDate" />
+        <input name="patternName" value="'New'" />
+        <input name="isInitIndividualApr" value="true" />
+        <transition on="back" to="PSREQ072_top" >
+			<evaluate expression="PSREQ072Service.init(identify)"
+			    result="flowScope.domain" />
+        </transition>
+        <transition on="backlist" to="back"></transition>
+    </subflow-state>
+</flow>

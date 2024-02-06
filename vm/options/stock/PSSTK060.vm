@@ -1,0 +1,293 @@
+<!doctype html>
+<html LANG="ja">
+<head>
+<META http-equiv="Content-type" content="text/html; charset=UTF-8">
+<title>#customSpringMessage('STOCK_LIST')</title><!--在庫一覧-->
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Content-script-type" CONTENT="text/javascript">
+<link rel="stylesheet" href="../../include/searchbox.css" type="text/css">
+<link id="CSS_FONT" rel="stylesheet" href="../../include/FontS.css" type="text/css">
+<link rel="stylesheet" href="../../include/Layout.css" type="text/css">
+<link rel="stylesheet" href="../../include/Color.css" type="text/css">
+<link rel="stylesheet" href="../../include/ime.css" type="text/css">
+<script language="javascript" type="text/javascript" src="../../include/common.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/check.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/date.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/searchbox.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/jquery-1.7.2.min.js"></script>
+<script language="javascript" type="text/javascript">
+<!--
+#set($authNoFlag=$LoginUser.hasAuth(${AuthNoConstant.getValue("MASTER_PRICE_UPDATE_GRANT")}))
+#set($commonTitle = "#customSpringMessage('STOCK_LIST')")
+
+var maxSearchHeight = 160;
+var minSearchHeight = 30;
+
+var pinName="PSSTK060_Pin";
+#parse("./common/common_js.vm")
+
+function onLoad(){
+    var statusFlag = "#out($!status)";
+    var linkFlag = false;
+    if(statusFlag != ""){
+        linkFlag = true;
+    }    
+    
+    bodyLoad();
+    var alertMessage = "$!alertMessage";
+    if (alertMessage != ""){
+        alert(alertMessage);
+    }
+    
+    var errorMsg = "#out($!errorMessage)";
+    if (errorMsg != ""){
+        setErrorMessage("ERRORDIV", errorMsg, "DATAAREA");
+        return;
+    }
+     var isDownload = "#out($!isDownLoadValidate)";
+     if (isDownload == 'true') {
+        iframeChange("#out(${flowExecutionUrl})&_eventId=download","pageid","PSSTK060","HIDDENAREA");
+     } else {
+        var isShowList = '#out($isShowList)';
+        if(isShowList == 'true'){
+            iframeChange("#out(${flowExecutionUrl})&_eventId=search","pageid","PSSTK060");
+            statusFlag= false;
+        } 
+        if( linkFlag && statusFlag != ""){
+           iframeChange("#out(${flowExecutionUrl})&_eventId=search","pageid","PSSTK060");
+        }
+    }
+}
+
+function doSearch() {  
+    setItemDisabled("itemProductClassM","itemProductClassS");
+    getObj("Body").target="_self";
+    buttonDisable();
+    getObj("Body").action = "#out(${flowExecutionUrl})&_eventId=validate";  
+    getObj("Body").submit();
+}
+function doDownload() {
+    setItemDisabled("itemProductClassM","itemProductClassS");
+    getObj("TR_ERROR").style.display = "none";
+    getObj("ERRORDIV").innerHTML="";
+    getObj("Body").target = "HIDDENAREA";
+    buttonDisable();
+    setTimeout(buttonUsable,1000);
+    getObj("Body").action = "#out(${flowExecutionUrl})&_eventId=downloadValidate";
+    getObj("Body").submit();
+}
+
+function openStockPlacePopup() {
+    // 廃止フラグ
+    // V4.4.0-00001-088-S
+    //var prmTermFlg = "0";
+    var prmTermFlg = "1";
+    // V4.4.0-00001-088-E
+    // 会社コード
+    var prmCompanyCd = getObj('securityCompanyCd').value;
+    // 事業所コード
+    var prmSectionPlaceCd = getObj('securitySectionPlaceCd').value;
+    // 参照範囲区分(2:事業所内)
+    var prmReferenceRangeFlg = "2";
+    // 全社在庫照会権限フラグ
+    var stockReadAllGrantFlg = getObj('stockReadAllGrantFlg').value;
+    if (stockReadAllGrantFlg == "1") {
+        // 全社在庫照会権限フラグが1：ありの場合
+        // 事業所コードを未設定にする
+        prmSectionPlaceCd = "";
+        // 参照範囲区分を1:会社内にする
+        prmReferenceRangeFlg = "1";
+    }
+
+    stockPlacePopup.setParam(prmTermFlg,prmCompanyCd,prmSectionPlaceCd,prmReferenceRangeFlg);
+    // 事業所コード・名は破棄用のhiddenオブジェクトを設定
+    stockPlacePopup.setObject(
+        getObj('tmpSectionPlaceCd')
+        ,getObj('tmpSectionPlaceName')
+        ,getObj('stockPlaceCd')
+        ,getObj('stockPlaceName'));
+    masterSearch(
+        '../../src/stockPlacePopup/search?pageid=stockPlacePopupSearch'
+        ,'StockPlaceSearch'
+        ,'700'
+        ,'500');
+}
+
+function openSectionPlacePopup() {
+    // 廃止フラグ
+    // V4.4.0-00001-088-S
+    //var prmTermFlg = "0";
+    var prmTermFlg = "1";
+    // V4.4.0-00001-088-E
+    // 会社コード
+    var prmCompanyCd = getObj('securityCompanyCd').value;
+    // 会社変更区分
+    var companyChangeInd = "0";
+
+    sectionPlacePopup.setParam(prmTermFlg,prmCompanyCd,companyChangeInd);
+    sectionPlacePopup.setObject(getObj('sectionPlaceCd'),getObj('sectionPlaceName'));
+    masterSearch(
+        '../../src/sectionPlacePopup/search?pageid=sectionPlacePopupSearch'
+        ,'SectionSearch'
+        ,'700'
+        ,'500');
+}
+
+function openItemPopup() {
+    // 廃止フラグ
+    // V4.4.0-00001-088-S
+    //var prmTermFlg = "0";
+    var prmTermFlg = "1";
+    // V4.4.0-00001-088-E
+    // 会社コード
+    var prmCompanyCd = getObj('securityCompanyCd').value;
+
+    itemPopup.setParam(prmTermFlg,prmCompanyCd);
+    itemPopup.setObject(getObj('itemCd'),getObj('itemName'));
+    masterSearch(
+       '../../src/itemPopup/search?pageid=itemPopupSearch&popupPageid=PSSTK060'
+       ,'itemPopup'
+      ,'850'
+      ,'600');
+}
+
+function clearSectionPlaceName() {
+        getObj('sectionPlaceName').value='';
+}
+
+function clearStockPlaceName() {
+        getObj('stockPlaceName').value='';
+}
+
+function checkBoxClear() {
+    searchConditionCheckBoxClear("stockZeroBothFlg");
+}
+
+//-->
+</script>
+</head>
+<body topmargin="0" leftmargin="0" marginwidth="0" marginheight="0" align="center" width="100%" height="100%" onload="onLoad();" style="overflow-y:hidden;">
+<form id="Body" name="Body" action="${flowExecutionUrl}&_eventId=validate" method="post">
+#customFormHiddenInput("isClassify" "false")
+#customFormHiddenInput("securityCompanyCd" "$!searchCondition.securityCompanyCd")
+#customFormHiddenInput("securitySectionPlaceCd" "$!searchCondition.securitySectionPlaceCd")
+#customFormHiddenInput("stockReadAllGrantFlg" "$!searchCondition.stockReadAllGrantFlg")
+#customFormHiddenInput("tmpSectionPlaceCd" "")
+#customFormHiddenInput("tmpSectionPlaceName" "")
+<!--
+    <iframe id="CALENDARBOX" class="CALENDARBOX" framespacing="0"scrolling="no" frameborder="0" src="../../sbxCalendar/body.html"></iframe>
+-->
+    <table class="NoBorder" width="100%" height="100%">
+        <tr>
+            <td id="SEARCH_AREA" class="SearchArea">
+                  #parse("./common/common_title_withoutnew.vm")
+                <table width="100%">
+                    <tr id="SEARCH_AREA2">
+                        <td id="Adjust" align="right" valign="top">
+                            <table class="NoBorder" width="100%">
+                                <tr><td align="left" colspan="2" nowrap>#customSpringMessage('PSSTK060_HEADER_COMMENT')</td></tr>
+                                 <tr>
+                                    <td nowrap class="FontSmallBold" align="right">#customSpringMessage('STOCK_PLACE')<!--在庫場所--></td>
+                                    <td nowrap align="left">
+                                        #springFormInput("searchCondition.stockPlaceCd" "class='Small noIME' maxlength=12 type='text' size=20 ondblclick='' onchange='clearStockPlaceName();'
+                                            onfocus='this.select();if(nowWarning==this) { closeWarningBox();}' onmouseover='reDrowWbx(this);' value='$!searchCondition.stockPlaceCd'")
+                                        #springFormInput("searchCondition.stockPlaceName" " class='SmallDsp' type='text' readonly tabIndex='-1' size='71' ")
+                                        <img class="Icon" name="ItemSearch" src="../../image/btnLupe.gif" onclick="openStockPlacePopup();">
+                                    </td>
+                                  #if("$!searchCondition.stockReadAllGrantFlg" == "1")
+                                    <td nowrap class="FontSmallBold" align="right">#customSpringMessage('SECTION_PLACE')<!-- 事業所--></td>
+                                    <td nowrap align="left">
+                                        #springFormInput("searchCondition.sectionPlaceCd" "class='Small noIME' maxlength=12 type='text' size=20 ondblclick='' onchange='clearSectionPlaceName();'
+                                            onfocus='this.select();if(nowWarning==this) { closeWarningBox();}' onmouseover='reDrowWbx(this);' value='$!searchCondition.sectionPlaceCd'")
+                                        #springFormInput("searchCondition.sectionPlaceName" " class='SmallDsp' type='text' readonly tabIndex='-1' size='71' ")
+                                        <img class="Icon" name="ItemSearch" src="../../image/btnLupe.gif" onclick="openSectionPlacePopup();">
+                                    </td>
+                                 #end
+                                 </tr>
+                                <tr>
+                                    <td nowrap class="FontSmallBold" align="right">#customSpringMessage('PRODUCT_CLASS')</td> <!-- 品名分類-->
+                                    <td class="FontSmallBold" align="left" nowrap colspan="3">
+                                        #customProductClassSelect("searchCondition.itemProductClassL","searchCondition.itemProductClassM","searchCondition.itemProductClassS")
+                                    </td>
+                                </tr>
+                                 <tr>
+                                    <td nowrap class="FontSmallBold" align="right">#customSpringMessage('ITEM_CD')
+                                       <span class="FontComment">＊</span><!-- 品名コード-->
+                                    </td>
+                                    <td nowrap align="left">
+                                        #springFormInput("searchCondition.itemCd" "class='Small noIME' maxlength=25 type='text' size=44 value='$!searchCondition.itemCd'")
+                                        <img class="Icon "name="" src="../../image/btnLupe.gif" onclick="openItemPopup();">
+                                    </td>
+                                 </tr>
+                                 <tr>
+                                    <td nowrap class="FontSmallBold" align="right">#customSpringMessage('ITEM_NAME')
+                                        <span class="FontComment">％</span><!-- 品名-->
+                                    </td>
+                                    <td nowrap align="left">
+                                    #springFormInput("searchCondition.itemName" "class='Small onIME' maxLength=60 size=80")
+                                    </td>
+                                 </tr>
+
+                                 <tr>
+                                    <td nowrap class="FontSmallBold" align="right">#customSpringMessage('KATASHIKI')
+                                        <span class="FontComment">＊</span><!-- 型式-->
+                                    </td>
+                                    <td nowrap align="left">
+                                        #springFormInput("searchCondition.katashiki" "class='Small inIME' maxLength=60 size=60")
+                                        
+                                    </td>
+                                 </tr>
+                                 <tr>
+                                     <td class="FontSmallBold" align="right" nowrap></td> 
+                                     <td class="FontSmallBold" align="left" nowrap><!-- 在庫ゼロも表示する-->
+                                         <input id="_stockZeroBothFlg" name="_stockZeroBothFlg" #if($!searchCondition.stockZeroBothFlg == '1')  checked  #end  type="checkbox" onchange="getObj('stockZeroBothFlg').value = getObj('_stockZeroBothFlg').checked ? '1':'';">#customSpringMessage('STOCK_ZERO_BOTH')&nbsp;</input>
+                                         #customFormHiddenInput("stockZeroBothFlg" "$!searchCondition.stockZeroBothFlg")
+                                     </td>
+                                 </tr>
+                                <tr>
+                                    <td class="FontComment" align="left" colspan="2">#customSpringMessage('PSSTK060_FOOTER_COMMENT')
+                                    <td class="FontSmallBold" align="right">&nbsp;</td>
+                                </tr>
+                            </table>
+                        </td>
+                        <td nowrap class="FontSmallBold" align="right" valign="top">
+                            <br><br><br>
+                            <input type="button" class="LargeButton" value="#customSpringMessage('ACTION_SEARCH')" onclick="javascript:doSearch()"/>
+                            <br><br>
+                          <a href="javascript:clear();checkBoxClear();" id="clearSearch">#customSpringMessage('ACTION_CLEAR_SEARCH_CRITERIA')<!-- 検索条件をクリアする --></a>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+        <tr id="UPLOAD_AREA">
+            <td class="UploadArea">
+                #parse("./common/common_download.vm")
+            </td>
+        </tr>
+        <tr id ="TR_ERROR" style="display:none;"><td class="error" style="height:0px;">
+            <div id="ERRORDIV">$!errorMessage </div>
+        </td></tr>
+        <tr>
+            <td class="NoBorder" style="height:auto;">
+                <iframe id="DATAAREA" name="DATAAREA" framespacing="0" frameborder="0" src="../../layout/default.vm" scrolling="no" frameborder="no" 
+                style="position:static;width:100%;border:0px solid #999999;height:100%;z-index:0;"></iframe>
+            </td>
+        </tr>
+    </table>
+<iframe id="HIDDENAREA" name="HIDDENAREA" framespacing="0" frameborder="0" src="" scrolling="no" frameborder="no" style="display:none"></iframe>
+</form>
+<script type="text/javascript">
+    document.getElementById("clearSearch").onclick = function (){
+        var itemL = document.getElementById("itemClassL");
+        var itemM = document.getElementById("itemClassM");
+        var itemS = document.getElementById("itemClassS");
+        itemL.selectedIndex = 0;
+        itemM.selectedIndex = 0;
+        itemS.selectedIndex = 0;
+        itemM.disabled = true;
+        itemS.disabled = true;
+    }
+</script>
+</body>
+</html>

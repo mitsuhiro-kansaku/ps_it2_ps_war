@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<flow xmlns="http://www.springframework.org/schema/webflow"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.springframework.org/schema/webflow
+        http://www.springframework.org/schema/webflow/spring-webflow-2.0.xsd"
+    parent="base">
+
+    <var name="defaultSearchCondition" class="fw.domain.options.stock.stockplace.StockPlaceSearchCondition" />
+
+    <on-start>
+        <evaluate expression="PSSTK200Service.init()" result="flowScope.searchCondition" />
+        <set name="flowScope.isCurrentPageSearch" value="false" />
+    </on-start>
+
+    <view-state id="PSSTK200" view="options/stock/PSSTK200" model="searchCondition">
+        <transition on="validate" validate="true">
+            <set name="flowScope.isCurrentPageSearch" value="false" />
+            <set name="flowScope.isShowList" value="true" />
+            <evaluate expression="PSSTK200Service.search(searchCondition)" />
+        </transition>
+        <transition on="search" to="PSSTK201" validate="false" />
+        <transition on="downloadValidate" validate="true">
+            <evaluate expression="PSSTK200Service.downloadValidate(searchCondition)" result="flashScope.isDownLoadValidate" />
+        </transition>
+        <transition on="download" validate="false">
+            <evaluate expression="PSSTK200Service.download(searchCondition)" />
+        </transition>
+        <transition on="upload" validate="false">
+            <evaluate expression="PSSTK200Service.upload()" />
+        </transition>
+        <transition on="showUploadResult" to="uploadResult" validate="false"/>
+        <transition on="new" to="PSSTK202" validate="false" />
+        <transition on="back" to="home" validate="false" />
+    </view-state>
+
+    <subflow-state id="PSSTK201" subflow="options/stock/PSSTK201">
+        <input name="searchCondition" value="searchCondition" />
+        <input name="isCurrentPageSearch" value="isCurrentPageSearch" />
+        <transition on="back" to="PSSTK200">
+            <set name="flowScope.isCurrentPageSearch" value="true" />
+        </transition>
+    </subflow-state>
+
+    <view-state id="uploadResult" view="common/upload_result">
+        <transition on="back" to="PSSTK200" />
+    </view-state>
+
+    <subflow-state id="PSSTK202" subflow="options/stock/PSSTK202">
+        <input name="searchCondition" value="searchCondition" />
+        <transition on="back" to="PSSTK200" />
+    </subflow-state>
+
+</flow>

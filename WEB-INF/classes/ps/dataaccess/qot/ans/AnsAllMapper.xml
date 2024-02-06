@@ -1,0 +1,490 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="ps.dataaccess.qot.ans.AnsAllMapper">
+    <!--見積回答詳細画面(初期表示時)の見積依頼情報取得SQL -->
+    <sql id="selectQuotReqDetail">
+        SELECT
+            T_QUOT_REQUEST.QUOT_REQ_NO,
+            T_QUOT_REQUEST.QUOT_REQ_SEQ,
+            T_QUOT_REQUEST.QUOT_REQ_VERSION,
+            T_QUOT_REQUEST.QUOT_ACQ_APL_NO,
+            T_QUOT_REQUEST.QUOT_REQ_STATUS,
+            T_QUOT_REQUEST.QUOT_ADO_STATUS,
+            T_QUOT_REQUEST.REQ_SECTION_CD,
+            T_QUOT_REQUEST.REQ_SECTION_NAME,
+            T_QUOT_REQUEST.REQ_USER_ID,
+            T_QUOT_REQUEST.REQ_USER_NAME,
+            T_QUOT_REQUEST.REQ_COMPANY_CD,
+            T_QUOT_REQUEST.REQ_USER_EXTENSION_NO,
+            T_QUOT_REQUEST.REQ_USER_TEL_NO,
+            T_QUOT_REQUEST.QUOT_RESP_LIMIT_DATE,
+            T_QUOT_REQUEST.DELIV_PLACE_CD,
+            T_QUOT_REQUEST.ITEM_CLASS_L_NAME,
+            T_QUOT_REQUEST.ITEM_CLASS_M_NAME,
+            T_QUOT_REQUEST.ITEM_CLASS_S_NAME,
+            T_QUOT_REQUEST.TITLE_NAME,
+            T_QUOT_REQUEST.DELIV_PLACE_NAME,
+            T_QUOT_REQUEST.FOR_SUPPRIER_COMMENT,
+            T_QUOT_REQUEST.QUOT_ADO_COMMENT,
+            T_QUOT_ADO_REQUEST.APP_ROUTE_NAME,
+            T_QUOT_ADO_REQUEST.APP_ROUTE_NO,
+            T_ATTACH_MNG_A.ATTACH_FILE_NAME AS ATTACH_FILE_NAME1,
+            T_ATTACH_MNG_B.ATTACH_FILE_NAME AS ATTACH_FILE_NAME2,
+            T_ATTACH_MNG_A.ATTACH_FILE_SEQ AS ATTACH_FILE_SEQ1,
+            T_ATTACH_MNG_B.ATTACH_FILE_SEQ AS ATTACH_FILE_SEQ2,
+            T_ATTACH_MNG_A.ATTACH_SCOPE AS ATTACH_SCOPE1,
+            T_ATTACH_MNG_B.ATTACH_SCOPE AS ATTACH_SCOPE2,
+            T_QUOT_ADO_REQUEST.QUOT_ADO_SEQ,
+            T_ATTACH_MNG_C.ATTACH_FILE_NAME AS ATTACH_FILE_NAME3,
+            T_ATTACH_MNG_C.ATTACH_FILE_SEQ AS ATTACH_FILE_SEQ3,
+            ${@ps.common.util.ItemSettingUtil@getItemSettingSelectSQL("T_QUOT_REQUEST")}
+    </sql>
+
+    <select id="searchQuotReqForInitDtl" resultMap="QuotRespDetail_Map">
+        <include refid="selectQuotReqDetail" />
+        FROM
+            T_QUOT_REQUEST
+        LEFT JOIN T_QUOT_ADO_REQUEST ON
+            T_QUOT_REQUEST.QUOT_REQ_SEQ = T_QUOT_ADO_REQUEST.QUOT_REQ_SEQ
+            AND T_QUOT_ADO_REQUEST.DELETE_FLG = '0'
+        LEFT JOIN T_ATTACH_MNG T_ATTACH_MNG_A ON
+            T_QUOT_REQUEST.ATTACH_FILE_SEQ1 = T_ATTACH_MNG_A.ATTACH_FILE_SEQ
+            AND T_ATTACH_MNG_A.DELETE_FLG = '0'
+        LEFT JOIN T_ATTACH_MNG T_ATTACH_MNG_B ON
+            T_QUOT_REQUEST.ATTACH_FILE_SEQ2 = T_ATTACH_MNG_B.ATTACH_FILE_SEQ
+            AND T_ATTACH_MNG_B.DELETE_FLG = '0'
+        LEFT JOIN T_ATTACH_MNG T_ATTACH_MNG_C ON T_QUOT_ADO_REQUEST.ATTACH_FILE_SEQ =
+            T_ATTACH_MNG_C.ATTACH_FILE_SEQ
+            AND T_ATTACH_MNG_C.DELETE_FLG = '0'
+        WHERE
+            T_QUOT_REQUEST.QUOT_REQ_NO = #{quotReqNo}
+            AND T_QUOT_REQUEST.NEW_FLG = '1'
+            AND T_QUOT_REQUEST.DELETE_FLG = '0'
+        UNION ALL
+        <include refid="selectQuotReqDetail" />
+        FROM
+            H_QUOT_REQUEST T_QUOT_REQUEST
+        LEFT JOIN H_QUOT_ADO_REQUEST T_QUOT_ADO_REQUEST 
+            ON T_QUOT_REQUEST.QUOT_REQ_SEQ = T_QUOT_ADO_REQUEST.QUOT_REQ_SEQ
+            AND T_QUOT_ADO_REQUEST.DELETE_FLG = '0'
+        LEFT JOIN H_ATTACH_MNG T_ATTACH_MNG_A
+            ON T_QUOT_REQUEST.ATTACH_FILE_SEQ1 = T_ATTACH_MNG_A.ATTACH_FILE_SEQ
+            AND T_ATTACH_MNG_A.DELETE_FLG = '0'
+        LEFT JOIN H_ATTACH_MNG T_ATTACH_MNG_B
+            ON T_QUOT_REQUEST.ATTACH_FILE_SEQ2 = T_ATTACH_MNG_B.ATTACH_FILE_SEQ
+            AND T_ATTACH_MNG_B.DELETE_FLG = '0'
+        LEFT JOIN H_ATTACH_MNG T_ATTACH_MNG_C
+            ON T_QUOT_ADO_REQUEST.ATTACH_FILE_SEQ = T_ATTACH_MNG_C.ATTACH_FILE_SEQ
+            AND T_ATTACH_MNG_C.DELETE_FLG = '0'
+        WHERE
+            T_QUOT_REQUEST.QUOT_REQ_NO = #{quotReqNo}
+            AND T_QUOT_REQUEST.NEW_FLG = '1'
+            AND T_QUOT_REQUEST.DELETE_FLG = '0'
+    </select>
+
+    <resultMap type="fw.domain.slip.quot.quotresp.quotrespdetail.QuotRespDetail" id="QuotRespDetail_Map">
+        <id column="QUOT_REQ_NO" property="quotReqSummary.quotReqNo"/>
+        <id column="QUOT_REQ_SEQ" property="quotAdo.quotReqSeqNo"/>
+        <id column="QUOT_REQ_VERSION" property="quotReqSummary.historyNo"/>
+        <id column="QUOT_ACQ_APL_NO" property="quotAdo.quotAcqAplNo"/>
+        <id column="QUOT_REQ_STATUS" property="quotReqSummary.status"/>
+        <id column="QUOT_ADO_STATUS" property="quotReqSummary.quotAdoStatus"/>
+        <id column="REQ_SECTION_CD" property="quotReqSummary.reqUser.reqUser.section.sectionCd"/>
+        <id column="REQ_SECTION_NAME" property="quotReqSummary.reqUser.reqUser.section.sectionName"/>
+        <id column="REQ_USER_ID" property="quotReqSummary.reqUser.reqUser.userID"/>
+        <id column="REQ_USER_NAME" property="quotReqSummary.reqUser.reqUser.userName"/>
+        <id column="REQ_COMPANY_CD" property="quotReqSummary.reqUser.reqUser.section.company.companyCd"/>
+        <id column="REQ_USER_EXTENSION_NO" property="quotReqSummary.reqUser.reqUser.extNo.extensionNo"/>
+        <id column="REQ_USER_TEL_NO" property="quotReqSummary.reqUser.reqUser.externalNo.externalNo"/>
+        <id column="QUOT_RESP_LIMIT_DATE" property="quotReqSummary.respLimit.dateOfymd"/>
+        <id column="DELIV_PLACE_CD" property="quotReqSummary.delivPlace.delivPlaceCd"/>
+        <id column="ITEM_CLASS_L_NAME" property="quotReqInfo.itemKind.itemClassLName"/>
+        <id column="ITEM_CLASS_M_NAME" property="quotReqInfo.itemKind.itemClassMName"/>
+        <id column="ITEM_CLASS_S_NAME" property="quotReqInfo.itemKind.itemClassSName"/>
+        <id column="TITLE_NAME" property="quotReqInfo.titleName"/>
+        <id column="DELIV_PLACE_NAME" property="quotReqSummary.delivPlace.delivPlaceName"/>
+        <id column="FOR_SUPPRIER_COMMENT" property="quotReqInfo.forSupplderComment"/>
+        <id column="ATTACH_FILE_NAME1" property="quotReqInfo.attachFileLinkList.attachFileLink1.fileName"/>
+        <id column="ATTACH_FILE_NAME2" property="quotReqInfo.attachFileLinkList.attachFileLink2.fileName"/>
+        <id column="ATTACH_FILE_SEQ1" property="quotReqInfo.attachFileLinkList.attachFileLink1.seqNo"/>
+        <id column="ATTACH_FILE_SEQ2" property="quotReqInfo.attachFileLinkList.attachFileLink2.seqNo"/>
+        <id column="ATTACH_SCOPE1" property="quotReqInfo.attachFileLinkList.attachRange1.attachRange"/>
+        <id column="ATTACH_SCOPE2" property="quotReqInfo.attachFileLinkList.attachRange2.attachRange"/>
+        <id column="QUOT_ADO_SEQ" property="quotAdo.quotAdoSeqNo"/>
+        <id column="QUOT_ADO_COMMENT" property="quotAdo.adoComment.comment"/>
+        <id column="APP_ROUTE_NAME" property="quotAdo.approute.appRouteName"/>
+        <id column="APP_ROUTE_NO" property="quotAdo.approute.appRouteNo"/>
+        <id column="ATTACH_FILE_NAME3" property="quotAdo.rangeByAttachFile.attachFile.fileName"/>
+        <id column="ATTACH_FILE_SEQ3" property="quotAdo.rangeByAttachFile.attachFile.seqNo"/>
+        <id column="EXT_TXT_1" property="quotReqInfo.detailExtItem.extendTxt.extendTxt1"/>
+        <id column="EXT_TXT_2" property="quotReqInfo.detailExtItem.extendTxt.extendTxt2"/>
+        <id column="EXT_TXT_3" property="quotReqInfo.detailExtItem.extendTxt.extendTxt3"/>
+        <id column="EXT_TXT_4" property="quotReqInfo.detailExtItem.extendTxt.extendTxt4"/>
+        <id column="EXT_TXT_5" property="quotReqInfo.detailExtItem.extendTxt.extendTxt5"/>
+        <id column="EXT_TXT_6" property="quotReqInfo.detailExtItem.extendTxt.extendTxt6"/>
+        <id column="EXT_TXT_7" property="quotReqInfo.detailExtItem.extendTxt.extendTxt7"/>
+        <id column="EXT_TXT_8" property="quotReqInfo.detailExtItem.extendTxt.extendTxt8"/>
+        <id column="EXT_TXT_9" property="quotReqInfo.detailExtItem.extendTxt.extendTxt9"/>
+        <id column="EXT_TXT_10" property="quotReqInfo.detailExtItem.extendTxt.extendTxt10"/>
+        <id column="EXT_AREA_1" property="quotReqInfo.detailExtItem.extendArea.extendArea1"/>
+        <id column="EXT_AREA_2" property="quotReqInfo.detailExtItem.extendArea.extendArea2"/>
+        <id column="EXT_AREA_3" property="quotReqInfo.detailExtItem.extendArea.extendArea3"/>
+        <id column="EXT_AREA_4" property="quotReqInfo.detailExtItem.extendArea.extendArea4"/>
+        <id column="EXT_AREA_5" property="quotReqInfo.detailExtItem.extendArea.extendArea5"/>
+        <id column="EXT_DATE_1" property="quotReqInfo.detailExtItem.extendDate.extendDate1.dateOfymd"/>
+        <id column="EXT_DATE_2" property="quotReqInfo.detailExtItem.extendDate.extendDate2.dateOfymd"/>
+        <id column="EXT_DATE_3" property="quotReqInfo.detailExtItem.extendDate.extendDate3.dateOfymd"/>
+        <id column="EXT_DATE_4" property="quotReqInfo.detailExtItem.extendDate.extendDate4.dateOfymd"/>
+        <id column="EXT_DATE_5" property="quotReqInfo.detailExtItem.extendDate.extendDate5.dateOfymd"/>
+        <id column="EXT_INT_1" property="quotReqInfo.detailExtItem.extendInt.extendInt1.value"/>
+        <id column="EXT_INT_2" property="quotReqInfo.detailExtItem.extendInt.extendInt2.value"/>
+        <id column="EXT_INT_3" property="quotReqInfo.detailExtItem.extendInt.extendInt3.value"/>
+        <id column="EXT_INT_4" property="quotReqInfo.detailExtItem.extendInt.extendInt4.value"/>
+        <id column="EXT_INT_5" property="quotReqInfo.detailExtItem.extendInt.extendInt5.value"/>
+        <id column="EXT_INT_6" property="quotReqInfo.detailExtItem.extendInt.extendInt6.value"/>
+        <id column="EXT_INT_7" property="quotReqInfo.detailExtItem.extendInt.extendInt7.value"/>
+        <id column="EXT_INT_8" property="quotReqInfo.detailExtItem.extendInt.extendInt8.value"/>
+        <id column="EXT_INT_9" property="quotReqInfo.detailExtItem.extendInt.extendInt9.value"/>
+        <id column="EXT_INT_10" property="quotReqInfo.detailExtItem.extendInt.extendInt10.value"/>
+        <id column="EXT_DEC_1" property="quotReqInfo.detailExtItem.extendDec.extendDec1.value"/>
+        <id column="EXT_DEC_2" property="quotReqInfo.detailExtItem.extendDec.extendDec2.value"/>
+        <id column="EXT_DEC_3" property="quotReqInfo.detailExtItem.extendDec.extendDec3.value"/>
+        <id column="EXT_DEC_4" property="quotReqInfo.detailExtItem.extendDec.extendDec4.value"/>
+        <id column="EXT_DEC_5" property="quotReqInfo.detailExtItem.extendDec.extendDec5.value"/>
+        <id column="EXT_SEL_1" property="quotReqInfo.detailExtItem.extendSel.extendSel1"/>
+        <id column="EXT_SEL_2" property="quotReqInfo.detailExtItem.extendSel.extendSel2"/>
+        <id column="EXT_SEL_3" property="quotReqInfo.detailExtItem.extendSel.extendSel3"/>
+        <id column="EXT_SEL_4" property="quotReqInfo.detailExtItem.extendSel.extendSel4"/>
+        <id column="EXT_SEL_5" property="quotReqInfo.detailExtItem.extendSel.extendSel5"/>
+        <id column="EXT_SEL_6" property="quotReqInfo.detailExtItem.extendSel.extendSel6"/>
+        <id column="EXT_SEL_7" property="quotReqInfo.detailExtItem.extendSel.extendSel7"/>
+        <id column="EXT_SEL_8" property="quotReqInfo.detailExtItem.extendSel.extendSel8"/>
+        <id column="EXT_SEL_9" property="quotReqInfo.detailExtItem.extendSel.extendSel9"/>
+        <id column="EXT_SEL_10" property="quotReqInfo.detailExtItem.extendSel.extendSel10"/>
+        <id column="EXT_CHK_1" property="quotReqInfo.detailExtItem.extendChk.extendChk1"/>
+        <id column="EXT_CHK_2" property="quotReqInfo.detailExtItem.extendChk.extendChk2"/>
+        <id column="EXT_CHK_3" property="quotReqInfo.detailExtItem.extendChk.extendChk3"/>
+        <id column="EXT_CHK_4" property="quotReqInfo.detailExtItem.extendChk.extendChk4"/>
+        <id column="EXT_CHK_5" property="quotReqInfo.detailExtItem.extendChk.extendChk5"/>
+        <id column="EXT_FILE_1" property="quotReqInfo.detailExtItem.extendFile.extendFile1.fileName"/>
+        <id column="EXT_FILE_2" property="quotReqInfo.detailExtItem.extendFile.extendFile2.fileName"/>
+        <id column="EXT_FILE_3" property="quotReqInfo.detailExtItem.extendFile.extendFile3.fileName"/>
+        <id column="EXT_FILE_BINARY_1" property="quotReqInfo.detailExtItem.extendFile.extendFile1.binary"/>
+        <id column="EXT_FILE_BINARY_2" property="quotReqInfo.detailExtItem.extendFile.extendFile2.binary"/>
+        <id column="EXT_FILE_BINARY_3" property="quotReqInfo.detailExtItem.extendFile.extendFile3.binary"/>
+        <id column="EXT_MST_1" property="quotReqInfo.detailExtItem.extendMst.extendMst1.mstKey"/>
+        <id column="EXT_MST_2" property="quotReqInfo.detailExtItem.extendMst.extendMst2.mstKey"/>
+        <id column="EXT_MST_3" property="quotReqInfo.detailExtItem.extendMst.extendMst3.mstKey"/>
+        <id column="EXT_MST_4" property="quotReqInfo.detailExtItem.extendMst.extendMst4.mstKey"/>
+        <id column="EXT_MST_5" property="quotReqInfo.detailExtItem.extendMst.extendMst5.mstKey"/>
+        <id column="EXT_MST_6" property="quotReqInfo.detailExtItem.extendMst.extendMst6.mstKey"/>
+        <id column="EXT_MST_7" property="quotReqInfo.detailExtItem.extendMst.extendMst7.mstKey"/>
+        <id column="EXT_MST_8" property="quotReqInfo.detailExtItem.extendMst.extendMst8.mstKey"/>
+        <id column="EXT_MST_NAME_1" property="quotReqInfo.detailExtItem.extendMst.extendMst1.mstName"/>
+        <id column="EXT_MST_NAME_2" property="quotReqInfo.detailExtItem.extendMst.extendMst2.mstName"/>
+        <id column="EXT_MST_NAME_3" property="quotReqInfo.detailExtItem.extendMst.extendMst3.mstName"/>
+        <id column="EXT_MST_NAME_4" property="quotReqInfo.detailExtItem.extendMst.extendMst4.mstName"/>
+        <id column="EXT_MST_NAME_5" property="quotReqInfo.detailExtItem.extendMst.extendMst5.mstName"/>
+        <id column="EXT_MST_NAME_6" property="quotReqInfo.detailExtItem.extendMst.extendMst6.mstName"/>
+        <id column="EXT_MST_NAME_7" property="quotReqInfo.detailExtItem.extendMst.extendMst7.mstName"/>
+        <id column="EXT_MST_NAME_8" property="quotReqInfo.detailExtItem.extendMst.extendMst8.mstName"/>
+    </resultMap>
+
+    <!--見積回答詳細画面(プルダウン選択時)の見積依頼情報取得SQL -->
+    <select id="serchQuotReqVersion" resultType="fw.common.cache.ListItem">
+        SELECT
+            T_QUOT_REQUEST.QUOT_REQ_SEQ AS "value",
+            T_QUOT_REQUEST.QUOT_REQ_VERSION AS "text"
+        FROM
+            T_QUOT_REQUEST
+        WHERE
+            T_QUOT_REQUEST.QUOT_REQ_NO = #{quotReqNo}
+            AND DELETE_FLG = '0'
+        UNION ALL
+        SELECT
+            T_QUOT_REQUEST.QUOT_REQ_SEQ AS "value",
+            T_QUOT_REQUEST.QUOT_REQ_VERSION AS "text"
+        FROM
+            H_QUOT_REQUEST T_QUOT_REQUEST
+        WHERE
+            T_QUOT_REQUEST.QUOT_REQ_NO = #{quotReqNo}
+            AND DELETE_FLG = '0'
+        ORDER BY "text" DESC
+    </select>
+
+    <!--見積回答詳細画面の見積取得申請情報取得SQL -->
+    <select id="searchQuotAcqAplForDetail" resultMap="QuotReqInfo_Map">
+        SELECT
+            T_QUOT_ACQ_APL.FOR_BUYER_COMMENT,
+            T_QUOT_ACQ_APL.SUP_CD,
+            T_QUOT_ACQ_APL.SUP_ABBR_NAME,
+            T_QUOT_ACQ_APL.SUP_COMPANY_CD,
+            T_QUOT_ACQ_APL.PRICE_REQ_FLG
+        FROM
+            T_QUOT_ACQ_APL
+        WHERE
+            T_QUOT_ACQ_APL.QUOT_ACQ_APL_NO = #{quotAcqAplNo}
+        AND T_QUOT_ACQ_APL.NEW_FLG = '1'
+        AND T_QUOT_ACQ_APL.NEW_APP_FLG = '1'
+        AND T_QUOT_ACQ_APL.DELETE_FLG = '0'
+        UNION ALL
+        SELECT
+            T_QUOT_ACQ_APL.FOR_BUYER_COMMENT,
+            T_QUOT_ACQ_APL.SUP_CD,
+            T_QUOT_ACQ_APL.SUP_ABBR_NAME,
+            T_QUOT_ACQ_APL.SUP_COMPANY_CD,
+            T_QUOT_ACQ_APL.PRICE_REQ_FLG
+        FROM
+            H_QUOT_ACQ_APL T_QUOT_ACQ_APL
+        WHERE
+            T_QUOT_ACQ_APL.QUOT_ACQ_APL_NO = #{quotAcqAplNo}
+        AND T_QUOT_ACQ_APL.NEW_FLG = '1'
+        AND T_QUOT_ACQ_APL.NEW_APP_FLG = '1'
+        AND T_QUOT_ACQ_APL.DELETE_FLG = '0'
+    </select>
+    <resultMap type="fw.domain.slip.quot.quotreq.quotdetail.QuotReqInfo" id="QuotReqInfo_Map">
+        <id column="FOR_BUYER_COMMENT" property="forBuyerComment"/>
+        <id column="SUP_CD" property="hopeSupplier.hopeSupplier.supCd"/>
+        <id column="SUP_ABBR_NAME" property="hopeSupplier.hopeSupplier.supplierName.supplierAbbrName"/>
+        <id column="SUP_COMPANY_CD" property="hopeSupplier.hopeSupplier.supCompanyCd"/>
+        <id column="PRICE_REQ_FLG" property="priceRegisterFlg.priceRegisterFlg"/>
+    </resultMap>
+
+    <!--見積回答詳細画面の見積依頼明細情報取得SQL -->
+    <select id="searchQuotReqDtlForDetail" resultMap="QuotReqInfoItem_Map">
+        SELECT
+            T_QUOT_REQ_DTL.QUOT_REQ_SEQ,
+            T_QUOT_REQ_DTL.QUOT_REQ_DTL_NO,
+            T_QUOT_REQ_DTL.CURRENCY_CD,
+            T_QUOT_REQ_DTL.QUOT_REQ_AMOUNT,
+            T_QUOT_REQ_DTL.ITEM_CD,
+            T_QUOT_REQ_DTL.ITEM_NAME,
+            T_QUOT_REQ_DTL.KATASHIKI,
+            T_QUOT_REQ_DTL.MANUFACT_CD,
+            T_QUOT_REQ_DTL.MANUFACT_NAME,
+            T_QUOT_REQ_DTL.REQ_DELIV_DATE,
+            T_QUOT_REQ_DTL.UNIT_PRICE,
+            T_QUOT_REQ_DTL.QUOT_REQ_VOL,
+            T_QUOT_REQ_DTL.UNIT_NAME,
+            T_ATTACH_MNG.ATTACH_FILE_NAME,
+            T_ATTACH_MNG.ATTACH_FILE_SEQ,
+            T_ATTACH_MNG.ATTACH_SCOPE,
+            ${@ps.common.util.ItemSettingUtil@getItemSettingSelectSQL("T_QUOT_REQ_DTL")}
+        FROM
+            T_QUOT_REQ_DTL
+        LEFT JOIN T_ATTACH_MNG ON
+            T_QUOT_REQ_DTL.ATTACH_FILE_SEQ = T_ATTACH_MNG.ATTACH_FILE_SEQ
+            AND T_ATTACH_MNG.DELETE_FLG = '0'
+        WHERE
+            T_QUOT_REQ_DTL.QUOT_REQ_SEQ = #{quotReqSeq}
+        UNION ALL
+        SELECT
+            T_QUOT_REQ_DTL.QUOT_REQ_SEQ,
+            T_QUOT_REQ_DTL.QUOT_REQ_DTL_NO,
+            T_QUOT_REQ_DTL.CURRENCY_CD,
+            T_QUOT_REQ_DTL.QUOT_REQ_AMOUNT,
+            T_QUOT_REQ_DTL.ITEM_CD,
+            T_QUOT_REQ_DTL.ITEM_NAME,
+            T_QUOT_REQ_DTL.KATASHIKI,
+            T_QUOT_REQ_DTL.MANUFACT_CD,
+            T_QUOT_REQ_DTL.MANUFACT_NAME,
+            T_QUOT_REQ_DTL.REQ_DELIV_DATE,
+            T_QUOT_REQ_DTL.UNIT_PRICE,
+            T_QUOT_REQ_DTL.QUOT_REQ_VOL,
+            T_QUOT_REQ_DTL.UNIT_NAME,
+            T_ATTACH_MNG.ATTACH_FILE_NAME,
+            T_ATTACH_MNG.ATTACH_FILE_SEQ,
+            T_ATTACH_MNG.ATTACH_SCOPE,
+            ${@ps.common.util.ItemSettingUtil@getItemSettingSelectSQL("T_QUOT_REQ_DTL")}
+        FROM
+            H_QUOT_REQ_DTL T_QUOT_REQ_DTL
+        LEFT JOIN H_ATTACH_MNG T_ATTACH_MNG ON
+            T_QUOT_REQ_DTL.ATTACH_FILE_SEQ = T_ATTACH_MNG.ATTACH_FILE_SEQ
+            AND T_ATTACH_MNG.DELETE_FLG = '0'
+        WHERE
+            T_QUOT_REQ_DTL.QUOT_REQ_SEQ = #{quotReqSeq}
+        ORDER BY
+            QUOT_REQ_DTL_NO
+    </select>
+    <resultMap type="fw.domain.slip.quot.quotreq.quotdetail.QuotReqInfoItem" id="QuotReqInfoItem_Map">
+        <id column="QUOT_REQ_SEQ" property="quotReqItemIdentify.quotReqIdentify.quotReqSeqNo.seqNumber"/>
+        <id column="QUOT_REQ_DTL_NO" property="quotReqItemIdentify.detailedNumber"/>
+        <id column="CURRENCY_CD" property="currency.currencyCd"/>
+        <id column="QUOT_REQ_AMOUNT" property="amount.amount"/>
+        <id column="ITEM_CD" property="itemCd"/>
+        <id column="ITEM_NAME" property="itemName"/>
+        <id column="KATASHIKI" property="katashiki"/>
+        <id column="MANUFACT_CD" property="manufact.manufactCd"/>
+        <id column="MANUFACT_NAME" property="manufact.manufactName"/>
+        <id column="REQ_DELIV_DATE" property="delivDate.dateOfymd"/>
+        <id column="UNIT_PRICE" property="unitPrice.amount.amount"/>
+        <id column="QUOT_REQ_VOL" property="vol.vol"/>
+        <id column="UNIT_NAME" property="unitName"/>
+        <id column="ATTACH_FILE_NAME" property="attachFileLink.fileName"/>
+        <id column="ATTACH_FILE_SEQ" property="attachFileLink.seqNo"/>
+        <id column="ATTACH_SCOPE" property="attachRange.attachRange"/>
+        <id column="EXT_TXT_1" property="detailExtItem.extendTxt.extendTxt1"/>
+        <id column="EXT_TXT_2" property="detailExtItem.extendTxt.extendTxt2"/>
+        <id column="EXT_TXT_3" property="detailExtItem.extendTxt.extendTxt3"/>
+        <id column="EXT_TXT_4" property="detailExtItem.extendTxt.extendTxt4"/>
+        <id column="EXT_TXT_5" property="detailExtItem.extendTxt.extendTxt5"/>
+        <id column="EXT_TXT_6" property="detailExtItem.extendTxt.extendTxt6"/>
+        <id column="EXT_TXT_7" property="detailExtItem.extendTxt.extendTxt7"/>
+        <id column="EXT_TXT_8" property="detailExtItem.extendTxt.extendTxt8"/>
+        <id column="EXT_TXT_9" property="detailExtItem.extendTxt.extendTxt9"/>
+        <id column="EXT_TXT_10" property="detailExtItem.extendTxt.extendTxt10"/>
+        <id column="EXT_AREA_1" property="detailExtItem.extendArea.extendArea1"/>
+        <id column="EXT_AREA_2" property="detailExtItem.extendArea.extendArea2"/>
+        <id column="EXT_AREA_3" property="detailExtItem.extendArea.extendArea3"/>
+        <id column="EXT_AREA_4" property="detailExtItem.extendArea.extendArea4"/>
+        <id column="EXT_AREA_5" property="detailExtItem.extendArea.extendArea5"/>
+        <id column="EXT_DATE_1" property="detailExtItem.extendDate.extendDate1.dateOfymd"/>
+        <id column="EXT_DATE_2" property="detailExtItem.extendDate.extendDate2.dateOfymd"/>
+        <id column="EXT_DATE_3" property="detailExtItem.extendDate.extendDate3.dateOfymd"/>
+        <id column="EXT_DATE_4" property="detailExtItem.extendDate.extendDate4.dateOfymd"/>
+        <id column="EXT_DATE_5" property="detailExtItem.extendDate.extendDate5.dateOfymd"/>
+        <id column="EXT_INT_1" property="detailExtItem.extendInt.extendInt1.value"/>
+        <id column="EXT_INT_2" property="detailExtItem.extendInt.extendInt2.value"/>
+        <id column="EXT_INT_3" property="detailExtItem.extendInt.extendInt3.value"/>
+        <id column="EXT_INT_4" property="detailExtItem.extendInt.extendInt4.value"/>
+        <id column="EXT_INT_5" property="detailExtItem.extendInt.extendInt5.value"/>
+        <id column="EXT_INT_6" property="detailExtItem.extendInt.extendInt6.value"/>
+        <id column="EXT_INT_7" property="detailExtItem.extendInt.extendInt7.value"/>
+        <id column="EXT_INT_8" property="detailExtItem.extendInt.extendInt8.value"/>
+        <id column="EXT_INT_9" property="detailExtItem.extendInt.extendInt9.value"/>
+        <id column="EXT_INT_10" property="detailExtItem.extendInt.extendInt10.value"/>
+        <id column="EXT_DEC_1" property="detailExtItem.extendDec.extendDec1.value"/>
+        <id column="EXT_DEC_2" property="detailExtItem.extendDec.extendDec2.value"/>
+        <id column="EXT_DEC_3" property="detailExtItem.extendDec.extendDec3.value"/>
+        <id column="EXT_DEC_4" property="detailExtItem.extendDec.extendDec4.value"/>
+        <id column="EXT_DEC_5" property="detailExtItem.extendDec.extendDec5.value"/>
+        <id column="EXT_SEL_1" property="detailExtItem.extendSel.extendSel1"/>
+        <id column="EXT_SEL_2" property="detailExtItem.extendSel.extendSel2"/>
+        <id column="EXT_SEL_3" property="detailExtItem.extendSel.extendSel3"/>
+        <id column="EXT_SEL_4" property="detailExtItem.extendSel.extendSel4"/>
+        <id column="EXT_SEL_5" property="detailExtItem.extendSel.extendSel5"/>
+        <id column="EXT_SEL_6" property="detailExtItem.extendSel.extendSel6"/>
+        <id column="EXT_SEL_7" property="detailExtItem.extendSel.extendSel7"/>
+        <id column="EXT_SEL_8" property="detailExtItem.extendSel.extendSel8"/>
+        <id column="EXT_SEL_9" property="detailExtItem.extendSel.extendSel9"/>
+        <id column="EXT_SEL_10" property="detailExtItem.extendSel.extendSel10"/>
+        <id column="EXT_CHK_1" property="detailExtItem.extendChk.extendChk1"/>
+        <id column="EXT_CHK_2" property="detailExtItem.extendChk.extendChk2"/>
+        <id column="EXT_CHK_3" property="detailExtItem.extendChk.extendChk3"/>
+        <id column="EXT_CHK_4" property="detailExtItem.extendChk.extendChk4"/>
+        <id column="EXT_CHK_5" property="detailExtItem.extendChk.extendChk5"/>
+        <id column="EXT_FILE_1" property="detailExtItem.extendFile.extendFile1.fileName"/>
+        <id column="EXT_FILE_2" property="detailExtItem.extendFile.extendFile2.fileName"/>
+        <id column="EXT_FILE_3" property="detailExtItem.extendFile.extendFile3.fileName"/>
+        <id column="EXT_FILE_BINARY_1" property="detailExtItem.extendFile.extendFile1.binary"/>
+        <id column="EXT_FILE_BINARY_2" property="detailExtItem.extendFile.extendFile2.binary"/>
+        <id column="EXT_FILE_BINARY_3" property="detailExtItem.extendFile.extendFile3.binary"/>
+        <id column="EXT_MST_1" property="detailExtItem.extendMst.extendMst1.mstKey"/>
+        <id column="EXT_MST_2" property="detailExtItem.extendMst.extendMst2.mstKey"/>
+        <id column="EXT_MST_3" property="detailExtItem.extendMst.extendMst3.mstKey"/>
+        <id column="EXT_MST_4" property="detailExtItem.extendMst.extendMst4.mstKey"/>
+        <id column="EXT_MST_5" property="detailExtItem.extendMst.extendMst5.mstKey"/>
+        <id column="EXT_MST_6" property="detailExtItem.extendMst.extendMst6.mstKey"/>
+        <id column="EXT_MST_7" property="detailExtItem.extendMst.extendMst7.mstKey"/>
+        <id column="EXT_MST_8" property="detailExtItem.extendMst.extendMst8.mstKey"/>
+        <id column="EXT_MST_NAME_1" property="detailExtItem.extendMst.extendMst1.mstName"/>
+        <id column="EXT_MST_NAME_2" property="detailExtItem.extendMst.extendMst2.mstName"/>
+        <id column="EXT_MST_NAME_3" property="detailExtItem.extendMst.extendMst3.mstName"/>
+        <id column="EXT_MST_NAME_4" property="detailExtItem.extendMst.extendMst4.mstName"/>
+        <id column="EXT_MST_NAME_5" property="detailExtItem.extendMst.extendMst5.mstName"/>
+        <id column="EXT_MST_NAME_6" property="detailExtItem.extendMst.extendMst6.mstName"/>
+        <id column="EXT_MST_NAME_7" property="detailExtItem.extendMst.extendMst7.mstName"/>
+        <id column="EXT_MST_NAME_8" property="detailExtItem.extendMst.extendMst8.mstName"/>
+    </resultMap>
+
+    <!--見積回答詳細画面の見積依頼取引先情報取得SQL -->
+    <select id="searchQuotReqSupForDetail" resultMap="QuotSupResp_Map">
+        SELECT
+            T_QUOT_RESPONSE.QUOT_RESP_SEQ,
+            T_QUOT_RESPONSE.QUOT_WITHDRAW_ID,
+            T_QUOT_RESPONSE.RESP_CONF_FLG,
+            T_QUOT_RESPONSE.QUOT_ADO_IND,
+            T_QUOT_RESPONSE.RESP_OPEN_FLG,
+            T_QUOT_RESPONSE.QUOT_RESP_END_DATE,
+            T_QUOT_RESPONSE.QUOT_RESP_DATE,
+            T_QUOT_RESPONSE.QUOT_RESP_COMMENT,
+            T_QUOT_REQ_SUP.QUOT_SUP_LINE_NO,
+            CASE 
+                WHEN T_QUOT_RESPONSE.QUOT_RESP_SEQ IS NOT NULL THEN '02'
+                ELSE '01'
+            END as QUOT_SUP_STATUS,
+            T_QUOT_REQ_SUP.CORRECT_CD,
+            T_QUOT_REQ_SUP.EDI_IND,
+            T_QUOT_REQ_SUP.QUOT_REQ_SEND_IND,
+            T_QUOT_REQ_SUP.SUP_CD,
+            T_QUOT_REQ_SUP.SUP_ABBR_NAME,
+            T_QUOT_REQ_SUP.SUBCON_IND,
+            T_QUOT_REQ_SUP.QUOT_REQ_DATE
+        FROM
+            T_QUOT_REQ_SUP
+        LEFT JOIN T_QUOT_RESPONSE ON
+            T_QUOT_REQ_SUP.QUOT_REQ_NO = T_QUOT_RESPONSE.QUOT_REQ_NO
+            AND T_QUOT_REQ_SUP.QUOT_REQ_VERSION = T_QUOT_RESPONSE.QUOT_REQ_VERSION
+            AND T_QUOT_REQ_SUP.QUOT_SUP_LINE_NO = T_QUOT_RESPONSE.QUOT_SUP_LINE_NO
+            AND T_QUOT_RESPONSE.DELETE_FLG = '0'
+        WHERE
+            T_QUOT_REQ_SUP.QUOT_REQ_SEQ = #{quotReqSeq}
+        AND
+            T_QUOT_REQ_SUP.DELETE_FLG = '0'
+        UNION ALL
+        SELECT
+            T_QUOT_RESPONSE.QUOT_RESP_SEQ,
+            T_QUOT_RESPONSE.QUOT_WITHDRAW_ID,
+            T_QUOT_RESPONSE.RESP_CONF_FLG,
+            T_QUOT_RESPONSE.QUOT_ADO_IND,
+            T_QUOT_RESPONSE.RESP_OPEN_FLG,
+            T_QUOT_RESPONSE.QUOT_RESP_END_DATE,
+            T_QUOT_RESPONSE.QUOT_RESP_DATE,
+            T_QUOT_RESPONSE.QUOT_RESP_COMMENT,
+            T_QUOT_REQ_SUP.QUOT_SUP_LINE_NO,
+            CASE 
+                WHEN T_QUOT_RESPONSE.QUOT_RESP_SEQ IS NOT NULL THEN '02'
+                ELSE '01'
+            END as QUOT_SUP_STATUS,
+            T_QUOT_REQ_SUP.CORRECT_CD,
+            T_QUOT_REQ_SUP.EDI_IND,
+            T_QUOT_REQ_SUP.QUOT_REQ_SEND_IND,
+            T_QUOT_REQ_SUP.SUP_CD,
+            T_QUOT_REQ_SUP.SUP_ABBR_NAME,
+            T_QUOT_REQ_SUP.SUBCON_IND,
+            T_QUOT_REQ_SUP.QUOT_REQ_DATE
+        FROM
+            H_QUOT_REQ_SUP T_QUOT_REQ_SUP
+        LEFT JOIN H_QUOT_RESPONSE T_QUOT_RESPONSE ON
+            T_QUOT_REQ_SUP.QUOT_REQ_NO = T_QUOT_RESPONSE.QUOT_REQ_NO
+            AND T_QUOT_REQ_SUP.QUOT_REQ_VERSION = T_QUOT_RESPONSE.QUOT_REQ_VERSION
+            AND T_QUOT_REQ_SUP.QUOT_SUP_LINE_NO = T_QUOT_RESPONSE.QUOT_SUP_LINE_NO
+            AND T_QUOT_RESPONSE.DELETE_FLG = '0'
+        WHERE
+            T_QUOT_REQ_SUP.QUOT_REQ_SEQ = #{quotReqSeq}
+        AND
+            T_QUOT_REQ_SUP.DELETE_FLG = '0'
+        ORDER BY QUOT_SUP_LINE_NO
+    </select>
+    <resultMap type="fw.domain.slip.quot.quotresp.quotrespdetail.QuotSupplierResp" id="QuotSupResp_Map">
+        <id column="QUOT_RESP_SEQ" property="quotRespSeqNo"/>
+        <id column="QUOT_WITHDRAW_ID" property="status"/>
+        <id column="RESP_CONF_FLG" property="respConfFlg"/>
+        <id column="QUOT_ADO_IND" property="ado"/>
+        <id column="RESP_OPEN_FLG" property="respOpen"/>
+        <id column="QUOT_RESP_END_DATE" property="quotEndDate.dateOfymd"/>
+        <id column="QUOT_RESP_DATE" property="respDate.dateOfymd"/>
+        <id column="QUOT_RESP_COMMENT" property="respComments"/>
+        <id column="QUOT_SUP_LINE_NO" property="quotSupplierLineNo"/>
+        <id column="QUOT_SUP_STATUS" property="quotReqSupplierStatus"/>
+        <id column="CORRECT_CD" property="correctCd"/>
+        <id column="EDI_IND" property="ediInd"/>
+        <id column="QUOT_REQ_SEND_IND" property="dataInd.quotReqSendInd.sendInd"/>
+        <id column="SUP_CD" property="supplier.supCd"/>
+        <id column="SUP_ABBR_NAME" property="supplier.supplierName.supplierAbbrName"/>
+        <id column="SUBCON_IND" property="supplier.subcon.subconInd"/>
+        <id column="QUOT_REQ_DATE" property="quotReqDate.dateOfymd"/>
+    </resultMap>
+</mapper>

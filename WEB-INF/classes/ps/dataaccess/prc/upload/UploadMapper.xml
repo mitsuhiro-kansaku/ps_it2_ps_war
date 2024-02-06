@@ -1,0 +1,822 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="ps.dataaccess.prc.upload.UploadMapper">
+
+    <!-- SRC-00115-00 include化共通-->
+    <sql id="listKeyIdentityWhereCondition">
+            <!--  ＩＴ２-01543-000 2013.06.20 DEL SBO_WANGXM
+        <if test="appStatusInd == 'ALL'" >
+                 AND (T_PRICE_UPLOAD.PRICE_UPL_STATUS = '00'
+                    OR     T_PRICE_UPLOAD.PRICE_UPL_STATUS = '01'
+                    OR     T_PRICE_UPLOAD.PRICE_UPL_STATUS = '02')
+            </if>
+            <if test="appStatusInd != 'ALL'">
+              AND T_PRICE_UPLOAD.PRICE_UPL_STATUS = #{appStatusInd, jdbcType=VARCHAR}
+            </if>-->
+            <if test="@org.apache.commons.lang.StringUtils@isNotBlank(titleName)">
+                AND T_PRICE_UPLOAD.TITLE_NAME
+                 ${@fw.common.util.SearchModeUtil@getSearchSQL("fw.domain.slip.price.packagereg.pricemstpackagereg.PriceMstPackageRegSearchCondition","titleName")}
+            </if>
+            <if test="@org.apache.commons.lang.StringUtils@isNotBlank(buyerUserId)">
+                <!-- 強化-01544-000 2013/05/18 ADD SBO_lichao START -->
+                <!-- AND T_PRICE_UPLOAD.LAST_UPD_USER_ID = #{buyerUserId, jdbcType=VARCHAR} -->
+                AND T_PRICE_UPLOAD.PRICE_UPL_USER_ID = #{buyerUserId, jdbcType=VARCHAR}
+                <!-- 強化-01544-000 2013/05/18 ADD SBO_lichao -END- -->
+            </if>
+            <if test="@org.apache.commons.lang.StringUtils@isNotBlank(registerDateFrom.dateOfymd)">
+                <!-- 強化-01544-000 2013/05/18 ADD SBO_lichao START -->
+                <!-- AND T_PRICE_UPLOAD.REG_DATE >= #{registerDateFrom.dateOfymd} -->
+                AND T_PRICE_UPLOAD.PRICE_UPL_DATE >= #{registerDateFrom.dateOfymd}
+                <!-- 強化-01544-000 2013/05/18 ADD SBO_lichao -END- -->
+            </if>
+            <if test="@org.apache.commons.lang.StringUtils@isNotBlank(registerDateTo.dateOfymd)">
+                <!-- 強化-01544-000 2013/05/18 ADD SBO_lichao START -->
+                <!-- AND T_PRICE_UPLOAD.REG_DATE &lt; = #{registerDateTo.dateOfymd} -->
+                AND T_PRICE_UPLOAD.PRICE_UPL_DATE &lt; = #{registerDateTo.dateOfymd}
+                <!-- 強化-01544-000 2013/05/18 ADD SBO_lichao -END- -->
+            </if>
+                AND T_PRICE_UPLOAD.PRICE_UPL_COMPANY_CD = '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}'
+                AND T_PRICE_UPLOAD.PRICE_UPL_SECTION_CD = '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}'
+                AND T_PRICE_UPLOAD.DELETE_FLG = '0'
+           <!-- ＩＴ２-01543-000 2013.06.20 ADD SBO_WANGXM START --> 
+           <choose>
+            <when test="@org.apache.commons.lang.StringUtils@isBlank(appStatusInd)" >
+                AND (T_PRICE_UPLOAD.PRICE_UPL_STATUS = '00'
+                   OR     T_PRICE_UPLOAD.PRICE_UPL_STATUS = '01'
+                   OR     T_PRICE_UPLOAD.PRICE_UPL_STATUS = '02'
+                   OR     T_PRICE_UPLOAD.PRICE_UPL_STATUS = '10')
+           </when>
+           <otherwise>
+               <choose>
+                    <when test="@org.apache.commons.lang.StringUtils@equals(appStatusInd,'ALL')">
+                     AND (T_PRICE_UPLOAD.PRICE_UPL_STATUS = '00'
+                        OR     T_PRICE_UPLOAD.PRICE_UPL_STATUS = '01'
+                        OR     T_PRICE_UPLOAD.PRICE_UPL_STATUS = '02')
+                   </when> 
+                   <otherwise>
+                       　　　　　　　　　　　　AND T_PRICE_UPLOAD.PRICE_UPL_STATUS = #{appStatusInd, jdbcType=VARCHAR}
+                   </otherwise>
+               </choose>
+           </otherwise>
+           </choose>
+           <!-- ＩＴ２-01543-000 2013.06.20 ADD SBO_WANGXM -END- --> 
+    </sql> 
+<!--検索条件で全てキリストを取得する-->
+    <select id="listKeyIdentity" parameterType="fw.domain.slip.price.packagereg.pricemstpackagereg.PriceMstPackageRegSearchCondition"
+                                                resultType="fw.domain.slip.price.packagereg.pricemstpackagereg.PriceMstPackageRegIdentify">
+        SELECT
+                T_PRICE_UPLOAD.PRICE_UPL_SEQ as "priceMstPackageRegSeqNo",
+                T_PRICE_UPLOAD.LAST_UPD_DATE as "lastUpdDate"
+        FROM
+                T_PRICE_UPLOAD 
+       <where>
+            <include refid="listKeyIdentityWhereCondition"/>
+        </where>
+            ORDER BY ${searchCondition.columnOrder.columnOrder()}
+    </select>
+
+   <resultMap type="fw.domain.slip.price.packagereg.pricemstpackagereg.PriceMstPackageRegItem" id="PriceMstPackageRegItem_Map">
+       <result column="PRICE_UPL_SEQ" property="priceMstPackageRegIdentify.priceMstPackageRegSeqNo"/>
+       <result column="PRICE_UPL_STATUS" property="status"/>
+       <result column="TITLE_NAME" property="titleName"/>
+       <result column="PRICE_UPL_ITME_VOL" property="itemNamePoint"/>
+       <!-- 強化-01544-000 2013/05/18 ADD SBO_lichao START -->
+       <!-- <result column="LAST_UPD_USER_ID" property="buyerUserId"/> -->
+       <result column="PRICE_UPL_USER_ID" property="buyerUserId"/>
+       <!-- 強化-01544-000 2013/05/18 ADD SBO_lichao -END- -->
+       <result column="USER_NAME" property="buyerUserName"/>
+       <!-- 強化-01544-000 2013/05/18 ADD SBO_lichao START -->
+       <!-- <result column="REG_DATE" property="registerDate.dateOfymd"/> -->
+       <result column="PRICE_UPL_DATE" property="registerDate.dateOfymd"/>
+       <!-- 強化-01544-000 2013/05/18 ADD SBO_lichao -END- -->
+       <result column="LAST_UPD_DATE" property="priceMstPackageRegIdentify.lastUpdDate"/>
+   </resultMap>
+    <!--価格マスタ明細を取得する-->
+    <select id="listAllItems" parameterType="fw.domain.slip.price.packagereg.pricemstpackagereg.PriceMstPackageRegSearchCondition"
+           resultMap="PriceMstPackageRegItem_Map">
+        SELECT
+                T_PRICE_UPLOAD.PRICE_UPL_SEQ,
+                T_PRICE_UPLOAD.PRICE_UPL_STATUS,
+                T_PRICE_UPLOAD.TITLE_NAME,
+                T_PRICE_UPLOAD.PRICE_UPL_ITME_VOL,
+                <!-- 強化-01544-000 2013/05/18 ADD SBO_lichao START -->
+                <!-- T_PRICE_UPLOAD.LAST_UPD_USER_ID, -->
+                T_PRICE_UPLOAD.PRICE_UPL_USER_ID,
+                <!-- 強化-01544-000 2013/05/18 ADD SBO_lichao -END- -->
+                CASE WHEN AA.COMPANY_CD IS NOT NULL AND AA.USER_ID IS NOT NULL AND AA.LANGUAGE_IND IS NOT NULL
+                THEN AA.USER_NAME
+                ELSE
+                BB.USER_NAME
+                END AS USER_NAME,
+                <!-- 強化-01544-000 2013/05/18 ADD SBO_lichao START -->
+                <!-- T_PRICE_UPLOAD.REG_DATE, -->
+                T_PRICE_UPLOAD.PRICE_UPL_DATE,
+                <!-- 強化-01544-000 2013/05/18 ADD SBO_lichao -END- -->
+                T_PRICE_UPLOAD.LAST_UPD_DATE,
+                T_PRICE_UPLOAD.PRICE_UPL_COMPANY_CD as "buyerUserCompanyCd",
+                T_PRICE_UPLOAD.PRICE_UPL_SECTION_CD as "buyerUserSectionCd",
+                T_APPROVAL.BACK_APP_COMMENTS as "backAppComment"
+        FROM
+                T_PRICE_UPLOAD
+        LEFT JOIN M_B_USER_LANG AA
+                <!-- 強化-01544-000 2013/05/18 ADD SBO_lichao START -->
+                <!-- ON ( T_PRICE_UPLOAD.LAST_UPD_COMPANY_CD = AA.COMPANY_CD
+                AND T_PRICE_UPLOAD.LAST_UPD_USER_ID = AA.USER_ID -->
+                ON ( T_PRICE_UPLOAD.PRICE_UPL_COMPANY_CD = AA.COMPANY_CD
+                AND T_PRICE_UPLOAD.PRICE_UPL_USER_ID = AA.USER_ID
+                <!-- 強化-01544-000 2013/05/18 ADD SBO_lichao -END- -->
+                AND AA.LANGUAGE_IND = '${@fw.security.SecurityUtil@getCompanyUseLanguageIndByEscapeSql()}')
+        LEFT JOIN M_B_USER_LANG BB
+                <!-- 強化-01544-000 2013/05/18 ADD SBO_lichao START -->
+                <!-- ON (T_PRICE_UPLOAD.LAST_UPD_COMPANY_CD = BB.COMPANY_CD
+                AND T_PRICE_UPLOAD.LAST_UPD_USER_ID = BB.USER_ID -->
+                ON (T_PRICE_UPLOAD.PRICE_UPL_COMPANY_CD = BB.COMPANY_CD
+                AND T_PRICE_UPLOAD.PRICE_UPL_USER_ID = BB.USER_ID
+                <!-- 強化-01544-000 2013/05/18 ADD SBO_lichao -END- -->
+                AND BB.LANGUAGE_IND = '${@fw.security.SecurityUtil@getSystemBaseLanguageBySessionByEscapeSql()}')
+        LEFT JOIN T_APPROVAL 
+                ON T_APPROVAL.APP_VOUCHER_KEY = T_PRICE_UPLOAD.PRICE_UPL_SEQ
+                AND T_APPROVAL.APP_VOUCHER_IND = 'G'
+
+        <where>   T_PRICE_UPLOAD.PRICE_UPL_SEQ IN
+        <foreach collection="searchCondition.page.keyDomainEntityList" item="keyList" open="(" separator="," close=")">
+                   #{keyList.priceMstPackageRegSeqNo, jdbcType=VARCHAR}
+        </foreach>
+        <include refid="listKeyIdentityWhereCondition"/>
+        </where>
+          ORDER BY ${searchCondition.columnOrder.columnOrder()}
+      </select>
+      <!-- ファイル取得SQL -->
+      <select id="searchFileFromAttach" parameterType="fw.domain.slip.price.packagereg.pricemstpackagereg.PriceMstPackageRegIdentify"
+                                        resultType="fw.domain.sp.library.LibraryFile">
+          SELECT
+                T_PRICE_UPLOAD.TITLE_NAME as "fileName",
+                T_PRICE_UPLOAD.PRICE_UPL_FILE as "fileData"
+          FROM 
+                T_PRICE_UPLOAD
+          WHERE 
+                T_PRICE_UPLOAD.PRICE_UPL_SEQ = #{priceMstPackageRegSeqNo}
+      </select>
+      <!--価格一括登録を更新-->
+	    <update id="applyCancel" parameterType="fw.domain.slip.price.packagereg.pricemstpackagereg.PriceMstPackageRegSearchCondition">
+	        UPDATE T_PRICE_UPLOAD
+	        SET
+	            DELETE_FLG = '1',
+	            LAST_UPD_DATE = '${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}',
+	            LAST_UPD_COMPANY_CD = '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}',
+	            LAST_UPD_SECTION_CD = '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}',
+	            LAST_UPD_USER_ID = '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}'
+	        WHERE
+	            PRICE_UPL_SEQ = #{seqNo}
+	    </update>
+	    <!--価格一括登録を登録する-->
+        <insert id="priceUploadInsert" parameterType="fw.domain.slip.price.packagereg.pricemstpackageregapp.PriceMstPackageRegApl">
+            INSERT INTO T_PRICE_UPLOAD
+              (PRICE_UPL_SEQ,
+               PRICE_UPL_STATUS,
+               PRICE_UPL_COMPANY_CD,
+               PRICE_UPL_COMPANY_NAME,
+               PRICE_UPL_SECTION_PLACE_CD,
+               PRICE_UPL_SECTION_PLACE_NAME,
+               PRICE_UPL_SECTION_CD,
+               PRICE_UPL_SECTION_NAME,
+               PRICE_UPL_USER_ID,
+               PRICE_UPL_USER_NAME,
+               PRICE_UPL_DATE,
+               PRICE_UPL_ITME_VOL,
+               TITLE_NAME,
+               PRICE_UPL_FILE,
+               APP_ROUTE_NO,
+               APP_ROUTE_NAME,
+               DELETE_FLG,
+               LAST_UPD_DATE,
+               LAST_UPD_COMPANY_CD,
+               LAST_UPD_SECTION_CD,
+               LAST_UPD_USER_ID,
+               REG_DATE,
+               REG_COMPANY_CD,
+               REG_SECTION_CD,
+               REG_USER_ID)
+            values
+              (
+               #{priceMstPackageRegApl.priceMstPackageReg.priceMstPackageRegIdentify.priceMstPackageRegSeqNo},
+               '00',
+               '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}',
+               '${@fw.security.SecurityUtil@getCompanyNameByEscapeSql()}',
+               '${@fw.security.SecurityUtil@getSectionPlaceCdByEscapeSql()}',
+               '${@fw.security.SecurityUtil@getSectionPlaceNameByEscapeSql()}',
+               '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}',
+               '${@fw.security.SecurityUtil@getDefaultSectionNameByEscapeSql()}',
+               '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}',
+               '${@fw.security.SecurityUtil@getUserNameByEscapeSql()}',
+               '${@fw.common.util.AppUtil@getSysDate()}',
+               #{priceMstPackageRegApl.priceMstPackageReg.priceUplItemVol.vol},
+               #{priceMstPackageRegApl.priceMstPackageReg.titleName.titleName, jdbcType=VARCHAR},
+               #{priceMstPackageRegApl.priceMstPackageReg.pricePackageRegTable.attachFile.data, jdbcType=BLOB},
+               #{priceMstPackageRegApl.application.approute.appRouteNo, jdbcType=VARCHAR},
+               #{priceMstPackageRegApl.application.approute.appRouteName, jdbcType=VARCHAR},
+               '0',
+               '${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}',
+               '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}',
+               '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}',
+               '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}',
+               '${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}',
+               '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}',
+               '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}',
+               '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}'
+               )
+        </insert>
+         <!--価格一括登録を更新する-->
+        <update id="priceUploadUpdate" parameterType="fw.domain.slip.price.packagereg.pricemstpackagereg.PriceMstPackageRegIdentify">
+            UPDATE T_PRICE_UPLOAD
+            SET
+                PRICE_UPL_STATUS = '10',
+                LAST_UPD_DATE = '${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}',
+                LAST_UPD_COMPANY_CD = '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}',
+                LAST_UPD_SECTION_CD = '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}',
+                LAST_UPD_USER_ID = '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}'
+            WHERE
+                PRICE_UPL_SEQ = #{priceMstPackageRegIdentify.priceMstPackageRegSeqNo}
+        </update>
+        <!-- 購買価格マスタキーリストを取得する -->
+      <resultMap type="fw.domain.slip.price.register.purprice.Identify" id="Identify_Map">
+       <result column="BUYER_COMPANY_CD" property="buyerCompany.buyerCompanyCd"/>
+       <result column="BUYER_SECTION_CD" property="buyerCompany.buyerSectionCd"/>
+       <result column="ITEM_CD" property="item.itemCd"/>
+       <result column="SUP_CD" property="supplierFrom.supCd"/>
+       <result column="VALID_START_DATE" property="validityPeriod.period.startDate.dateOfymd"/>
+       <result column="VALID_END_DATE" property="validityPeriod.period.endDate.dateOfymd"/>
+      </resultMap>
+      <select id="identifyList" parameterType="fw.domain.slip.price.register.purprice.Identify"
+           resultMap="Identify_Map">
+          SELECT
+               BUYER_COMPANY_CD, 
+               BUYER_SECTION_CD, 
+               ITEM_CD,
+               SUP_CD, 
+               VALID_START_DATE, 
+               VALID_END_DATE
+          FROM 
+               M_PUR_PRICE
+          WHERE 
+               BUYER_COMPANY_CD = #{buyerCompany.buyerCompanyCd}
+          AND  BUYER_SECTION_CD = #{buyerCompany.buyerSectionCd}
+          AND  ITEM_CD = #{item.itemCd}
+          AND  SUP_CD = #{supplierFrom.supCd}
+          AND  TERM_FLG = '0'
+          AND  VALID_END_DATE > #{validityPeriod.period.startDate.dateOfymd}
+      </select>
+        <!--購買価格マスタを更新する-->
+        <update id="mstPurPriceUpdate">
+            UPDATE M_PUR_PRICE
+            SET
+                VALID_END_DATE = #{validEndDate},
+                LAST_UPD_DATE = '${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}',
+                LAST_UPD_COMPANY_CD = '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}',
+                LAST_UPD_SECTION_CD = '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}',
+                LAST_UPD_USER_ID = '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}'
+            WHERE
+                BUYER_COMPANY_CD = #{identify.buyerCompany.buyerCompanyCd}
+           AND  BUYER_SECTION_CD = #{identify.buyerCompany.buyerSectionCd}
+           AND  ITEM_CD = #{identify.item.itemCd}
+           AND  SUP_CD = #{identify.supplierFrom.supCd}
+          <if test="@org.apache.commons.lang.StringUtils@isBlank(identify.validityPeriod.period.startDate.dateOfymd)">
+           AND  VALID_START_DATE ='${@fw.common.util.AppUtil@VALID_START_DATE}'
+          </if>
+          <if test="@org.apache.commons.lang.StringUtils@isNotBlank(identify.validityPeriod.period.startDate.dateOfymd)">
+           AND  VALID_START_DATE = #{identify.validityPeriod.period.startDate.dateOfymd}
+          </if>
+          <if test="@org.apache.commons.lang.StringUtils@isBlank(identify.validityPeriod.period.endDate.dateOfymd)">
+           AND  VALID_END_DATE = '${@fw.common.util.AppUtil@VALID_END_DATE}'
+          </if>
+          <if test="@org.apache.commons.lang.StringUtils@isNotBlank(identify.validityPeriod.period.endDate.dateOfymd)">
+           AND  VALID_END_DATE = #{identify.validityPeriod.period.endDate.dateOfymd}
+          </if>
+        </update>
+        <!--購買価格明細マスタを更新する-->
+        <update id="mstPurPriceDtlUpdate">
+            UPDATE M_PUR_PRICE_DTL
+            SET
+                VALID_END_DATE = #{validEndDate},
+                LAST_UPD_DATE = '${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}',
+                LAST_UPD_COMPANY_CD = '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}',
+                LAST_UPD_SECTION_CD = '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}',
+                LAST_UPD_USER_ID = '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}'
+            WHERE
+                BUYER_COMPANY_CD = #{identify.buyerCompany.buyerCompanyCd}
+           AND  BUYER_SECTION_CD = #{identify.buyerCompany.buyerSectionCd}
+           AND  ITEM_CD = #{identify.item.itemCd}
+           AND  SUP_CD = #{identify.supplierFrom.supCd}
+           <if test="@org.apache.commons.lang.StringUtils@isBlank(identify.validityPeriod.period.startDate.dateOfymd)">
+           AND  VALID_START_DATE ='${@fw.common.util.AppUtil@VALID_START_DATE}'
+          </if>
+          <if test="@org.apache.commons.lang.StringUtils@isNotBlank(identify.validityPeriod.period.startDate.dateOfymd)">
+           AND  VALID_START_DATE = #{identify.validityPeriod.period.startDate.dateOfymd}
+          </if>
+          <if test="@org.apache.commons.lang.StringUtils@isBlank(identify.validityPeriod.period.endDate.dateOfymd)">
+           AND  VALID_END_DATE = '${@fw.common.util.AppUtil@VALID_END_DATE}'
+          </if>
+          <if test="@org.apache.commons.lang.StringUtils@isNotBlank(identify.validityPeriod.period.endDate.dateOfymd)">
+           AND  VALID_END_DATE = #{identify.validityPeriod.period.endDate.dateOfymd}
+          </if>
+        </update>
+        <!--購買価格表示制御マスタを更新する-->
+        <update id="mstPurPriceDspAuthUpdate">
+            UPDATE M_PUR_PRICE_DSP_AUTH
+            SET
+                VALID_END_DATE = #{validEndDate},
+                LAST_UPD_DATE = '${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}',
+                LAST_UPD_COMPANY_CD = '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}',
+                LAST_UPD_SECTION_CD = '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}',
+                LAST_UPD_USER_ID = '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}'
+            WHERE
+                BUYER_COMPANY_CD = #{identify.buyerCompany.buyerCompanyCd}
+           AND  BUYER_SECTION_CD = #{identify.buyerCompany.buyerSectionCd}
+           AND  ITEM_CD = #{identify.item.itemCd}
+           AND  SUP_CD = #{identify.supplierFrom.supCd}
+           <if test="@org.apache.commons.lang.StringUtils@isBlank(identify.validityPeriod.period.startDate.dateOfymd)">
+           AND  VALID_START_DATE ='${@fw.common.util.AppUtil@VALID_START_DATE}'
+           </if>
+           <if test="@org.apache.commons.lang.StringUtils@isNotBlank(identify.validityPeriod.period.startDate.dateOfymd)">
+           AND  VALID_START_DATE = #{identify.validityPeriod.period.startDate.dateOfymd}
+           </if>
+           <if test="@org.apache.commons.lang.StringUtils@isBlank(identify.validityPeriod.period.endDate.dateOfymd)">
+           AND  VALID_END_DATE = '${@fw.common.util.AppUtil@VALID_END_DATE}'
+           </if>
+           <if test="@org.apache.commons.lang.StringUtils@isNotBlank(identify.validityPeriod.period.endDate.dateOfymd)">
+           AND  VALID_END_DATE = #{identify.validityPeriod.period.endDate.dateOfymd}
+           </if>
+        </update>
+        <!--購買価格マスタを登録する-->
+        <insert id="mstPurPriceInsert" parameterType="fw.domain.slip.price.register.purprice.BuyerPrice">
+            INSERT INTO M_PUR_PRICE
+              (
+               BUYER_COMPANY_CD,
+               BUYER_SECTION_CD,
+               ITEM_CD,
+               SUP_CD,
+               VALID_START_DATE,
+               VALID_END_DATE,
+               UPDATE_NO,
+               MODIFY_IND,
+               APP_STATUS_IND,
+               PRICE_TYPE,
+               MNG_IND,
+               INSPECT_IND,
+               CURRENCY_CD,
+               BUYER_USER_COMPANY_CD,
+               BUYER_USER_SECTION_CD,
+               BUYER_USER_ID,
+               PRICE_MNG_COMPANY_CD,
+               PRICE_MNG_SECTION_CD,
+               PRICE_MNG_USER_ID,
+               ORDER_UNIT,
+               MIN_ORDER_VOL,
+               TAX_IND,
+               CONSUMPT_IND,
+               BUY_PRICE,
+               AUTO_ORDER_FLG,
+               ORDER_LT,
+               CATALOG_IND,
+               QUOT_REQ_NO,
+               PRICE_LIST_NO,
+               UPDATE_CYCLE,
+               NEXT_UPD_YM,
+               PRICE_REMARKS,
+               PIECE_FLG,
+               GREEN_FLG,
+               GREEN_LABEL,
+               REF_URL,
+               PUR_STOP_FROM,
+               PUR_STOP_TO,
+               CATALOG_FLG,
+               CONNECT_TYPE,
+               PUR_PRICE_JNL_SEQ,
+               APP_PRICE_REG_ROUTE,
+               APP_PRICE_REG_ROUTE_NAME,
+               TERM_FLG,
+               LAST_UPD_DATE,
+               LAST_UPD_COMPANY_CD,
+               LAST_UPD_SECTION_CD,
+               LAST_UPD_USER_ID,
+               REG_DATE,
+               REG_COMPANY_CD,
+               REG_SECTION_CD,
+               REG_USER_ID)
+            values
+              (
+               #{identify.buyerCompany.buyerCompanyCd},
+               #{identify.buyerCompany.buyerSectionCd},
+               #{identify.item.itemCd},
+               #{identify.supplierFrom.supCd},
+               <if test="@org.apache.commons.lang.StringUtils@isBlank(identify.validityPeriod.period.startDate.dateOfymd)">
+               '${@fw.common.util.AppUtil@VALID_START_DATE}',
+               </if>
+               <if test="@org.apache.commons.lang.StringUtils@isNotBlank(identify.validityPeriod.period.startDate.dateOfymd)">
+               #{identify.validityPeriod.period.startDate.dateOfymd},
+               </if>
+               <if test="@org.apache.commons.lang.StringUtils@isBlank(identify.validityPeriod.period.endDate.dateOfymd)">
+               '${@fw.common.util.AppUtil@VALID_END_DATE}',
+               </if>
+               <if test="@org.apache.commons.lang.StringUtils@isNotBlank(identify.validityPeriod.period.endDate.dateOfymd)">
+               #{identify.validityPeriod.period.endDate.dateOfymd},
+               </if>
+               #{revision.updateNo},
+               #{managementInfo.preInd.preInd},
+               '2',
+               #{managementInfo.priceType},
+               #{managementInfo.priceManagementInd.priceManagementInd},
+               #{orderDeliv.inspectInd.inspectInd},
+               #{identify.supplierFrom.currency.currencyCd},
+               #{identify.buyerCompany.buyerCompanyCd},
+               #{identify.buyerCompany.buyerSectionCd},
+               #{managementInfo.buyerUser.buyerUserId},
+               #{identify.buyerCompany.buyerCompanyCd},
+               #{identify.buyerCompany.buyerSectionCd},
+               #{managementInfo.priceMngUser.priceMngUserId},
+               #{orderDeliv.custUnitVol.custUnitVol.vol},
+               #{orderDeliv.minCustVol.minCustVol.vol},
+               #{supItem.amountTypePrice.taxCalculationInd.taxInd.taxInd},
+               #{supItem.amountTypePrice.taxCalculationInd.consumptInd.consumptInd},
+               #{supItem.amountTypePrice.amountPrice1.price.amount},
+               #{orderDeliv.autoOrderFlg.autoOrderFlg},
+               #{orderDeliv.standardDelivDayCount.standardDelivDayCount.dayCount},
+               #{supItem.kind.materialInd.materialInd},
+               #{managementInfo.quotReqNo.quotReqNo},
+               #{supple.priceNo},
+               #{revision.updateCycle.updateCycle},
+               #{revision.lastUpdYm.lastUpdYm.dateOfym},
+               #{supple.buyerPriceRemarks},
+               #{orderDeliv.autoTerminateFlg.autoTerminateFlg},
+               #{supple.green.greenPur},
+               #{supple.green.priceLabel},
+               #{supple.refUrl},
+               #{managementInfo.purStopFlag.purStopPeriod.purStopPeriodStart.dateOfymd},
+               #{managementInfo.purStopFlag.purStopPeriod.purStopPeriodEnd.dateOfymd},
+               #{supItem.kind.materialType.materialType},
+               #{orderDeliv.connectType.connectTypeInd},
+               #{purPriceJnlSeq},
+               #{managementInfo.approute.appRouteNo},
+               #{managementInfo.approute.appRouteName},
+               #{termFlg},
+               '${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}',
+               '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}',
+               '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}',
+               '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}',
+               '${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}',
+               '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}',
+               '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}',
+               '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}'
+               )
+        </insert>
+        <!--購買価格明細マスタを登録する-->
+        <insert id="mstPurPriceDtlInsert">
+            INSERT INTO M_PUR_PRICE_DTL
+              (
+               BUYER_COMPANY_CD,
+               BUYER_SECTION_CD,
+               ITEM_CD,
+               SUP_CD,
+               VALID_START_DATE,
+               VALID_END_DATE,
+               LOWER_VOL,
+               UPPER_VOL,
+               UPDATE_NO,
+               BUY_PRICE,
+               LAST_UPD_DATE,
+               LAST_UPD_COMPANY_CD,
+               LAST_UPD_SECTION_CD,
+               LAST_UPD_USER_ID,
+               REG_DATE,
+               REG_COMPANY_CD,
+               REG_SECTION_CD,
+               REG_USER_ID)
+            values
+              (
+               #{buyerPrice.identify.buyerCompany.buyerCompanyCd},
+               #{buyerPrice.identify.buyerCompany.buyerSectionCd},
+               #{buyerPrice.identify.item.itemCd},
+               #{buyerPrice.identify.supplierFrom.supCd},
+               <if test="@org.apache.commons.lang.StringUtils@isBlank(buyerPrice.identify.validityPeriod.period.startDate.dateOfymd)">
+               '${@fw.common.util.AppUtil@VALID_START_DATE}',
+               </if>
+               <if test="@org.apache.commons.lang.StringUtils@isNotBlank(buyerPrice.identify.validityPeriod.period.startDate.dateOfymd)">
+               #{buyerPrice.identify.validityPeriod.period.startDate.dateOfymd},
+               </if>
+               <if test="@org.apache.commons.lang.StringUtils@isBlank(buyerPrice.identify.validityPeriod.period.endDate.dateOfymd)">
+               '${@fw.common.util.AppUtil@VALID_END_DATE}',
+               </if>
+               <if test="@org.apache.commons.lang.StringUtils@isNotBlank(buyerPrice.identify.validityPeriod.period.endDate.dateOfymd)">
+               #{buyerPrice.identify.validityPeriod.period.endDate.dateOfymd},
+               </if>
+               #{lowerVol},
+               #{upperVol},
+               #{buyerPrice.revision.updateNo},
+               #{buyPrice},
+               '${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}',
+               '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}',
+               '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}',
+               '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}',
+               '${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}',
+               '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}',
+               '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}',
+               '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}'
+               )
+        </insert>
+        <!--購買価格表示制御マスタを登録する-->
+        <insert id="mstPurPriceDspAuthInsert" parameterType="fw.domain.slip.price.register.purprice.BuyerPrice">
+            INSERT INTO M_PUR_PRICE_DSP_AUTH
+              (
+               BUYER_COMPANY_CD,
+               BUYER_SECTION_CD,
+               ITEM_CD,
+               SUP_CD,
+               VALID_START_DATE,
+               VALID_END_DATE,
+               REQ_COMPANY_CD,
+               REQ_SECTION_PLACE_CD,
+               LAST_UPD_DATE,
+               LAST_UPD_COMPANY_CD,
+               LAST_UPD_SECTION_CD,
+               LAST_UPD_USER_ID,
+               REG_DATE,
+               REG_COMPANY_CD,
+               REG_SECTION_CD,
+               REG_USER_ID)
+            values
+              (
+               #{identify.buyerCompany.buyerCompanyCd},
+               #{identify.buyerCompany.buyerSectionCd},
+               #{identify.item.itemCd},
+               #{identify.supplierFrom.supCd},
+               <if test="@org.apache.commons.lang.StringUtils@isBlank(identify.validityPeriod.period.startDate.dateOfymd)">
+               '${@fw.common.util.AppUtil@VALID_START_DATE}',
+               </if>
+               <if test="@org.apache.commons.lang.StringUtils@isNotBlank(identify.validityPeriod.period.startDate.dateOfymd)">
+               #{identify.validityPeriod.period.startDate.dateOfymd},
+               </if>
+               <if test="@org.apache.commons.lang.StringUtils@isBlank(identify.validityPeriod.period.endDate.dateOfymd)">
+               '${@fw.common.util.AppUtil@VALID_END_DATE}',
+               </if>
+               <if test="@org.apache.commons.lang.StringUtils@isNotBlank(identify.validityPeriod.period.endDate.dateOfymd)">
+               #{identify.validityPeriod.period.endDate.dateOfymd},
+               </if>
+               <if test="managementInfo.priceVisibility == &quot;0&quot;" >
+               #{identify.buyerCompany.buyerCompanyCd},
+               </if>
+               <if test="managementInfo.priceVisibility != &quot;0&quot;" >
+               'ALL',
+               </if>
+               'ALL',
+               '${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}',
+               '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}',
+               '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}',
+               '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}',
+               '${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}',
+               '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}',
+               '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}',
+               '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}'
+               )
+        </insert>
+        <!--購買価格ジャーナルを登録する-->
+        <insert id="mstPurPriceJnlInsert" parameterType="fw.domain.slip.price.register.purprice.BuyerPrice">
+            INSERT INTO M_PUR_PRICE_JNL
+              (
+               PUR_PRICE_HIST_SEQ,
+               BUYER_COMPANY_CD,
+               BUYER_SECTION_CD,
+               ITEM_CD,
+               ITEM_NAME,
+               SUP_CD,
+               SUP_NAME,
+               VALID_START_DATE,
+               VALID_END_DATE,
+               UPDATE_NO,
+               MODIFY_IND,
+               APP_STATUS_IND,
+               ITEM_CLASS_L,
+               ITEM_CLASS_L_NAME,
+               ITEM_CLASS_M,
+               ITEM_CLASS_M_NAME,
+               ITEM_CLASS_S,
+               ITEM_CLASS_S_NAME,
+               KATASHIKI,
+               MANUFACT_CD,
+               MANUFACT_NAME,
+               PRICE_TYPE,
+               MNG_IND,
+               INSPECT_IND,
+               CURRENCY_CD,
+               BUYER_USER_COMPANY_CD,
+               BUYER_USER_SECTION_CD,
+               BUYER_USER_ID,
+               PRICE_MNG_COMPANY_CD,
+               PRICE_MNG_SECTION_CD,
+               PRICE_MNG_USER_ID,
+               UNIT_CD,
+               UNIT_NAME,
+               ORDER_UNIT,
+               MIN_ORDER_VOL,
+               TAX_IND,
+               CONSUMPT_IND,
+               BUY_PRICE,
+               AUTO_ORDER_FLG,
+               ORDER_LT,
+               CATALOG_IND,
+               QUOT_REQ_NO,
+               PRICE_LIST_NO,
+               UPDATE_CYCLE,
+               NEXT_UPD_YM,
+               PRICE_REMARKS,
+               PIECE_FLG,
+               GREEN_FLG,
+               GREEN_LABEL,
+               PUR_PRICE_JNL_SEQ,
+               APP_PRICE_REG_ROUTE,
+               APP_PRICE_REG_ROUTE_NAME,
+               REF_URL,
+               PUR_STOP_FROM,
+               PUR_STOP_TO,
+               CATALOG_FLG,
+               CONNECT_TYPE,
+               TERM_FLG,
+               LAST_UPD_DATE,
+               LAST_UPD_COMPANY_CD,
+               LAST_UPD_SECTION_CD,
+               LAST_UPD_USER_ID,
+               REG_DATE,
+               REG_COMPANY_CD,
+               REG_SECTION_CD,
+               REG_USER_ID)
+            values
+              (
+               #{historySeqNo},
+               #{identify.buyerCompany.buyerCompanyCd},
+               #{identify.buyerCompany.buyerSectionCd},
+               #{identify.item.itemCd},
+               #{identify.item.itemName},
+               #{identify.supplierFrom.supCd},
+               #{identify.supplierFrom.supplierName.supplierAbbrName},
+               <if test="@org.apache.commons.lang.StringUtils@isBlank(identify.validityPeriod.period.startDate.dateOfymd)">
+               '${@fw.common.util.AppUtil@VALID_START_DATE}',
+               </if>
+               <if test="@org.apache.commons.lang.StringUtils@isNotBlank(identify.validityPeriod.period.startDate.dateOfymd)">
+               #{identify.validityPeriod.period.startDate.dateOfymd},
+               </if>
+               <if test="@org.apache.commons.lang.StringUtils@isBlank(identify.validityPeriod.period.endDate.dateOfymd)">
+               '${@fw.common.util.AppUtil@VALID_END_DATE}',
+               </if>
+               <if test="@org.apache.commons.lang.StringUtils@isNotBlank(identify.validityPeriod.period.endDate.dateOfymd)">
+               #{identify.validityPeriod.period.endDate.dateOfymd},
+               </if>
+               #{revision.updateNo},
+               #{managementInfo.preInd.preInd},
+               #{managementInfo.appStatusInd},
+               #{identify.item.itemClass.itemClassL},
+               #{identify.item.itemClass.itemClassNameL},
+               #{identify.item.itemClass.itemClassM},
+               #{identify.item.itemClass.itemClassNameM},
+               #{identify.item.itemClass.itemClassS},
+               #{identify.item.itemClass.itemClassNameS},
+               #{identify.item.katashiki},
+               #{identify.item.manufact.manufactCd},
+               #{identify.item.manufact.manufactName},
+               #{managementInfo.priceType},
+               #{managementInfo.priceManagementInd.priceManagementInd},
+               #{orderDeliv.inspectInd.inspectInd},
+               #{identify.supplierFrom.currency.currencyCd},
+               #{identify.buyerCompany.buyerCompanyCd},
+               #{identify.buyerCompany.buyerSectionCd},
+               #{managementInfo.buyerUser.buyerUserId},
+               #{identify.buyerCompany.buyerCompanyCd},
+               #{identify.buyerCompany.buyerSectionCd},
+               #{managementInfo.priceMngUser.priceMngUserId},
+               #{identify.item.unit.unitCd},
+               #{identify.item.unit.unitName},
+               #{orderDeliv.custUnitVol.custUnitVol.vol},
+               #{orderDeliv.minCustVol.minCustVol.vol},
+               #{supItem.amountTypePrice.taxCalculationInd.taxInd.taxInd},
+               #{supItem.amountTypePrice.taxCalculationInd.consumptInd.consumptInd},
+               #{supItem.amountTypePrice.amountPrice1.price.amount},
+               #{orderDeliv.autoOrderFlg.autoOrderFlg},
+               #{orderDeliv.standardDelivDayCount.standardDelivDayCount.dayCount},
+               #{supItem.kind.materialInd.materialInd},
+               #{managementInfo.quotReqNo.quotReqNo},
+               #{supple.priceNo},
+               #{revision.updateCycle.updateCycle},
+               #{revision.lastUpdYm.lastUpdYm.dateOfym},
+               #{supple.buyerPriceRemarks},
+               #{orderDeliv.autoTerminateFlg.autoTerminateFlg},
+               #{supple.green.greenPur},
+               #{supple.green.priceLabel},
+               #{purPriceJnlSeq},
+               #{managementInfo.approute.appRouteNo},
+               #{managementInfo.approute.appRouteName},
+               #{supple.refUrl},
+               #{managementInfo.purStopFlag.purStopPeriod.purStopPeriodStart.dateOfymd},
+               #{managementInfo.purStopFlag.purStopPeriod.purStopPeriodEnd.dateOfymd},
+               #{supItem.kind.materialType.materialType},
+               #{orderDeliv.connectType.connectTypeInd},
+               #{termFlg},
+               '${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}',
+               '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}',
+               '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}',
+               '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}',
+               '${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}',
+               '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}',
+               '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}',
+               '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}'
+               )
+        </insert>
+        <!--購買価格明細ジャーナルを登録する-->
+        <insert id="mstPurPriceDtlJnlInsert">
+            INSERT INTO M_PUR_PRICE_DTL_JNL
+              (
+               PUR_PRICE_HIST_SEQ,
+               LOWER_VOL,
+               UPPER_VOL,
+               BUYER_COMPANY_CD,
+               BUYER_SECTION_CD,
+               SUP_CD,
+               VALID_START_DATE,
+               VALID_END_DATE,
+               UPDATE_NO,
+               BUY_PRICE,
+               LAST_UPD_DATE,
+               LAST_UPD_COMPANY_CD,
+               LAST_UPD_SECTION_CD,
+               LAST_UPD_USER_ID,
+               REG_DATE,
+               REG_COMPANY_CD,
+               REG_SECTION_CD,
+               REG_USER_ID)
+            values
+              (
+               #{buyerPrice.historySeqNo},
+               #{lowerVol},
+               #{upperVol},
+               #{buyerPrice.identify.buyerCompany.buyerCompanyCd},
+               #{buyerPrice.identify.buyerCompany.buyerSectionCd},
+               #{buyerPrice.identify.supplierFrom.supCd},
+               <if test="@org.apache.commons.lang.StringUtils@isBlank(buyerPrice.identify.validityPeriod.period.startDate.dateOfymd)">
+               '${@fw.common.util.AppUtil@VALID_START_DATE}',
+               </if>
+               <if test="@org.apache.commons.lang.StringUtils@isNotBlank(buyerPrice.identify.validityPeriod.period.startDate.dateOfymd)">
+               #{buyerPrice.identify.validityPeriod.period.startDate.dateOfymd},
+               </if>
+               <if test="@org.apache.commons.lang.StringUtils@isBlank(buyerPrice.identify.validityPeriod.period.endDate.dateOfymd)">
+               '${@fw.common.util.AppUtil@VALID_END_DATE}',
+               </if>
+               <if test="@org.apache.commons.lang.StringUtils@isNotBlank(buyerPrice.identify.validityPeriod.period.endDate.dateOfymd)">
+               #{buyerPrice.identify.validityPeriod.period.endDate.dateOfymd},
+               </if>
+               #{buyerPrice.revision.updateNo},
+               #{buyPrice},
+               '${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}',
+               '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}',
+               '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}',
+               '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}',
+               '${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}',
+               '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}',
+               '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}',
+               '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}'
+               )
+        </insert>
+        <!--購買価格表示制御ジャーナルを登録する-->
+        <insert id="mstPurPriceDspAuthJnlInsert" parameterType="fw.domain.slip.price.register.purprice.BuyerPrice">
+            INSERT INTO M_PUR_PRICE_DSP_AUTH_JNL
+              (
+               PUR_PRICE_HIST_SEQ,
+               REQ_COMPANY_CD,
+               REQ_SECTION_PLACE_CD,
+               LAST_UPD_DATE,
+               LAST_UPD_COMPANY_CD,
+               LAST_UPD_SECTION_CD,
+               LAST_UPD_USER_ID,
+               REG_DATE,
+               REG_COMPANY_CD,
+               REG_SECTION_CD,
+               REG_USER_ID)
+            values
+              (
+               #{historySeqNo},
+               <if test="managementInfo.priceVisibility == &quot;0&quot;" >
+               #{identify.buyerCompany.buyerCompanyCd},
+               </if>
+               <if test="managementInfo.priceVisibility != &quot;0&quot;" >
+               'ALL',
+               </if>
+               'ALL',
+               '${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}',
+               '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}',
+               '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}',
+               '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}',
+               '${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}',
+               '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}',
+               '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}',
+               '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}'
+               )
+        </insert>
+</mapper>

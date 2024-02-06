@@ -1,0 +1,148 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="ps.dataaccess.src.deliveryplacepopup.DeliveryPlacePopupMapper">
+
+    <!-- SRC-00115-00 include化共通-->
+    <sql id="listKeyIdentityWhereCondition">
+        AND '${@fw.common.util.AppUtil@getSysDate()}' BETWEEN M_DELIVERY_PLACE.VALID_START_DATE AND M_DELIVERY_PLACE.VALID_END_DATE
+        AND '${@fw.common.util.AppUtil@getSysDate()}' BETWEEN M_DELIVERY_PLACE.VALID_START_DATE AND M_DELIVERY_PLACE.VALID_END_DATE
+        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(companyCd)">
+            AND (M_DELIVERY_PLACE.COMPANY_CD = #{companyCd} OR M_DELIVERY_PLACE.COMPANY_CD = '${@fw.common.constant.ApplicationConstant@COMPANY_CD_ALL}')
+        </if>
+        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(delivPlaceCd)">
+            AND M_DELIVERY_PLACE.DELIV_PLACE_CD ${@fw.common.util.SearchModeUtil@getSearchSQL("fw.domain.mst.organization.deliveryplace.DeliveryPlacePopupSearchCondition","delivPlaceCd")}
+        </if>
+        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(delivPlaceName)">
+            AND M_DELIVERY_PLACE_LANG.DELIV_PLACE_NAME ${@fw.common.util.SearchModeUtil@getSearchSQL("fw.domain.mst.organization.deliveryplace.DeliveryPlacePopupSearchCondition","delivPlaceName")}
+        </if>
+        <if test="@fw.domain.mst.searchcondition.SearchCondition@termFlgIsNotEmpty(searchCondition.termFlg) and  searchCondition.termFlg==0">
+            AND M_DELIVERY_PLACE.TERM_FLG = #{searchCondition.termFlg, jdbcType=VARCHAR}
+        </if>
+        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(sectionPlaceCd)">
+            AND M_DELIVERY_PLACE.SECTION_PLACE_CD ${@fw.common.util.SearchModeUtil@getSearchSQL("fw.domain.mst.organization.deliveryplace.DeliveryPlacePopupSearchCondition","sectionPlaceCd")}
+        </if>
+        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(sectionPlaceName)">
+            AND M_SECTION_PLACE_LANG.SECTION_PLACE_NAME ${@fw.common.util.SearchModeUtil@getSearchSQL("fw.domain.mst.organization.deliveryplace.DeliveryPlacePopupSearchCondition","sectionPlaceName")}
+        </if>
+    </sql>
+
+    <select id="listKeyIdentity" parameterType="fw.domain.mst.organization.deliveryplace.DeliveryPlacePopupSearchCondition" resultType="fw.domain.mst.organization.deliveryplace.DeliveryPlaceIdentify">
+         SELECT 
+              M_DELIVERY_PLACE.DELIV_PLACE_CD AS "delivPlaceCd",
+              M_DELIVERY_PLACE.COMPANY_CD AS "companyCd",
+              M_DELIVERY_PLACE.SECTION_PLACE_CD AS "sectionPlaceCd",
+              M_DELIVERY_PLACE.VALID_START_DATE AS "validStartDate.dateOfymd",
+              M_DELIVERY_PLACE.VALID_END_DATE AS "validEndDate.dateOfymd",
+              M_DELIVERY_PLACE.LAST_UPD_DATE AS "lastUpdDate"
+            FROM M_DELIVERY_PLACE
+            INNER JOIN M_COMPANY
+            ON 
+                  M_DELIVERY_PLACE.COMPANY_CD=M_COMPANY.COMPANY_CD
+              AND M_COMPANY.COMPANY_USE_LANGUAGE_IND = '${@fw.security.SecurityUtil@getCompanyUseLanguageIndByEscapeSql()}'
+            INNER JOIN M_SECTION_PLACE
+            ON
+                M_DELIVERY_PLACE.COMPANY_CD = M_SECTION_PLACE.COMPANY_CD
+                AND  M_DELIVERY_PLACE.SECTION_PLACE_CD = M_SECTION_PLACE.SECTION_PLACE_CD
+            LEFT JOIN M_DELIVERY_PLACE_LANG
+            ON 
+               M_DELIVERY_PLACE.DELIV_PLACE_CD=M_DELIVERY_PLACE_LANG.DELIV_PLACE_CD
+               AND M_DELIVERY_PLACE.COMPANY_CD=M_DELIVERY_PLACE_LANG.COMPANY_CD
+               AND M_DELIVERY_PLACE.SECTION_PLACE_CD=M_DELIVERY_PLACE_LANG.SECTION_PLACE_CD
+               AND M_DELIVERY_PLACE.VALID_START_DATE=M_DELIVERY_PLACE_LANG.VALID_START_DATE
+               AND M_DELIVERY_PLACE.VALID_END_DATE=M_DELIVERY_PLACE_LANG.VALID_END_DATE
+               AND M_DELIVERY_PLACE_LANG.LANGUAGE_IND=M_COMPANY.COMPANY_USE_LANGUAGE_IND
+            LEFT JOIN M_SECTION_PLACE_LANG
+            ON
+                M_SECTION_PLACE.COMPANY_CD = M_SECTION_PLACE_LANG.COMPANY_CD
+                AND M_SECTION_PLACE.SECTION_PLACE_CD = M_SECTION_PLACE_LANG.SECTION_PLACE_CD
+               AND M_SECTION_PLACE_LANG.LANGUAGE_IND=M_COMPANY.COMPANY_USE_LANGUAGE_IND
+        <where>
+            <include refid="listKeyIdentityWhereCondition"/>
+        </where>
+         ORDER BY ${searchCondition.columnOrder.columnOrder()}
+    </select>
+
+    <resultMap type="fw.domain.mst.organization.deliveryplace.DeliveryPlacePopupItem" id="DeliveryPlacePopupItem_Map">
+        <id column="COMPANY_CD" property="deliveryPlaceIdentify.companyCd" />
+        <id column="SECTION_PLACE_CD" property="deliveryPlaceIdentify.sectionPlaceCd" />
+        <id column="DELIV_PLACE_CD" property="deliveryPlaceIdentify.delivPlaceCd" />
+        <id column="VALID_START_DATE" property="deliveryPlaceIdentify.validStartDate" />
+        <id column="VALID_END_DATE" property="deliveryPlaceIdentify.validEndDate" />
+        <id column="SECTION_PLACE_CD" property="deliveryPlaceIdentify.sectionPlaceCd" />
+        <id column="SECTION_PLACE_NAME" property="deliveryPlaceIdentify.sectionPlaceName" />
+    </resultMap>
+
+    <select id="listPageItem" parameterType="fw.domain.mst.organization.deliveryplace.DeliveryPlacePopupSearchCondition" 
+        resultMap="DeliveryPlacePopupItem_Map">
+      SELECT 
+          M_DELIVERY_PLACE.COMPANY_CD,
+          M_DELIVERY_PLACE.SECTION_PLACE_CD,
+          M_DELIVERY_PLACE.DELIV_PLACE_CD,
+          M_DELIVERY_PLACE_LANG.VALID_START_DATE,
+          M_DELIVERY_PLACE_LANG.VALID_END_DATE,
+          M_DELIVERY_PLACE.DELIV_PLACE_CD AS "delivPlaceCd",
+          M_DELIVERY_PLACE.TEL_NO AS "telNo",
+          M_DELIVERY_PLACE_LANG.DELIV_PLACE_NAME AS "delivPlaceName",
+          M_DELIVERY_PLACE_LANG.DELIV_PLACE_NAME_INB AS "delivPlaceNameInb",
+          M_DELIVERY_PLACE_LANG.ADDRESS1 AS "address1",
+          M_DELIVERY_PLACE_LANG.ADDRESS2 AS "address2"
+          ,M_DELIVERY_PLACE.SECTION_PLACE_CD AS "sectionPlaceCd"
+          ,M_SECTION_PLACE_LANG.SECTION_PLACE_NAME AS "sectionPlaceName"
+          
+        FROM M_DELIVERY_PLACE
+        INNER JOIN M_COMPANY
+        ON 
+              M_DELIVERY_PLACE.COMPANY_CD=M_COMPANY.COMPANY_CD
+          AND M_COMPANY.COMPANY_USE_LANGUAGE_IND = '${@fw.security.SecurityUtil@getCompanyUseLanguageIndByEscapeSql()}'
+        INNER JOIN M_SECTION_PLACE
+        ON
+              M_DELIVERY_PLACE.COMPANY_CD=M_SECTION_PLACE.COMPANY_CD
+          AND M_DELIVERY_PLACE.SECTION_PLACE_CD=M_SECTION_PLACE.SECTION_PLACE_CD
+        LEFT JOIN M_DELIVERY_PLACE_LANG
+        ON 
+           M_DELIVERY_PLACE.DELIV_PLACE_CD=M_DELIVERY_PLACE_LANG.DELIV_PLACE_CD
+           AND M_DELIVERY_PLACE.COMPANY_CD=M_DELIVERY_PLACE_LANG.COMPANY_CD
+           AND M_DELIVERY_PLACE.SECTION_PLACE_CD=M_DELIVERY_PLACE_LANG.SECTION_PLACE_CD
+           AND M_DELIVERY_PLACE.VALID_START_DATE=M_DELIVERY_PLACE_LANG.VALID_START_DATE
+           AND M_DELIVERY_PLACE.VALID_END_DATE=M_DELIVERY_PLACE_LANG.VALID_END_DATE
+           AND M_DELIVERY_PLACE_LANG.LANGUAGE_IND=M_COMPANY.COMPANY_USE_LANGUAGE_IND
+        LEFT JOIN M_SECTION_PLACE_LANG
+        ON
+            M_SECTION_PLACE.COMPANY_CD = M_SECTION_PLACE_LANG.COMPANY_CD
+            AND M_SECTION_PLACE.SECTION_PLACE_CD = M_SECTION_PLACE_LANG.SECTION_PLACE_CD
+            AND M_SECTION_PLACE_LANG.LANGUAGE_IND=M_COMPANY.COMPANY_USE_LANGUAGE_IND
+        <where> (M_DELIVERY_PLACE.DELIV_PLACE_CD,
+                 M_DELIVERY_PLACE.COMPANY_CD,
+                 M_DELIVERY_PLACE.SECTION_PLACE_CD,
+                 M_DELIVERY_PLACE.VALID_START_DATE,
+                 M_DELIVERY_PLACE.VALID_END_DATE) IN 
+                 <foreach collection="searchCondition.page.keyDomainEntityList" item="keyList"  open="(" separator="," close=")">  
+                    (#{keyList.delivPlaceCd},#{keyList.companyCd},#{keyList.sectionPlaceCd},#{keyList.validStartDate.dateOfymd},#{keyList.validEndDate.dateOfymd}) 
+                </foreach>
+            <include refid="listKeyIdentityWhereCondition"/>
+        </where>
+        ORDER BY ${searchCondition.columnOrder.columnOrder()}
+    </select>
+
+      <select id="lostFocusSearch" parameterType ="fw.domain.mst.organization.deliveryplace.DeliveryPlacePopupSearchCondition" resultType="String">
+       SELECT 
+           DISTINCT M_DELIVERY_PLACE_LANG.DELIV_PLACE_NAME AS "delivPlaceName"
+            FROM M_DELIVERY_PLACE
+            INNER JOIN M_COMPANY
+            ON 
+                  M_DELIVERY_PLACE.COMPANY_CD=M_COMPANY.COMPANY_CD
+              AND M_COMPANY.COMPANY_USE_LANGUAGE_IND = '${@fw.security.SecurityUtil@getCompanyUseLanguageIndByEscapeSql()}'
+            LEFT JOIN M_DELIVERY_PLACE_LANG
+            ON 
+               M_DELIVERY_PLACE.DELIV_PLACE_CD=M_DELIVERY_PLACE_LANG.DELIV_PLACE_CD
+               AND M_DELIVERY_PLACE.COMPANY_CD=M_DELIVERY_PLACE_LANG.COMPANY_CD
+               AND M_DELIVERY_PLACE.SECTION_PLACE_CD=M_DELIVERY_PLACE_LANG.SECTION_PLACE_CD
+               AND M_DELIVERY_PLACE.VALID_START_DATE=M_DELIVERY_PLACE_LANG.VALID_START_DATE
+               AND M_DELIVERY_PLACE.VALID_END_DATE=M_DELIVERY_PLACE_LANG.VALID_END_DATE
+               AND M_DELIVERY_PLACE_LANG.LANGUAGE_IND=M_COMPANY.COMPANY_USE_LANGUAGE_IND
+            WHERE 
+                M_DELIVERY_PLACE.DELIV_PLACE_CD=#{delivPlaceCd, jdbcType=VARCHAR}
+        </select>
+</mapper>

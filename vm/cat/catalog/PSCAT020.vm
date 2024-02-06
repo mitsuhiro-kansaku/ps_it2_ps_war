@@ -1,0 +1,1398 @@
+<!doctype html>
+<html LANG="ja">
+<head>
+<title>
+#if("Correct" == "$!type")
+#customSpringMessage('CATALOG_PUR_REQ_CORRECT')
+#else
+#customSpringMessage('CATALOG_PUR_REQ_INPUT')
+#end
+</title><!--カタログ購入依頼入力-->
+<meta http-equiv="Content-type" content="text/html; charset=UTF-8">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Content-script-type" CONTENT="text/javascript">
+<link rel="stylesheet" href="../../include/searchbox.css" type="text/css">
+<link id="CSS_FONT" rel="stylesheet" href="../../include/FontS.css" type="text/css">
+<link rel="stylesheet" href="../../include/Layout.css" type="text/css">
+<link rel="stylesheet" href="../../include/Color.css" type="text/css">
+<link rel="stylesheet" href="../../include/ime.css" type="text/css">
+<script language="javascript" type="text/javascript" src="../../include/common.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/check.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/date.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/searchbox.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/jquery-1.7.2.min.js"></script>
+<script language="javascript" type="text/javascript"> 
+<!--
+#set($isActiveProfileBudget = "#isActiveProfile('budget')")
+#parse("./common/common_js.vm")
+
+var openSubjectIndex=-1;
+var subjectPopupCompanyCd='#jsEscape($!catalogPurReqApl.purAplManagement.reqUser.reqUser.section.company.companyCd)';
+var chgUserId = "";
+// 変更前の負担部門コード
+var sectionCd_x = "";
+// 変更前の納入先コード
+var delivPlaceCd_x = "";
+// 変更前の科目コード
+var subjectCd_x = "";
+
+var isClickable = false;
+
+function onLoad() {
+    setFocusForInput();
+    setChgUserIdValue();
+    top.document.title = this.document.title; 
+    
+    var alertMessage = "$!alertMessage";
+    if(alertMessage.indexOf("I038") != -1 || alertMessage.indexOf("I037") != -1 || alertMessage.indexOf("#customSpringMessage('I039')") != -1 || alertMessage.indexOf("#customSpringMessage('I040')") != -1){
+        alert(alertMessage);
+    }
+    
+    calcTotal();
+    var errorMsg = "$!errorMessage";
+    if (errorMsg != ""){
+        document.getElementById("TR_ERROR").style.display = "";
+        isClickable = true;
+        return;
+    }
+    #set( $purReq = "#customSpringMessage('PUR_REQ')" )
+    var isApplySuccess = '#jsEscape($!isApplySuccess)';
+    if(isApplySuccess == 'true'){           
+        alert('#customMessageArgs("I005",[$purReq])'+"\n\n#customSpringMessage('PUR_APL_NO'):$!catalogPurReqApl.purAplManagement.catalogIdentify.purAplNo.purAplNo");
+        buttonDisable();
+        top.iframeChange("${flowExecutionUrl}&_eventId=success");
+        return;
+    }  
+    var isApplySuccessForUpdate = '#jsEscape($!isApplySuccessForUpdate)';
+    if(isApplySuccessForUpdate == 'true'){           
+        alert('#customMessageArgs("I005",[$purReq])'+"\n\n#customSpringMessage('PUR_APL_NO'):$!catalogPurReqApl.purAplManagement.catalogIdentify.purAplNo.purAplNo");
+        buttonDisable();
+        top.iframeChange("${flowExecutionUrl}&_eventId=back"); 
+        return;
+    }       
+    var isTempSaveSuccess = '#jsEscape($!isTempSaveSuccess)';
+    if(isTempSaveSuccess == 'true'){
+        alert('#customMessageArgs("I030",[$purReq])'+"\n\n#customSpringMessage('PUR_APL_NO'):$!catalogPurReqApl.purAplManagement.catalogIdentify.purAplNo.purAplNo");
+        buttonDisable();
+        top.iframeChange("${flowExecutionUrl}&_eventId=success");
+        return;
+    }  
+    var isTempSaveSuccessForUpdate = '#jsEscape($!isTempSaveSuccessForUpdate)';
+    if(isTempSaveSuccessForUpdate == 'true'){
+        alert('#customMessageArgs("I030",[$purReq])'+"\n\n#customSpringMessage('PUR_APL_NO'):$!catalogPurReqApl.purAplManagement.catalogIdentify.purAplNo.purAplNo");
+        buttonDisable();
+        top.iframeChange("${flowExecutionUrl}&_eventId=back");
+        return;
+    }       
+    var isApplyAgainSuccess = '#jsEscape($!isApplyAgainSuccess)';
+    if(isApplyAgainSuccess == 'true'){
+        alert('#customMessageArgs("I002",[$purReq])'+"\n\n#customSpringMessage('PUR_APL_NO'):$!catalogPurReqApl.purAplManagement.catalogIdentify.purAplNo.purAplNo");
+        buttonDisable();
+        top.iframeChange("${flowExecutionUrl}&_eventId=back");
+        return;
+    }
+    
+    #if($!alertMessage.indexOf("E035") != -1)
+        alert("$!alertMessage");
+        isClickable = true;
+        return;
+    #end
+    
+    #if("$!alertMessage" != "" && "$!errorMessage" == "" ) 
+        #if("Correct" == "$!type")
+            if (confirm("$!alertMessage")) {
+            	if("$!TEMPSAVE"){
+            		getObj("Body").action="${flowExecutionUrl}&_eventId=tempSave&checkPass=1";
+            	} else {
+                	getObj("Body").action="${flowExecutionUrl}&_eventId=applyAgain&checkPass=1";
+            	}
+                buttonDisable();
+                getObj("Body").submit();
+                return;
+            }
+        #else
+            if (confirm("$!alertMessage")) {
+            	if("$!TEMPSAVE"){
+            		getObj("Body").action="${flowExecutionUrl}&_eventId=tempSave&checkPass=1";
+            	} else {
+                	getObj("Body").action="${flowExecutionUrl}&_eventId=apply&checkPass=1";
+            	}
+                buttonDisable();
+                getObj("Body").submit();
+                return;
+            }
+        #end
+    #end
+
+    deliveryPlace();
+
+    isClickable = true;
+}
+ 
+ function calcTotal() {
+    setShowButton();
+    #if($!catalogPurReqApl.purAplManagement.catalogPurReqList.size() != 0)
+        $.ajax({
+            type:"POST",
+            async:false,
+            url:"../../buyPriceController/itemAmount",
+            data:{
+                #foreach($!catalogPurReqListItem in $!catalogPurReqApl.purAplManagement.catalogPurReqList)
+                    "amountArray[$velocityCount].amountFormat":getObj("purAplManagement.catalogPurReqList[$velocityCount].reqAmount.amount").value,
+                #end
+                currencyCd:"#jsEscape($!catalogPurReqApl.purAplManagement.catalogPurReqList[0].priceArticle.supplierFrom.currency.currencyCd)"
+            },
+            success:function(data){
+                setText("TotalAmount",data.amount.amountFormat);
+                totalAmount = data.amount.amount;
+                setAppRouteByAmount('1',
+                    totalAmount,
+                    "$!catalogPurReqApl.purAplManagement.catalogPurReqList[0].priceArticle.supplierFrom.currency.currencyCd");
+            }
+        });
+
+        #if($catalogPurReqApl.purAplManagement.foreignCurrency)
+            $.ajax({
+                type:"POST",
+                async:false,
+                url:"../../buyPriceController/itemAmount",
+                data:{
+                    #foreach($!catalogPurReqListItem in $!catalogPurReqApl.purAplManagement.catalogPurReqList)
+                        "amountArray[$velocityCount].amountFormat":getObj("purAplManagement.catalogPurReqList[$velocityCount].cnvAmount.cnvAmount.amount").value,
+                    #end
+                    currencyCd:"#jsEscape($!catalogPurReqApl.purAplManagement.reqUser.reqUser.section.company.currency.currencyCd)"
+                },
+                success:function(data){
+                    setText("TotalConvAmount",data.amount.amountFormat);
+                }
+             });
+        #end
+    #end
+}
+
+function openDetail(buyerCompanyCd,buyerSectionCd,itemCd,supCd,validStartDate,validEndDate,lastUpdDate) {
+    poppage("${flowExecutionUrl}&_eventId=detail&buyerCompanyCd=" + encodeURIComponent(buyerCompanyCd) + "&buyerSectionCd=" + encodeURIComponent(buyerSectionCd) + "&itemCd=" + encodeURIComponent(itemCd) + "&supCd=" + encodeURIComponent(supCd) + "&validStartDate=" + validStartDate + "&validEndDate=" + validEndDate + "&lastUpdDate=" + lastUpdDate,'DETAIL','900','850');
+}
+
+function userOnblur() {
+    var userId = getObj("purAplManagement.reqUser.reqUser.userID").value;
+    var userCompanyCd = "#jsEscape($!loginUserCompanyCd)";
+    var referenceRangeFlg = "#jsEscape($!referenceRangeFlg)";
+    var termFlag = "0";
+    if(userId == "") {
+        getObj("purAplManagement.reqUser.reqUser.section.sectionCd").value = "";
+        getObj("purAplManagement.reqUser.reqUser.section.sectionName").value = "";
+        getObj("purAplManagement.reqUser.reqUser.userName").value = "";
+        getObj("purAplManagement.reqUser.reqUser.externalNo.externalNo").value = "";
+        getObj("purAplManagement.reqUser.reqUser.extNo.extensionNo").value = "";
+        getObj("purAplManagement.reqUser.reqUser.mailAddr.mail").value = "";
+        getObj('link.purAplManagement.reqUser.reqUser.mailAddr.mail').innerHTML="";
+        chgUserId = userId;
+    } else if (userId != chgUserId) {
+         chgUserId = userId;
+         $.ajax({
+            type: "POST", 
+            async:false, 
+            url:"../../getUserInfoOnBlur",
+            data: {
+                termFlag:termFlag,
+                companyCd:userCompanyCd,
+                referenceRangeFlg:referenceRangeFlg,
+                userId:userId
+            },
+            success:function(data){  
+                //設定
+                getObj("purAplManagement.reqUser.reqUser.section.sectionCd").value = data.userIdentify.sectionCd;
+                getObj("purAplManagement.reqUser.reqUser.section.sectionName").value = data.sectionName;
+                getObj("purAplManagement.reqUser.reqUser.userName").value = data.userName;
+                getObj("purAplManagement.reqUser.reqUser.externalNo.externalNo").value = data.externalNo;
+                getObj("purAplManagement.reqUser.reqUser.extNo.extensionNo").value = data.extensionNo;
+                getObj("purAplManagement.reqUser.reqUser.mailAddr.mail").value = data.mailAddr;
+                getObj("link.purAplManagement.reqUser.reqUser.mailAddr.mail").innerHTML=data.mailAddr;
+            }
+         });  
+   }
+ }
+ 
+ function sectionOnblur() {
+    var sectionCd = getObj("purAplManagement.loadSection.loadSection.sectionCd").value;
+    if(sectionCd == sectionCd_x) {
+        return;
+    } else {
+        sectionCd_x = sectionCd;
+    }
+    
+    var CompanyCd = "#jsEscape($!catalogPurReqApl.purAplManagement.reqUser.reqUser.section.company.companyCd)";
+    var termFlag = "0";
+    
+    if(sectionCd == "") {
+        getObj("purAplManagement.loadSection.loadSection.sectionCd").value = "";
+        getObj("purAplManagement.loadSection.loadSection.sectionName").value = "";
+        getObj("purAplManagement.loadSection.loadSection.company.companyCd").value = "";
+        getObj("purAplManagement.loadSection.loadSection.company.companyName").value = "";
+        getObj("purAplManagement.loadSection.loadSection.sectionPlace.sectionPlaceCd").value = "";
+        getObj("purAplManagement.loadSection.loadSection.sectionPlace.sectionPlaceName").value = "";
+    } else {
+         $.ajax({
+            type: "POST", 
+            async:false, 
+            url:"../../getSectionInfoOnBlur",
+            data: {
+                sectionCd:cleanXss(sectionCd),
+                companyCd:cleanXss(CompanyCd),
+                termFlag:termFlag
+                ,loadSectionFlg:'1'
+            },
+            success:function(data){  
+                //設定
+                
+                getObj("purAplManagement.loadSection.loadSection.sectionName").value = data.sectionName;
+                getObj("purAplManagement.loadSection.loadSection.company.companyCd").value = data.sectionIdentify.companyCd;
+                getObj("purAplManagement.loadSection.loadSection.company.companyName").value = data.companyName;
+                getObj("purAplManagement.loadSection.loadSection.sectionPlace.sectionPlaceCd").value = data.sectionPlaceCd;
+                getObj("purAplManagement.loadSection.loadSection.sectionPlace.sectionPlaceName").value = data.sectionPlaceName;
+            }
+         });  
+         
+   }
+ }
+ 
+ function deliveryPlace() {
+    var delivPlaceCd = getObj("purAplManagement.delivPlace.delivPlaceCd").value;
+    if(delivPlaceCd == delivPlaceCd_x) {
+        return;
+    } else {
+        delivPlaceCd_x = delivPlaceCd;
+    }
+    
+    var CompanyCd = "#jsEscape($!catalogPurReqApl.purAplManagement.reqUser.reqUser.section.company.companyCd)";
+    var termFlag = "0";
+    if(delivPlaceCd == "") {
+        getObj("purAplManagement.delivPlace.delivPlaceCd").value = "";
+        getObj("purAplManagement.delivPlace.delivPlaceName").value = "";
+    } else {
+         $.ajax({
+            type: "POST", 
+            async:false, 
+            url:"../../getDeliveryPlaceOnBlur",
+            data: {
+                delivPlaceCd:delivPlaceCd,
+                companyCd:CompanyCd,
+                termFlag:termFlag
+            },
+            success:function(data){  
+                //設定
+                getObj("purAplManagement.delivPlace.delivPlaceName").value = data.delivPlaceName;
+                if(getObj("purAplManagement.delivPlace.delivPlaceName").value != "" && getObj("purAplManagement.delivPlace.delivPlaceName").value != null){
+
+                    $("span:[id^=dayCount_]").each(function(i){
+                        var orderLt = $(this).text();
+                        delivDayOnBlur(i,orderLt,delivPlaceCd);
+                    });
+                }
+            }
+         });  
+         
+   }
+ }
+
+ function subjectOnblur() {
+    var subjectCd = getObj("subjectCd").value;
+    var CompanyCd = "#jsEscape($!catalogPurReqApl.purAplManagement.reqUser.reqUser.section.company.companyCd)";
+    var termFlag = "0";
+    if(subjectCd == "") {
+        getObj("subjectCd").value = "";
+        getObj("subjectName").value = "";
+    } else {
+         $.ajax({
+            type: "POST", 
+            async:false, 
+            url:"../../getSubjectOnBlur",
+            data: {
+                subjectCd:subjectCd,
+                companyCd:CompanyCd,
+                termFlag:termFlag
+            },
+            success:function(data){  
+                //設定
+                getObj("subjectName").value = data.subjectName;
+            }
+         });
+   }
+ }
+ 
+ function subjectDtlOnblur($velocityCount) {
+    var index=$velocityCount;
+    var subjectCd = getObj("purAplManagement.catalogPurReqList["+index+"].subject.subjectCd").value;
+    if(subjectCd == subjectCd_x) {
+        return;
+    } else {
+        subjectCd_x = subjectCd;
+    }
+    
+    var CompanyCd = "#jsEscape($!catalogPurReqApl.purAplManagement.reqUser.reqUser.section.company.companyCd)";
+    var termFlag = "0";
+    if(subjectCd == "") {
+        getObj("purAplManagement.catalogPurReqList["+index+"].subject.subjectCd").value = "";
+        getObj("purAplManagement.catalogPurReqList["+index+"].subject.subjectName").value = "";
+    } else {
+         $.ajax({
+            type: "POST", 
+            async:false, 
+            url:"../../getSubjectOnBlur",
+            data: {
+                subjectCd:subjectCd,
+                companyCd:CompanyCd,
+                termFlag:termFlag
+            },
+            success:function(data){  
+                //設定
+                getObj("purAplManagement.catalogPurReqList["+index+"].subject.subjectName").value = data.subjectName;
+            }
+         });
+   }
+ }
+
+
+function openSubjectWindow($velocityCount){
+    openSubjectIndex=$velocityCount;
+    subjectPopup.setObject(getObj("purAplManagement.catalogPurReqList["+openSubjectIndex+"].subject.subjectCd"),getObj("purAplManagement.catalogPurReqList["+openSubjectIndex+"].subject.subjectName"));
+    masterSearch('../../src/subjectPopup/search?pageid=subjectPopupSearch&popupPageid=PSCAT020&projectId=subject',
+                                       'subjectPopup',
+                                       '700',
+                                       '500');
+}
+
+function getCalendar(num,objName){
+    var obj = getObj(objName);
+    initSearchBox(num,obj);
+}
+
+function setSubjectCd() {
+    var subjectCdValue=getObj("subjectCd").value;
+    var subjectNameValue=getObj("subjectName").value;
+    for(i=0; i<=#jsEscape($!catalogPurReqApl.purAplManagement.catalogPurReqList.size())-1; i++) {
+        getObj("purAplManagement.catalogPurReqList["+i+"].subject.subjectCd").value=subjectCdValue;
+        
+        if(subjectNameValue!=""){
+            buttonDisable();
+            setTimeout(buttonUsable,1000);
+            getObj("purAplManagement.catalogPurReqList["+i+"].subject.subjectName").value=subjectNameValue;
+        }
+    }
+}
+
+function setAptDate() {
+    var aptDateValue=getObj("AptDate").value;
+    for(i=0; i<=#jsEscape($!catalogPurReqApl.purAplManagement.catalogPurReqList.size())-1; i++) {
+        buttonDisable();
+        setTimeout(buttonUsable,1000);
+        getObj("purAplManagement.catalogPurReqList["+i+"].hopeDlvEst.hopeDlvEst.dateOfymdFormat").value=aptDateValue;
+    }
+}
+
+function cart_select(){
+    buttonDisable();
+    #if($!type=="Insert")
+        getObj("Body").action="${flowExecutionUrl}&_eventId=itemSelect";
+        getObj("Body").submit();
+    #end
+    #if($!type=="Update")
+        getObj("Body").action="${flowExecutionUrl}&_eventId=itemSelect";
+        getObj("Body").submit();
+    #end
+    #if($!type=="Correct")
+        getObj("Body").action="${flowExecutionUrl}&_eventId=itemSelect";
+        getObj("Body").submit();
+    #end
+}
+
+function exec_apply(){
+    if(!isClickable) {
+        return;
+    }
+
+	if(isFresh() == true) {
+		return;
+	}
+    #set( $purReq = "#customSpringMessage('PUR_REQ')" )   
+    #set( $register = "#customSpringMessage('ACTION_REGISTER')" )    
+    if( !confirm('#customMessageArgs("W001",[$purReq,$register])') ) {
+        return;
+    }   
+    buttonDisable();
+    getObj('Body').action='${flowExecutionUrl}&_eventId=apply';
+    getObj("Body").submit();
+}
+
+function exec_applyAgain(){
+    if(!isClickable) {
+        return;
+    }
+
+	if(isFresh() == true) {
+		return;
+	}
+    #set( $purReq = "#customSpringMessage('PUR_REQ')" )   
+    #set( $update = "#customSpringMessage('UPDATE')" )    
+    if( !confirm('#customMessageArgs("W001",[$purReq,$update])') ) {
+        return;
+    }   
+    buttonDisable();
+    getObj('Body').action='${flowExecutionUrl}&_eventId=applyAgain';
+    getObj("Body").submit();
+}
+
+function exec_pre(){
+    if(!isClickable) {
+        return;
+    }
+
+	if(isFresh() == true) {
+		return;
+	}
+    buttonDisable();
+    #set( $purReq = "#customSpringMessage('PUR_REQ')" )
+
+    getObj('Body').action='${flowExecutionUrl}&_eventId=tempSave';
+    getObj("Body").submit();   
+}
+
+function isFresh() {
+	var isApplySuccess = '#jsEscape($!isApplySuccess)';
+	var isApplySuccessForUpdate = '#jsEscape($!isApplySuccessForUpdate)';
+	var isTempSaveSuccess = '#jsEscape($!isTempSaveSuccess)';
+	var isTempSaveSuccessForUpdate = '#jsEscape($!isTempSaveSuccessForUpdate)';
+	var isApplyAgainSuccess = '#jsEscape($!isApplyAgainSuccess)';
+	if(isApplySuccess == 'true' 
+		|| isApplySuccessForUpdate == 'true' 
+		|| isTempSaveSuccess == 'true' 
+		|| isTempSaveSuccessForUpdate == 'true' 
+		|| isApplyAgainSuccess == 'true' ) {
+		return true;
+	} else {
+	    return false;
+	} 
+}
+
+//カートから削除
+function deleteCart(index){
+    buttonDisable();
+    getObj("Body").action="${flowExecutionUrl}&_eventId=deleteCart&catalogPurReqIndex="+index;
+    getObj("Body").submit();
+}
+//ロストフォーカス時に、購買価格マスタより、単価を取得しなおす。
+function loadBuyPriceByDateAjax(index) {
+    // 価格タイプ
+    var priceType = getObj("purAplManagement.catalogPurReqList["+index+"].priceArticle.priceType").value;
+    // 価格管理会社コード
+    var buyerCompanyCd = getObj("purAplManagement.catalogPurReqList["+index+"].priceArticle.buyUser.buyUser.section.company.companyCd").value;
+    // 価格管理部門コード
+    var buyerSectionCd = getObj("purAplManagement.catalogPurReqList["+index+"].priceArticle.buyUser.buyUser.section.sectionCd").value;
+    // 品名コード
+    var itemCd = getObj("purAplManagement.catalogPurReqList["+index+"].priceArticle.item.itemCd").value;
+    // 取引先コード
+    var supCd = getObj("purAplManagement.catalogPurReqList["+index+"].priceArticle.supplierFrom.supCd").value;
+    // 数量
+    var vol = trim(getObj("purAplManagement.catalogPurReqList["+index+"].hopeVol.hopeVol.volFormat").value);
+    // 通貨コード   
+    var currencyCd = getObj("purAplManagement.catalogPurReqList["+index+"].priceArticle.supplierFrom.currency.currencyCd").innerText;
+    // 希望納期
+    var date = getObj("purAplManagement.catalogPurReqList["+index+"].hopeDlvEst.hopeDlvEst.dateOfymdFormat").value;
+    if(priceType == "2") {// 2:ロットの場合
+        if(vol==""){
+            var price = 0;
+            vol = 0;
+            calculateAmount(price,vol,currencyCd,index);
+            return;
+        }
+        
+        $.ajax({
+            type:"POST",
+            async:false,
+            url:"../../buyPriceController/loadByVol",
+            data:{
+                buyerCompanyCd:buyerCompanyCd,
+                buyerSectionCd:buyerSectionCd,
+                itemCd:itemCd,
+                supCd:supCd,
+                "vol.volFormat":vol,
+                currencyCd:currencyCd
+            },
+            success:function(data){  
+               var price;
+               if (!data){
+                    getObj("catalogPurReqList["+index+"].priceArticle.buyPrice.amount.amountFormat").innerText = editVal2('0');
+                    getObj("purAplManagement.catalogPurReqList["+index+"].priceArticle.buyPrice.amount.amount").value = "0";
+                    price = 0;
+                }else{
+                    getObj("catalogPurReqList["+index+"].priceArticle.buyPrice.amount.amountFormat").innerText = data.price.amountFormat;
+                    getObj("purAplManagement.catalogPurReqList["+index+"].priceArticle.buyPrice.amount.amount").value = data.price.amount;
+                    price = data.price.amount;
+               } 
+               calculateAmount(price,vol,currencyCd,index);
+            }
+       });
+    } else { // 1:標準の場合 タイプ
+        $.ajax({
+            type:"POST",
+            async:false,
+            url:"../../buyPriceController/loadByValidDate",
+            data:{
+                buyerCompanyCd:buyerCompanyCd,
+                buyerSectionCd:buyerSectionCd,
+                itemCd:itemCd,
+                supCd:supCd,
+                currencyCd:currencyCd
+            },
+            success:function(data){  
+               var price;
+               if (!data){
+                    getObj("catalogPurReqList["+index+"].priceArticle.buyPrice.amount.amountFormat").innerText = editVal2('0');
+                    getObj("purAplManagement.catalogPurReqList["+index+"].priceArticle.buyPrice.amount.amount").value = "0";
+                    price = 0;
+               }else{
+                    getObj("catalogPurReqList["+index+"].priceArticle.buyPrice.amount.amountFormat").innerText = data.price.amountFormat;
+                    getObj("purAplManagement.catalogPurReqList["+index+"].priceArticle.buyPrice.amount.amount").value = data.price.amount;
+                    price = data.price.amount;
+               }
+               if(vol==""){
+                  vol = 0;
+               }
+               calculateAmount(price,vol,currencyCd,index);
+            }
+        });
+    }
+
+}
+
+function setAppRouteByAmount(approuteVoucherInd, amount, currencyCd){
+    if(!amount) {
+        return;
+    } else {
+        $.ajax({
+            type: "POST", 
+            async:false, 
+            url:"../../appRouteController/getAppRouteByAmount",
+            data: {
+                "approuteVoucherInd.approuteVoucherInd":approuteVoucherInd,
+                "amount.amountFormat":amount,
+                "amount.currencyCd":currencyCd,
+                current:getObj('application.approute.appRouteNo').options[getObj('application.approute.appRouteNo').selectedIndex].value
+            },
+            success:function(data){
+                $("[id='application.approute.appRouteNo']").empty();
+                $.each(data,function(index,element){
+                    var varItem = new Option(element.text, element.value);
+                    varItem.selected = element.selected;
+                    getObj("application.approute.appRouteNo").options.add(varItem);
+                  });
+            }
+         });   
+    }
+
+    setShowButton();
+}
+
+function setShowButton() {
+    var selObj = getObj('application.approute.appRouteNo');
+    if (!selObj.options[0].selected) {
+        getObj("ViewRoot").disabled = false;
+    } else {
+        getObj("ViewRoot").disabled = true;
+    }
+}
+
+function calculateAmount(price,vol,currencyCd,index){
+    $.ajax({
+        type:"POST",
+        async:false,
+        url:"../../buyPriceController/calculateAmount",
+        data:{
+            "price.amount":price,
+            "vol.volFormat":vol,
+            currencyCd:currencyCd
+        },
+        success:function(data){
+            getObj("catalogPurReqList["+index+"].reqAmount.amountFormat").innerHTML = data.amount.amountFormat;
+            getObj("purAplManagement.catalogPurReqList["+index+"].reqAmount.amount").value = data.amount.amount;
+            if(getObj("catalogPurReqList["+index+"].cnvAmount.cnvAmount.amountFormat")) {
+                getObj("catalogPurReqList["+index+"].cnvAmount.cnvAmount.amountFormat").innerHTML = data.cnvAmount.amountFormat;
+            }
+            getObj("purAplManagement.catalogPurReqList["+index+"].cnvAmount.cnvAmount.amount").value = data.cnvAmount.amount;
+            calcTotal();
+        }
+    });   
+}
+
+function appRoutePopup() { 
+    var appRouteNo = getObj('application.approute.appRouteNo').value; 
+    appRouteDetailPopup.setParam('#jsEscape($!catalogPurReqApl.purAplManagement.reqUser.reqUser.section.company.companyCd)','#jsEscape($!catalogPurReqApl.purAplManagement.reqUser.reqUser.section.sectionCd)','1',appRouteNo);
+    masterSearch('../../src/apr/PSCMN030?pageid=appRouteDetailPopup','PLACESEARCHBOX','700','300');
+}
+function userSelectAfterProc() {
+    //メール更新
+    getObj('link.purAplManagement.reqUser.reqUser.mailAddr.mail').innerHTML=getObj('purAplManagement.reqUser.reqUser.mailAddr.mail').value;  
+}
+
+// お気に入りに追加
+function addFav(buyerCompanyCd,buyerSectionCd,itemCd,supCd,validStartDate,validEndDate) {
+    poppage("${flowExecutionUrl}&_eventId=PSFAV010&&buyerCompanyCd=" + encodeURIComponent(buyerCompanyCd) + "&&buyerSectionCd=" + encodeURIComponent(buyerSectionCd) + "&&itemCd=" + encodeURIComponent(itemCd) + "&&supCd=" + encodeURIComponent(supCd) + "&&validStartDate=" + validStartDate+ "&&validEndDate=" + validEndDate, "PSFAV010","600", "600");
+}
+
+function addFavForeach(){
+   poppage("${flowExecutionUrl}&_eventId=PSFAV010ALL", "PSFAV010","600", "600");
+    
+}
+
+// 納期取得処理
+function delivDayOnBlur(velocityCount,standardDelivDayCount,delivPlaceCd) {
+    var index=velocityCount;
+    // 希望納期
+    var date = getObj("purAplManagement.catalogPurReqList[" + index + "].hopeDlvEst.hopeDlvEst.dateOfymdFormat").value;
+
+    // 希望納期が空白の場合は処理継続。空白以外の場合は何もしない
+    if(date == ""){
+        // 依頼日
+        var purReqDate = "$!catalogPurReqApl.purAplManagement.purReqDate.purReqDate.reqDate.dateOfymd";
+
+        // 依頼日、標準納入日数がどちらも空白以外なら処理継続。
+        if(purReqDate != "" && standardDelivDayCount != ""){
+        // 納期取得処理
+        $.post(
+            "../../DelivDayOnblurController/getDelivDayOnblur",
+            {
+                purReqDate:purReqDate,
+                standardDelivDayCount:standardDelivDayCount,
+                delivPlaceCd:delivPlaceCd
+            }).success(
+                function(data){
+                    // 希望納期を設定する
+                    getObj("purAplManagement.catalogPurReqList[" + index + "].hopeDlvEst.hopeDlvEst.dateOfymdFormat").value = data.calculationDate;
+                }
+            ); 
+       }
+    }
+}
+
+function setChgUserIdValue() {
+    chgUserId = getObj("purAplManagement.reqUser.reqUser.userID").value;
+}
+
+function downloadExt(filename, file) {
+    iframeChange("${flowExecutionUrl}&_eventId=downloadext", 'filename', filename, 'file', file);
+}
+
+function imgFileName(buyerCompanyCd, buyerSectionCd, itemCd, supCd, validStartDate, validEndDate){
+    poppage('$!requestContext.contextPath/imageGet.do?buyerCompanyCd=' + encodeURIComponent(buyerCompanyCd) + '&buyerSectionCd=' + encodeURIComponent(buyerSectionCd) + '&itemCd=' + encodeURIComponent(itemCd) + '&supCd=' + encodeURIComponent(supCd) + '&validStartDate=' + validStartDate + '&validEndDate=' + validEndDate,'_blank',300,300);
+}
+// 負担部門Onfocus
+function sectionCodeGetfocus(obj){
+  sectionCd_x = obj.value;
+}
+// 納入先Onfocus
+function deliveryPlaceCodeGetfocus(obj){
+    delivPlaceCd_x = obj.value;
+}
+// 科目Onfocus
+function subjectCodeGetfocus(obj){
+    subjectCd_x = obj.value;
+}
+//-->
+</script>
+ 
+<style> 
+table.HomeBox {
+    background-color:white;
+    behavior: url("../../include/ie-css3.htc");
+    border: 1px solid #333333;
+    border-radius: 16px;
+    box-shadow: 3px 3px 0px #000000;
+    zoom:1;
+    -moz-border-radius: 16px;
+    -webkit-border-radius: 16px;
+
+}
+</style>
+ 
+</head>
+<body class="CreateArea" onLoad="onLoad();">
+<form id="Body" name="Body" action="${flowExecutionUrl}&_eventId=apply" method="post" enctype="multipart/form-data">
+    #customFormHiddenInput("purAplManagement.catalogIdentify.purAplNo.purAplNo.hidden" "$!catalogPurReqApl.purAplManagement.catalogIdentify.purAplNo.purAplNo")
+    
+    <table class="HomeBox" width="700">
+        <tr>
+            <td>
+                <iframe id="CALENDARBOX" class="CALENDARBOX" framespacing="0" scrolling="no" frameborder="0" src="../../sbxCalendar/body.vm"></iframe>
+                <table class="NoBordre" width="100%">
+                    <tr>
+                        <td align="left">
+                            <table class="NoBorder" width="98%">
+                                <tr>
+                                    <td>
+                                        #if("Correct" == "$!type")
+                                        <u><img src="../../image/mrkCircle.gif"><span class="FontStepTitle">#customSpringMessage('CATALOG_PUR_REQ_CORRECT')</span></u><br><br><!--カタログ購入依頼入力-->
+                                        #else
+                                        <u><img src="../../image/mrkCircle.gif"><span class="FontStepTitle">#customSpringMessage('CATALOG_PUR_REQ_INPUT')</span></u><br><br><!--カタログ購入依頼入力-->
+                                        #end
+                                        <span class="FontSmallBold DarkBlue">#customSpringMessage('PSCAT020_HEADER_COMMENT')</span>
+                                    <br><br>
+                                    </td>
+                                    #if("Correct" == "$!type")
+                                    <td align="right" valign="middle" nowrap>
+                                        #if($!{catalogPurReqApl.purAplManagement.catalogIdentify.appUnitNo} == "")
+                                            <input type="button" class="LargeButton" value="#customSpringMessage('ITEM_NAME_SELECT')" onclick="cart_select();">&nbsp;<!--品名選択-->
+                                        #end
+                                        <input type="button" class="LargeButton" value="#customSpringMessage('RE_REQ')" onclick="exec_applyAgain();"><!--再申請-->
+                                    </td>
+                                    #else
+                                    <td align="right" valign="middle" nowrap>
+                                        #if($!{catalogPurReqApl.purAplManagement.catalogIdentify.appUnitNo} == "")
+                                            <input type="button" class="LargeButton" value="#customSpringMessage('ITEM_NAME_SELECT')" onclick="cart_select();">&nbsp;<!--品名選択-->
+                                        #end
+                                        <input type="button" class="LargeButton" value="#customSpringMessage('TEMPORARY_PRESERVATION')" onclick="exec_pre();">&nbsp;
+                                        <input type="button" class="LargeButton" value="#customSpringMessage('REQ')" onclick="exec_apply();"><!--一時保存--><!--申　請-->
+                                    </td>
+                                    #end
+                                </tr>
+                                <tr style="display:none;">
+                                    <td colspan="2">
+                                        <input id="sts" type="text">
+                                    </td>
+                                </tr>
+                                <tr id ="TR_ERROR" style="display:none;"><td class="error" style="height:0px;" colspan="2">
+                                    $!errorMessage
+                                </td></tr>
+                            </table>
+                    
+                              <table class="Box1G" width="100%">
+                                <tbody class="Box1G">
+                                   #if("Correct" == $!type || "Update" == $!type || $!isApplySuccess=="true" || $!isTempSaveSuccess=="true" || $!isApplyAgainSuccess=="true")
+                                     <tr>
+                                   #else
+                                     <tr style="display:none;">
+                                   #end
+                                        <td nowrap class="Box1H FontBoxHeader">
+                                            #customSpringMessage('PUR_APL_NO')<!--購入申請番号-->
+                                        </td>
+                                        <td nowrap class="Box1D FontSmallAnk">
+                                            <span nowrap class="FontSlipNo" id="purAplManagement.catalogIdentify.purAplNo.purAplNo" name="purAplManagement.catalogIdentify.purAplNo.purAplNo">
+                                                #out($!catalogPurReqApl.purAplManagement.catalogIdentify.purAplNo.purAplNo)
+                                            </span>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td nowrap class="Box1H FontBoxHeader">
+                                            #customSpringMessage('REQ_DATE')<!--依頼日-->
+                                        </td>
+                                        <td nowrap class="Box1D FontSmallAnk">
+                                            <span class="FontSmall">#out($!catalogPurReqApl.purAplManagement.purReqDate.purReqDate.reqDate.dateOfymdDispYMD)</span>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td nowrap class="Box1H FontBoxHeader">
+                                            #customSpringMessage('EMERGENCY')<!--緊急-->
+                                        </td>
+                                        <td nowrap class="Box1D FontSmallAnk">
+                                            #customFormCheckbox("catalogPurReqApl.purAplManagement.urgentInd.urgentInd" "" "1" "0")#customSpringMessage('EMERGENCY')
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td nowrap class="Box1H FontBoxHeader">
+                                            #customSpringMessage('TITLE_NAME')<span class="FontWarn">&nbsp;※</span><!--件名-->
+                                        </td>
+                                        <td nowrap class="Box1D">
+                                            #springFormInput("catalogPurReqApl.purAplManagement.titleName.titleName" "size=71 maxlength=30 class='Small'")
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td nowrap class="Box1H FontBoxHeader">
+                                            #customSpringMessage('CLIENT')<span class="FontWarn">&nbsp;※</span><!--依頼者-->
+                                        </td>
+                                        <td nowrap class="Box1D">
+                                            <table class="NoBorder">
+                                                <tr>
+                                                    <td valign="top">
+                                                        <img class="Mark" src="../../image/mrkHuman.gif" >
+                                                    </td>
+                                                    <td nowrap class="FontSmall">
+                                                        <input id="purAplManagement.reqUser.reqUser.section.sectionCd" name="purAplManagement.reqUser.reqUser.section.sectionCd" type="text" class="Small" style="background:transparent;border:0px" size="14" readonly tabIndex="-1" value="#out($!catalogPurReqApl.purAplManagement.reqUser.reqUser.section.sectionCd)"/>
+                                                        <input id="purAplManagement.reqUser.reqUser.section.sectionName" name="purAplManagement.reqUser.reqUser.section.sectionName" type="text" class="Small" style="background:transparent;border:0px" size="35" readonly tabIndex="-1" value="#out($!catalogPurReqApl.purAplManagement.reqUser.reqUser.section.sectionName)"/><br>
+                                                        #springFormInput("catalogPurReqApl.purAplManagement.reqUser.reqUser.userID" "maxLength=12 size=20 class='Small noIME' onblur='userOnblur();'")
+                                                        <input id="purAplManagement.reqUser.reqUser.userName" name="purAplManagement.reqUser.reqUser.userName" class="SmallDsp" type="text" readonly tabIndex="-1" size="35" value="#out($!catalogPurReqApl.purAplManagement.reqUser.reqUser.userName)">
+                                                        <img class="Icon" name="SectionSearch" src="../../image/btnLupe.gif" onclick="
+                                                            userPopup.setObject(getObj('purAplManagement.reqUser.reqUser.userID'),getObj('purAplManagement.reqUser.reqUser.userName'),getObj('purAplManagement.reqUser.reqUser.section.sectionCd'),getObj('purAplManagement.reqUser.reqUser.section.sectionName'),'','','',getObj('purAplManagement.reqUser.reqUser.mailAddr.mail'),getObj('purAplManagement.reqUser.reqUser.extNo.extensionNo'),getObj('purAplManagement.reqUser.reqUser.externalNo.externalNo'),'');
+                                                            masterSearch('../../src/userPopup/search?pageid=userPopupSearch&popupPageid=PSCAT020','userSearch','700','500');" >
+                                                    </td>
+                                                    <td>
+                                                        <table class="NoBorder">
+                                                            <tr>
+                                                                <td>
+                                                                    <img class="Mark" src="../../image/mrkTel.gif" >
+                                                                </td>   
+                                                                <td class="FontSmall" nowrap>
+                                                                    #customSpringMessage('EXTENSION_NO'):<!--内線番号-->
+                                                                </td>
+                                                                <td align="left">
+                                                                    #springFormInput("catalogPurReqApl.purAplManagement.reqUser.reqUser.extNo.extensionNo" "size=25 maxLength=20 class='Small noIME' onfocus='this.select();'")
+                                                                </td>
+                                                                <td class="FontSmall" nowrap>
+                                                                    #customSpringMessage('EXTERNAL_NO'):<!--外線番号-->
+                                                                </td>
+                                                                <td align="left">
+                                                                    #springFormInput("catalogPurReqApl.purAplManagement.reqUser.reqUser.externalNo.externalNo" "size=25 maxLength=20 class='Small noIME'")
+                                                                </td>
+                                                            </tr>
+                                                        </table>
+                                                        <table class="NoBorder">
+                                                            <tr>
+                                                                <td>
+                                                                    <img class="Mark" src="../../image/mrkMail.gif" >
+                                                                </td>
+                                                                <td>
+                                #customFormHiddenInput("purAplManagement.reqUser.reqUser.mailAddr.mail" "$!catalogPurReqApl.purAplManagement.reqUser.reqUser.mailAddr.mail")
+                                <a id = "link.purAplManagement.reqUser.reqUser.mailAddr.mail" class="FontMiniAnk" href='mailto:#out($!catalogPurReqApl.purAplManagement.reqUser.reqUser.userName)<#out($!catalogPurReqApl.purAplManagement.reqUser.reqUser.mailAddr.mail)>'>#out($!catalogPurReqApl.purAplManagement.reqUser.reqUser.mailAddr.mail)</a>
+                                                                </td>
+                                                            </tr>
+                                                        </table>
+                                                    </td>
+                                                </tr>
+                                            </table>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td nowrap class="Box1H FontBoxHeader">
+                                            #customSpringMessage('APP_ROUTE')<span class="FontWarn">&nbsp;※</span><!--承認ルート-->
+                                        </td>
+                                        <td nowrap class="Box1D">
+                                            #customFormSingleSelect("catalogPurReqApl.application.approute.appRouteNo" $appRouteList "class='Small' onchange='setShowButton()'")
+                                                <input type="button" id="ViewRoot" name="ViewRoot" class="SmallButton" value="#customSpringMessage('SHOW')" onclick="appRoutePopup();"> ##表示
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td nowrap class="Box1H FontBoxHeader">
+                                            #customSpringMessage('SECTION_TYPE_PLANNED')<span class="FontWarn">&nbsp;※</span><!--負担部門-->
+                                        </td>
+                                        <td nowrap class="Box1D">
+                                        #if($customMacroRequestContext.isActiveProfile('budget'))
+                                            #springFormInput("catalogPurReqApl.purAplManagement.loadSection.loadSection.sectionCd" "maxLength=12 size=20 class='Small noIME' maxLength='12' size='14'  onblur='sectionOnblur();' onfocus='sectionCodeGetfocus(this);'")<!--ここをダブルクリックすると、依頼部門を検索できます。-->
+                                            <input id="purAplManagement.loadSection.loadSection.sectionName" name="purAplManagement.loadSection.loadSection.sectionName" class="SmallDsp" type="text" readonly tabIndex="-1" size="71" value="#out($catalogPurReqApl.purAplManagement.loadSection.loadSection.sectionName)"><!--ここをダブルクリックすると、依頼部門を検索できます。-->
+                                            <img class="Icon" name="SectionSearch" src="../../image/btnLupe.gif" onclick="sectionPopup.setObject(getObj('purAplManagement.loadSection.loadSection.sectionCd'),getObj('purAplManagement.loadSection.loadSection.sectionName'),getObj('purAplManagement.loadSection.loadSection.company.companyCd'),getObj('purAplManagement.loadSection.loadSection.company.companyName'),getObj('purAplManagement.loadSection.loadSection.sectionPlace.sectionPlaceCd'),getObj('purAplManagement.loadSection.loadSection.sectionPlace.sectionPlaceName'));
+                            masterSearch('../../src/loadSectionPopup/search?pageid=sectionPopupSearch&popupPageid=PSCAT020',
+                                       'SectionSearch',
+                                       '700',
+                                       '500');" ><!--依頼部門検索-->
+                                        #else
+                                            #springFormInput("catalogPurReqApl.purAplManagement.loadSection.loadSection.sectionCd" "maxLength=12 size=20 class='Small noIME' maxLength='12' size='14'  onblur='sectionOnblur();' onfocus='sectionCodeGetfocus(this);'")<!--ここをダブルクリックすると、依頼部門を検索できます。-->
+                                            <input id="purAplManagement.loadSection.loadSection.sectionName" name="purAplManagement.loadSection.loadSection.sectionName" class="SmallDsp" type="text" readonly tabIndex="-1" size="71" value="#out($catalogPurReqApl.purAplManagement.loadSection.loadSection.sectionName)"><!--ここをダブルクリックすると、依頼部門を検索できます。-->
+                                            <img class="Icon" name="SectionSearch" src="../../image/btnLupe.gif" onclick="sectionPopup.setObject(getObj('purAplManagement.loadSection.loadSection.sectionCd'),getObj('purAplManagement.loadSection.loadSection.sectionName'),getObj('purAplManagement.loadSection.loadSection.company.companyCd'),getObj('purAplManagement.loadSection.loadSection.company.companyName'),getObj('purAplManagement.loadSection.loadSection.sectionPlace.sectionPlaceCd'),getObj('purAplManagement.loadSection.loadSection.sectionPlace.sectionPlaceName'));
+                            masterSearch('../../src/sectionPopup/search?pageid=sectionPopupSearch&popupPageid=PSCAT020',
+                                       'SectionSearch',
+                                       '700',
+                                       '500');" ><!--依頼部門検索-->
+                                       #end
+                                            #customFormHiddenInput("purAplManagement.loadSection.loadSection.company.companyCd" "$catalogPurReqApl.purAplManagement.loadSection.loadSection.company.companyCd")
+                                            #customFormHiddenInput("purAplManagement.loadSection.loadSection.company.companyName" "$catalogPurReqApl.purAplManagement.loadSection.loadSection.company.companyName")
+                                            #customFormHiddenInput("purAplManagement.loadSection.loadSection.sectionPlace.sectionPlaceCd" "$catalogPurReqApl.purAplManagement.loadSection.loadSection.sectionPlace.sectionPlaceCd")
+                                            #customFormHiddenInput("purAplManagement.loadSection.loadSection.sectionPlace.sectionPlaceName" "$catalogPurReqApl.purAplManagement.loadSection.loadSection.sectionPlace.sectionPlaceName")
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td nowrap class="Box1H FontBoxHeader">
+                                            #customSpringMessage('DELIVERY_PLACE')<span class="FontWarn">&nbsp;※</span><!--納入先-->
+                                        </td>
+                                        <td nowrap class="Box1D">
+                                            #springFormInput("catalogPurReqApl.purAplManagement.delivPlace.delivPlaceCd" "maxLength=12 size=20 class='Small noIME' onblur='deliveryPlace();' onfocus='deliveryPlaceCodeGetfocus(this);'")<!--ここをダブルクリックすると、納入先を検索できます。-->
+                                            <input id="purAplManagement.delivPlace.delivPlaceName" name="purAplManagement.delivPlace.delivPlaceName" class="SmallDsp" type="text" readonly tabIndex="-1" size="71" value="#out($catalogPurReqApl.purAplManagement.delivPlace.delivPlaceName)"><!--ここをダブルクリックすると、納入先を検索できます。-->
+                                            <img class="Icon" name="placeSearch" src="../../image/btnLupe.gif" onclick="deliveryPlacePopup.setObject(getObj('purAplManagement.delivPlace.delivPlaceCd'),getObj('purAplManagement.delivPlace.delivPlaceName'));
+                          masterSearch('../../src/deliveryPlacePopup/search?pageid=deliveryPlacePopupSearch&popupPageid=PSCAT020',
+                                       'deliveryPlaceSearch',
+                                       '700',
+                                       '500');" ><!--納入先検索-->
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td nowrap class="Box1H FontBoxHeader">
+                                            #customSpringMessage('BUDGET_NO')<!--予算番号-->
+                                            #foreach($!item in $!PSCAT020PageCreater.getItemListForBody())
+                                                #if($!item.getColumnName()=="T_PUR_APL.BUDGET_NO")
+                                                    #if($!item.getItemDefinitionDetail().getInputMethod().getMustEnterFlg().getMustEnterFlg() == "1")
+                                                        <span class="FontWarn">&nbsp;※</span>
+                                                    #end
+                                                #end
+                                            #end
+                                        </td>
+                                        <td nowrap class="Box1D">
+                                            #springFormInput("catalogPurReqApl.purAplManagement.budgetNumber.budgetNumber" "size=53 maxLength=30 class='Small noIME'")
+                                            #if($isActiveProfileBudget == "true")
+                                                 <img class="Icon" name="budgetNoSearch" src="../../image/btnLupe.gif" 
+                                                    onclick="budgetnoPopup.setParam('0',getObj('purAplManagement.loadSection.loadSection.company.companyCd').value, getObj('purAplManagement.loadSection.loadSection.sectionPlace.sectionPlaceCd').value
+                                                    , getObj('purAplManagement.loadSection.loadSection.sectionCd').value, getObj('purAplManagement.loadSection.loadSection.sectionName').value);
+                                                    budgetnoPopup.setObject(getObj('purAplManagement.budgetNumber.budgetNumber'));
+                                                    masterSearch('../../src/budgetnoPopup/search?pageid=budgetnoPopupSearch&popupPageid=PSCAT020',
+                                                    'budgetNoSearch', 
+                                                    '750', 
+                                                    '500');"
+                                                 >
+                                            #end
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td nowrap class="Box1H FontBoxHeader">#customSpringMessage('FOR_BOSS_COMMENT')</td><!--承認者向けコメント-->
+                                        <td class="Box1D">
+                                            #springFormTextarea("catalogPurReqApl.purAplManagement.forAppComment.forAppComment.comment" "class='Small' style='width:100%;' rows='4' maxLength=200")
+                                            <span class="FontWarn"></span>
+                                        </td>
+                                    </tr>
+                                    #if("1" == "$!catalogSupplierCommentInd")
+                                        <tr>
+                                            <td nowrap class="Box1H FontBoxHeader">#customSpringMessage('FOR_SUPPRIER_COMMENT')</td><!--取引先向けコメント-->
+                                            <td class="Box1D">
+                                                #springFormTextarea("catalogPurReqApl.purAplManagement.forSupplierComment.forSupplierComment.comment" "class='Small' style='width:100%;' rows='4' maxLength=200")
+                                                <span class="FontWarn"></span>
+                                            </td>
+                                        </tr>
+                                    #end
+                                    <tr>
+                                        <td nowrap class="Box1H FontBoxHeader">#customSpringMessage('APL_AMOUNT')</td><!--申請金額-->
+                                        <td nowrap class="Box1D FontSmall">
+                                            <span class="FontCurrMiddle Brown">                                              
+                                              #if($!catalogPurReqApl.purAplManagement.catalogPurReqList.size() != 0)
+                                               #if("$!catalogPurReqApl.purAplManagement.catalogPurReqList[0].priceArticle.supplierFrom.currency.currencyMark" == "\")
+                                                     &yen;
+                                               #else
+                                               #out($!catalogPurReqApl.purAplManagement.catalogPurReqList[0].priceArticle.supplierFrom.currency.currencyMark)
+                                               #end                                               
+                                                <span id="TotalAmount" name="TotalAmount" class="FontCurrMiddle Brown"></span>
+                                            <span class="FontMiniAnkBold Brown">&nbsp;                                            
+                                                #out($!catalogPurReqApl.purAplManagement.catalogPurReqList[0].priceArticle.supplierFrom.currency.currencyCd)
+                                            </span>
+                                             #if($catalogPurReqApl.purAplManagement.foreignCurrency)
+                                                &nbsp;(
+                                                #if("$!catalogPurReqApl.purAplManagement.reqUser.reqUser.section.company.currency.currencyMark" == "\")
+                                                     &yen;
+                                                #else
+                                                    #out($!catalogPurReqApl.purAplManagement.reqUser.reqUser.section.company.currency.currencyMark)
+                                                #end
+                                                <span id="TotalConvAmount" name="TotalConvAmount" class="FontCurrMiddle Brown"></span>
+                                            <span class="FontMiniAnkBold Brown">&nbsp;                                            
+                                                #out($!catalogPurReqApl.purAplManagement.reqUser.reqUser.section.company.currency.currencyCd)
+                                            </span>
+                                                )
+                                             #end
+                                            #end
+                                            </span>
+                                        </td>
+                                    </tr>
+                                    
+                                    ## 拡張項目
+                                    $!PSCAT020PageCreater.build('reg','_tr_style', '', '_td_style_left', 'class="Box1H FontBoxHeader"','_td_style_right', 'class="Box1D FontSmall"')
+                                    #foreach($!item in $!PSCAT020PageCreater.getItemListForBody())
+                                        #set($index = $!item.getColumnName().indexOf("."))
+                                        #set($indexStart = $index + 1)
+                                        #set($indexEnd = $indexStart + 4)
+                                        #if($!item.getColumnName().substring($indexStart, $indexEnd) == "EXT_")
+                                            $!PSCAT020PageCreater.printDefault($!item)
+                                        #end
+                                    #end
+
+                                </tbody>
+                            </table>
+                            <br>
+                            <table class="NoBorder" width="100%">
+                                <tr>
+                                    <td>
+                                        <span class="CornerTopBrown"><span class="Corner1"></span> <span class="Corner2"></span> <span class="Corner3"></span><span class="Corner4"></span></span>
+                                        <div class="CornerMidBrown" width="100%"> 
+                                            <table>
+                                                <tbody>
+                                                    <tr>
+                                                        <td>
+                                                            &nbsp;<img src="../../image/mrkInfo.gif" >&nbsp;<!--情報-->
+                                                        </td>
+                                                        <td class="FontSmallBold DarkBlue" align="left">
+                                                            #customSpringMessage('ALL_FAVORITE_CREATE_COMMENT')<!--全ての品名をお気に入りに登録することができます。-->
+                                                        </td>
+                                                        <td>
+                                                            <input type="button" class="SmallButton" value="#customSpringMessage('ALL_FAVORITE_CREATE')" onclick="addFavForeach();">
+                                                        </td><!--全てお気に入りに登録-->
+                                                    </tr>
+                                                    <tr>
+                                                        <td>
+                                                            &nbsp;<img src="../../image/mrkInfo.gif" >&nbsp;<!--情報-->
+                                                        </td>
+                                                        <td class="FontSmallBold DarkBlue" align="left">
+                                                            #customSpringMessage('COMMENT_PASTE_INPUT_VALUE')&nbsp;&nbsp;<!--入力した値を明細に一括で貼付することができます。-->
+                                                        </td>
+                                                        <td>
+                                                            <span class="FontBoxHeader">#customSpringMessage('DELIV_DATE')&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><!--納期-->
+                                                            <input id="AptDate" name="AptDate" class="Small noIME" maxlength="8" type="text" size="12" onblur="dateOnBlur(this);" onfocus="dateOnFocus(this);">
+                                                            <img class="Icon" src="../../image/btnCalendar.gif" onclick="getCalendar(1,'AptDate');" ><!--カレンダー-->&nbsp;<span class="FontMini" style="text-align:right;"></span>
+                                                        </td>
+                                                        <td>
+                                                            <input class="SmallButton" type="button" value="#customSpringMessage('ACTION_PASTE')" onclick="setAptDate();"><!--貼付-->
+                                                        </td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td>
+                                                            &nbsp;
+                                                        </td>
+                                                        <td>
+                                                            &nbsp;
+                                                        </td>
+                                                        <td class="FontSmallBold DarkBlue" align="left" nowrap>
+                                                            <span class="FontBoxHeader">#customSpringMessage('SUBJECT')&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><!--科目-->
+                                                            <input id="subjectCd" name="subjectCd" class="Small noIME" onblur="subjectOnblur();" maxlength="12" type="text" size="20">
+                                                            <input id="subjectName" name="subjectName" class="SmallDsp" type="text" readonly tabIndex="-1" size="71">
+                                                            <img class="Icon" name="PlaceSearch" src="../../image/btnLupe.gif" onclick="subjectPopup.setObject(getObj('subjectCd'),getObj('subjectName')); masterSearch('../../src/subjectPopup/search?pageid=subjectPopupSearch&popupPageid=PSCAT020&projectId=paster','subjectPopup','700','500');"><!--科目検索-->
+                                                            </td>
+                                                        <td>
+                                                            <input class="SmallButton" type="button" value="#customSpringMessage('ACTION_PASTE')" onclick="setSubjectCd();">
+                                                        </td><!--貼付-->
+                                                    </tr>
+                                                    
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                        <span class="CornerBtmBrown"><span class="Corner4"></span> <span class="Corner3"></span> <span class="Corner1"></span><span class="Corner1"></span></span>
+                                    </td>
+                                </tr>
+                            </table>
+                            <br>
+                            <table class="NoBorder" width="98%">
+                                #if($!catalogPurReqApl.purAplManagement.catalogPurReqList.size()!=0)
+                                <tbody class="Box1G">
+                                    <table class="Box1G" width="98%">
+                                        <!--　１行目　-->
+                                        #foreach($!catalogPurReq in $!catalogPurReqApl.purAplManagement.catalogPurReqList)                                      
+                                        <tr>
+                                            <td class="ProductArea" align="left" nowrap>
+                                                <table class="NoBorder">
+                                                    <tr>
+                                                        <td nowrap><span class="FontMini">#customSpringMessage('PRODUCT_CLASS'):</span></td><!--品名分類-->
+                                                        <td>
+                                                            <table>
+                                                                <tr>
+                                                                    <td><div class="ItemKind">#customSpringMessage('ITEM_CLASS_L_ABBR')</div></td><!--大分類--><!--大-->
+                                                                    <td class="FontCategolyName" nowrap>#out($!catalogPurReqApl.purAplManagement.catalogPurReqList[$velocityCount].priceArticle.item.itemClass.itemClassNameL)</td>
+                                                                    <td><div class="ItemKind">#customSpringMessage('ITEM_CLASS_M_ABBR')</div></td><!--中分類--><!--中-->
+                                                                    <td class="FontCategolyName" nowrap>#out($!catalogPurReqApl.purAplManagement.catalogPurReqList[$velocityCount].priceArticle.item.itemClass.itemClassNameM)</td>
+                                                                    <td><div class="ItemKind">#customSpringMessage('ITEM_CLASS_S_ABBR')</div></td><!--小分類--><!--小-->
+                                                                    <td class="FontCategolyName" nowrap>#out($!catalogPurReqApl.purAplManagement.catalogPurReqList[$velocityCount].priceArticle.item.itemClass.itemClassNameS)</td>
+                                                                </tr>
+                                                            </table>
+                                                        </td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td><span class="FontMini" width="60px;">#customSpringMessage('ITEM_CD'):&nbsp;&nbsp;&nbsp;</span></td><!--品名コード-->
+                                                        <td><span class="FontSmallAnk Brown">#out($!catalogPurReqApl.purAplManagement.catalogPurReqList[$velocityCount].priceArticle.item.itemCd)</span><span class="Green FontCurrMiddle">&nbsp;
+                                                                #if($!catalogPurReqApl.purAplManagement.catalogPurReqList[$velocityCount].priceArticle.greenFlg=="0")
+                                                                &clubs;&clubs;&clubs;
+                                                                #end
+                                                        </span></td><!--グリーン品-->
+                                                    </tr>
+                                                    <tr>
+                                                        <td><span class="FontMini" width="60px;">#customSpringMessage('ITEM_NAME'):</span></td><!--品名-->                                                      
+                                                        <td><span class="FontMiddleAnkBold">
+                                                        #if("$!catalogPurReqApl.purAplManagement.catalogPurReqList[$velocityCount].priceArticle.refUrl" != "")
+                                                        <a href="javascript:void(0)" onclick="javascript:poppage('#jsEscapeInHTML($!catalogPurReqApl.purAplManagement.catalogPurReqList[$velocityCount].priceArticle.refUrl)','_blank','600','600')">
+                                                        #out($!catalogPurReqApl.purAplManagement.catalogPurReqList[$velocityCount].priceArticle.item.itemName)</a>
+                                                        #elseif("$!catalogPurReqApl.purAplManagement.catalogPurReqList[$velocityCount].externalCatalogDataList.detailURL" != "")
+                                                        <a href="javascript:void(0)" onclick="javascript:poppage('#jsEscapeInHTML($!catalogPurReqApl.purAplManagement.catalogPurReqList[$velocityCount].externalCatalogDataList.detailURL)','_blank','600','600')">
+                                                        #out($!catalogPurReqApl.purAplManagement.catalogPurReqList[$velocityCount].priceArticle.item.itemName)</a>
+                                                        #else
+                                                        #out($!catalogPurReqApl.purAplManagement.catalogPurReqList[$velocityCount].priceArticle.item.itemName)
+                                                        #end
+                                                        </span>
+                                                        </td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td><span class="FontMini" width="60px;">#customSpringMessage('SUPPLIER')：</span></td><!--取引先-->
+                                                        <td><span class="FontSmallBold Green">#out($!catalogPurReqApl.purAplManagement.catalogPurReqList[$velocityCount].priceArticle.supplierFrom.supCd) #out($!catalogPurReqApl.purAplManagement.catalogPurReqList[$velocityCount].priceArticle.supplierFrom.supplierName.supplierAbbrName)</span></td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td width="60px;"><span class="FontMini">#customSpringMessage('KATASHIKI')：</span></td><!--型式-->
+                                                        <td><span class="FontMiniAnk">#out($!catalogPurReqApl.purAplManagement.catalogPurReqList[$velocityCount].priceArticle.item.katashiki)</span></td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td width="60px;"><span class="FontMini">#customSpringMessage('MANUFACT')：</span></td><!--メーカー-->
+                                                        <td><span class="FontMini" >#out($!catalogPurReqApl.purAplManagement.catalogPurReqList[$velocityCount].priceArticle.item.manufact.manufactCd) #out($!catalogPurReqApl.purAplManagement.catalogPurReqList[$velocityCount].priceArticle.item.manufact.manufactName)</span></td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td class="FontMini" nowrap align="left">
+                                                            #customSpringMessage('DELIV_DATE')<span class="FontWarn">&nbsp;※</span>：
+                                                        </td><!--納期-->
+                                                        <td nowrap align="left">
+                                                            #set( $dateCount = $!catalogPurReqApl.purAplManagement.catalogPurReqList[$velocityCount].priceArticle.standardDelivDayCount.standardDelivDayCount.dayCount )
+                                                            #if ($dateCount == "")
+                                                                #set( $dateCount = "0")
+                                                            #end
+                                                            #springFormInput("catalogPurReqApl.purAplManagement.catalogPurReqList[$velocityCount].hopeDlvEst.hopeDlvEst.dateOfymdFormat" "maxLength=8 size=12 class='Small noIME' onblur='dateOnBlur(this);' onfocus='dateOnFocus(this);' ")
+                                                            <img class="Icon" src="../../image/btnCalendar.gif" onclick="getCalendar(1,'purAplManagement.catalogPurReqList[$velocityCount].hopeDlvEst.hopeDlvEst.dateOfymdFormat');" ><!--カレンダー-->&nbsp;
+                                                            <span class="FontMini" style="text-align:right;">(#customSpringMessage("STD_ORDER_LT")：<span id="dayCount_$velocityCount">#out($!catalogPurReqApl.purAplManagement.catalogPurReqList[$velocityCount].priceArticle.standardDelivDayCount.standardDelivDayCount.dayCount)</span>#customSpringMessage('STD_DELIVE_DAY'))</span><!--(標準納入日数：1日)-->
+                                                        </td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td class="FontMini" nowrap align="left" valign="middle">
+                                                            #customSpringMessage('SUBJECT')<span class="FontWarn">&nbsp;※</span>：
+                                                        </td><!--科目-->
+                                                        <td nowrap align="left">
+                                                            #springFormInput("catalogPurReqApl.purAplManagement.catalogPurReqList[$velocityCount].subject.subjectCd" "maxLength=12 size=20 onblur='subjectDtlOnblur($velocityCount);' onfocus='subjectCodeGetfocus(this);' class='Small noIME'")
+                                                            <input id="purAplManagement.catalogPurReqList[$velocityCount].subject.subjectName" name="purAplManagement.catalogPurReqList[$velocityCount].subject.subjectName" class="SmallDsp" type="text" readonly tabIndex="-1" size="71" value="#out($!catalogPurReqApl.purAplManagement.catalogPurReqList[$velocityCount].subject.subjectName)">
+                                                            <img class="Icon" name="PlaceSearch" src="../../image/btnLupe.gif" onclick="openSubjectWindow($velocityCount);" ><!--科目検索-->
+                                                        </td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td class="FontMini" nowrap align="left" valign="middle">
+                                                            #customSpringMessage('INSPECT_IND')：
+                                                        </td><!--検査区分-->
+                                                        <td class="FontSmall" nowrap align="left">
+                                                            <span class="FontSmall">&nbsp;#out($!catalogPurReqApl.purAplManagement.catalogPurReqList[$velocityCount].priceArticle.inspectInd.inspectInd_PageValue)</span><!--検査区分-->
+                                                        </td>
+                                                    </tr>
+
+                                                    
+                                                </table>
+                                            </td>
+                                            <td class="PaddingM" align="left" valign="middle">
+                                                <table>
+                                                    <tr>
+                                                        <td class="FontMini" nowrap align="left" valign="middle">
+                                                        	#if($!catalogPurReqApl.purAplManagement.catalogPurReqList[$velocityCount].priceCreateFlg.priceCreate == "true")
+                                                            <a href="#" onclick="javascript:openDetail('#jsEscapeInHTML($!catalogPurReqApl.purAplManagement.catalogPurReqList[$velocityCount].priceArticle.priceArticleIdentify.buyerCompanyCd)'
+                                                                                                      ,'#jsEscapeInHTML($!catalogPurReqApl.purAplManagement.catalogPurReqList[$velocityCount].priceArticle.priceArticleIdentify.buyerSectionCd)'
+                                                                                                      ,'#jsEscapeInHTML($!catalogPurReqApl.purAplManagement.catalogPurReqList[$velocityCount].priceArticle.item.itemCd)'
+                                                                                                      ,'#jsEscapeInHTML($!catalogPurReqApl.purAplManagement.catalogPurReqList[$velocityCount].priceArticle.priceArticleIdentify.supCd)'
+                                                                                                      ,'#jsEscapeInHTML($!catalogPurReqApl.purAplManagement.catalogPurReqList[$velocityCount].priceArticle.priceArticleIdentify.validStartDate)'
+                                                                                                      ,'#jsEscapeInHTML($!catalogPurReqApl.purAplManagement.catalogPurReqList[$velocityCount].priceArticle.priceArticleIdentify.validEndDate)'
+                                                                                                      ,'');" class="FontMini">#customSpringMessage('PRICE_DETAIL')</a>&nbsp;<!--価格詳細-->
+															#end
+                                                        </td>
+                                                        <td>&nbsp;</td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td class="FontMini" nowrap align="left" valign="middle">
+                                                            #customSpringMessage('UNIT_PRICE')：
+                                                        </td><!--単価-->
+                                                        <td align="right" valign="bottom" nowrap>
+                                                            <span class="FontCurrSmall">
+                                                                #if("$!catalogPurReqApl.purAplManagement.catalogPurReqList[$velocityCount].priceArticle.supplierFrom.currency.currencyMark" == "\")
+                                                                    &yen;
+                                                                #else
+                                                                    #out($!catalogPurReqApl.purAplManagement.catalogPurReqList[$velocityCount].priceArticle.supplierFrom.currency.currencyMark)
+                                                                #end
+                                                                <span id="catalogPurReqList[$velocityCount].priceArticle.buyPrice.amount.amountFormat" name="catalogPurReqList[$velocityCount].priceArticle.buyPrice.amount.amountFormat" class="FontCurrSmall">#out($!catalogPurReqApl.purAplManagement.catalogPurReqList[$velocityCount].priceArticle.buyPrice.amount.amountFormat)</span></span>
+                                                            <span class="FontMiniAnkBold">&nbsp;#out($!catalogPurReqApl.purAplManagement.catalogPurReqList[$velocityCount].priceArticle.supplierFrom.currency.currencyCd)</span>
+                                                            <br />&nbsp;<span class="FontMini Green">
+                                                                #if("$!catalogPurReqApl.purAplManagement.catalogPurReqList[$velocityCount].priceArticle.taxCalculationInd.consumptInd.consumptInd" !="")
+                                                                    (&nbsp;#out($!catalogPurReqApl.purAplManagement.catalogPurReqList[$velocityCount].priceArticle.taxCalculationInd.taxInd.taxInd_PageValue) #out($!catalogPurReqApl.purAplManagement.catalogPurReqList[$velocityCount].priceArticle.taxCalculationInd.consumptInd.consumptInd_PageValue))
+                                                                #end
+                                                            </span>
+                                                        </td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td class="FontMini" nowrap align="left">
+                                                            #customSpringMessage('VOL')<span class="FontWarn">&nbsp;※</span>：
+                                                        </td><!--数量-->
+                                                        <td nowrap align="left">
+                                                        	#if($!catalogPurReqApl.purAplManagement.catalogPurReqList[$velocityCount].priceCreateFlg.priceCreate == "true")
+                                                            	#springFormInput("catalogPurReqApl.purAplManagement.catalogPurReqList[$velocityCount].hopeVol.hopeVol.volFormat" "maxLength=13 size=18 class='Small noIME SmallRight' onblur='javascript:loadBuyPriceByDateAjax($velocityCount);calcTotal();editVal(this);' onfocus='deleteComma(this);'")
+                                                            #else                                                           
+                                                            	#springFormInput("catalogPurReqApl.purAplManagement.catalogPurReqList[$velocityCount].hopeVol.hopeVol.volFormat" "maxLength=13 size=18 class='Small noIME SmallRight' onblur='javascript:calculateAmount($!catalogPurReqApl.purAplManagement.catalogPurReqList[$velocityCount].priceArticle.buyPrice.amount.amount, this.value, $!catalogPurReqApl.purAplManagement.catalogPurReqList[$velocityCount].priceArticle.supplierFrom.currency.currencyCdWithDoublequote,$velocityCount);calcTotal();editVal(this);' onfocus='deleteComma(this);'")
+                                                            #end
+                                                            &nbsp;<span class="FontSmall">#out($catalogPurReqApl.purAplManagement.catalogPurReqList[$velocityCount].priceArticle.item.unit.unitName)</span><!--数量-->
+                                                            <br>&nbsp;<span class="FontMini">
+                                                                #if("$!catalogPurReqApl.purAplManagement.catalogPurReqList[$velocityCount].priceArticle.custUnitVol.custUnitVol.volFormat" != ""||"$!catalogPurReqApl.purAplManagement.catalogPurReqList[$velocityCount].priceArticle.minCustVol.minCustVol.volFormat" != "")
+                                                                    (
+                                                                #end
+                                                                #if("$!catalogPurReqApl.purAplManagement.catalogPurReqList[$velocityCount].priceArticle.custUnitVol.custUnitVol.vol" != "")
+                                                                    #customSpringMessage('UNIT')：#out($catalogPurReqApl.purAplManagement.catalogPurReqList[$velocityCount].priceArticle.custUnitVol.custUnitVol.volFormat)
+                                                                #end
+                                                                #if("$!catalogPurReqApl.purAplManagement.catalogPurReqList[$velocityCount].priceArticle.custUnitVol.custUnitVol.volFormat" != "" && "$!catalogPurReqApl.purAplManagement.catalogPurReqList[$velocityCount].priceArticle.minCustVol.minCustVol.volFormat" != "")
+                                                                    /
+                                                                #end
+                                                                #if("$!catalogPurReqApl.purAplManagement.catalogPurReqList[$velocityCount].priceArticle.minCustVol.minCustVol.vol" != "")
+                                                                    #customSpringMessage('MIN_ORDER_VOL')：#out($catalogPurReqApl.purAplManagement.catalogPurReqList[$velocityCount].priceArticle.minCustVol.minCustVol.volFormat)
+                                                                #end
+                                                                #if("$!catalogPurReqApl.purAplManagement.catalogPurReqList[$velocityCount].priceArticle.custUnitVol.custUnitVol.volFormat" != ""||"$!catalogPurReqApl.purAplManagement.catalogPurReqList[$velocityCount].priceArticle.minCustVol.minCustVol.volFormat" != "")
+                                                                     )
+                                                                #end
+                                                            </span><br><!--(単位：10/最小発注数量：10)-->
+                                                        </td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td class="FontMini" nowrap align="left" valign="middle">
+                                                            #customSpringMessage('AMOUNT')：
+                                                        </td><!--金額-->
+                                                        <td align="right" valign="bottom" nowrap>
+                                                            <span class="FontCurrMiddle Brown">
+                                                                #if("$!catalogPurReqApl.purAplManagement.catalogPurReqList[$velocityCount].priceArticle.supplierFrom.currency.currencyMark" == "\")
+                                                                    &yen;
+                                                                #else
+                                                                    #out($!catalogPurReqApl.purAplManagement.catalogPurReqList[$velocityCount].priceArticle.supplierFrom.currency.currencyMark)
+                                                                #end
+                                                            <span id="catalogPurReqList[$velocityCount].reqAmount.amountFormat" name="catalogPurReqList[$velocityCount].reqAmount.amountFormat" class="FontCurrMiddle Brown">#out($!catalogPurReqApl.purAplManagement.catalogPurReqList[$velocityCount].reqAmount.amountFormat)</span></span>&nbsp;
+                                                            <span class="FontMiniAnkBold Brown" id="purAplManagement.catalogPurReqList[$velocityCount].priceArticle.supplierFrom.currency.currencyCd" name ="purAplManagement.catalogPurReqList[$velocityCount].priceArticle.supplierFrom.currency.currencyCd">#out($!catalogPurReqApl.purAplManagement.catalogPurReqList[$velocityCount].priceArticle.supplierFrom.currency.currencyCd)</span>
+                                                            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+                                                            #customFormHiddenInput("purAplManagement.catalogPurReqList[$velocityCount].cnvAmount.cnvAmount.amount" "$!catalogPurReqApl.purAplManagement.catalogPurReqList[$velocityCount].cnvAmount.cnvAmount.amount")
+                                                            #customFormHiddenInput("purAplManagement.catalogPurReqList[$velocityCount].reqAmount.amount" "$!catalogPurReqApl.purAplManagement.catalogPurReqList[$velocityCount].reqAmount.amount")
+                                                            
+                                                            #customFormHiddenInput("purAplManagement.catalogPurReqList[$velocityCount].priceArticle.buyUser.buyUser.section.company.companyCd" "$!catalogPurReqApl.purAplManagement.catalogPurReqList[$velocityCount].priceArticle.buyUser.buyUser.section.company.companyCd")
+                                                            #customFormHiddenInput("purAplManagement.catalogPurReqList[$velocityCount].priceArticle.buyUser.buyUser.section.sectionCd" "$!catalogPurReqApl.purAplManagement.catalogPurReqList[$velocityCount].priceArticle.buyUser.buyUser.section.sectionCd")
+                                                            #customFormHiddenInput("purAplManagement.catalogPurReqList[$velocityCount].priceArticle.item.itemCd" "$!catalogPurReqApl.purAplManagement.catalogPurReqList[$velocityCount].priceArticle.item.itemCd")
+                                                            #customFormHiddenInput("purAplManagement.catalogPurReqList[$velocityCount].priceArticle.supplierFrom.supCd" "$!catalogPurReqApl.purAplManagement.catalogPurReqList[$velocityCount].priceArticle.supplierFrom.supCd")
+                                                            #customFormHiddenInput("purAplManagement.catalogPurReqList[$velocityCount].priceArticle.priceType" "$!catalogPurReqApl.purAplManagement.catalogPurReqList[$velocityCount].priceArticle.priceType")       
+                                                            #customFormHiddenInput("purAplManagement.catalogPurReqList[$velocityCount].priceArticle.buyPrice.amount.amount" "$!catalogPurReqApl.purAplManagement.catalogPurReqList[$velocityCount].priceArticle.buyPrice.amount.amount")                                                            
+                                                            #customFormHiddenInput("purAplManagement.catalogPurReqList[$velocityCount].exclusiveSlipId.slipNo" "$!catalogPurReqApl.purAplManagement.catalogPurReqList[$velocityCount].exclusiveSlipId.slipNo")
+                                                            #customFormHiddenInput("purAplManagement.catalogPurReqList[$velocityCount].exclusiveSlipId.lastUpdDate" "$!catalogPurReqApl.purAplManagement.catalogPurReqList[$velocityCount].exclusiveSlipId.lastUpdDate")
+                                                        </td>
+                                                    </tr>
+                                                    #if("$!catalogPurReqApl.purAplManagement.reqUser.reqUser.section.company.currency.currencyCd" != "$!catalogPurReqApl.purAplManagement.catalogPurReqList[$velocityCount].priceArticle.supplierFrom.currency.currencyCd"
+                                                         && "$!catalogPurReqApl.purAplManagement.catalogPurReqList[$velocityCount].priceArticle.supplierFrom.currency.currencyCd" != "")
+                                                    <tr>
+                                                        <td class="FontMini" nowrap align="left" valign="middle">
+                                                            #customSpringMessage('CONVERTED_AMOUNT')：
+                                                        </td><!--換算金額-->
+                                                        <td align="right" valign="bottom" nowrap>
+                                                            <span class="FontCurrSmall">
+                                                                #if("$!catalogPurReqApl.purAplManagement.reqUser.reqUser.section.company.currency.currencyMark" == "\")
+                                                                    &yen;
+                                                                #else
+                                                                    #out($!catalogPurReqApl.purAplManagement.reqUser.reqUser.section.company.currency.currencyMark)
+                                                                #end
+                                                                <span id="catalogPurReqList[$velocityCount].cnvAmount.cnvAmount.amountFormat" name="catalogPurReqList[$velocityCount].cnvAmount.cnvAmount.amountFormat" class="FontCurrSmall">#out($!catalogPurReqApl.purAplManagement.catalogPurReqList[$velocityCount].cnvAmount.cnvAmount.amountFormat)</span></span>
+                                                            <span class="FontMiniAnkBold">&nbsp;#out($!catalogPurReqApl.purAplManagement.reqUser.reqUser.section.company.currency.currencyCd)</span>
+                                                            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+                                                        </td>
+                                                    </tr>
+                                                    #end
+                                                </table>
+                                            </td>
+                                            <td class="PaddingM" align="center" valign="middle">
+                                            	#if($!catalogPurReqApl.purAplManagement.catalogPurReqList[$velocityCount].priceCreateFlg.priceCreate == "true")
+                                                <a class="FontMini" href="#" onclick="addFav('#jsEscapeInHTML($!catalogPurReqApl.purAplManagement.catalogPurReqList[$velocityCount].priceArticle.buyUser.buyUser.section.company.companyCd)','#jsEscapeInHTML($!catalogPurReqApl.purAplManagement.catalogPurReqList[$velocityCount].priceArticle.buyUser.buyUser.section.sectionCd)','#jsEscapeInHTML($!catalogPurReqApl.purAplManagement.catalogPurReqList[$velocityCount].priceArticle.item.itemCd)','#jsEscapeInHTML($!catalogPurReqApl.purAplManagement.catalogPurReqList[$velocityCount].priceArticle.supplierFrom.supCd)','#jsEscapeInHTML($!catalogPurReqApl.purAplManagement.catalogPurReqList[$velocityCount].priceArticle.priceArticleIdentify.validStartDate)','#jsEscapeInHTML($!catalogPurReqApl.purAplManagement.catalogPurReqList[$velocityCount].priceArticle.priceArticleIdentify.validEndDate)');">#customSpringMessage('ACTION_REG_FAV')...</a><br><!--お気に入りに登録-->
+                                                #end
+                                                <br>
+                                                #if("$!catalogPurReqApl.purAplManagement.catalogPurReqList[$velocityCount].externalCatalogDataList.imageURL" != "")
+
+                                                	<a href="#" onclick="javascript:poppage('$!catalogPurReqApl.purAplManagement.catalogPurReqList[$velocityCount].externalCatalogDataList.imageURL','_blank',300,300);"><img class="CatalogImage" src="$!catalogPurReqApl.purAplManagement.catalogPurReqList[$velocityCount].externalCatalogDataList.imageURL" ></a><!--クリックすると画像を拡大します-->
+                                                #elseif("$!catalogPurReqApl.purAplManagement.catalogPurReqList[$velocityCount].priceArticle.goodsImage.imgFileName"=="")
+                                                    #catalogImage($!catalogPurReqApl.purAplManagement.catalogPurReqList[$velocityCount].priceArticle.priceArticleIdentify.buyerCompanyCd,
+                                                                    $!catalogPurReqApl.purAplManagement.catalogPurReqList[$velocityCount].priceArticle.priceArticleIdentify.buyerSectionCd,
+                                                                    $!catalogPurReqApl.purAplManagement.catalogPurReqList[$velocityCount].priceArticle.priceArticleIdentify.itemCd,
+                                                                    $!catalogPurReqApl.purAplManagement.catalogPurReqList[$velocityCount].priceArticle.priceArticleIdentify.supCd,
+                                                                    $!catalogPurReqApl.purAplManagement.catalogPurReqList[$velocityCount].priceArticle.priceArticleIdentify.validStartDate,
+                                                                    $!catalogPurReqApl.purAplManagement.catalogPurReqList[$velocityCount].priceArticle.priceArticleIdentify.validEndDate)
+                                                #else
+                                                    <a href="#" onclick="imgFileName('#jsEscapeInHTML($!catalogPurReqApl.purAplManagement.catalogPurReqList[$velocityCount].priceArticle.priceArticleIdentify.buyerCompanyCd)', '#jsEscapeInHTML($!catalogPurReqApl.purAplManagement.catalogPurReqList[$velocityCount].priceArticle.priceArticleIdentify.buyerSectionCd)', '#jsEscapeInHTML($!catalogPurReqApl.purAplManagement.catalogPurReqList[$velocityCount].priceArticle.priceArticleIdentify.itemCd)', '#jsEscapeInHTML($!catalogPurReqApl.purAplManagement.catalogPurReqList[$velocityCount].priceArticle.priceArticleIdentify.supCd)', '#jsEscapeInHTML($!catalogPurReqApl.purAplManagement.catalogPurReqList[$velocityCount].priceArticle.priceArticleIdentify.validStartDate)', '#jsEscapeInHTML($!catalogPurReqApl.purAplManagement.catalogPurReqList[$velocityCount].priceArticle.priceArticleIdentify.validEndDate)');">
+                                                    #catalogImage($!catalogPurReqApl.purAplManagement.catalogPurReqList[$velocityCount].priceArticle.priceArticleIdentify.buyerCompanyCd,
+                                                                    $!catalogPurReqApl.purAplManagement.catalogPurReqList[$velocityCount].priceArticle.priceArticleIdentify.buyerSectionCd,
+                                                                    $!catalogPurReqApl.purAplManagement.catalogPurReqList[$velocityCount].priceArticle.priceArticleIdentify.itemCd,
+                                                                    $!catalogPurReqApl.purAplManagement.catalogPurReqList[$velocityCount].priceArticle.priceArticleIdentify.supCd,
+                                                                    $!catalogPurReqApl.purAplManagement.catalogPurReqList[$velocityCount].priceArticle.priceArticleIdentify.validStartDate,
+                                                                    $!catalogPurReqApl.purAplManagement.catalogPurReqList[$velocityCount].priceArticle.priceArticleIdentify.validEndDate)
+                                                    </a><!--クリックすると画像を拡大します-->
+                                                #end
+                                                <br><br>
+                                                <input type="button" class="SmallButton" value="#customSpringMessage('CART_DELETE')" onclick="deleteCart($velocityCount)"><!--カートから削除-->
+                                            </td>
+                                        </tr>
+                                        #if("$!catalogPurReqApl.purAplManagement.catalogPurReqList[$velocityCount].externalCatalogDataList.display1" != "" ||
+                                            "$!catalogPurReqApl.purAplManagement.catalogPurReqList[$velocityCount].externalCatalogDataList.display2" != "" ||
+                                            "$!catalogPurReqApl.purAplManagement.catalogPurReqList[$velocityCount].externalCatalogDataList.display3" != "" ||
+                                            "$!catalogPurReqApl.purAplManagement.catalogPurReqList[$velocityCount].externalCatalogDataList.display4" != "" ||
+                                            "$!catalogPurReqApl.purAplManagement.catalogPurReqList[$velocityCount].externalCatalogDataList.display5" != "")
+                                        <tr>
+                                            <td class="ProductArea" align="left" valign="top" colspan="3" >
+                                                <table class="NoBorder">
+                                                    #if("$!catalogPurReqApl.purAplManagement.catalogPurReqList[$velocityCount].externalCatalogDataList.display1" != "")
+                                                        <tr>
+                                                            <td nowrap valign="top"><span class="FontMini">#customSpringMessage('DISPLAY1'):</span></td><!--カタログ情報1-->
+                                                            <td><span class="FontMini">#out("$!catalogPurReqApl.purAplManagement.catalogPurReqList[$velocityCount].externalCatalogDataList.display1")</span></td>
+                                                        </tr>
+                                                    #end
+                                                    #if("$!catalogPurReqApl.purAplManagement.catalogPurReqList[$velocityCount].externalCatalogDataList.display2" != "")
+                                                        <tr>
+                                                            <td nowrap valign="top"><span class="FontMini">#customSpringMessage('DISPLAY2'):</span></td><!--カタログ情報2-->
+                                                            <td><span class="FontMini">#out("$!catalogPurReqApl.purAplManagement.catalogPurReqList[$velocityCount].externalCatalogDataList.display2")</span></td>
+                                                        </tr>
+                                                    #end
+                                                    #if("$!catalogPurReqApl.purAplManagement.catalogPurReqList[$velocityCount].externalCatalogDataList.display3" != "")
+                                                        <tr>
+                                                            <td nowrap valign="top"><span class="FontMini">#customSpringMessage('DISPLAY3'):</span></td><!--カタログ情報3-->
+                                                            <td><span class="FontMini">#out("$!catalogPurReqApl.purAplManagement.catalogPurReqList[$velocityCount].externalCatalogDataList.display3")</span></td>
+                                                        </tr>
+                                                    #end
+                                                    #if("$!catalogPurReqApl.purAplManagement.catalogPurReqList[$velocityCount].externalCatalogDataList.display4" != "")
+                                                        <tr>
+                                                            <td nowrap valign="top"><span class="FontMini">#customSpringMessage('DISPLAY4'):</span></td><!--カタログ情報4-->
+                                                            <td><span class="FontMini">#out("$!catalogPurReqApl.purAplManagement.catalogPurReqList[$velocityCount].externalCatalogDataList.display4")</span></td>
+                                                        </tr>
+                                                    #end
+                                                    #if("$!catalogPurReqApl.purAplManagement.catalogPurReqList[$velocityCount].externalCatalogDataList.display5" != "")
+                                                        <tr>
+                                                            <td nowrap valign="top"><span class="FontMini">#customSpringMessage('DISPLAY5'):</span></td><!--カタログ情報5-->
+                                                            <td><span class="FontMini">#out("$!catalogPurReqApl.purAplManagement.catalogPurReqList[$velocityCount].externalCatalogDataList.display5")</span></td>
+                                                        </tr>
+                                                    #end
+                                                </table>
+                                            </td>
+                                        </tr>
+                                        #end
+                                        ## 拡張項目
+                                        #if($!PSCAT020PageCreater.getDetailSize() > 0)
+                                        <tr>
+                                            <td class="ProductArea" colspan="3">
+                                                <table class="NoBorder">
+                                                    <tbody class="NoBorder">
+                                            $!PSCAT020PageCreater.build('reg', '_tr_style', '', '_td_style_left', 'class="FontMini" style="width:60px;padding-right:0px"', '_td_style_right', 'class="FontSmallAnk" style="width:500px;padding-left:0px"')
+                                            #foreach($!item in $!PSCAT020PageCreater.getItemListForDetail($velocityCount))
+                                                $!PSCAT020PageCreater.printDefault($!item)
+                                            #end
+                                                    </tbody>
+                                                </table>
+                                            </td>
+                                        </tr>
+                                        #end
+                                        <tr><td colspan="3" style="border-bottom:1px dotted #669999;"></td></tr>
+                                        #end
+                                    </table>
+                                </tbody>
+                                #end
+                            </table>
+                            
+                            <br>
+                            <table class="NoBorder" width="98%">
+                                <tr>
+                                    <td align="left">&nbsp;&nbsp;&nbsp;
+                                        #customSpringMessage('PSCAT020_FOOTER_COMMENT')
+                                    </td>## ※印の項目は、必須入力です。
+                                    #if("Correct" == "$!type")
+                                    <td align="right" valign="middle" nowrap>
+                                        #if($!{catalogPurReqApl.purAplManagement.catalogIdentify.appUnitNo} == "")
+                                            <input type="button" class="LargeButton" value="#customSpringMessage('ITEM_NAME_SELECT')" onclick="cart_select();"><!--品名選択-->
+                                        #end
+                                        &nbsp;
+                                        <input type="button" class="LargeButton" value="#customSpringMessage('RE_REQ')" onclick="exec_applyAgain();"><!--再申請-->
+                                    </td>
+                                    #else
+                                    <td align="right" valign="middle">
+                                        #if($!{catalogPurReqApl.purAplManagement.catalogIdentify.appUnitNo} == "")
+                                            <input type="button" class="LargeButton" value="#customSpringMessage('ITEM_NAME_SELECT')" onclick="cart_select();"><!--品名選択-->
+                                        #end
+                                        &nbsp;
+                                        <input type="button" class="LargeButton" value="#customSpringMessage('TEMPORARY_PRESERVATION')" onclick="exec_pre();">&nbsp;
+                                        <input type="button" class="LargeButton" value="#customSpringMessage('REQ')" onclick="exec_apply();"><!--品名選択--><!--一時保存--><!--申　請-->
+                                    </td>
+                                    #end
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+</form>
+</body>
+</html>

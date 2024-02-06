@@ -1,0 +1,471 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta http-equiv="Content-type" content="text/html; charset=UTF-8">
+## 強化-01715-000    2013.06.17 DEL SBO_WANGXM
+##<title>個人設定（一覧）</title>
+## 強化-01715-000    2013.06.17 ADD SBO_WANGXM
+<title>#customSpringMessage('PERSONAL_SETTINGS_PANEL_TITLE_LIST')</title>
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Content-script-type" content="text/javascript">
+<link id="CSS_FONT" rel="stylesheet" href="../../include/FontS.css" type="text/css">
+<link rel="stylesheet" href="../../include/Layout.css" type="text/css">
+<link rel="stylesheet" href="../../include/Color.css" type="text/css">
+<script language="javascript" type="text/javascript" src="../../include/common.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/jquery-1.7.2.min.js"></script>
+<script type="text/javascript">
+String.prototype.toInt = function(){
+    return Number(this);
+}
+String.prototype.changeIndex = function(index){
+    return this.replace(new RegExp("\\[\\d*\\]","g"),"["+index+"]");
+}
+Array.prototype.indexOf = function(num){
+    var pos = -1;
+    for(var i=0;i<this.length;i++){
+        if(this[i] == num){
+            pos = i;
+            break;
+        }
+    }
+    return pos;
+}
+
+var items = [];
+var len = 0; 
+var btnNo = 0;
+var trlen = 0;
+var btnIndex = 0;
+
+$(function(){
+    ## +++++ 強化-01819-000 SBO_SOKOU ADD START +++++
+    buttonDisable(true);
+    ## +++++ 強化-01819-000 SBO_SOKOU ADD -END- +++++
+    $("img[name=order_icon0]").css("cursor","pointer");
+    $("input[type=radio][name$=lockFlag]").click(function(){
+        var radiock = $("input[type=radio][name$=lockFlag]:checked");
+        $(radiock).removeAttr("checked");
+        $(this).attr("checked","true");
+    });
+});
+
+function order(orderIcon){
+    items = [];
+    len = 0;    
+    btnNo = 0;  
+    trlen = 0;
+    var inputs = $("input[name$=order]:checked");
+    if (inputs.length == 0) {
+        ## +++++ 強化-01795-000 2013/06/30 DAIKO_SOKOU ADD START
+        alert("#nothingSelectedMessage()");
+        ## +++++ 強化-01795-000 2013/06/30 DAIKO_SOKOU ADD -END-
+        return ;
+    }
+
+    btnNo = $(orderIcon).attr("idx");
+    btnIndex = $(orderIcon).attr("idx").toInt() + 1;
+    trlen = $("tr[idx]").length;
+    len = inputs.length;
+
+    var start = $(inputs).eq(0).parent().parent().attr("idx").toInt();
+    var end = $(inputs).eq(len - 1).parent().parent().attr("idx").toInt();
+
+    if(len == 1 && start == btnNo) {
+        return;
+    }
+    
+    if (len == trlen) {
+        return;
+    }
+
+    if(currency(inputs) != -1){
+        partmove();
+    }else{
+        $(inputs).each(function(index,item){
+            var tr = $(item).parent().parent();
+            items.push($(tr));
+            $(tr).remove();
+        });
+        if(start > btnNo){  
+            forward();
+        }else if(end < btnNo){
+            backward();
+        }else{
+            turn();
+        }
+        resetNo();
+    }
+}
+
+function currency(inputs){
+    var ids = [];
+    $(inputs).each(function(index,item){
+        var id = $(item).parent().parent().attr("idx");
+        ids.push(id);
+        if (id == "1") {
+            ids.push("0");
+        }
+    });
+    return ids.indexOf(btnNo);
+}
+
+function partmove(){
+    var ths = [];
+    $("input[name$=order]").not("input[name$=order]:checked").each(function(i,item){
+        var no = $(item).parent().parent().attr("idx").toInt();
+        var tr = $(item).parent().parent();
+        if(btnNo > no){
+            ths.push(tr);
+        }
+    });
+
+    var inputs = $("input[name$=order]:checked");
+    var lastIdx = 0;
+    if(ths.length > 0){
+        lastIdx = $(ths[ths.length-1]).attr("idx");  
+        $(inputs).each(function(index,item){
+            var tr = $(item).parent().parent();
+            items.push($(tr));
+            $(tr).remove();
+        });
+        items.reverse();
+        for(var i = 0 ; i < len ; i++){
+            $("tr[idx=" + lastIdx + "]").after($(items[i]));
+        }
+    }else{
+        var trFirstUnCheckd = $("input[name$=order]").not("input[name$=order]:checked").eq(0).parent().parent();
+        $(inputs).each(function(index,item){
+            var tr = $(item).parent().parent();
+            items.push($(tr));
+            $(tr).remove();
+        });
+        for(var i = 0 ; i < len ; i++){
+            $(trFirstUnCheckd).before($(items[i]));
+        }
+    }
+    resetNo();
+}
+
+function turn(){
+    items.reverse();
+    var addindex = 0;
+    for(var i = 0 ; i < len ; i++){
+        if (addindex != 0) {
+            $("tr[idx=" + addindex + "]").after($(items[i]));
+            continue;
+        }
+        for (var j = btnIndex - 1; j > 0; j--) {
+            if ($("tr[idx=" + j + "]").size() > 0) {
+                $("tr[idx=" + j + "]").after($(items[i]));
+                break;
+            }
+        }
+    }
+}
+
+function forward(){
+    var addindex = 0;
+    for(var i = 0 ; i < len ; i++){
+        if (addindex != 0) {
+        ## +++++ ＩＴ３-00201-000 2013/07/08 DEL SBO_Chen START +++++
+        ##    $("tr[idx=" + addindex + "]").before($(items[i]));
+        ##    continue;
+        ## }
+        ## +++++ ＩＴ３-00201-000 2013/07/08 DEL SBO_Chen END +++++
+        ## +++++ ＩＴ３-00201-000 2013/07/08 ADD SBO_Chen START +++++
+            if ($("tr[idx=" + addindex + "]").size() > 0) {
+                $("tr[idx=" + addindex + "]").before($(items[i]));
+            } else {
+                $("tr[idx=" + (addindex - 1) + "]").after($(items[i]));
+                addindex = addindex + 1;
+            }
+            continue;   
+        }   
+    ## +++++ ＩＴ３-00201-000 2013/07/08 ADD SBO_Chen END +++++
+        for (var j = btnIndex ; j <= trlen; j++) {
+            if ($("tr[idx=" + j + "]").size() > 0) {
+                $("tr[idx=" + j + "]").before($(items[i]));
+                addindex = j;
+                break;
+            }
+            ## +++++ ＩＴ３-00201-000 2013/07/08 ADD SBO_Chen START +++++
+            if ($("tr[idx=" + (j - 1) + "]").size() > 0) {
+                $("tr[idx=" + (j - 1) + "]").after($(items[i]));
+                addindex = j + 1;
+                break;
+            }
+            ## +++++ ＩＴ３-00201-000 2013/07/08 ADD SBO_Chen END +++++
+        }
+    }
+}
+
+function backward(){
+    items.reverse();
+    var addindex = 0;
+    for(var i = 0 ; i < len ; i++){
+        if (addindex != 0) {
+            $("tr[idx=" + addindex + "]").after($(items[i]));
+            continue;
+        }
+        
+        for (var j = btnIndex - 1; j > 0; j--) {
+            if ($("tr[idx=" + j + "]").size() > 0) {
+                $("tr[idx=" + j + "]").after($(items[i]));
+                addindex = j;
+                break;
+            }
+        }
+    }
+}
+
+function resetNo(){
+    $("tr[idx]").each(function(i,item){
+        $(item).find("td").eq(0).text(i+1);
+        $(item).attr("idx", i+1);
+    });
+    $("img[idx]").each(function(i,item){
+        $(item).attr("idx", i);
+    });
+}
+
+function resetIndex(){
+    $("tr[idx]").each(function(i,tr){
+        $(tr).find("td input:hidden").each(function(j,input){
+            var newname = $(input).attr("name").changeIndex(i);
+            $(input).attr("name",newname);
+        });
+    });
+}
+## 強化-01715-000 20130626 ADD SBO_SOKOU START
+function onClickRadioButton(radio) {
+    radio.disabled = true;
+    var radioObj = getObj(radio.id.substr(1));
+    if (radioObj.value == "1") {
+        radio.checked = false;
+        setTimeout(
+            function() {
+                radio.checked = false;
+                radio.disabled = false;
+            }, 10);
+    } else {
+        radio.disabled = false;
+    }
+    ## 強化-01715-000 20130626 ADD SBO_SOKOU -END-
+    $("input[name$='displayMethod.lockFlag.lockFlag'][type='hidden']").each(function(i,item){
+        $(item).val("0");
+    });
+}
+
+function unbindEvent(obj) {
+    $(obj).unbind('onpropertychange');
+}
+
+</script>
+<script language="javascript" type="text/javascript"> 
+<!--
+function onLoad() {
+    top.document.title = document.title;
+    ## ----- 強化-01819-000 SBO_SOKOU DEL START -----
+    ## document.getElementsByTagName("input")[0].focus();
+    ## ----- 強化-01819-000 SBO_SOKOU DEL -END- -----
+    
+    #if($!parentWindowReload == "1")
+    if(window.opener && window.opener.frames["DATAAREA"]){
+        if(window.opener.frames["DATAAREA"].window.afterPersonalSet){
+            window.opener.frames["DATAAREA"].window.afterPersonalSet();
+        }
+        ## 強化-01715-000    2013.06.17 ADD SBO_WANGXM START
+        window.opener=null;
+        window.close();
+        ## 強化-01715-000    2013.06.17 ADD SBO_WANGXM -END-
+    }
+    ## +++++ 強化-01819-000 SBO_SOKOU ADD START +++++
+    #else
+    buttonDisable(false);
+    document.getElementsByTagName("input")[0].focus();
+    ## +++++ 強化-01819-000 SBO_SOKOU ADD -END- +++++
+    #end
+}
+## +++++ 強化-01819-000 SBO_SOKOU ADD START +++++
+function buttonDisable(disabledFlg){
+   var i;
+   var buttonArr = $("input[type='button']");
+    for(i = 0;i < buttonArr.length; i++){
+        buttonArr[i].disabled = disabledFlg;
+    }
+}
+## +++++ 強化-01819-000 SBO_SOKOU ADD -END- +++++
+## 強化-01715-000    2013.06.17 DEL SBO_WANGXM START
+#set($masterName = "個人設定（一覧）" )
+#set($initMsg = "初期設定に戻" )
+#set($settingMsg = "設定" )
+## 強化-01715-000    2013.06.17 DEL SBO_WANGXM -END-
+
+## 強化-01715-000    2013.06.17 ADD SBO_WANGXM START
+#set($masterName = "#customSpringMessage('PERSONAL_SETTINGS_PANEL_TITLE_LIST')")
+#set($initMsg = "#customSpringMessage('PERSONAL_SETTINGS_PANEL_INIT_BTN')")
+#set($settingMsg = "#customSpringMessage('CONFIGURATION')")
+## 強化-01715-000    2013.06.17 ADD SBO_WANGXM -END-
+function execDefault(infName,action){
+    ## +++++ 強化-01836-000 2013/07/04 ADD SBO_lichao START +++++
+    ##if(!confirm('#customMessageArgs("W001", [$masterName, $initMsg])')) {
+    if(!confirm('#customMessageArgs("W019", [$masterName, $initMsg])')) {
+    ## +++++ 強化-01836-000 2013/07/04 ADD SBO_lichao START +++++
+        return;
+    }
+    getObj("Body").action="../../mst/personalsettinglist/reset";
+    getObj("Body").submit();
+}
+
+function exec(infName,action) {
+    if(!confirm('#customMessageArgs("W001", [$masterName, $settingMsg])')) {
+        return;
+    }
+    resetIndex();
+    getObj("Body").submit();
+}
+//-->
+</script>
+<style type="text/css">
+<!--
+/*シートカスタマイズの項目追加・変更画面*/
+.disp_setting_order_style{
+    border-top:0px !important; 
+    border-right:0px !important; 
+    border-bottom:0px !important;
+    white-space:nowrap !important;
+    text-align:left !important;
+    vertical-align:bottom !important;
+    background:#fff;
+    width:1%;
+}
+/*表-項目*/
+.table_item{
+    white-space:nowrap;
+    background:url('../image/background_active.png') 50% 50% repeat #6eac2c;
+    color:#fff;
+    text-align:center;
+    padding:2px 5px;
+    white-space:nowrap;
+}
+/*表*/
+.select_table{
+    font-size:x-small;
+    border-collapse:collapse;
+    color:#000;
+    word-break: break-all;
+    background:#fff;
+}
+.select_table td{
+    border:solid 1px #006;
+    padding:2px;
+}
+//-->
+</style>
+</head>
+<body topmargin="0" leftmargin="0" marginwidth="0" marginheight="0" align="center" width="100%" height="100%"  onload="onLoad();" bgcolor="#EAEAEA">
+<form id="Body" name="Body" action="../../mst/personalsettinglist/save" method="post" >
+    <table class="NoBorder" width="100%" height="100%">
+        <tr>
+            <td id="EXEC_AREA" class="PersonalSettingHeaderArea">
+                <span class="CornerTopGray">
+                    <span class="Corner1"></span><span class="Corner2"></span><span class="Corner3"></span><span class="Corner4"></span>
+                </span>
+                 <table class="CornerMidGray" width="100%">
+                    <tr>
+                        <td width="30%" align="left" class="ScreenName">
+                            <script LANGUAGE="javascript" type="text/javascript">document.write(document.title);</script>
+                        </td>
+                        <td align="right">
+                            <input type="button" class="MiddleButton" value="#customSpringMessage("CLOSE")" onClick="window.close();">
+                        </td>
+                    </tr>
+                </table>
+                <span class="CornerBtmGray">
+                    <span class="Corner4"></span><span class="Corner3"></span><span class="Corner2"></span><span class="Corner1"></span>
+                </span>
+                <table width="100%">
+                    <tr>
+                        <td id="Adjust">
+                            <!-- 処理ボタン表示部 -->
+                            <table class="NoBorder" width="100%">
+                                <tr>
+                                    <td align="left">
+										## 強化-01715-000    2013.06.17 DEL SBO_WANGXM	
+                                        ##<input type="button" class="MiddleButton" value="初期設定に戻す" onclick="javascript:execDefault('設定','初期設定に更新');">
+										## 強化-01715-000    2013.06.17 ADD SBO_WANGXM	
+                                        <input type="button" class="MiddleButton" value="#customSpringMessage('PERSONAL_SETTINGS_PANEL_INIT_BTN')" onclick="javascript:execDefault('#customSpringMessage('CONFIGURATION')','初期設定に更新');">
+                                    </td>
+                                    <td align="right">
+										## 強化-01715-000    2013.06.17 DEL SBO_WANGXM	
+                                        ##<input type="button" class="MiddleButton" value="設定" onclick="javascript:exec('設定','更新');">
+										## 強化-01715-000    2013.06.17 ADD SBO_WANGXM	
+                                        <input type="button" class="MiddleButton" value="#customSpringMessage('CONFIGURATION')" onclick="javascript:exec('#customSpringMessage('CONFIGURATION')','更新');">
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+                </table>
+            <table id="TABLE" width="100%"  class="select_table" bgcolor="#ffffff">
+                <thead>
+                    <tr id="Header">
+                        <th class="BoxHeaderCenter FontSmall" width="5%;">No.</th>
+						## 強化-01715-000    2013.06.17 DEL SBO_WANGXM START
+						#*  
+                        <th class="BoxHeaderCenter FontSmall" width="5%;">表示</th>
+                        <th class="BoxHeaderLeft FontSmall">項目名</th>
+                        <th class="BoxHeaderCenter FontSmall" width="5%;">固定</th>
+                        <th class="BoxHeaderCenter FontSmall" width="5%;">同列表示</th>
+                        <th class="BoxHeaderCenter FontSmall" width="5%;">順番</th>
+						*#
+						## 強化-01715-000    2013.06.17 DEL SBO_WANGXM -END-
+						## 強化-01715-000    2013.06.17 ADD SBO_WANGXM START
+                        <th class="BoxHeaderCenter FontSmall" width="5%;">#customSpringMessage('SHOW')</th>
+                        <th class="BoxHeaderLeft FontSmall">#customSpringMessage('ELEMENT_CONFIG_NAME')</th>
+                        <th class="BoxHeaderCenter FontSmall" width="5%;">#customSpringMessage('PERSONAL_SETTINGS_PANEL_FIXVIEW')</th>
+                        <th class="BoxHeaderCenter FontSmall" width="5%;">#customSpringMessage('PERSONAL_SETTINGS_PANEL_GROUPVIEW')</th>
+                        <th class="BoxHeaderCenter FontSmall" width="5%;">#customSpringMessage('DSP_ORDER')</th>
+						## 強化-01715-000    2013.06.17 ADD SBO_WANGXM -END-
+                        <td width="5%;" class="disp_setting_order_style">
+                            <img src="../../image/order_right.gif" name="order_icon0" idx="0" onclick="order(this)">
+                        </td>
+                    </tr>
+                </thead>
+                #set( $velocityCount = 0 )
+                #foreach($!item in $!itemList)
+                    #set( $number = $velocityCount + 1 )
+                    <tr idx="$number">
+                        <td class="BoxDetailCenter FontList">
+                            $number
+                        </td>
+                        <td class="BoxDetailCenter">
+                            #customFormCheckboxForPersonalSetting("domain.personalSettingManagementList[$velocityCount].displayMethod.displayFlag.displayFlag" "" "1" "0" "$!item.display")<!--表示-->
+                            #customFormHiddenInput("personalSettingManagementList[$velocityCount].displayMethod.displayOrder.displayOrder" "$velocityCount")
+                            #customFormHiddenInput("personalSettingManagementList[$velocityCount].personalSettingIdentify.userId" "$!item.personalSettingIdentify.userId")
+                            #customFormHiddenInput("personalSettingManagementList[$velocityCount].personalSettingIdentify.funcId" "$!item.personalSettingIdentify.funcId")
+                            #customFormHiddenInput("personalSettingManagementList[$velocityCount].personalSettingIdentify.elementSeq" "$!item.personalSettingIdentify.elementSeq")
+                            #customFormHiddenInput("personalSettingManagementList[$velocityCount].personalSettingIdentify.voucherType" "$!item.personalSettingIdentify.voucherType")
+                            #customFormHiddenInput("personalSettingManagementList[$velocityCount].personalSettingIdentify.lastUpdDate" "$!item.personalSettingIdentify.lastUpdDate")
+                        </td>
+                        <td class="BoxDetailLeft"><span class="FontList">#out($!item.itemName)</span></td>
+                        <td class="BoxDetailCenter">
+                            #customFormRadioForPersonalSetting("domain.personalSettingManagementList[$velocityCount].displayMethod.lockFlag.lockFlag" "$LOCK_FLG" "1" "0" "$!item.lock")<!--固定-->
+                        </td>
+                        <td class="BoxDetailCenter">
+                            #customFormCheckboxForPersonalSetting("domain.personalSettingManagementList[$velocityCount].displayMethod.oneColumnDisplayFlag.oneColumnDisplayFlag" "" "2" "0" "$!item.oneColumnDspFlg")<!--同列表示-->
+                        </td>
+                        <td class="BoxDetailCenter">
+                            <input type="checkbox" name="domain_order"><!--順番-->
+                        </td>
+                        <td class="disp_setting_order_style">
+                            <img src="../../image/order_right.gif" name="order_icon0" idx="$number" onclick="order(this);">
+                        </td>
+                    </tr>
+                    #end
+                </table>
+        </td></tr>
+    </table>
+</form>
+</body>
+</html>

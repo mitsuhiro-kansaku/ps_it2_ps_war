@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<flow xmlns="http://www.springframework.org/schema/webflow"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.springframework.org/schema/webflow
+        http://www.springframework.org/schema/webflow/spring-webflow-2.0.xsd"
+    parent="base">
+
+    <var name="domain" class="fw.domain.slip.receive.receive.receiveapp.ReceiveUnAppListItem" />
+    <var name="identify030" class="fw.domain.slip.receive.receive.unreceivelist.UnReceiveIdentify" />
+    <var name="identify050" class="fw.domain.slip.common.identify.OrderNo" />
+    <var name="identify090" class="fw.domain.slip.order.order.OrderIdentify" />
+    
+    <input name="processFlg" />
+    <input name="searchCondition" />
+    <input name="isCurrentPageSearch" />
+    
+    <decision-state id="isSearchByKey">
+       <if test="flowScope.isCurrentPageSearch" then="searchByKey" else="searchByCondition" />
+    </decision-state>
+    
+    <action-state id="searchByCondition">
+    <evaluate expression="PSRCV070Service.init(searchCondition)" result="flowScope.itemList" />
+        <transition to="PSRCV070"/> 
+    </action-state>
+
+    <action-state  id="searchByKey" >
+        <evaluate expression="PSRCV070Service.page(searchCondition)" result="flowScope.itemList" />
+        <transition to="PSRCV070"/>
+    </action-state>
+
+    <view-state id="PSRCV070" view="rcv/rcv/PSRCV070" model="domain">
+       <transition on="order" validate="false">
+            <evaluate expression="PSRCV070Service.order(searchCondition)"  result="flowScope.itemList" />
+        </transition>
+        <transition on="page" validate="false">
+            <evaluate expression="PSRCV070Service.page(searchCondition)"  result="flowScope.itemList" /> 
+        </transition>
+        <transition on="back" to="home" validate="false" />
+        <!-- 再申請画面 -->
+        <transition on="applyAgainValidate" validate="false">
+            <set name="flashScope.isShowApplyAgain" value="true" />
+            <set name="flashScope.pattern" value="requestParameters.pattern"/>
+            <set name="identify030.unReceiveIdentify.orderSeq" value="requestParameters.orderSeq"/>
+            <set name="identify030.unReceiveIdentify.delivKeyNo.delivKeyNo" value="requestParameters.delivKeyNo"/>
+        </transition>
+        <transition on="applyAgain" to="PSRCV030ApplyAgain" validate="false" />
+        <!-- 申請中止 -->
+        <transition on="applyCancel" validate="true"  to="searchByKey">
+             <evaluate expression="PSRCV070Service.applyCancel(domain)"/> 
+             <set name="flashScope.isSuccess" value="true"/>
+        </transition>
+        <!-- 詳細画面 -->
+        <transition on="detailValidate" validate="false">
+            <set name="flashScope.isShowDetail" value="true" />
+            <set name="flashScope.pattern" value="requestParameters.pattern"/>
+            <set name="identify050.orderNo" value="requestParameters.orderNo"/>
+            <set name="identify090.orderSeq" value="requestParameters.orderSeq"/>
+        </transition>
+        <transition on="detail" to="PSRCV050" validate="false" />
+    </view-state>
+    
+    <subflow-state id="PSRCV030ApplyAgain" subflow="rcv/rcv/PSRCV030" >
+        <input name="identify" value="identify030" />
+        <input name="processFlg" value="2" />
+    </subflow-state>
+    <subflow-state id="PSRCV050" subflow="rcv/rcv/PSRCV050TOP">
+        <input name="identify050" value="identify050" />
+        <input name="identify090" value="identify090" />
+    </subflow-state>
+</flow>

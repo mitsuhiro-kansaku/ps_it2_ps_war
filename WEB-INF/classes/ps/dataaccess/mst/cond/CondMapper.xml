@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="ps.dataaccess.mst.cond.CondMapper">
+
+    <select id="listCondItem" resultType="fw.domain.mst.systemsetting.cond.CondItem">
+        SELECT 
+            M_COND.COND_KEY as "condIdentify.condKey",
+            M_COND.COND_NAME as "condName",
+            M_COND.COND_VALUE as "condValue",
+            M_COND.COND_COMMENTS as "condComments"
+        FROM M_COND
+    </select>
+ 
+    <!-- SRC-00115-00 include化共通-->
+    <sql id="listKeyIdentityWhereCondition">
+        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(condKey)">
+            AND M_COND.COND_KEY
+            ${@fw.common.util.SearchModeUtil@getSearchSQL("fw.domain.mst.systemsetting.cond.CondSearchCondition","condKey")}
+        </if>
+        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(condName)">
+            AND M_COND.COND_NAME
+            ${@fw.common.util.SearchModeUtil@getSearchSQL("fw.domain.mst.systemsetting.cond.CondSearchCondition","condName")}
+        </if>
+    </sql>
+
+    <select id="listKeyIdentity" parameterType="fw.domain.mst.systemsetting.cond.CondSearchCondition" resultType="fw.domain.mst.systemsetting.cond.CondIdentify">
+        SELECT
+            M_COND.COND_KEY as "condKey"
+        FROM M_COND
+        <where>
+            <include refid="listKeyIdentityWhereCondition"/>
+        </where>
+        ORDER BY ${searchCondition.columnOrder.columnOrder()}
+    </select>
+
+    <select id="listPageItem" parameterType="fw.domain.mst.searchcondition.SearchCondition" resultType="fw.domain.mst.systemsetting.cond.CondItem">
+        SELECT 
+            M_COND.COND_KEY as "condIdentify.condKey",
+            M_COND.COND_NAME as "condName",
+            M_COND.COND_VALUE as "condValue",
+            M_COND.COND_COMMENTS as "condComments",
+            M_COND.LAST_UPD_DATE as "condIdentify.lastUpdDate"
+        FROM M_COND
+        <where>
+            (M_COND.COND_KEY) in
+            <foreach collection="searchCondition.page.keyDomainEntityList" item="keyList" open="(" separator="," close=")">
+                (#{keyList.condKey})
+            </foreach>
+            <include refid="listKeyIdentityWhereCondition"/>
+        </where>
+        ORDER BY ${searchCondition.columnOrder.columnOrder()}
+    </select>
+
+    <select id="search" parameterType="fw.domain.mst.systemsetting.cond.CondIdentify" resultType="fw.domain.mst.systemsetting.cond.CondManagement">
+        SELECT 
+            M_COND.COND_KEY as "condIdentify.condKey",
+            M_COND.COND_NAME as "condName",
+            M_COND.COND_VALUE as "condValue",
+            M_COND.COND_COMMENTS as "condComments",
+            M_COND.LAST_UPD_DATE as "condIdentify.lastUpdDate"
+        FROM M_COND
+        WHERE M_COND.COND_KEY = #{condKey}
+    </select>
+
+    <select id="searchExclusive" parameterType="fw.domain.mst.systemsetting.cond.CondIdentify" resultType="fw.domain.mst.systemsetting.cond.CondIdentify">
+        SELECT 
+            M_COND.COND_KEY as "condKey"  
+        FROM M_COND
+        WHERE
+            M_COND.COND_KEY = #{condKey}
+            AND M_COND.LAST_UPD_DATE = #{lastUpdDate}
+    </select>
+    
+    <update id="update" parameterType="fw.domain.mst.systemsetting.cond.CondManagement">
+        UPDATE M_COND 
+        SET
+            M_COND.COND_VALUE = #{condValue},
+            LAST_UPD_DATE = #{registInfo.lastUpdDate},
+            LAST_UPD_COMPANY_CD = #{registInfo.lastUpdCompanyCd},
+            LAST_UPD_SECTION_CD = #{registInfo.lastUpdSectionCd},
+            LAST_UPD_USER_ID = #{registInfo.lastUpdUserId}
+        WHERE
+        M_COND.COND_KEY = #{condIdentify.condKey}
+    </update>
+
+</mapper>

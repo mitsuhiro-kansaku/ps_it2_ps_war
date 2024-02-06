@@ -1,0 +1,477 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<title>#customSpringMessage('DELIV_RCV_INPUT')</title><!-- 納期回答入力 -->
+<meta http-equiv="Content-type" content="text/html; charset=UTF-8">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Content-script-type" content="text/javascript">
+<link id="CSS_FONT" rel="stylesheet" href="../../include/FontS.css" type="text/css">
+<link rel="stylesheet" href="../../include/Layout.css" type="text/css">
+<link rel="stylesheet" href="../../include/Color.css" type="text/css">
+<link rel="stylesheet" href="../../include/searchbox.css" type="text/css">
+<link rel="stylesheet" href="../../include/ime.css" type="text/css">
+<script language="javascript" type="text/javascript" src="../../include/common.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/check.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/date.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/searchbox.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/jquery-1.7.2.min.js"></script>
+<script language="javascript" type="text/javascript">
+
+<!--
+#parse("./common/common_js.vm")
+
+var isClickable = false;
+
+//初期化
+function onLoad() {
+    setFocusForInput();
+
+    var errorMsg = "$!errorMessage";
+    if (errorMsg != ""){
+        document.getElementById("TR_ERROR").style.display = "";
+        isClickable = true;
+        return;
+    }
+
+    var alertMessage = "$!alertMessage";
+    if (alertMessage != ""){
+        #if($alertMessage.indexOf('W009') != -1)
+            if (confirm("$alertMessage")) {
+                buttonDisable();
+                getObj("Body").action="${flowExecutionUrl}&_eventId=save&checkPass=1";
+                getObj("Body").submit();
+                return;
+            }
+        #else
+            alert(alertMessage);
+        #end
+    }
+
+    var isSuccess = "#jsEscape($isSuccess)";
+    if (isSuccess == 'true') {
+        // 納期回答
+        #set( $delivDateResp = "#customSpringMessage('DELIV_DATE_RESP')" )
+        alert('#customMessageArgs("I005", [$delivDateResp])');
+        buttonDisable();
+        getObj("Body").action = "${flowExecutionUrl}&_eventId=back";
+        getObj("Body").submit();
+        return;
+    }
+
+    isClickable = true;
+}
+
+
+// 登録
+function save() {
+    if(!isClickable) {
+        return;
+    }
+    // 納期回答
+    #set( $delivDateResp = "#customSpringMessage('DELIV_DATE_RESP')" )
+    // 登録
+    #set( $reqResply = "#customSpringMessage('ACTION_REGISTER')" )
+
+    if( !confirm('#customMessageArgs("W001", [$delivDateResp, $reqResply])') ) {
+        return;
+    }
+    ## +++++ 強化-00041-000 2013/04/07 ADD SBO_KANGJW START +++++
+    buttonDisable();
+    ## +++++ 強化-00041-000 2013/04/07 ADD SBO_KANGJW END +++++
+    getObj("Body").action = "${flowExecutionUrl}&_eventId=save";
+    getObj("Body").submit();
+}
+
+// 回答明細追加
+function addDetail() {
+    if(!isClickable) {
+        return;
+    }
+    buttonDisable();
+    getObj("Body").action = "${flowExecutionUrl}&_eventId=addDetail";
+    getObj("Body").submit();
+}
+
+// 回答明細削除
+function deleteDetail(index) {
+    if(!isClickable) {
+        return;
+    }
+    getObj("Body").action = "${flowExecutionUrl}&_eventId=deleteDetail&detailIndex=" + index;
+    getObj("Body").submit();
+}
+
+//-->
+</script>
+</head>
+
+<body class="CreateArea" topmargin="0" leftmargin="0" marginwidth="0" marginheight="0" align="center" width="100%" height="100%" onload="onLoad();" bgcolor="#EAEAEA" >
+<form name="Body" id="Body" method="post" enctype="multipart/form-data">
+    <table class="NoBorder" width="100%" height="100%">
+        <tr id="P_AREA"  style="display:none;"></tr>
+        <tr>
+        <td class="NoBorder" style="height:auto;">
+            <table class="HomeBox" align="center">
+                <tr>
+                ## +++++ 強化-01524-000 2013/05/20 ADD SBO_KANGJW START +++++
+                <td style="padding:25px,15px,0px,15px">
+                ## +++++ 強化-01524-000 2013/05/20 ADD SBO_KANGJW END +++++
+                ## ----- 強化-01524-000 2013/05/20 DEL SBO_KANGJW START -----
+                ##<td style="padding:60px,15px,0px,15px">
+                ## ----- 強化-01524-000 2013/05/20 DEL SBO_KANGJW END -----
+                    <!-- ＊＊＊＊＊　カレンダーボックス　＊＊＊＊＊ -->
+                    <iframe id="CALENDARBOX" class="CALENDARBOX" framespacing="0" scrolling="no" frameborder="0" src="../../sbxCalendar/body.vm"></iframe>
+                    <table>
+                        <tr>
+                            <td align="left">
+                            <table class="NoBorder" width="98%">
+                                <tr>
+                                    <td>
+                                        <u><img src="../../image/mrkCircle.gif">
+                                        <span id="StepTitle" class="FontStepTitle">
+                                            <script>document.write(document.title);</script>
+                                        </span>
+                                        </u><br><br>
+                                        <span id="STEPMSG" class="FontSmallBold DarkBlue">#customSpringMessage('PSDLV050_HEADER_COMMENT') ## 必要な項目に値を入力して、「登録」ボタンを押してください。
+                                        </span>
+                                        ## +++++ 強化-01835-000 2013/06/29 ADD SBO_lichao -END- +++++
+                                        <br><br>
+                                    </td>
+                                    <td align="right" valign="middle" id="Submit1" nowrap>
+                                        <input name="Button" type="button" class="LargeButton" value="#customSpringMessage('ACTION_REGISTER')" onclick="save();"><!-- 登録 -->
+                                    </td>
+                                </tr>
+                                <tr id="status" style="display:none;">
+                                    <td>
+                                        <input id="sts" type="text">
+                                    </td>
+                                </tr>
+                                 <tr id ="TR_ERROR" style="display:none;"><td class="error" style="height:0px;">
+                                    $!errorMessage
+                                </td></tr>
+                            </table>
+                          ## +++++ IT2-01349-000 2013/03/14 ADD SBO_wangzf START +++++
+                            <table class="Box1G" width="100%">
+                          ## +++++ IT2-01349-000 2013/03/14 ADD SBO_wangzf END +++++
+                          ## ----- IT2-01349-000 2013/03/14 DEL SBO_wangzf START -----
+                          ## <table class="NoBorder" width="100%">
+                          ## ----- IT2-01349-000 2013/03/14 DEL SBO_wangzf END -----
+                                <tbody class="Box1G ListBorderWidth">
+                                    <tr id="SlipNo">
+                                        <td nowrap class="Box1H FontBoxHeader">#customSpringMessage('ORDER_NO')</td><!-- 注文番号 -->
+                                        <td nowrap class="Box1D FontSmallAnk">
+                                            <span nowrap class="FontSlipNo">#out($!domain.order.orderManagement.orderNo.orderNo)</span>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td nowrap class="Box1H FontBoxHeader">#customSpringMessage('REVISION_NUMBER')</td><!-- 履歴番号 -->
+                                        <td nowrap class="Box1D FontSmall">#out($!domain.order.orderManagement.historyNo.historyNo)</td>
+                                    </tr>
+                                    <tr>
+                                        <td nowrap class="Box1H FontBoxHeader" width="25%">#customSpringMessage('ORDER_DATE')</td><!-- 注文日 -->
+                                        <td nowrap class="Box1D FontSmallAnk">#out($!domain.order.schedule.orderDate.orderDate.dateOfymdFormat)</td>
+                                    </tr>
+                                    <tr>
+                                        <td nowrap class="Box1H FontBoxHeader">#customSpringMessage('TITLE_NAME')</td><!-- 件名 -->
+                                        <td nowrap class="Box1D FontSmall">#out($!domain.order.orderManagement.titleName.titleName)</td>
+                                    </tr>
+                                    <tr>
+                                        <td nowrap class="Box1H FontBoxHeader" width="25%">#customSpringMessage('ITEM_CD')</td><!-- 品名コード -->
+                                        <td nowrap class="Box1D FontSmall">#out($!domain.order.accounting.orderItem.item.itemCd)</td>
+                                    </tr>
+                                    <tr>
+                                        <td nowrap class="Box1H FontBoxHeader" width="25%">#customSpringMessage('ITEM_NAME')</td><!-- 品名 -->
+                                        <td nowrap class="Box1D FontSmall">#out($!domain.order.accounting.orderItem.item.itemName)</td>
+                                    </tr>
+                                    <tr>
+                                        <td nowrap class="Box1H FontBoxHeader" width="25%">#customSpringMessage('KATASHIKI')</td><!--  型式 -->
+                                        <td nowrap class="Box1D FontSmall">#out($!domain.order.accounting.orderItem.item.katashiki)</td>
+                                    </tr>
+                                    <tr>
+                                        <td nowrap class="Box1H FontBoxHeader" width="25%">#customSpringMessage('MANUFACT')</td><!-- メーカー -->
+                                        <td nowrap class="Box1D FontSmall">
+                                            #out($!domain.order.accounting.orderItem.item.manufact.manufactCd) #out($!domain.order.accounting.orderItem.item.manufact.manufactName)
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td nowrap class="Box1H FontBoxHeader" width="25%">#customSpringMessage('ORDER_DELIV_DATE')</td><!-- 注文納期 -->
+                                        <td nowrap class="Box1D FontSmallAnk">#out($!domain.order.schedule.dlvEst.dlvEst.dateOfymdFormat)</td>
+                                    </tr>
+                                    <tr>
+                                        <td nowrap class="Box1H FontBoxHeader" width="25%">#customSpringMessage('ORDER_VOL')</td><!-- 注文数量 -->
+                                        <td nowrap class="Box1D FontSmall">
+                                            ## ----- 2013/03/21 DEL DAIKO_TAKEDA
+##                                            #out($!domain.order.accounting.orderAmount.orderVolume.orderVol.volFormat)
+                                            ## +++++ 2013/03/21 ADD DAIKO_TAKEDA
+                                            #out($!domain.order.originVol.volFormat)
+                                            #out($!domain.order.accounting.orderItem.item.unit.unitName)
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td nowrap class="Box1H FontBoxHeader" width="25%">#customSpringMessage('RCV_REMAIN_AMOUNT')</td><!-- 受入残数量 -->
+                                        <td nowrap class="Box1D FontSmall">
+                                            #out($!domain.order.accounting.orderAmount.orderVolume.receivedVol.volFormat)
+                                            #out($!domain.order.accounting.orderItem.item.unit.unitName)
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td class="Box1H FontBoxHeader">#customSpringMessage('SUPPLIER')</td><!--  取引先 -->
+                                        <td class="Box1D FontSmall">
+                                            <table class="NoBorder">
+                                                <tr>
+                                                    <td nowrap>
+                                                        <span class="FontSmall">#out($!domain.order.supplierFrom.supCd)</span>&nbsp;
+                                                        <span class="FontUserName">#out($!domain.order.supplierFrom.supplierName.supplierAbbrName)</span>
+                                                    </td>
+                                                    <td>
+                                                        #if ($!domain.order.supplierFrom.subcon.subconInd == '1')
+                                                            <span class="FontSubcon Subcon">#out($!domain.order.supplierFrom.subcon.subconInd_PageValue)</span>
+                                                        #end
+                                                    </td>
+                                                </tr>
+                                            </table>
+                                            <span class="SkyBlue">
+                                                #out($!domain.order.supplierFrom.supplierContact.ctc.zipCd.zipCd)<br>
+                                                #out($!domain.order.supplierFrom.supplierContact.ctc.address1.address)&nbsp;
+                                                #out($!domain.order.supplierFrom.supplierContact.ctc.address2.address)
+                                            ## +++++ 強化-01835-000 2013/06/29 ADD SBO_lichao START +++++
+                                            ##</span></br>
+                                            </span><br>
+                                            ## +++++ 強化-01835-000 2013/06/29 ADD SBO_lichao -END- +++++
+                                            <table class="NoBorder">
+                                                <tr>
+                                                    <td><img src="../../image/mrkTel.gif"></td>
+                                                    <td class="FontMini" nowrap>
+                                                        #customSpringMessage('EXTERNAL_NO'):<!-- 外線番号 -->
+                                                        <span class="FontSmallAnk">#out($!domain.order.supplierFrom.supplierContact.ctc.telNo.telNo)</span>
+                                                        &nbsp;&nbsp;
+                                                        FAX:
+                                                        <span class="FontSmallAnk">#out($!domain.order.supplierFrom.supplierContact.ctc.faxNo.faxNo)</span>
+                                                    </td>
+                                                </tr>
+                                            </table>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td class="Box1H FontBoxHeader">#customSpringMessage('CLIENT')</td><!-- 依頼者 -->
+                                        <td class="Box1D">
+                                            <table class="NoBorder">
+                                                <tr>
+                                                    <td valign="top" rowspan="2"><img class="Mark" src="../../image/mrkHuman.gif"></td>
+                                                    <td class="FontSmall" rowspan="2" style="padding-right:20px;" nowrap>
+                                                        #out($!domain.order.user.reqUser.reqUser.section.sectionCd)&nbsp;
+                                                        #out($!domain.order.user.reqUser.reqUser.section.sectionName)
+                                                        <br>
+                                                        #out($!domain.order.user.reqUser.reqUser.userID)&nbsp;
+                                                        <span class="FontUserName">#out($!domain.order.user.reqUser.reqUser.userName)</span>
+                                                    </td>
+                                                    <td><img class="Mark" src="../../image/mrkTel.gif"></td>
+                                                    <td class="FontMini" nowrap>
+                                                        #customSpringMessage('EXTENSION_NO')：<!-- 内線番号 -->
+                                                        <span class="FontSmallAnk">#out($!domain.order.user.reqUser.reqUser.extNo.extensionNo)</span>&nbsp;&nbsp;
+                                                        #customSpringMessage('EXTERNAL_NO')：<!-- 外線番号 -->
+                                                        <span class="FontSmallAnk">#out($!domain.order.user.reqUser.reqUser.externalNo.externalNo)</span>
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <td><img class="Mark" src="../../image/mrkMail.gif"></td>
+                                                    <td nowrap>
+                                                        <span class="FontMiniAnk">
+                                                            <A HREF='mailto: #out($!domain.order.user.reqUser.reqUser.userName)<#out($!domain.order.user.reqUser.reqUser.mailAddr.mail)>'>
+                                                                #out($!domain.order.user.reqUser.reqUser.mailAddr.mail)
+                                                            </A>
+                                                        </span>
+                                                    </td>
+                                                    <td align="right" valign="bottom"></td>
+                                                </tr>
+                                            </table>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td class="Box1H FontBoxHeader">#customSpringMessage('BUYER_USER')</td><!-- 購買担当者 -->
+                                        <td class="Box1D">
+                                            <table class="NoBorder">
+                                                <tr>
+                                                    <td valign="top" rowspan="2"><img class="Mark" src="../../image/mrkHuman.gif"></td>
+                                                    <td class="FontSmall" rowspan="2" style="padding-right:20px;" nowrap>
+                                                        #out($!domain.order.user.buyUser.buyUser.section.sectionCd)&nbsp;
+                                                        #out($!domain.order.user.buyUser.buyUser.section.sectionName)<br>
+                                                        #out($!domain.order.user.buyUser.buyUser.userID)&nbsp;
+                                                        <span class="FontUserName">#out($!domain.order.user.buyUser.buyUser.userName)</span>
+                                                    </td>
+                                                    <td><img class="Mark" src="../../image/mrkTel.gif"></td>
+                                                    <td class="FontMini" nowrap>
+                                                        #customSpringMessage('EXTENSION_NO')：<!-- 内線番号 -->
+                                                        <span class="FontSmallAnk">#out($!domain.order.user.buyUser.buyUser.extNo.extensionNo)</span>&nbsp;&nbsp;
+                                                        #customSpringMessage('EXTERNAL_NO')：<!-- 外線番号 -->
+                                                        <span class="FontSmallAnk">#out($!domain.order.user.buyUser.buyUser.externalNo.externalNo)</span>
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <td><img class="Mark" src="../../image/mrkMail.gif"></td>
+                                                    <td nowrap>
+                                                        <span class="FontMiniAnk">
+                                                            <A HREF='mailto: #out($!domain.order.user.buyUser.buyUser.userName)<#out($!domain.order.user.buyUser.buyUser.mailAddr.mail)>'>
+                                                                #out($!domain.order.user.buyUser.buyUser.mailAddr.mail)
+                                                            </A>
+                                                        </span>
+                                                    </td>
+                                                    <td align="right" valign="bottom"></td>
+                                                </tr>
+                                            </table>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td nowrap class="Box1H FontBoxHeader">#customSpringMessage('FOR_SUPPRIER_COMMENT')</td><!-- 取引先向けコメント -->
+                                        <td nowrap class="Box1D FontSmall">#out($!domain.order.orderComment.forSupplierComment.forSupplierComment.comment)</td>
+                                    </tr>
+                                    <tr>
+                                        <td nowrap class="Box1H FontBoxHeader">#customSpringMessage('SUBJECT')</td><!-- 科目 -->
+                                        <td nowrap class="Box1D FontSmall">
+                                            #out($!domain.order.accounting.subject.subjectCd)&nbsp;#out($!domain.order.accounting.subject.subjectName)
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td nowrap class="Box1H FontBoxHeader">#customSpringMessage('DELIVERY_PLACE')</td><!-- 納入先 -->
+                                        <td nowrap class="Box1D FontSmall">#out($!domain.order.complement.delivPlace.delivPlaceName)</td>
+                                    </tr>
+                                    <tr>
+                                        <td nowrap class="Box1H FontBoxHeader">#customSpringMessage('DELIV_RCV_LIMIT')</td><!-- 納期回答期限 -->
+                                        <td nowrap class="Box1D FontSmall">
+											#out($!domain.delivRespLimit.delivRespLimit.dateOfymdFormat)
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td nowrap class="Box1H FontBoxHeader">#customSpringMessage('RCV_DETAIL')</td><!-- 回答備考 -->
+                                        <td nowrap class="Box1D FontSmall">
+                                            #springFormTextarea("domain.respInformation.respBackup.respBackup.comment" "style='width:100%;' rows='4' maxlength='200'")
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                            <br>
+                            <table class="NoBorder" width="100%">
+                                <tr>
+                                    <td>
+                                        <span class="CornerTopBrown">
+                                            <span class="Corner1"></span>
+                                            <span class="Corner2"></span>
+                                            <span class="Corner3"></span>
+                                            <span class="Corner4"></span>
+                                        </span>
+                                        <div class="CornerMidBrown" width="100%">
+                                            <table  width="100%">
+                                                <tbody>
+                                                    <tr>
+                                                        <td>
+                                                            &nbsp;<img src="../../image/mrkInfo.gif">&nbsp;
+                                                        </td>
+                                                        <td class="FontSmallBold DarkBlue" align="left">#customSpringMessage('DTL_ADD_COMMENT')</td><!-- 「明細追加」ボタンをクリックすると明細を追加できます。 -->
+                                                        <td>
+                                                            <input type="button" class="SmallButton" value="#customSpringMessage('DETAIL_ADD')" onclick="addDetail();"><!-- 明細追加 -->
+                                                        </td>
+                                                    </tr>
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                        <span class="CornerBtmBrown">
+                                            <span class="Corner4"></span>
+                                            <span class="Corner3"></span>
+                                            <span class="Corner1"></span>
+                                            <span class="Corner1"></span>
+                                        </span>
+                                    </td>
+                                </tr>
+                            </table>
+                            <br>
+                            <table id="DetailTable" class="Box1G" width="100%">
+                                <tbody id="Detail1" class="Box1H ListBorderWidth">
+                                    #if($!domain.delivRespItem.respItemInformationList.size() > 0)
+                                        #set($index = 0)
+                                        #foreach($!item in $!domain.delivRespItem.respItemInformationList)
+                                            <tr>
+                                                <td nowrap class="Box1H FontSmallAnkBold" rowspan="2" width="5%">
+                                                    <p>#set( $index = $index + 1 )$index</p><br>
+                                                    <a class="FontMini" href="#" onclick="deleteDetail($velocityCount)">#customSpringMessage('ACTION_CANCEL')<!-- 取消 -->
+                                                    ## +++++ 強化-01835-000 2013/06/29 ADD SBO_lichao START +++++
+                                                    </a>
+                                                    ## +++++ 強化-01835-000 2013/06/29 ADD SBO_lichao -END- +++++
+                                                </td>
+                                                <td nowrap class="Box1H FontBoxHeader">
+                                                    #customSpringMessage('QUOT_RESP_VOL')<!-- 回答数量 -->
+                                                    <span class="FontWarn">&nbsp;※</span>
+                                                </td>
+                                                <td nowrap class="Box1D" nowrap>
+                                                    #springFormInput("domain.delivRespItem.respItemInformationList[$velocityCount].respVol.respVol.volFormat" "class='SmallRight noIME' maxlength='13' size='18' onblur='editVal(this);' onfocus='deleteComma(this);'")
+                                                    #out($!domain.order.accounting.orderItem.item.unit.unitName)
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td nowrap class="Box1H FontBoxHeader">
+                                                    #customSpringMessage('QUOT_RESP_DELIV_DATE')<span class="FontWarn">&nbsp;※</span><!-- 回答納期 -->
+                                                </td>
+                                                <td nowrap class="Box1D">
+                                                    #springFormInput("domain.delivRespItem.respItemInformationList[$velocityCount].respDlvEst.respDlvEst.dateOfymdFormat" "class='SmallAnk noIME' maxlength='8' size='12' onfocus='dateOnFocus(this);' onblur='dateOnBlur(this);' ")
+                                                    <img class="Icon" name="AptdateSearch" src="../../image/btnCalendar.gif" onclick="initSearchBox(1,getElementById('delivRespItem.respItemInformationList[$velocityCount].respDlvEst.respDlvEst.dateOfymdFormat'));">
+                                                </td>
+                                            </tr>
+                                        #end
+                                    #end
+                                </tbody>
+                            </table>
+
+                            <br>
+
+                            <span class="CornerTopBrown">
+                                <span class="Corner1"></span>
+                                <span class="Corner2"></span>
+                                <span class="Corner3"></span>
+                                <span class="Corner4"></span>
+                            </span>
+
+                            <div class="CornerMidBrown" width="100%">
+                                <table width="100%">
+                                    <tbody>
+                                        <tr>
+                                            <td>
+                                                &nbsp;<img src="../../image/mrkInfo.gif">&nbsp;
+                                            </td>
+                                            <td class="FontSmallBold DarkBlue" align="left">#customSpringMessage('DTL_ADD_COMMENT')</td><!--  「明細追加」ボタンをクリックすると明細を追加できます。 -->
+                                            <td>
+                                                <input type="button" class="SmallButton" value="#customSpringMessage('DETAIL_ADD')" onclick="addDetail();"><!-- 明細追加 -->
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <span class="CornerBtmBrown">
+                                <span class="Corner4"></span>
+                                <span class="Corner3"></span>
+                                <span class="Corner1"></span>
+                                <span class="Corner1"></span>
+                            </span>
+
+                            <br>
+                            <table class="NoBorder" width="100%">
+                                <tr>
+                                    <td>
+                                         #customSpringMessage('PSDLV050_FOOTER_COMMENT') ## ※印の項目は、必須入力です。
+                                    </td>
+                                    <td align="right" valign="middle" id="Submit1" nowrap>
+                                        <input name="Button" type="button" class="LargeButton" value="#customSpringMessage('ACTION_REGISTER')" onclick="save();"><!-- 登録 -->
+                                    </td>
+                                </tr>
+                            </table>
+                            </td>
+                        </tr>
+                    </table>
+                </td>
+                </tr>
+            </table>
+        </td>
+        </tr>
+    </table>
+</form>
+</body>
+</html>

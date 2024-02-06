@@ -1,0 +1,201 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<flow xmlns="http://www.springframework.org/schema/webflow"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.springframework.org/schema/webflow
+        http://www.springframework.org/schema/webflow/spring-webflow-2.0.xsd"
+    parent="base">
+
+    <var name="domain" class="fw.domain.slip.purreq.purreqcatalog.FavoritesTab" />
+
+    <input name="buyerCompanyCd" />
+    <input name="buyerSectionCd" />
+    <input name="itemCd" />
+    <input name="supCd" />
+    <input name="validStartDate" />
+    <input name="validEndDate" />
+    <input name="eventType" />
+    <input name="catalogPurReqApl" />
+    <input name="isAddFavAll" />
+
+    <decision-state id="isAddFav">
+       <if test="flowScope.eventType == 'addFav'"  then="initAdd"  else="init" />
+    </decision-state>
+    
+    <action-state id="initAdd">
+        <evaluate expression="PSFAV010InitService.initFavAdd(buyerCompanyCd, buyerSectionCd, itemCd, supCd, validStartDate, validEndDate,catalogPurReqApl)"
+            result="flowScope.domain" />
+        <transition to="PSFAV010"/> 
+    </action-state>
+    
+    <action-state id="init">
+        <evaluate expression="PSFAV010InitService.init()"
+            result="flowScope.domain" />
+        <transition to="PSFAV010"/> 
+    </action-state>
+    
+    <view-state id="PSFAV010" view="fav/favorite/PSFAV010" model="domain">
+        <transition on="PSFAV010_01" to="PSFAV010_01"/>
+    </view-state>
+    <view-state id="PSFAV010_01" view="fav/favorite/PSFAV010_01" model="domain">
+        <!-- あなたのお気に入りタブクリック -->
+        <transition on="searchYours">
+            <evaluate expression="PSFAV010InitService.displayYourFavorites()"
+                result="flowScope.domain" />
+        </transition>
+        <!-- 部門のお気に入りタブクリック -->
+        <transition on="searchSections">
+            <evaluate expression="PSFAV010InitService.displaySectionFavorites()"
+                result="flowScope.domain" />
+        </transition>
+        <!-- お気に入りフォルダ名をクリック（あなたのお気に入り選択時） -->
+        <transition on="searchYourFavCat" to="PSFAV010_02" validate="false">
+            <evaluate expression="PSFAV010InitService.searchYourFavCatDtl(requestParameters.favoritesSeqNo)"
+                result="flowScope.domain" />
+        </transition>
+        <!-- お気に入りフォルダ名をクリック（部門のお気に入り選択時） -->
+        <transition on="searchSecFavCat" to="PSFAV010_02" validate="false">
+            <evaluate expression="PSFAV010InitService.searchSecFavCatDtl(requestParameters.favoritesSeqNo)"
+                result="flowScope.domain" />
+        </transition>
+        <!-- お気に入りフォルダ名を変更する（あなたのお気に入り選択時） -->
+        <!-- 強化-00473-000 2013/04/12 DEL SBO_shiwt START -->
+        <!--<transition on="renameYour" validate="false">-->
+        <!-- 強化-00473-000 2013/04/12 DEL SBO_shiwt -END- -->
+        <!-- 強化-00473-000 2013/04/12 ADD SBO_shiwt START -->
+        <transition on="renameYour" validate="true">
+        <!-- 強化-00473-000 2013/04/12 ADD SBO_shiwt -END- -->
+            <evaluate expression="PSFAV010EditService.renameFolder(requestParameters.favoritesSeqNo,domain)"
+            result="flowScope.domain" />
+            <!-- 強化-00017-000 2013/04/24 ADD SBO_CHENCHENG START -->
+            <set name="flashScope.isFolderSuccess" value="true" />
+            <!-- 強化-00017-000 2013/04/24 ADD SBO_CHENCHENG -END- -->
+        </transition>
+        <!-- お気に入りフォルダ名を変更する（部門のお気に入り選択時） -->
+        <!-- 強化-00473-000 2013/04/12 DEL SBO_shiwt START -->
+        <!--<transition on="renameSec" validate="true">-->
+        <!-- 強化-00473-000 2013/04/12 DEL SBO_shiwt -END- -->
+        <!-- 強化-00473-000 2013/04/12 ADD SBO_shiwt START -->
+        <transition on="renameSec" validate="true">
+        <!-- 強化-00473-000 2013/04/12 ADD SBO_shiwt -END- -->
+            <evaluate expression="PSFAV010EditService.renameFolder(requestParameters.favoritesSeqNo,domain)"
+            result="flowScope.domain" />
+            <!-- 強化-00017-000 2013/04/24 ADD SBO_CHENCHENG START -->
+            <set name="flashScope.isFolderSuccess" value="true" />
+            <!-- 強化-00017-000 2013/04/24 ADD SBO_CHENCHENG -END- -->
+        </transition>
+        <!-- 新しいフォルダを追加する（あなたのお気に入り選択時） -->
+        <transition on="addYourFolder" validate="true">
+            <evaluate expression="PSFAV010EditService.addFolder(domain)"
+            result="flowScope.domain" />
+            <!-- 強化-00017-000 2013/04/24 ADD SBO_CHENCHENG START -->
+            <set name="flashScope.isFolderSuccess" value="true" />
+            <!-- 強化-00017-000 2013/04/24 ADD SBO_CHENCHENG -END- -->
+        </transition>
+        <!-- 新しいフォルダを追加する（部門のお気に入り選択時） -->
+        <transition on="addSectionsFolder" validate="true">
+            <evaluate expression="PSFAV010EditService.addFolder(domain)"
+            result="flowScope.domain" />
+            <!-- 強化-00017-000 2013/04/24 ADD SBO_CHENCHENG START -->
+            <set name="flashScope.isFolderSuccess" value="true" />
+            <!-- 強化-00017-000 2013/04/24 ADD SBO_CHENCHENG -END- -->
+        </transition>
+        <!-- お気に入りフォルダを削除する（あなたのお気に入り選択時） -->
+        <transition on="delFolderYour" validate="false">
+            <evaluate expression="PSFAV010EditService.deleteFolder(requestParameters.favoritesSeqNo)"
+            result="flowScope.domain" />
+            <!-- 強化-00017-000 2013/04/24 ADD SBO_CHENCHENG START -->
+            <set name="flashScope.isFolderSuccess" value="true" />
+            <!-- 強化-00017-000 2013/04/24 ADD SBO_CHENCHENG -END- -->
+        </transition>
+        <!-- お気に入りフォルダを削除する（部門のお気に入り選択時） -->
+        <transition on="delFolderSec" validate="false">
+            <evaluate expression="PSFAV010EditService.deleteFolder(requestParameters.favoritesSeqNo)"
+            result="flowScope.domain" />
+            <!-- 強化-00017-000 2013/04/24 ADD SBO_CHENCHENG START -->
+            <set name="flashScope.isFolderSuccess" value="true" />
+            <!-- 強化-00017-000 2013/04/24 ADD SBO_CHENCHENG -END- -->
+        </transition>
+        
+        <!-- お気に入りに価格品を追加する（あなたのお気に入り選択時） -->
+        <transition on="addYourFav" validate="false">
+            <set name="flashScope.favoritesSeqNo" value="requestParameters.favoritesSeqNo"></set>
+            <set name="flashScope.no" value="requestParameters.no"></set>
+            <set name="flashScope.isNoError" value="true"></set>
+            
+        </transition>
+        <!-- お気に入りに価格品を追加する（あなたのお気に入り選択時） -->
+        <transition on="addYourFavNoError" to="PSFAV010_02" validate="false">
+            <evaluate expression="PSFAV010EditService.addFavoriteCatalog(requestParameters.favoritesSeqNo, buyerCompanyCd, buyerSectionCd, supCd, itemCd)"
+                result="flowScope.domain" />
+            <set name="flashScope.isSuccess" value="true"></set>
+        </transition>
+
+        <!-- お気に入りに価格品を追加する（部門のお気に入り選択時） -->
+        <transition on="addSecFav" validate="false">
+            <set name="flashScope.favoritesSeqNo" value="requestParameters.favoritesSeqNo"></set>
+            <set name="flashScope.no" value="requestParameters.no"></set>
+            <set name="flashScope.isNoError" value="true"></set>
+        </transition>
+        
+                <!-- お気に入りに価格品を追加する（部門のお気に入り選択時） -->
+        <transition on="addSecFavNoError" to="PSFAV010_02" validate="false">
+            <evaluate expression="PSFAV010EditService.addFavoriteCatalog(requestParameters.favoritesSeqNo, buyerCompanyCd, buyerSectionCd, supCd, itemCd)"
+                result="flowScope.domain" />
+            <set name="flashScope.isSuccess" value="true"></set>
+        </transition>
+
+        <!-- お気に入りに価格品を追加する（あなたのお気に入り選択時） -->
+        <transition on="addYourFavAll" validate="false">
+            <set name="flashScope.favoritesSeqNo" value="requestParameters.favoritesSeqNo"></set>
+            <set name="flashScope.buyerCompanyCd" value="requestParameters.buyerCompanyCd"></set>
+            <set name="flashScope.buyerSectionCd" value="requestParameters.buyerSectionCd"></set>
+            <set name="flashScope.supCd" value="requestParameters.supCd"></set>
+            <set name="flashScope.itemCd" value="requestParameters.itemCd"></set>
+            <set name="flashScope.no" value="requestParameters.no"></set>
+            <set name="flashScope.isNoError" value="true"></set>
+        </transition>
+        <!-- お気に入りに価格品を追加する（あなたのお気に入り選択時） -->
+        <transition on="addYourFavAllNoError" to="PSFAV010_02" validate="false">
+            <evaluate expression="PSFAV010EditService.addFavoriteCatalog(requestParameters.favoritesSeqNo, requestParameters.buyerCompanyCd, requestParameters.buyerSectionCd, requestParameters.supCd, requestParameters.itemCd)"
+                result="flowScope.domain" />
+            <set name="flashScope.isSuccess" value="true"></set>
+        </transition>
+
+        <!-- お気に入りに価格品を追加する（部門のお気に入り選択時） -->
+        <transition on="addSecFavAll"  validate="false">
+            <set name="flashScope.favoritesSeqNo" value="requestParameters.favoritesSeqNo"></set>
+            <set name="flashScope.buyerCompanyCd" value="requestParameters.buyerCompanyCd"></set>
+            <set name="flashScope.buyerSectionCd" value="requestParameters.buyerSectionCd"></set>
+            <set name="flashScope.supCd" value="requestParameters.supCd"></set>
+            <set name="flashScope.itemCd" value="requestParameters.itemCd"></set>
+            <set name="flashScope.no" value="requestParameters.no"></set>
+            <set name="flashScope.isNoError" value="true"></set>
+        </transition>
+                <!-- お気に入りに価格品を追加する（部門のお気に入り選択時） -->
+        <transition on="addSecFavAllNoError" to="PSFAV010_02" validate="false">
+            <evaluate expression="PSFAV010EditService.addFavoriteCatalog(requestParameters.favoritesSeqNo, requestParameters.buyerCompanyCd, requestParameters.buyerSectionCd, requestParameters.supCd, requestParameters.itemCd)"
+                result="flowScope.domain" />
+            <set name="flashScope.isSuccess" value="true"></set>
+        </transition>
+
+    </view-state>
+    <view-state id="PSFAV010_02" view="fav/favorite/PSFAV010_02" model="domain">
+        <!-- お気に入りから価格品を削除する（あなたのお気に入り選択時） -->
+        <transition on="deleteCatalogYour" validate="false">
+            <evaluate expression="PSFAV010EditService.deleteCatalogYour(requestParameters.favoritesSeqNo, requestParameters.dtlNo)"
+            result="flowScope.domain" />
+        </transition>
+        <!-- お気に入りから価格品を削除する（部門のお気に入り選択時） -->
+        <transition on="deleteCatalogSec" validate="false">
+            <evaluate expression="PSFAV010EditService.deleteCatalogSec(requestParameters.favoritesSeqNo, requestParameters.dtlNo)"
+            result="flowScope.domain" />
+        </transition>
+    </view-state>
+    
+    <view-state id="PSFAV010Error" view="fav/favorite/PSFAV010Error" />
+    
+    <global-transitions>
+        <transition on-exception="java.security.InvalidParameterException" to="PSFAV010Error" />
+    </global-transitions>
+    
+    </flow>

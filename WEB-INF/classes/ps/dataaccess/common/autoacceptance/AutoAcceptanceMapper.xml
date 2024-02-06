@@ -1,0 +1,301 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="ps.dataaccess.common.autoacceptance.AutoAcceptanceMapper">
+
+    <!-- 納品キー番号取得用SQL -->
+    <select id="searchDeliv" resultType="hashmap">
+        SELECT
+             T_RECEIVE_MNG.DELIV_KEY_NO AS "DELIV_KEY_NO",
+             T_ARRIVAL.DELIV_VOL AS "DELIV_VOL",
+             T_ARRIVAL.TOTAL_AMOUNT AS "TOTAL_AMOUNT",
+             CASE WHEN T_ARRIVAL.INSPECT_IND = '0' THEN T_ARRIVAL.ARRIV_EXP_DATE ELSE T_INSPECT.INSPECT_DATE END AS "ACCEPT_DATE"
+        FROM T_RECEIVE_MNG
+        LEFT JOIN T_ARRIVAL ON T_RECEIVE_MNG.APP_ARRIVAL_SEQ = T_ARRIVAL.ARRIVAL_SEQ
+            AND T_ARRIVAL.DELETE_FLG = '0'
+        LEFT JOIN T_INSPECT ON T_RECEIVE_MNG.APP_INSPECT_SEQ = T_INSPECT.INSPECT_SEQ
+            AND T_INSPECT.DELETE_FLG = '0'
+        WHERE T_RECEIVE_MNG.ORDER_NO = #{orderNo}
+            AND (T_RECEIVE_MNG.DELIV_STATUS = '3104'
+            OR (T_RECEIVE_MNG.DELIV_STATUS = '2104'
+            AND T_ARRIVAL.INSPECT_IND = '0'))
+            AND T_RECEIVE_MNG.DELETE_FLG = '0'
+    </select>
+
+    <!-- 注文情報取得用SQL -->
+    <select id="searchOrder" resultType="hashmap">
+        SELECT
+             BUYER_COMPANY_CD AS "BUYER_COMPANY_CD",
+             TAX_IND AS "TAX_IND",
+             CURRENCY_CD AS "CURRENCY_CD",
+             ORDER_NO AS "ORDER_NO"
+        FROM T_ORDER
+        WHERE T_ORDER.ORDER_SEQ = #{orderSeq} AND T_ORDER.DELETE_FLG = '0'
+    </select>
+
+    <!-- 受入管理テーブル更新SQL -->
+    <update id="updateReceive">
+        UPDATE T_RECEIVE_MNG
+        SET
+             DELIV_STATUS = '4104',<!-- 受入管理ステータス -->
+             NEW_ACCEPTANCE_SEQ = #{acceptanceSeq},<!-- 最新検収シーケンス番号 -->
+             APP_ACCEPTANCE_SEQ = #{acceptanceSeq},<!-- 承認済検収シーケンス番号 -->
+             LAST_UPD_DATE = '${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}',<!-- 最終更新日時 -->
+             LAST_UPD_COMPANY_CD = '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}',<!-- 最終更新会社コード -->
+             LAST_UPD_SECTION_CD = '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}',<!-- 最終更新部門コード -->
+             LAST_UPD_USER_ID = '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}'<!-- 最終更新ユーザーID -->
+         WHERE DELIV_KEY_NO = #{delivKeyNo}
+    </update>
+
+    <!--最大版数 -->
+    <select id="getMaxVersion" resultType="java.lang.Integer">
+      SELECT MAX(T_ACCEPTANCE.ACCEPT_VERSION)
+        FROM T_ACCEPTANCE
+       WHERE T_ACCEPTANCE.DELIV_KEY_NO = #{delivKeyNo}
+         AND T_ACCEPTANCE.DELETE_FLG = '0'
+    </select>
+
+    <!-- 検収テーブル登録SQL -->
+    <insert id="insertAcceptance">
+	INSERT INTO
+		T_ACCEPTANCE(
+			  ACCEPT_SEQ
+			  , DELIV_KEY_NO
+			  , ORDER_NO
+			  , ACCEPT_VERSION
+			  , CORRECT_CD
+			  , PRE_SEQ
+			  , RB_IND
+			  , RB_SEQ
+			  , ARRIV_EXP_DATE
+			  , DELIV_VOL
+			  , ACCEPT_STATUS
+			  , ACCEPT_DATE
+			  , FISCAL_MONTH
+			  , ACCEPT_COMPANY_CD
+			  , ACCEPT_COMPANY_NAME
+			  , ACCEPT_SECTION_PLACE_CD
+			  , ACCEPT_SECTION_PLACE_NAME
+			  , ACCEPT_SECTION_CD
+			  , ACCEPT_SECTION_NAME
+			  , ACCEPT_USER_ID
+			  , ACCEPT_USER_NAME
+			  , LOAD_COMPANY_CD
+			  , LOAD_COMPANY_NAME
+			  , LOAD_SECTION_PLACE_CD
+			  , LOAD_SECTION_PLACE_NAME
+			  , LOAD_SECTION_CD
+			  , LOAD_SECTION_NAME
+			  , SUBJECT_COMPANY_CD
+			  , SUBJECT_CD
+			  , SUBJECT_NAME
+			  , BUDGET_NO
+			  , HAVE_IN_STOCK_FLG
+			  , STOCK_COMPANY_CD
+			  , STOCK_SECTION_PLACE_CD
+			  , STOCK_PLACE_CD
+			  , STOCK_PLACE_NAME
+			  , SUP_COMPANY_CD
+			  , SUP_CD
+			  , SUP_NAME
+			  , SUP_ABBR_NAME
+			  , CURRENCY_CD
+			  , TAX_IND
+			  , CONSUMPT_IND
+			  , TAX_RATE
+			  , ACCEPT_VOL
+			  , UNIT_CD
+			  , UNIT_NAME
+			  , UNIT_PRICE
+			  , ACCEPT_AMOUNT
+			  , CONSUMPT_AMOUNT
+			  , TOTAL_AMOUNT
+			  , ACCEPT_CNV_CURRENCY_CD
+			  , ACCEPT_CNV_RATE
+			  , ACCEPT_CNV_AMOUNT
+			  , SUP_CONFIRM_FLG
+			  , APP_ROUTE_NO
+			  , APP_ROUTE_NAME
+			  , SEND_IND
+			  , RECEIPT_NUMBER
+			  , ACC_SEND_IND
+			  , ACC_RECEIPT_NUMBER
+			  , PRINT_IND
+			  , FAX_SEND_IND
+			  , FAX_RECEIPT_NUMBER
+			  , BI_OUT_IND
+			  , DELETE_FLG
+			  , AUTO_DELETE_FLG
+			  , AUTO_DELETE_DATE
+			  , LAST_UPD_DATE
+			  , LAST_UPD_COMPANY_CD
+			  , LAST_UPD_SECTION_CD
+			  , LAST_UPD_USER_ID
+			  , REG_DATE
+			  , REG_COMPANY_CD
+			  , REG_SECTION_CD
+			  , REG_USER_ID
+			)
+		SELECT
+			  #{acceptanceSeq}<!-- 検収シーケンス番号 -->
+			  , #{delivKeyNo}<!-- 納品キー番号 -->
+			  , T_ORDER.ORDER_NO<!-- 注文番号 -->
+			  , #{acceptVersion}<!-- 検収版数 -->
+			  , '1'<!-- 訂正コード -->
+			  , ''<!-- 変更前シーケンス番号 -->
+			  , '0'<!-- 赤黒区分 -->
+			  , ''<!-- 赤黒相手SEQNO -->
+			  , T_ARRIVAL.ARRIV_EXP_DATE<!-- 納入日 -->
+			  , T_ARRIVAL.DELIV_VOL<!-- 納入数量 -->
+			  , '04'<!-- 検収ステータス -->
+			  , #{acceptDate}<!-- 検収日 -->
+			  , #{month}<!-- 計上月度 -->
+			  , T_ORDER.BUYER_COMPANY_CD<!-- 検収会社コード -->
+			  , T_ORDER.BUYER_COMPANY_NAME<!-- 検収会社名 -->
+			  , T_ORDER.BUYER_SECTION_PLACE_CD<!-- 検収事業所コード -->
+			  , T_ORDER.BUYER_SECTION_PLACE_NAME<!-- 検収事業所名 -->
+			  , T_ORDER.BUYER_SECTION_CD<!-- 検収部門コード -->
+			  , T_ORDER.BUYER_SECTION_NAME<!-- 検収部門名 -->
+			  , T_ORDER.BUYER_USER_ID<!-- 検収担当者ID -->
+			  , T_ORDER.BUYER_USER_NAME<!-- 検収担当者名 -->
+			  , T_ORDER.LOAD_COMPANY_CD<!-- 負担会社コード -->
+			  , T_ORDER.LOAD_COMPANY_NAME<!-- 負担会社名 -->
+			  , T_ORDER.LOAD_SECTION_PLACE_CD<!-- 負担事業所コード -->
+			  , T_ORDER.LOAD_SECTION_PLACE_NAME<!-- 負担事業所名 -->
+			  , T_ORDER.LOAD_SECTION_CD<!-- 負担部門コード -->
+			  , T_ORDER.LOAD_SECTION_NAME<!-- 負担部門名 -->
+			  , T_ORDER.SUBJECT_COMPANY_CD<!-- 科目会社コード -->
+			  , T_ORDER.SUBJECT_CD<!-- 科目コード -->
+			  , T_ORDER.SUBJECT_NAME<!-- 科目名 -->
+			  , T_ORDER.BUDGET_NO<!-- 予算番号 -->
+			  , T_ARRIVAL.HAVE_IN_STOCK_FLG<!-- 在庫対象フラグ -->
+			  , T_ARRIVAL.STOCK_COMPANY_CD<!-- 在庫場所会社コード -->
+			  , T_ARRIVAL.STOCK_SECTION_PLACE_CD<!-- 在庫場所事業所コード -->
+			  , T_ARRIVAL.STOCK_PLACE_CD<!-- 在庫場所コード -->
+			  , T_ARRIVAL.STOCK_PLACE_NAME<!-- 在庫場所名 -->
+			  , T_ORDER.SUP_COMPANY_CD<!-- 取引先会社コード -->
+			  , T_ORDER.SUP_CD<!-- 取引先コード -->
+			  , T_ORDER.SUP_NAME<!-- 取引先名 -->
+			  , T_ORDER.SUP_ABBR_NAME<!-- 取引先名（略称） -->
+			  , T_ORDER.CURRENCY_CD<!-- 通貨コード -->
+			  , T_ORDER.TAX_IND<!-- 課税区分 -->
+			  , T_ORDER.CONSUMPT_IND<!-- 消費税区分 -->
+			  <if test="@org.apache.commons.lang.StringUtils@isNotBlank(taxRate)">
+			  , #{taxRate}
+			  </if>
+			  <if test="@org.apache.commons.lang.StringUtils@isBlank(taxRate)">
+			  , NULL
+			  </if><!-- 税率 -->
+			  , #{acceptVol}<!-- 検収数量 -->
+			  , T_ORDER.UNIT_CD<!-- 単位コード -->
+			  , T_ORDER.UNIT_NAME<!-- 単位名 -->
+			  , T_ORDER.UNIT_PRICE<!-- 単価 -->
+			  , #{acceptAmount}<!-- 検収金額 -->
+			  , #{consumptAmount}<!-- 消費税額 -->
+			  , #{totalAmount}<!-- 合計金額 -->
+			  , '${@fw.security.SecurityUtil@getCurrencyCdByEscapeSql()}'<!-- 検収登録時換算通貨 -->
+			  , #{rate}<!-- 検収登録時換算レート -->
+			  , #{companyAmount}<!-- 検収登録時換算金額 -->
+			  , '0'<!-- 取引先確認フラグ -->
+			  , ''<!-- 検収承認ルート番号 -->
+			  , ''<!-- 承認ルート名 -->
+			  , CASE WHEN T_ORDER.EDI_IND = '1' THEN '0' ELSE '9' END<!-- データ送信区分 -->
+			  , ''<!-- 受付番号 -->
+			  , '0'<!-- 会計システム送信区分 -->
+			  , ''<!-- 会計受付番号 -->
+			  , '0'<!-- 印刷区分 -->
+			  , CASE WHEN M_SUPPLIER.ACCEPT_FAX_IND = '1' THEN '0' ELSE '9' END<!-- FAX送信区分 -->
+			  , ''<!-- FAX受付番号 -->
+			  , '0'<!-- 実績抽出区分 -->
+			  , '0'
+			  , '0'
+			  , ''
+			  , '${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}'
+			  , '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}'
+			  , '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}'
+			  , '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}'
+			  , '${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}'
+			  , '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}'
+			  , '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}'
+			  , '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}'
+        FROM T_ORDER
+        LEFT JOIN T_RECEIVE_MNG
+             ON T_ORDER.ORDER_NO = T_RECEIVE_MNG.ORDER_NO
+             AND T_RECEIVE_MNG.DELIV_KEY_NO = #{delivKeyNo}
+        LEFT JOIN T_ARRIVAL ON T_RECEIVE_MNG.APP_ARRIVAL_SEQ = T_ARRIVAL.ARRIVAL_SEQ
+            AND T_ARRIVAL.DELETE_FLG = '0'
+        LEFT JOIN M_SUPPLIER
+             ON (T_ORDER.SUP_COMPANY_CD = M_SUPPLIER.COMPANY_CD
+             OR M_SUPPLIER.COMPANY_CD = '${@fw.common.constant.ApplicationConstant@COMPANY_CD_ALL}')
+            AND T_ORDER.SUP_CD = M_SUPPLIER.SUP_CD
+            AND M_SUPPLIER.VALID_START_DATE &lt;= ${@fw.common.util.AppUtil@getSysDate()}
+            AND M_SUPPLIER.VALID_END_DATE &gt;= ${@fw.common.util.AppUtil@getSysDate()}
+            AND M_SUPPLIER.TERM_FLG = '0'
+        WHERE T_ORDER.ORDER_SEQ = #{orderSeq} AND T_ORDER.DELETE_FLG = '0'
+    </insert>
+
+    <!-- 検収取引先言語テーブル登録SQL -->
+    <insert id="insertAcceptanceSupLng">
+    INSERT INTO
+        T_ACCEPTANCE_SUP_LNG(
+			  ACCEPT_SEQ
+			  , ACCEPT_COMPANY_NAME
+			  , ACCEPT_SECTION_PLACE_NAME
+			  , ACCEPT_SECTION_NAME
+			  , ACCEPT_USER_NAME
+			  , LOAD_COMPANY_NAME
+			  , LOAD_SECTION_PLACE_NAME
+			  , LOAD_SECTION_NAME
+			  , SUBJECT_NAME
+			  , SUP_NAME
+			  , SUP_ABBR_NAME
+			  , UNIT_NAME
+			  , STOCK_PLACE_NAME
+			  , AUTO_DELETE_FLG
+			  , AUTO_DELETE_DATE
+			  , LAST_UPD_DATE
+			  , LAST_UPD_COMPANY_CD
+			  , LAST_UPD_SECTION_CD
+			  , LAST_UPD_USER_ID
+			  , REG_DATE
+			  , REG_COMPANY_CD
+			  , REG_SECTION_CD
+			  , REG_USER_ID
+            )
+        SELECT
+			  #{acceptanceSeq}<!-- 検収シーケンス番号 -->
+			  , T_ORDER_SUP_LNG.BUYER_COMPANY_NAME<!-- 検収会社名 -->
+			  , T_ORDER_SUP_LNG.BUYER_SECTION_PLACE_NAME<!-- 検収事業所名 -->
+			  , T_ORDER_SUP_LNG.BUYER_SECTION_NAME<!-- 検収部門名 -->
+			  , T_ORDER_SUP_LNG.BUYER_USER_NAME<!-- 検収担当者名 -->
+			  , T_ORDER_SUP_LNG.LOAD_COMPANY_NAME<!-- 負担会社名 -->
+			  , T_ORDER_SUP_LNG.LOAD_SECTION_PLACE_NAME<!-- 負担事業所名 -->
+			  , T_ORDER_SUP_LNG.LOAD_SECTION_NAME<!-- 負担部門名 -->
+			  , T_ORDER_SUP_LNG.SUBJECT_NAME<!-- 科目名 -->
+			  , T_ORDER_SUP_LNG.SUP_NAME<!-- 取引先名 -->
+			  , T_ORDER_SUP_LNG.SUP_ABBR_NAME<!-- 取引先名（略称） -->
+			  , T_ORDER_SUP_LNG.UNIT_NAME<!-- 単位名 -->
+			  , T_ARRIVAL.STOCK_PLACE_NAME<!-- 在庫場所名 -->
+              , '0'
+              , ''
+              , '${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}'
+              , '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}'
+              , '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}'
+              , '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}'
+              , '${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}'
+              , '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}'
+              , '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}'
+              , '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}'
+        FROM T_ORDER_SUP_LNG
+       INNER JOIN T_ORDER
+          ON T_ORDER_SUP_LNG.ORDER_SEQ = T_ORDER.ORDER_SEQ
+        LEFT JOIN T_RECEIVE_MNG
+          ON T_ORDER.ORDER_NO = T_RECEIVE_MNG.ORDER_NO
+         AND T_RECEIVE_MNG.DELIV_KEY_NO = #{delivKeyNo}
+        LEFT JOIN T_ARRIVAL
+          ON T_RECEIVE_MNG.APP_ARRIVAL_SEQ = T_ARRIVAL.ARRIVAL_SEQ
+         AND T_ARRIVAL.DELETE_FLG = '0'
+        WHERE T_ORDER_SUP_LNG.ORDER_SEQ = #{orderSeq}
+    </insert>
+</mapper>

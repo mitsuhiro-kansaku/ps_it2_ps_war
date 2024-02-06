@@ -1,0 +1,283 @@
+<!doctype html>
+<html LANG="ja">
+<head>
+<title>#customSpringMessage('SCREEN_PAY_PRINT')</title>
+<meta http-equiv="Content-type" content="text/html; charset=UTF-8">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Content-script-type" content="text/javascript">
+<link id="CSS_FONT" rel="stylesheet" href="../../include/FontS.css" type="text/css">
+<link rel="stylesheet" href="../../include/Layout.css" type="text/css">
+<link rel="stylesheet" href="../../include/Color.css" type="text/css">
+<link rel="stylesheet" href="../../include/searchbox.css" type="text/css">
+<script language="javascript" type="text/javascript" src="../../include/jquery-1.7.2.min.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/jquery.tablefix.js"></script>
+<script language="javascript" TYPE="text/javascript" src="../../include/common.js"></script>
+<script language="javascript" TYPE="text/javascript" src="../../include/check.js"></script>
+<script language="javascript" TYPE="text/javascript" src="../../include/date.js"></script>
+<script language="javascript" TYPE="text/javascript" src="../../include/tablesort.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/searchbox.js"></script>
+<script language="javascript" TYPE="text/javascript">
+<!--
+#parse("./common/common_js.vm")
+
+function onLoad() {
+    ## +++++ 強化-00905-000 2013/05/21 ADD SBO_pangzhen START +++++
+    top.document.title=parent.document.title;
+    ## +++++ 強化-00905-000 2013/05/21 ADD SBO_pangzhen -END- +++++
+    parentButtonEnable();
+    dataLoadHasPage();
+    var isSuccess = "#jsEscape($isSuccess)";
+    if (isSuccess == 'true'){
+        alert('#customMessageArgs("I032","")');
+    }
+    var alertMessage = "$!alertMessage";
+    if (alertMessage != ""){
+        ## +++++ 強化-00852-000 2013/05/27 ADD SBO_CHENCHENG START +++++
+        buttonUsableForList(alertMessage);
+        ## +++++ 強化-00852-000 2013/05/27 ADD SBO_CHENCHENG -END- +++++
+        alert(alertMessage);
+    }
+    var errorMsg = "$!errorMessage";
+    if (errorMsg != ""){
+        return;
+    }
+        window.parent.getObj("APPROVALAREA").style.display = "";
+        var isShowDetail = "#jsEscape($isShowDetail)";
+        if (isShowDetail == 'true'){
+            var seqNumber = "#jsEscape($identify.payReqSeq)"
+            poppage("${flowExecutionUrl}&_eventId=detail&seqNumber=" + seqNumber,'DETAIL','800','700');
+        }
+}
+
+/* 一括選択 */
+//check /uncheck all
+$(function(){
+    $(document).delegate('#ParentCheck','change',function() {
+        var chk = $(this).prop("checked");
+        var status = 0;
+        $("input:[type=checkbox][name^=_screenPayPrintItemList]").prop("checked",chk)
+
+        if(chk){
+            $("tr:[id^=Row_]").css("background-color","#ffff99");
+            status = 1;
+        }else{
+            $("tr:[id^=Row_]").each(function(){
+                var count = $(this).attr("id").substring(4);
+                if (Number(count) % 2 != 0) {
+                    $(this).css("background-color","#ffffff");
+                } else {
+                    $(this).css("background-color","#dce4ef");
+                }
+            });
+        }
+        $("input:[type=hidden][id^=screenPayPrintItemList][id$=checkStatus]").val(status);
+    });
+});
+
+// 行チェックボックス選択
+function selectRow(no, obj) {
+    var status = 0;
+    if(no % 2 == 0) {
+        var backgroundColor = "#dce4ef";
+    } else {
+        backgroundColor = "#ffffff";
+    }
+    if( obj.checked ) {
+        backgroundColor = "#ffff99";
+		status = 1;
+    }
+    $("[id=" + 'Row_' + no + "]").css({"backgroundColor":backgroundColor});
+    document.getElementById("screenPayPrintItemList[" + no + "].identify.checkStatus").value = status;
+}
+
+/* 印刷 */
+function exec() {
+//    parent.getObj("ERRORAREA").src="../../layout/error.vm";
+    var count=0;
+    $("input:[type=checkbox][name^=_screenPayPrintItemList]").each(function(){
+        if($(this).prop("checked"))
+            count ++;
+    });
+
+    if (count==0) {
+        ## ----- 2013/07/10 DEL DAIKO_NAKAI
+        ###set( $mSelectCheckBox = "#customSpringMessage('SELECT_CHECK_BOX')" );
+        ## 2013.03.04 DEL DAIKO_WANG
+        ## alert('#customMessageArgs("E027",[$mSelectCheckBox])');
+        ## 2013.03.04 ADD DAIKO_WANG
+        ## ----- 強化-00229-000 2013/05/23 DEL SBO_KANGJW START -----
+        ##alert("#nothingSelectedMessage()");
+        ## ----- 強化-00229-000 2013/05/23 DEL SBO_KANGJW END -----
+        ## ----- 2013/07/10 DEL DAIKO_NAKAI START -----
+        ## +++++ 強化-00229-000　2013/05/23 ADD SBO_KANGJW START +++++
+        ##document.getElementById("errorDiv").innerHTML="#customMessageArgs('E210',[$mSelectCheckBox])";
+        ## +++++ 強化-00229-000　2013/05/23 ADD SBO_KANGJW END +++++
+        ## ----- 2013/07/10 DEL DAIKO_NAKAI END -----
+        ## +++++ 2013/07/10 ADD DAIKO_NAKAI
+        alert("#nothingSelectedMessage()");
+    } else {
+        // 確認メッセージ
+        #set( $mPrintSheet = "#customSpringMessage('PAY_SHEET')" )
+        #set( $mPrint = "#customSpringMessage('PRINT')" )
+        if( !confirm('#customMessageArgs("W001",[$mPrintSheet, $mPrint])') ) {
+            return;
+        } 
+        parentButtonDisable();
+        // 印刷の場合
+        getObj("BodyForm").action = "${flowExecutionUrl}&_eventId=print";
+        getObj('BodyForm').submit();
+        // iframeChange("${flowExecutionUrl}&_eventId=print");
+    }
+}
+
+/* 詳細画面をポップアップ */
+function openDetail(seqNumber,lastUpdDate) {
+    ## ----- 強化-00749-000 2013/04/03 DEL SBO_CHENCHENG START -----
+    ## ----- iframeChange("${flowExecutionUrl}&_eventId=detailValidate&seqNumber=" + seqNumber + "&&lastUpdDate="+ lastUpdDate,"HIDDENAREA");
+    ## ----- 強化-00749-000 2013/04/03 DEL SBO_CHENCHENG -END- -----
+    ## +++++ 強化-00749-000 2013/04/03 ADD SBO_CHENCHENG START +++++
+    parent.iframeChange("${flowExecutionUrl}&_eventId=detailValidate&seqNumber=" + seqNumber + "&&lastUpdDate="+ lastUpdDate,"HIDDENAREA");
+    ## +++++ 強化-00749-000 2013/04/03 ADD SBO_CHENCHENG -END- +++++
+}
+
+//-->
+</script>
+
+</head>
+<body id="BODY" topmargin="0" leftmargin="0" marginwidth="0" marginheight="0" align="left" onload="onLoad();setTablefix('#TABLEFIX', 1, 3+$!PSPAY151PageCreaterForList.printLockColumn());">
+<form id="BodyForm" name="BodyForm" method="post" >
+#if($!errorMessage && $!errorMessage !="")
+<div class="error">
+    $!errorMessage
+</div>
+#end
+## ----- ＩＴ３-00509-000 2013/08/29 DEL SBO_PANGZHEN START -----
+## ## +++++ 強化-00229-000　2013/05/23 ADD SBO_KANGJW START +++++
+## <span id="errorDiv" class="error">
+## </span>
+## ## +++++ 強化-00229-000　2013/05/23 ADD SBO_KANGJW END +++++
+## ----- ＩＴ３-00509-000 2013/08/29 DEL SBO_PANGZHEN -END- -----
+#if($!itemList.screenPayPrintItemList && ($!itemList.screenPayPrintItemList.size() > 0))
+#foreach($!payItem in $!itemList.screenPayPrintItemList)
+    #customFormHiddenInput("screenPayPrintItemList[$velocityCount].identify.checkStatus" "$!{payItem.identify.checkStatus}")
+    #customFormHiddenInput("screenPayPrintItemList[$velocityCount].identify.paySeq" "$!{payItem.identify.paySeq}")
+    #customFormHiddenInput("screenPayPrintItemList[$velocityCount].identify.lastUpdDate" "$!{payItem.identify.lastUpdDate}")
+    #customFormHiddenInput("screenPayPrintItemList[$velocityCount].identify.supCd" "$!{payItem.supCd}")
+    #customFormHiddenInput("screenPayPrintItemList[$velocityCount].identify.supName" "$!{payItem.supName}")
+	#customFormHiddenInput("screenPayPrintItemList[$velocityCount].identify.supCompanyCd" "$!{payItem.supCompanyCd}")
+#end
+<table id="TABLEFIX" class="ListArea" width="100%">
+    <thead>
+        <tr id="Header">
+                <th class="BoxHeaderCenter FontSmall">No.</th>
+				<th label="chk" class="BoxHeaderCenter FontSmall">
+					<input name="ParentCheck" id="ParentCheck" type="checkbox"/>
+            	</th>
+                <th class="BoxHeaderCenter FontSmall">#customSpringMessage("DETAIL")<!--詳細--></th>
+            #foreach($!item in $!PSPAY151PageCreaterForList.getItemListForBody())
+                
+                #set($currentOneColumnFlag = $!PSPAY151PageCreaterForList.getOneColumnFlag($!item))
+                #if($velocityCount == 0)
+                    $!PSPAY151PageCreaterForList.printTHtag($!item,'class="BoxHeaderCenter FontSmall"')
+                #elseif($currentOneColumnFlag)
+                    $!PSPAY151PageCreaterForList.printBRtag($!item)
+                #else
+                    $!PSPAY151PageCreaterForList.printTHtagClose()
+                    $!PSPAY151PageCreaterForList.printTHtag($!item,'class="BoxHeaderCenter FontSmall"')
+                #end
+                #if($!item.getColumnName() == "T_P_PAY.PAY_NO")
+                    $!PSPAY151PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName() == "T_P_PAY.INPUT_USER_NAME")
+                    $!PSPAY151PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName() == "T_P_PAY.PRINT_IND")
+                    $!PSPAY151PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName() == "T_P_PAY.REQ_DATE")
+                    $!PSPAY151PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName() == "T_P_PAY.TITLE_NAME")
+                    $!PSPAY151PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName() == "T_P_PAY.SUP_CD")
+                    $!PSPAY151PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName() == "T_P_PAY.SUP_ABBR_NAME")
+                    $!PSPAY151PageCreaterForList.printHead($!item)
+               #elseif($!item.getColumnName() == "T_P_PAY.CURRENCY_CD")
+                    $!PSPAY151PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName() == "T_P_PAY.TOTAL_AMOUNT_IN_TAX")
+                    $!PSPAY151PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName() == "T_P_PAY.PAY_CONDITION_NAME")
+                    $!PSPAY151PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName() == "T_P_PAY.REQ_SECTION_CD")
+                    $!PSPAY151PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName() == "T_P_PAY.REQ_SECTION_NAME")
+                    $!PSPAY151PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName() == "T_P_PAY.REQ_USER_ID")
+                    $!PSPAY151PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName() == "T_P_PAY.REQ_USER_NAME")
+                    $!PSPAY151PageCreaterForList.printHead($!item)
+                #else
+                    $!PSPAY151PageCreaterForList.printHead($!item)
+                #end
+            #end
+            $!PSPAY151PageCreaterForList.printTHtagClose()
+        </tr>
+    </thead>
+    <tbody>
+        #foreach($!payItem in $!itemList.screenPayPrintItemList)
+        <tr id="Row_$velocityCount" #if($velocityCount % 2 == 0) bgcolor="#dce4ef" #else bgcolor="#ffffff" #end>
+            <td class="BoxDetailCenter FontList">#set( $No = $velocityCount+1)$No</td>
+			<td class="BoxDetailCenter">
+                <input type="checkbox" onclick="selectRow($velocityCount, this)" class="Icon" id="_screenPayPrintItemList[$velocityCount].identify.checkStatus" name="_screenPayPrintItemList[$velocityCount].identify.checkStatus">
+            </td>
+            <td class="BoxDetailCenter FontList">
+                <img id="DetailButton_0" class="Icon" src="../../image/btnDetailDisp.gif" onclick="openDetail('#jsEscapeInHTML($!payItem.identify.paySeq)', '#jsEscapeInHTML($!payItem.identify.lastUpdDate)');">
+            </td>
+                #foreach($!item in $!PSPAY151PageCreaterForList.getItemListForBody($velocityCount))
+                    #set($currentOneColumnFlag = $!PSPAY151PageCreaterForList.getOneColumnFlag($!item))
+                    #if($velocityCount == 0)
+                        $!PSPAY151PageCreaterForList.printTDtag('class="BoxDetailLeft FontList"')
+                    #elseif(!$currentOneColumnFlag)
+                        $!PSPAY151PageCreaterForList.printTDtagClose()
+                        $!PSPAY151PageCreaterForList.printTDtag('class="BoxDetailLeft FontList"')
+                    #end
+                    #if($!item.getColumnName() == "T_P_PAY.PAY_NO")
+                        $!PSPAY151PageCreaterForList.printDefault($!item,"_data_style",'class="FontList FontSlipNo" align="center"')
+                    #elseif($!item.getColumnName() == "T_P_PAY.INPUT_USER_NAME")
+                        $!PSPAY151PageCreaterForList.printDefault($!item)
+                    #elseif($!item.getColumnName() == "T_P_PAY.PRINT_IND")
+                        $!PSPAY151PageCreaterForList.printSpecial("s25_codeNameRed",$!item,'PRINT_IND','','_redValue','06','_boldStyle','"Red"',"_data_style",'class="FontStatus" align="center"')
+                    #elseif($!item.getColumnName() == "T_P_PAY.REQ_DATE")
+                        $!PSPAY151PageCreaterForList.printDefault($!item,"_data_style",'align="center"')
+                    #elseif($!item.getColumnName() == "T_P_PAY.TITLE_NAME")
+                        $!PSPAY151PageCreaterForList.printDefault($!item)
+                    #elseif($!item.getColumnName() == "T_P_PAY.SUP_CD")
+                        $!PSPAY151PageCreaterForList.printDefault($!item,"_data_style",'align="center"')
+                    #elseif($!item.getColumnName() == "T_P_PAY.SUP_ABBR_NAME")
+                        $!PSPAY151PageCreaterForList.printDefault($!item)
+                    #elseif($!item.getColumnName() == "T_P_PAY.CURRENCY_CD")
+                        $!PSPAY151PageCreaterForList.printDefault($!item,"_data_style",'align="center"')
+                    #elseif($!item.getColumnName() == "T_P_PAY.TOTAL_AMOUNT_IN_TAX")
+                        $!PSPAY151PageCreaterForList.printSpecial('s27_list_data_currency',$!item,"_data_style",'class="FontCurrSmall" align="right"')
+                    #elseif($!item.getColumnName() == "T_P_PAY.PAY_CONDITION_NAME")
+                        $!PSPAY151PageCreaterForList.printDefault($!item)
+                    #elseif($!item.getColumnName() == "T_P_PAY.REQ_SECTION_CD")
+                        $!PSPAY151PageCreaterForList.printDefault($!item,"_data_style",'align="center"')
+                    #elseif($!item.getColumnName() == "T_P_PAY.REQ_SECTION_NAME")
+                        $!PSPAY151PageCreaterForList.printDefault($!item)
+                    #elseif($!item.getColumnName() == "T_P_PAY.REQ_USER_ID")
+                        $!PSPAY151PageCreaterForList.printDefault($!item,"_data_style",'align="center"')
+                    #elseif($!item.getColumnName() == "T_P_PAY.REQ_USER_NAME")
+                        $!PSPAY151PageCreaterForList.printDefault($!item)
+                    #else
+                        $!PSPAY151PageCreaterForList.printDefault($!item)
+                    #end
+                #end
+                $!PSPAY151PageCreaterForList.printTDtagClose()
+        </tr>
+        #end
+    </tbody>
+</table>
+#end
+<table id="WAIT" class="NoBorder" style="display:none;width:100%;"><tr><td style="text-align:center;"><br><br>
+<img src="../../image/wait.gif"><br><span class="FontMini"><br>#customSpringMessage('SEARCH_MESSAGE')</span></td></tr></table><!--問い合わせ中...-->
+</form>
+</body>
+</html>

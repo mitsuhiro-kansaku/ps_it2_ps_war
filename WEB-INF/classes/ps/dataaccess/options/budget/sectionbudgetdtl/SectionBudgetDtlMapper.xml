@@ -1,0 +1,150 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="ps.dataaccess.options.budget.sectionbudgetdtl.SectionBudgetDtlMapper">
+
+    <sql id="listFrom">
+        FROM 
+            T_RECEIVE_MNG
+        INNER JOIN 
+            T_ORDER 
+        ON 
+            T_ORDER.ORDER_NO = T_RECEIVE_MNG.ORDER_NO
+            
+        INNER JOIN 
+            T_ACCEPTANCE 
+        ON 
+            T_ACCEPTANCE.ACCEPT_SEQ = T_RECEIVE_MNG.APP_ACCEPTANCE_SEQ
+    </sql>
+
+    <sql id="listKeyWhereCondition">
+        AND T_RECEIVE_MNG.DELETE_FLG = '0'
+        AND T_ORDER.NEW_APP_FLG = '1'
+        AND T_ORDER.DELETE_FLG = '0'
+        AND T_ACCEPTANCE.ACCEPT_STATUS = '04'
+        AND T_ACCEPTANCE.RB_IND = '0'
+        AND T_ACCEPTANCE.DELETE_FLG = '0'
+        AND T_ACCEPTANCE.BUDGET_NO IS NULL
+        AND T_ACCEPTANCE.LOAD_COMPANY_CD = '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}'
+        AND T_ACCEPTANCE.LOAD_SECTION_CD = #{sectionBudgetDtlIdentify.section.sectionCd, jdbcType=VARCHAR}
+        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(sectionBudgetDtlIdentify.subject.subjectCd)">
+            AND T_ACCEPTANCE.SUBJECT_CD = #{sectionBudgetDtlIdentify.subject.subjectCd, jdbcType=VARCHAR}
+        </if>
+        AND SUBSTR (T_ACCEPTANCE.ACCEPT_DATE,0,6) IN
+        <foreach collection="sectionBudgetDtlIdentify.notZeroMonths" item="month" open="(" separator="," close=")">
+            #{month}
+        </foreach>
+    </sql>
+
+    <sql id="keyWhereCondition">
+        (T_RECEIVE_MNG.DELIV_KEY_NO,T_ORDER.ORDER_SEQ) IN
+        <foreach collection="searchCondition.page.keyDomainEntityList" item="keyList" open="(" separator="," close=")">
+            (
+                #{keyList.delivKeyNo},#{keyList.orderSeq}
+            )
+        </foreach>
+    </sql>
+
+    <select id="listKeyIdentity"
+        parameterType="fw.domain.options.budget.sectionbudgetdtl.SectionBudgetDtlSearchCondition"
+        resultType="fw.domain.options.budget.sectionbudgetdtl.SectionBudgetDtlIdentify">
+        SELECT
+            T_RECEIVE_MNG.DELIV_KEY_NO as "delivKeyNo" , 
+            T_ORDER.ORDER_SEQ as "orderSeq" 
+        <include refid="listFrom"/>
+        <where>
+            <include refid="listKeyWhereCondition"/>
+        </where>
+        ORDER BY ${searchCondition.columnOrder.columnOrder()}
+    </select>
+
+    <resultMap id="sectionBudgetDtlItem" type="fw.domain.options.budget.sectionbudgetdtl.SectionBudgetDtlItem" >
+        <id column="DELIV_KEY_NO" property="sectionBudgetDtlIdentify.delivKeyNo" />
+        <id column="ORDER_SEQ" property="sectionBudgetDtlIdentify.orderSeq" />
+        <id column="LAST_UPD_DATE" property="sectionBudgetDtlIdentify.lastUpdDate" />
+    </resultMap>
+
+    <sql id="listSelect">
+        SELECT 
+            T_RECEIVE_MNG.DELIV_KEY_NO as "DELIV_KEY_NO",
+            T_ORDER.ORDER_SEQ as "ORDER_SEQ",
+            T_RECEIVE_MNG.LAST_UPD_DATE as "LAST_UPD_DATE",
+            T_RECEIVE_MNG.NEW_ARRIVAL_SEQ as "newArrivalSeq" , 
+            T_RECEIVE_MNG.DELIV_STATUS as "delivStatus",
+            T_ACCEPTANCE.CORRECT_CD as "correctCd" ,
+            T_ACCEPTANCE.ACCEPT_VERSION as "acceptVersion" , 
+            T_ACCEPTANCE.ACCEPT_DATE as "acceptDate.dateOfymd" ,
+            T_ACCEPTANCE.CURRENCY_CD as "currencyCd" ,
+            T_ACCEPTANCE.DELIV_VOL as "delivVol.vol" ,
+            T_ACCEPTANCE.ACCEPT_VOL as "acceptVol.vol" ,
+            T_ACCEPTANCE.UNIT_NAME as "unitName" ,
+            T_ACCEPTANCE.UNIT_PRICE as "unitPrice.amount" ,
+            T_ACCEPTANCE.ACCEPT_AMOUNT as "acceptAmount.amount" ,
+            T_ACCEPTANCE.ACCEPT_SECTION_CD as "acceptSectionCd" ,
+            T_ACCEPTANCE.ACCEPT_SECTION_NAME as "acceptSectionName" ,
+            T_ACCEPTANCE.ACCEPT_USER_ID as "acceptUserId" ,
+            T_ACCEPTANCE.ACCEPT_USER_NAME as "acceptUserName" ,
+            T_ACCEPTANCE.SUP_CD as "supCd" ,
+            T_ACCEPTANCE.SUP_ABBR_NAME as "supAbbrName" ,
+            T_ORDER.ORDER_NO as "orderNo",
+            T_ORDER.REQ_TYPE_IND as "reqTypeInd",
+            T_ORDER.SUBCON_IND as "subconInd" ,
+            T_ORDER.EDI_IND as "ediInd",
+            T_ORDER.BUYER_SECTION_CD as "buyerSectionCd",
+            T_ORDER.BUYER_SECTION_NAME as "buyerSectionName",
+            T_ORDER.BUYER_USER_ID as "buyerUserId" ,
+            T_ORDER.BUYER_USER_NAME as "buyerUserName" ,
+            T_ORDER.ORDER_FIRST_DATE as "orderDate.dateOfymd",
+            T_ORDER.REQ_SECTION_CD as "reqSectionCd" ,
+            T_ORDER.REQ_SECTION_NAME as "reqSectionName" ,
+            T_ORDER.REQ_USER_Id as "reqUserId",
+            T_ORDER.REQ_USER_NAME as "reqUserName",
+            T_ORDER.ITEM_CD as "itemCd",
+            T_ORDER.ITEM_NAME as "itemName",
+            T_ACCEPTANCE.LOAD_SECTION_CD as "loadSectionCd",
+            T_ACCEPTANCE.LOAD_SECTION_NAME as "loadSectionName",
+            T_ACCEPTANCE.SUBJECT_CD as "subjectCd",
+            T_ACCEPTANCE.SUBJECT_NAME as "subjectName",
+            T_ACCEPTANCE.BUDGET_NO as "budgetNo",
+            T_ACCEPTANCE.TAX_RATE as "taxRate",
+            T_ACCEPTANCE.TOTAL_AMOUNT as "totalAmount.amount"
+    </sql>
+
+    <select id="listPageItem" 
+        parameterType="fw.domain.options.budget.sectionbudgetdtl.SectionBudgetDtlSearchCondition"
+        resultMap="sectionBudgetDtlItem">
+        <include refid="listSelect"/>
+        <include refid="listFrom"/>
+        <where>
+            <include refid="keyWhereCondition"/>
+        </where>
+        ORDER BY ${searchCondition.columnOrder.columnOrder()}
+    </select>
+
+    <select id="sectionBudgetDtlListDownload" 
+        parameterType="fw.domain.options.budget.sectionbudgetdtl.SectionBudgetDtlSearchCondition"
+        resultMap="sectionBudgetDtlItem">
+        <include refid="pageHeader"/>
+            <include refid="listSelect"/>
+            <include refid="listFrom"/>
+            <where>
+                <include refid="keyWhereCondition"/>
+            </where>
+            ORDER BY ${searchCondition.columnOrder.columnOrder()}
+        <include refid="pageRoot"/>
+    </select>
+
+    <sql id="pageHeader">
+       SELECT * FROM (
+    </sql>
+    <sql id="pageFooder">
+       )
+    </sql>
+    <sql id="pageRoot">
+        ) WHERE  ROWNUM &lt;=${@fw.common.util.PropertiesUtil@getLong("DOWNLOAD_MAXCNT")}
+    </sql>
+    <sql id="sysYmd">
+        (SELECT TO_CHAR(SYSDATE, 'yyyymmdd') FROM dual)
+    </sql>
+</mapper>

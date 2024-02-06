@@ -1,0 +1,340 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="ps.dataaccess.options.stock.inv.inventoryresults.InventoryResultsMapper">
+
+    <sql id="listKeyIdentityWhereCondition">
+        <!-- 個人設定未定義の場合、条件に入らないため追加している -->
+        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(companyCd)">
+         AND T_INVENTORY.COMPANY_CD = #{companyCd, jdbcType=VARCHAR}
+        </if>
+        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(sectionPlaceCd)">
+         AND T_INVENTORY.SECTION_PLACE_CD = #{sectionPlaceCd, jdbcType=VARCHAR}
+        </if>
+             ${@ps.common.util.ItemSettingUtil@getItemSettingWhereSQL()}
+        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(manufactName)">
+         AND T_INVENTORY.MANUFACT_NAME = #{manufactName, jdbcType=VARCHAR}
+        </if>
+        <if test="@org.apache.commons.lang.StringUtils@equals('1',searchInd)">
+         AND T_INVENTORY.INPUT_INV_DATE IS NULL
+        </if>
+        <if test="@org.apache.commons.lang.StringUtils@equals('2',searchInd)">
+         AND T_INVENTORY.INPUT_INV_DATE IS NOT NULL
+        </if>
+    </sql>
+
+    <sql id="listSql">
+        WITH V_STRG_SHIP_RESULTS AS
+     (<include refid="ps.dataaccess.options.stock.common.storageshipment.StorageShipmentUtilMapper.syntheticStrgShipResultsSql"/>)
+      SELECT T_INVENTORY.COMPANY_CD
+           , T_INVENTORY.SECTION_PLACE_CD
+           , T_INVENTORY.STOCK_PLACE_CD
+           , T_INVENTORY.INV_YEAR_MONTH
+           , T_INVENTORY.ITEM_CD
+           , T_INVENTORY.LAST_UPD_DATE
+           , M_ITEM.ITEM_CLASS_L
+           , M_ITEM.ITEM_CLASS_M
+           , M_ITEM.ITEM_CLASS_S
+           , M_ITEM.COMPANY_CD AS ITEM_COMPANY_CD
+           , M_ITEM.KATASHIKI
+           , M_ITEM.MANUFACT_CD
+           , M_ITEM.UNIT_CD
+           , COALESCE(T_INVENTORY.START_STOCK_VOL, 0) AS START_STOCK_VOL
+           ,(CASE WHEN T_INVENTORY_MNG.INV_STATUS_IND IN (
+                    '${@fw.common.options.stock.constant.CodeNameConstantForStock@INV_STATUS_IND_SETTLE_END}'
+                  , '${@fw.common.options.stock.constant.CodeNameConstantForStock@INV_STATUS_IND_SETTLE_CANCELLING}'
+                  )
+                  THEN COALESCE(T_INVENTORY.INPUT_STOCK_VOL, 0)
+                  ELSE COALESCE(T_STOCK.STOCK_VOL, 0)
+             END) AS INPUT_STOCK_VOL
+           ,(CASE WHEN T_INVENTORY_MNG.INV_STATUS_IND IN (
+                    '${@fw.common.options.stock.constant.CodeNameConstantForStock@INV_STATUS_IND_SETTLE_END}'
+                  , '${@fw.common.options.stock.constant.CodeNameConstantForStock@INV_STATUS_IND_SETTLE_CANCELLING}'
+                  )
+                  THEN NULL
+                  ELSE COALESCE(
+                        (SELECT SUM(V_STRG_SHIP_RESULTS.STRG_SHIP_VOL)
+                           FROM V_STRG_SHIP_RESULTS
+                          WHERE T_INVENTORY.COMPANY_CD       = V_STRG_SHIP_RESULTS.COMPANY_CD
+                            AND T_INVENTORY.SECTION_PLACE_CD = V_STRG_SHIP_RESULTS.SECTION_PLACE_CD
+                            AND T_INVENTORY.STOCK_PLACE_CD   = V_STRG_SHIP_RESULTS.STOCK_PLACE_CD
+                            AND T_INVENTORY.ITEM_CD          = V_STRG_SHIP_RESULTS.ITEM_CD
+                            AND T_INVENTORY.INV_YEAR_MONTH &lt; V_STRG_SHIP_RESULTS.INV_YEAR_MONTH
+                       ), 0)
+             END) AS NEXT_MONTH_STOCK_VOL
+           , COALESCE(
+              (SELECT COUNT(1)
+                 FROM V_STRG_SHIP_RESULTS
+                WHERE T_INVENTORY.COMPANY_CD       = V_STRG_SHIP_RESULTS.COMPANY_CD
+                  AND T_INVENTORY.SECTION_PLACE_CD = V_STRG_SHIP_RESULTS.SECTION_PLACE_CD
+                  AND T_INVENTORY.STOCK_PLACE_CD   = V_STRG_SHIP_RESULTS.STOCK_PLACE_CD
+                  AND T_INVENTORY.INV_YEAR_MONTH   = V_STRG_SHIP_RESULTS.INV_YEAR_MONTH
+                  AND T_INVENTORY.ITEM_CD          = V_STRG_SHIP_RESULTS.ITEM_CD
+                  AND T_INVENTORY.INPUT_INV_DATE &lt; V_STRG_SHIP_RESULTS.REG_DATE
+                  AND V_STRG_SHIP_RESULTS.SETTLE_INV_IND = '${@fw.common.options.stock.constant.CodeNameConstantForStock@SETTLE_INV_IND_NORMAL}'
+             ), 0) AS GEN_INV_COUNT_AFTER_INPUTTED
+           , T_INVENTORY.INVENTORY_VOL AS INVENTORY_VOL
+           , T_INVENTORY_MNG.START_INV_DATE
+           , T_INVENTORY.INPUT_INV_DATE
+           , T_INVENTORY_MNG.SETTLE_INV_DATE
+           , M_COMPANY_LANG.COMPANY_NAME
+           , M_SECTION_PLACE_LANG.SECTION_PLACE_NAME
+           , M_STOCK_PLACE_LANG.STOCK_PLACE_NAME
+           , M_ITEM_CLASS_L_LANG.ITEM_CLASS_NAME AS ITEM_CLASS_L_NAME
+           , M_ITEM_CLASS_M_LANG.ITEM_CLASS_NAME AS ITEM_CLASS_M_NAME
+           , M_ITEM_CLASS_S_LANG.ITEM_CLASS_NAME AS ITEM_CLASS_S_NAME
+           , M_ITEM_LANG.ITEM_NAME
+           , M_MANUFACT_LANG.MANUFACT_NAME
+           , M_UNIT_NAME_LANG.UNIT_NAME
+           , T_INVENTORY_MNG.LAST_UPD_DATE AS INVENTORY_MNG_LAST_UPD_DATE
+        FROM T_INVENTORY
+       INNER JOIN T_INVENTORY_MNG
+          ON T_INVENTORY.COMPANY_CD       = T_INVENTORY_MNG.COMPANY_CD
+         AND T_INVENTORY.SECTION_PLACE_CD = T_INVENTORY_MNG.SECTION_PLACE_CD
+         AND T_INVENTORY.STOCK_PLACE_CD   = T_INVENTORY_MNG.STOCK_PLACE_CD
+         AND T_INVENTORY.INV_YEAR_MONTH   = T_INVENTORY_MNG.INV_YEAR_MONTH
+       INNER JOIN M_COMPANY
+          ON T_INVENTORY.COMPANY_CD = M_COMPANY.COMPANY_CD
+        LEFT OUTER JOIN T_STOCK
+          ON T_INVENTORY.COMPANY_CD       = T_STOCK.COMPANY_CD
+         AND T_INVENTORY.SECTION_PLACE_CD = T_STOCK.SECTION_PLACE_CD
+         AND T_INVENTORY.STOCK_PLACE_CD   = T_STOCK.STOCK_PLACE_CD
+         AND T_INVENTORY.ITEM_CD          = T_STOCK.ITEM_CD
+        LEFT OUTER JOIN M_COMPANY_LANG
+          ON M_COMPANY.COMPANY_CD         = M_COMPANY_LANG.COMPANY_CD
+         AND M_COMPANY_LANG.LANGUAGE_IND  = '${@fw.security.SecurityUtil@getCompanyUseLanguageIndByEscapeSql()}'
+        LEFT OUTER JOIN M_SECTION_PLACE_LANG
+          ON T_INVENTORY.COMPANY_CD       = M_SECTION_PLACE_LANG.COMPANY_CD
+         AND T_INVENTORY.SECTION_PLACE_CD = M_SECTION_PLACE_LANG.SECTION_PLACE_CD
+         AND M_COMPANY_LANG.LANGUAGE_IND  = M_SECTION_PLACE_LANG.LANGUAGE_IND
+        LEFT OUTER JOIN M_STOCK_PLACE_LANG
+          ON T_INVENTORY.COMPANY_CD       = M_STOCK_PLACE_LANG.COMPANY_CD
+         AND T_INVENTORY.SECTION_PLACE_CD = M_STOCK_PLACE_LANG.SECTION_PLACE_CD
+         AND T_INVENTORY.STOCK_PLACE_CD   = M_STOCK_PLACE_LANG.STOCK_PLACE_CD
+         AND M_COMPANY_LANG.LANGUAGE_IND  = M_STOCK_PLACE_LANG.LANGUAGE_IND 
+        LEFT OUTER JOIN M_ITEM
+          ON T_INVENTORY.COMPANY_CD       = M_ITEM.COMPANY_CD
+         AND T_INVENTORY.ITEM_CD          = M_ITEM.ITEM_CD
+        LEFT OUTER JOIN M_ITEM_LANG
+          ON M_ITEM.COMPANY_CD            = M_ITEM_LANG.COMPANY_CD
+         AND M_ITEM.ITEM_CD               = M_ITEM_LANG.ITEM_CD
+         AND M_COMPANY_LANG.LANGUAGE_IND  = M_ITEM_LANG.LANGUAGE_IND
+        LEFT OUTER JOIN M_MANUFACT_LANG
+          ON M_ITEM.MANUFACT_CD           = M_MANUFACT_LANG.MANUFACT_CD
+         AND M_COMPANY_LANG.LANGUAGE_IND  = M_MANUFACT_LANG.LANGUAGE_IND
+        LEFT OUTER JOIN M_UNIT_NAME_LANG
+          ON M_ITEM.UNIT_CD               = M_UNIT_NAME_LANG.UNIT_CD
+         AND M_COMPANY_LANG.LANGUAGE_IND  = M_UNIT_NAME_LANG.LANGUAGE_IND
+        LEFT OUTER JOIN M_ITEM_CLASS_LANG M_ITEM_CLASS_L_LANG
+          ON M_ITEM.ITEM_CLASS_L              = M_ITEM_CLASS_L_LANG.ITEM_CLASS_L
+         AND M_ITEM_CLASS_L_LANG.ITEM_CLASS_M = ' '
+         AND M_ITEM_CLASS_L_LANG.ITEM_CLASS_S = ' '
+         AND M_COMPANY_LANG.LANGUAGE_IND      = M_ITEM_CLASS_L_LANG.LANGUAGE_IND
+        LEFT OUTER JOIN M_ITEM_CLASS_LANG M_ITEM_CLASS_M_LANG
+          ON M_ITEM.ITEM_CLASS_L              = M_ITEM_CLASS_M_LANG.ITEM_CLASS_L
+         AND M_ITEM.ITEM_CLASS_M              = M_ITEM_CLASS_M_LANG.ITEM_CLASS_M
+         AND M_ITEM_CLASS_M_LANG.ITEM_CLASS_S = ' '
+         AND M_COMPANY_LANG.LANGUAGE_IND      = M_ITEM_CLASS_M_LANG.LANGUAGE_IND
+        LEFT OUTER JOIN M_ITEM_CLASS_LANG M_ITEM_CLASS_S_LANG
+          ON M_ITEM.ITEM_CLASS_L          = M_ITEM_CLASS_S_LANG.ITEM_CLASS_L
+         AND M_ITEM.ITEM_CLASS_M          = M_ITEM_CLASS_S_LANG.ITEM_CLASS_M
+         AND M_ITEM.ITEM_CLASS_S          = M_ITEM_CLASS_S_LANG.ITEM_CLASS_S
+         AND M_COMPANY_LANG.LANGUAGE_IND  = M_ITEM_CLASS_S_LANG.LANGUAGE_IND
+    </sql>
+
+    <resultMap id="identity_Map" type="fw.domain.options.stock.inv.inventoryresults.InventoryResultsIdentify">
+        <id column="COMPANY_CD"       property="companyCd" />
+        <id column="SECTION_PLACE_CD" property="sectionPlaceCd" />
+        <id column="STOCK_PLACE_CD"   property="stockPlaceCd" />
+        <id column="INV_YEAR_MONTH"   property="invYearMonth.dateOfym" />
+        <id column="ITEM_CD"          property="itemCd" />
+        <id column="LAST_UPD_DATE"    property="lastUpdDate" />
+    </resultMap>
+
+    <resultMap id="item_Map" type="fw.domain.options.stock.inv.inventoryresults.InventoryResultsItem">
+        <id column="COMPANY_CD"       property="inventoryResultsIdentify.companyCd" />
+        <id column="SECTION_PLACE_CD" property="inventoryResultsIdentify.sectionPlaceCd" />
+        <id column="STOCK_PLACE_CD"   property="inventoryResultsIdentify.stockPlaceCd" />
+        <id column="INV_YEAR_MONTH"   property="inventoryResultsIdentify.invYearMonth.dateOfym" />
+        <id column="ITEM_CD"          property="inventoryResultsIdentify.itemCd" />
+        <id column="LAST_UPD_DATE"    property="inventoryResultsIdentify.lastUpdDate" />
+        <id column="COMPANY_NAME"          property="companyName" />
+        <id column="SECTION_PLACE_NAME"    property="sectionPlaceName" />
+        <id column="STOCK_PLACE_NAME"      property="stockPlaceName" />
+        <id column="ITEM_CLASS_L"          property="itemClassL" />
+        <id column="ITEM_CLASS_L_NAME"     property="itemClassLName" />
+        <id column="ITEM_CLASS_M"          property="itemClassM" />
+        <id column="ITEM_CLASS_M_NAME"     property="itemClassMName" />
+        <id column="ITEM_CLASS_S"          property="itemClassS" />
+        <id column="ITEM_CLASS_S_NAME"     property="itemClassSName" />
+        <id column="ITEM_COMPANY_CD"       property="itemCompanyCd" />
+        <id column="ITEM_NAME"             property="itemName" />
+        <id column="KATASHIKI"             property="katashiki" />
+        <id column="MANUFACT_CD"           property="manufactCd" />
+        <id column="MANUFACT_NAME"         property="manufactName" />
+        <id column="UNIT_CD"               property="unitCd" />
+        <id column="UNIT_NAME"             property="unitName" />
+        <id column="START_STOCK_VOL"       property="startStockVol.vol" />
+        <id column="INPUT_STOCK_VOL"       property="inputStockVol.vol" />
+        <id column="NEXT_MONTH_STOCK_VOL"  property="nextMonthStockVol.vol" />
+        <id column="INVENTORY_VOL"         property="inventoryVol.vol" />
+        <id column="INVENTORY_VOL"         property="beforeInventoryVol.vol" />
+        <id column="START_INV_DATE"        property="startInvDate.dateOfymd" />
+        <id column="INPUT_INV_DATE"        property="inputInvDate.dateOfymd" />
+        <id column="SETTLE_INV_DATE"       property="settleInvDate.dateOfymd" />
+        <id column="GEN_INV_COUNT_AFTER_INPUTTED" property="generatedInventoryCountAfterInputted" />
+        <id column="INVENTORY_MNG_LAST_UPD_DATE"  property="inventoryMngLastUpdDate" />
+    </resultMap>
+
+    <select id="listKeyIdentity" parameterType="fw.domain.options.stock.inv.inventoryresults.InventoryResultsSearchCondition" resultMap="identity_Map">
+      SELECT T_INVENTORY.COMPANY_CD
+           , T_INVENTORY.SECTION_PLACE_CD
+           , T_INVENTORY.STOCK_PLACE_CD
+           , T_INVENTORY.INV_YEAR_MONTH
+           , T_INVENTORY.ITEM_CD
+        FROM(<include refid="listSql"/>) T_INVENTORY
+        <where>
+            <include refid="listKeyIdentityWhereCondition"/>
+        </where>
+    ORDER BY ${searchCondition.columnOrder.columnOrder()}
+    </select>
+
+    <select id="listPageItem" parameterType="fw.domain.options.stock.inv.inventoryresults.InventoryResultsSearchCondition" resultMap="item_Map">
+      SELECT *
+        FROM(<include refid="listSql"/>) T_INVENTORY
+        <where>
+            (T_INVENTORY.COMPANY_CD
+           , T_INVENTORY.SECTION_PLACE_CD
+           , T_INVENTORY.STOCK_PLACE_CD
+           , T_INVENTORY.INV_YEAR_MONTH
+           , T_INVENTORY.ITEM_CD) IN
+        <foreach collection="searchCondition.page.keyDomainEntityList" item="keyList" open="(" separator="," close=")">
+            (#{keyList.companyCd, jdbcType=VARCHAR}
+           , #{keyList.sectionPlaceCd, jdbcType=VARCHAR}
+           , #{keyList.stockPlaceCd, jdbcType=VARCHAR}
+           , #{keyList.invYearMonth.dateOfym, jdbcType=VARCHAR}
+           , #{keyList.itemCd, jdbcType=VARCHAR})
+        </foreach>
+            <include refid="listKeyIdentityWhereCondition"/>
+        </where>
+    ORDER BY ${searchCondition.columnOrder.columnOrder()}
+    </select>
+
+    <select id="download" parameterType="fw.domain.options.stock.inv.inventoryresults.InventoryResultsSearchCondition" resultMap="item_Map">
+      SELECT * FROM(
+      SELECT *
+        FROM(<include refid="listSql"/>) T_INVENTORY
+        <where>
+            <include refid="listKeyIdentityWhereCondition"/>
+        </where>
+    ORDER BY ${searchCondition.columnOrder.columnOrder()}
+      )WHERE ROWNUM &lt;= ${@fw.common.util.PropertiesUtil@getLong("DOWNLOAD_MAXCNT")}
+    </select>
+
+    <select id="downloadCount" parameterType="fw.domain.options.stock.inv.inventoryresults.InventoryResultsSearchCondition" resultType="java.lang.Long">
+      SELECT COUNT(*)
+        FROM(<include refid="listSql"/>) T_INVENTORY
+        <where>
+            <include refid="listKeyIdentityWhereCondition"/>
+        </where>
+    </select>
+
+    <insert id="insert" parameterType="fw.domain.options.stock.inv.inventoryresults.InventoryResultsManagement">
+      INSERT INTO T_INVENTORY (
+        COMPANY_CD
+      , SECTION_PLACE_CD
+      , STOCK_PLACE_CD
+      , INV_YEAR_MONTH
+      , ITEM_CD
+      , START_STOCK_VOL
+      , INPUT_STOCK_VOL
+      , INVENTORY_VOL
+      , UNIT_CD
+      , INPUT_INV_DATE
+      , AUTO_DELETE_FLG
+      , AUTO_DELETE_DATE
+      , LAST_UPD_DATE
+      , LAST_UPD_COMPANY_CD
+      , LAST_UPD_SECTION_CD
+      , LAST_UPD_USER_ID
+      , REG_DATE
+      , REG_COMPANY_CD
+      , REG_SECTION_CD
+      , REG_USER_ID
+      ) VALUES (
+        #{inventoryResultsIdentify.companyCd, jdbcType=VARCHAR}
+      , #{inventoryResultsIdentify.sectionPlaceCd, jdbcType=VARCHAR}
+      , #{inventoryResultsIdentify.stockPlaceCd, jdbcType=VARCHAR}
+      , #{inventoryResultsIdentify.invYearMonth.dateOfym, jdbcType=VARCHAR}
+      , #{inventoryResultsIdentify.itemCd, jdbcType=VARCHAR}
+      , #{startStockVol.vol, jdbcType=NUMERIC}
+      , #{inputStockVol.vol, jdbcType=NUMERIC}
+      , #{inventoryVol.vol, jdbcType=NUMERIC}
+      , #{item.unit.unitCd, jdbcType=VARCHAR}
+      , '${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}'
+      , '0'
+      , NULL
+      , '${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}'
+      , '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}'
+      , '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}'
+      , '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}'
+      , '${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}'
+      , '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}'
+      , '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}'
+      , '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}'
+      )
+    </insert>
+
+    <update id="update" parameterType="fw.domain.options.stock.inv.inventoryresults.InventoryResultsManagement">
+      UPDATE T_INVENTORY SET 
+        INPUT_INV_DATE  = '${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}'
+      , INPUT_STOCK_VOL = #{inputStockVol.vol, jdbcType=NUMERIC}
+      , INVENTORY_VOL   = #{inventoryVol.vol, jdbcType=NUMERIC}
+      , LAST_UPD_DATE       = '${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}'
+      , LAST_UPD_COMPANY_CD = '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}'
+      , LAST_UPD_SECTION_CD = '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}'
+      , LAST_UPD_USER_ID    = '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}'
+       WHERE COMPANY_CD       = #{inventoryResultsIdentify.companyCd, jdbcType=VARCHAR}
+         AND SECTION_PLACE_CD = #{inventoryResultsIdentify.sectionPlaceCd, jdbcType=VARCHAR}
+         AND STOCK_PLACE_CD   = #{inventoryResultsIdentify.stockPlaceCd, jdbcType=VARCHAR}
+         AND INV_YEAR_MONTH   = #{inventoryResultsIdentify.invYearMonth.dateOfym, jdbcType=VARCHAR}
+         AND ITEM_CD          = #{inventoryResultsIdentify.itemCd, jdbcType=VARCHAR}
+    </update>
+
+    <select id="searchIdentify" parameterType="fw.domain.options.stock.inv.inventoryresults.InventoryResultsIdentify" resultMap="identity_Map">
+      SELECT COMPANY_CD
+           , SECTION_PLACE_CD
+           , STOCK_PLACE_CD
+           , INV_YEAR_MONTH
+           , ITEM_CD
+           , LAST_UPD_DATE
+        FROM T_INVENTORY
+       WHERE COMPANY_CD       = #{companyCd, jdbcType=VARCHAR}
+         AND SECTION_PLACE_CD = #{sectionPlaceCd, jdbcType=VARCHAR}
+         AND STOCK_PLACE_CD   = #{stockPlaceCd, jdbcType=VARCHAR}
+         AND INV_YEAR_MONTH   = #{invYearMonth.dateOfym, jdbcType=VARCHAR}
+         AND ITEM_CD          = #{itemCd, jdbcType=VARCHAR}
+    </select>
+
+    <resultMap id="mngIdentity_Map" type="fw.domain.options.stock.inv.InventoryMngIdentify">
+        <id column="COMPANY_CD"       property="companyCd" />
+        <id column="SECTION_PLACE_CD" property="sectionPlaceCd" />
+        <id column="STOCK_PLACE_CD"   property="stockPlaceCd" />
+        <id column="INV_YEAR_MONTH"   property="invYearMonth.dateOfym" />
+        <id column="LAST_UPD_DATE"    property="lastUpdDate" />
+    </resultMap>
+
+    <select id="searchMngIdentify" parameterType="fw.domain.options.stock.inv.InventoryMngIdentify" resultMap="mngIdentity_Map">
+      SELECT COMPANY_CD
+           , SECTION_PLACE_CD
+           , STOCK_PLACE_CD
+           , INV_YEAR_MONTH
+           , LAST_UPD_DATE
+        FROM T_INVENTORY_MNG
+       WHERE COMPANY_CD       = #{companyCd, jdbcType=VARCHAR}
+         AND SECTION_PLACE_CD = #{sectionPlaceCd, jdbcType=VARCHAR}
+         AND STOCK_PLACE_CD   = #{stockPlaceCd, jdbcType=VARCHAR}
+         AND INV_YEAR_MONTH   = #{invYearMonth.dateOfym, jdbcType=VARCHAR}
+    </select>
+
+</mapper>

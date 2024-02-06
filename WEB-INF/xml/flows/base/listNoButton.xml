@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<flow xmlns="http://www.springframework.org/schema/webflow"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.springframework.org/schema/webflow
+        http://www.springframework.org/schema/webflow/spring-webflow-2.0.xsd"
+    abstract="true"
+    start-state="isSearchByKey"
+    parent="base">
+    
+    <input name="searchCondition" />
+    <input name="isCurrentPageSearch" />
+
+    <decision-state id="isSearchByKey">
+       <if test="flowScope.isCurrentPageSearch" then="searchByKey" else="searchByCondition" />
+    </decision-state>
+    
+    <action-state id="searchByCondition">
+        <evaluate expression="listInitService.listInit(searchCondition)" result="flowScope.itemList" />
+    </action-state>
+
+    <action-state  id="searchByKey">
+        <evaluate expression="listSplitService.listSplit(searchCondition)" result="flowScope.itemList" />
+    </action-state>
+
+    <view-state id="list" model="identify">
+        <transition on="order" validate="false">
+            <evaluate expression="listSortService.listSort(searchCondition)"
+                result="flowScope.itemList" />
+        </transition>
+        <transition on="page" validate="false">
+            <evaluate expression="listSplitService.listSplit(searchCondition)"
+                result="flowScope.itemList" />
+        </transition>
+        <transition on="back" to="home" validate="false" />
+    </view-state>
+
+</flow>

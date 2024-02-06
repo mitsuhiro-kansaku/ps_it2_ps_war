@@ -1,0 +1,452 @@
+<!doctype html>
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="ja" lang="ja">
+<head>
+<title>
+    #if($!{patternName} == 'Input')
+        #customSpringMessage('INSPECT_INPUT')
+    #elseif($!{patternName} == 'Change')
+        #customSpringMessage('INSPECT_CHANGE')
+    #elseif($!{patternName} == 'Cancel')
+        #customSpringMessage('INSPECT_CANCELL')
+    #elseif($!{patternName} == 'Correct')
+        #customSpringMessage('INSPECT_CORRECT')
+    #end
+</title>
+<meta http-equiv="Content-type" content="text/html; charset=UTF-8">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Content-script-type" content="text/javascript">
+<link id="CSS_FONT" rel="stylesheet" href="../../include/FontS.css" type="text/css">
+<link rel="stylesheet" href="../../include/searchbox.css" type="text/css">
+<link rel="stylesheet" href="../../include/Layout.css" type="text/css">
+<link rel="stylesheet" href="../../include/Color.css" type="text/css">
+<link rel="stylesheet" href="../../include/ime.css" type="text/css">
+<script language="javascript" type="text/javascript" src="../../include/common.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/check.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/date.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/searchbox.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/jquery-1.7.2.min.js"></script>
+<script language="javascript" type="text/javascript">
+#set($isActiveProfileStock = "#isActiveProfile('stock')")
+#parse("./common/common_js.vm")
+#if($!{patternName} == 'Input')
+    #set($commonTitle = "#customSpringMessage('INSPECT_INPUT')")
+#elseif($!{patternName} == 'Change')
+    #set($commonTitle = "#customSpringMessage('INSPECT_CHANGE')")
+#elseif($!{patternName} == 'Cancel')
+    #set($commonTitle = "#customSpringMessage('INSPECT_CANCELL')")
+#elseif($!{patternName} == 'Correct')
+    #set($commonTitle = "#customSpringMessage('INSPECT_CORRECT')")
+#end
+var isClickable = false;
+function onLoad() {
+    setFocusForInput();
+    top.document.title = "#jsEscape($commonTitle)";
+    setAppRouteByAmount('4',
+                        '#jsEscape($!domain.inspect.order.accounting.orderAmount.orderAmount.amount)',
+                        '#jsEscape($!domain.inspect.order.supplierFrom.currency.currencyCd)');
+    setAppRouteName();
+    var alertMessage = "$!alertMessage";
+	#set( $receive = "#customSpringMessage('INSPECTION')" )
+    if (alertMessage != "") {
+        alert(alertMessage);
+    }   
+    var errorMsg = "$!errorMessage";
+    if (errorMsg != "") {
+        document.getElementById("TR_ERROR").style.display = "";
+        isClickable = true;
+         return;
+    }
+    #if($!isSuccess == 'true')
+        #if($!patternName == 'Cancel')
+            alert('#customMessageArgs("I035",[$receive])');
+        #else
+            alert('#customMessageArgs("I002",[$receive])');
+        #end
+        buttonDisable();
+        top.iframeChange("${flowExecutionUrl}&_eventId=returnList");
+        return;
+    #end
+    
+    isClickable = true;
+}
+/** 申請 **/
+function apply() {
+    if(!isClickable) {
+        return;
+    }
+    #set( $inspectMsg = "#customSpringMessage('INSPECTION')" )
+    #set( $registerMsg = "#customSpringMessage('ACTION_REGISTER')" )
+    #set( $changeMsg = "#customSpringMessage('CHANGE_BUTTON')" )
+    #set( $cancelMsg = "#customSpringMessage('ACTION_CANCEL')" )
+    var patternName = "#jsEscape($!{patternName})";
+    if (patternName == "Input") {
+        if( !confirm('#customMessageArgs("W001", [$inspectMsg, $registerMsg])') ) {
+            return;
+        }
+    } else if (patternName == "Change") {
+        if( !confirm('#customMessageArgs("W001", [$inspectMsg, $changeMsg])') ) {
+            return;
+        }
+    } else if (patternName == "Cancel") {
+        if( !confirm('#customMessageArgs("W001", [$inspectMsg, $cancelMsg])') ) {
+            return;
+        }
+    } else {
+        return;
+    }
+    buttonDisable();
+    getObj("Body").action = "${flowExecutionUrl}&_eventId=apply";
+    getObj("Body").submit();
+}
+/** 再申請 **/
+function applyAgain() {
+    if(!isClickable) {
+        return;
+    }
+    #set( $inspectMsg = "#customSpringMessage('INSPECTION')" )
+    #set( $registerMsg = "#customSpringMessage('ACTION_REGISTER')" )
+    if( !confirm('#customMessageArgs("W001", [$inspectMsg, $registerMsg])') ) {
+        return;
+    }
+    buttonDisable();
+    getObj("Body").action = "${flowExecutionUrl}&_eventId=applyAgain";
+    getObj("Body").submit();
+}
+</script>
+</head>
+<body class="CreateArea" onload="onLoad();">
+<form id="Body"  name="Body" width="680" method="post" enctype="multipart/form-data">
+    <table class="HomeBox">
+        <tr>
+            <td class="BoxCreateSlip">
+                <iframe id="CALENDARBOX" class="CALENDARBOX" framespacing="0" scrolling="no" frameborder="0" src="../../sbxCalendar/body.vm"></iframe>
+                <table width="700">
+                    <tr>
+                        <td align="left">
+                            <!-- ＊＊＊＊＊＊＊＊＊＊左サイド＊＊＊＊＊＊＊＊＊＊ -->
+                            <table class="NoBorder" width="100%">
+                                <tr>
+                                    <td>
+                                        <u><img src="../../image/mrkCircle.gif">
+                                            <span id="StepTitle" class="FontStepTitle">
+                                                #if($!{patternName} == 'Input')
+                                                    #customSpringMessage('INSPECT_INPUT')
+                                                #elseif($!{patternName} == 'Change')
+                                                    #customSpringMessage('INSPECT_CHANGE')
+                                                #elseif($!{patternName} == 'Cancel')
+                                                    #customSpringMessage('INSPECT_CANCELL')
+                                                #elseif($!{patternName} == 'Correct')
+                                                    #customSpringMessage('INSPECT_CORRECT')
+                                                #end
+                                            </span>
+                                        </u>
+                                        <br><br>
+                                        <span id="ReqNo" class="FontSmallBold DarkBlue">#customSpringMessage('PSTST020_HEADER_COMMENT') </span> ## 必要な項目と承認ルートを選択して、申請してください。
+                                    <br><br>
+                                    </td>
+                                    <td align="right" valign="middle" id="Submit1">
+                                        #if($!{patternName} == 'Correct')
+                                            <input type="button" class="LargeButton" value="#customSpringMessage('RE_REQ')" onclick="applyAgain();">
+                                        #else
+                                            <input type="button" class="LargeButton" value="#customSpringMessage('REQ')" onclick="apply();">
+                                        #end
+                                    </td>
+                                </tr>
+                                 <tr id ="TR_ERROR" style="display:none;"><td class="error" style="height:0px;">
+                                    $!errorMessage
+                                </td></tr>
+                            </table>
+                            <!-- ＊＊＊＊＊＊＊＊＊＊１番目の四角＊＊＊＊＊＊＊＊＊＊ -->
+                            $!PSTST020PageCreater.build('upd','_tr_style','','_td_style_left','nowrap class="Box1H FontBoxHeader"','_td_style_right','nowrap class="Box1D FontSmallAnk"', '_label_style', 'FontSmallAnk')
+                            <table class="NoBorder" width="100%">
+                                <tbody class="Box1G">
+                                    <tr>
+                                        <td nowrap class="Box1H FontBoxHeader">#customSpringMessage('DELIV_KEY_NO')<!--納品キー番号--></td>
+                                        <td nowrap class="Box1D FontSmallAnk">
+                                            <span class="FontSlipNo">
+                                                #out($!{domain.inspect.delivKeyNo.delivKeyNo})
+                                            </span>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td nowrap class="Box1H FontBoxHeader">#customSpringMessage('TITLE_NAME')<!--件名--></td>
+                                        <td nowrap class="Box1D FontSmallAnk">#out($!{domain.inspect.order.titleName.titleName})</td>
+                                    </tr>
+                                    <tr>
+                                        <td nowrap class="Box1H FontBoxHeader">#customSpringMessage('DELIVERY_PLACE')<!--納入先--></td>
+                                        <td nowrap class="Box1D FontSmallAnk">
+                                            #out($!{domain.inspect.order.complement.delivPlace.delivPlaceCd})
+                                            #out($!{domain.inspect.order.complement.delivPlace.delivPlaceName})
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td nowrap class="Box1H FontBoxHeader">#customSpringMessage('ITEM_CD')<!--品名コード--></td>
+                                        <td nowrap class="Box1D FontSmallAnk">#out($!{domain.inspect.order.accounting.orderItem.item.itemCd})</td>
+                                    </tr>
+                                    <tr>
+                                        <td nowrap class="Box1H FontBoxHeader">#customSpringMessage('ITEM_NAME')<!--品名--></td>
+                                        <td nowrap class="Box1D FontSmallAnk">#out($!{domain.inspect.order.accounting.orderItem.item.itemName})</td>
+                                    </tr>
+                                    <tr>
+                                        <td nowrap class="Box1H FontBoxHeader">#customSpringMessage('KATASHIKI')<!--型式--></td>
+                                        <td nowrap class="Box1D FontSmallAnk">#out($!{domain.inspect.order.accounting.orderItem.item.katashiki})</td>
+                                    </tr>
+                                    <tr>
+                                        <td nowrap class="Box1H FontBoxHeader">#customSpringMessage('MANUFACT')<!--メーカー--></td>
+                                        <td nowrap class="Box1D FontSmallAnk">
+                                            #out($!{domain.inspect.order.accounting.orderItem.item.manufact.manufactCd})
+                                            #out($!{domain.inspect.order.accounting.orderItem.item.manufact.manufactName})
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td nowrap class="Box1H FontBoxHeader">#customSpringMessage('ORDER_DATE')<!--注文日--></td>
+                                        <td nowrap class="Box1D FontSmallAnk">#out($!{domain.inspect.order.schedule.orderDate.orderDate.dateOfymdFormat})</td>
+                                    </tr>
+                                    <tr>
+                                        <td nowrap class="Box1H FontBoxHeader">#customSpringMessage('DELIV_DATE')<!--納期--></td>
+                                        <td nowrap class="Box1D FontSmallAnk">#out($!{domain.inspect.order.schedule.dlvEst.dlvEst.dateOfymdFormat})</td>
+                                    </tr>
+                                    <tr>
+                                        <td nowrap class="Box1H FontBoxHeader">#customSpringMessage('CURRENCY_CD')<!--通貨コード--></td>
+                                        <td nowrap class="Box1D FontSmallAnk">#out($!{domain.inspect.order.supplierFrom.currency.currencyCd})</td>
+                                    </tr>
+                                    <tr>
+                                        <td nowrap class="Box1H FontBoxHeader">#customSpringMessage('UNIT_PRICE')<!--単価--></td>
+                                        <td nowrap class="Box1D ">
+                                            <span class="FontCurrSmall FontBigAnkBold">
+                                                #out($!{domain.inspect.order.supplierFrom.currency.currencyMark})&nbsp;
+                                                #out($!{domain.inspect.order.accounting.orderAmount.unitPrice.amount.amountFormat})
+                                            </span>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td nowrap class="Box1H FontBoxHeader">#customSpringMessage('UNIT_PRICE_IND')<!--単価区分--></td>
+                                        <td nowrap class="Box1D FontSmallAnk">
+                                            #out($!{domain.inspect.order.status.priceManagement.unitPriceInd_PageValue})
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td nowrap class="Box1H FontBoxHeader">#customSpringMessage('ORDER_VOL')<!--注文数量--></td>
+                                        <td nowrap class="Box1D">
+                                            <table width="100%">
+                                                <tr>
+                                                    <td nowrap class="FontSmallAnk">
+                                                        #out($!domain.inspect.order.originVol.volFormat)
+                                                        &nbsp;
+                                                        #out($!domain.inspect.order.accounting.orderItem.item.unit.unitName)
+                                                    </td>
+                                                    #if( $!domain.inspect.order.orderCancel.orderCancelVol.vol != "" && $!domain.inspect.order.orderCancel.orderCancelVol.vol != "0" )
+                                                    <td nowrap class="FontSmallAnk" align="right">
+                                                        #customSpringMessage("ORDER_CANCEL_VOL")&nbsp;&nbsp;
+                                                        #out($!domain.inspect.order.orderCancel.orderCancelVol.volFormat)
+                                                        &nbsp;
+                                                        #out($!domain.inspect.order.accounting.orderItem.item.unit.unitName)
+                                                    </td>
+                                                    #end
+                                    </tr>
+                                            </table>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td nowrap class="Box1H FontBoxHeader">#customSpringMessage('ORDER_AMOUNT')<!--注文金額--></td>
+                                        <td nowrap class="Box1D">
+                                            <table width="100%">
+                                                <tr>
+                                                    <td class="FontCurrSmall">
+                                                        #out($!domain.inspect.order.supplierFrom.currency.currencyMark)
+                                                        #out($!domain.inspect.order.originAmount.amountFormat)
+                                                    </td>
+                                                    #if( $!domain.inspect.order.orderCancel.orderCancelAmount.amount != "" && $!domain.inspect.order.orderCancel.orderCancelAmount.amount != "0" )
+                                                    <td class="FontCurrSmall" align="right" nowrap>
+                                                        <span class="FontSmall">#customSpringMessage("ORDER_CANCEL_AMOUNT")</span>&nbsp;&nbsp;
+                                                        #out($!domain.inspect.order.supplierFrom.currency.currencyMark)
+                                                        #out($!domain.inspect.order.orderCancel.orderCancelAmount.amountFormat)
+                                                    </td>
+                                                    #end
+                                    </tr>
+                                            </table>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td nowrap class="Box1H FontBoxHeader">#customSpringMessage('SUPPLIER')<!--取引先--></td>
+                                        <td nowrap class="Box1D FontSmallAnk">
+                                            <span class="FontMiniAnk">#out($!{domain.inspect.order.supplierFrom.supCd})</span>&nbsp;
+                                            <span class="FontSmallBold">#out($!{domain.inspect.order.supplierFrom.supplierName.supplierAbbrName})</span>&nbsp;
+                                            #if ($!domain.inspect.order.supplierFrom.subcon.subconInd == '1')
+                                                <span class="FontSubcon Subcon">#out($!domain.inspect.order.supplierFrom.subcon.subconInd_PageValue)</span>
+                                            #end
+                                            #if ($!domain.inspect.order.supplierFrom.ediInd.ediInd != '')
+                                                <span class="FontSmallAnk">#out($!domain.inspect.order.supplierFrom.ediInd.ediInd_PageValue)</span>
+                                            #end
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td nowrap class="Box1H FontBoxHeader">#customSpringMessage('FOR_SUPPRIER_COMMENT')<!--取引先向けコメント--></td>
+                                        <td nowrap class="Box1D FontSmallAnk">#out($!{domain.inspect.order.orderComment.forSupplierComment.forSupplierComment.comment})</td>
+                                    </tr>
+                                    #foreach($!item in $!PSTST020PageCreater.getItemListById("extend"))
+                                        #if($!{patternName} == 'Cancel' || ($!{patternName} == 'Correct' && $!{domain.inspect.correctInd.correctInd} == '3'))
+                                            $!PSTST020PageCreater.printDefaultForCancelForDispPos(1, $!item)
+                                        #else
+                                            $!PSTST020PageCreater.PageDefaultForDispPos(1, $!item)
+                                        #end
+                                    #end
+                                </tbody>
+                                <tr><td class="NoBorder">&nbsp;</td></tr>
+                                <tbody class="Box1H FontBoxHeader ListBorderWidth">
+                                    <tr>
+                                        <td nowrap class="Box1H FontBoxHeader">#customSpringMessage('RCV_DATE')<!--受入日--></td>
+                                        <td nowrap class="Box1D FontSmallAnk">#out($!{domain.inspect.receiveResult.receiveDate.receiveDate.dateOfymdFormat})</td>
+                                    </tr>
+                                    <tr>
+                                        <td nowrap class="Box1H FontBoxHeader">#customSpringMessage('RCV_AMOUNT')<!--受入数量--></td>
+                                        <td nowrap class="Box1D FontSmallAnk">
+                                            <span>#out($!{domain.inspect.receiveResult.receiveVol.receiveVol.volFormat})</span>
+                                            <span class="FontSmall">&nbsp;#out($!{domain.inspect.receiveResult.receiveVol.unit.unitName})</span>
+                                        </td>
+                                    </tr>
+                                #if($isActiveProfileStock == "true")## 在庫オプション
+                                    <tr>
+                                        <td nowrap class="Box1H FontBoxHeader">#customSpringMessage('HAVE_IN_STOCK_FLG')<!--在庫対象--></td>
+                                        <td nowrap class="Box1D FontSmallAnk">
+                                            #out($!{domain.inspect.receiveResult.haveInStockFlg.haveInStockFlg_PageValue})
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td nowrap class="Box1H FontBoxHeader">#customSpringMessage('STOCK_PLACE')<!--在庫場所--></td>
+                                        <td nowrap class="Box1D FontSmallAnk">
+                                            #out($!{domain.inspect.receiveResult.stockPlace.stockPlaceCd})
+                                            #out($!{domain.inspect.receiveResult.stockPlace.stockPlaceName})
+                                        </td>
+                                    </tr>
+                                #end
+                                    <tr>
+                                        <td nowrap class="Box1H FontBoxHeader">#customSpringMessage('RCV_REMARK')<!--受入備考--></td>
+                                        <td class="Box1D FontSmallAnk">
+                                            #out($!{domain.inspect.receiveResult.receiveRemark.remark.comment})
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td class="Box1H FontBoxHeader" WIDTH="20%">#customSpringMessage('RCV_USER')<!--受入担当者--></td>
+                                        <td class="Box1D FontSmallAnk">
+                                            <table class="NoBorder">
+                                                <tr>
+                                                    <td valign="top" rowspan="2"><img class="Mark" src="../../image/mrkHuman.gif"></td>
+                                                    <td rowspan="2" nowrap>
+                                                        <span class="FontSmall">
+                                                            #out($!{domain.inspect.receiveResult.receiveUser.receiveUser.section.sectionCd})
+                                                            #out($!{domain.inspect.receiveResult.receiveUser.receiveUser.section.sectionName})
+                                                        </span>
+                                                        <br>
+                                                        #out($!{domain.inspect.receiveResult.receiveUser.receiveUser.userID})&nbsp;
+                                                        <span class="FontUserName"><b class="FontUserName">#out($!{domain.inspect.receiveResult.receiveUser.receiveUser.userName})</b></span>
+                                                    </td>
+                                                    <td><img class="Mark" src="../../image/mrkTel.gif"></td>
+                                                    <td class="FontMini" nowrap>
+                                                        #customSpringMessage('EXTENSION_NO')<!--内線番号：--><span class="FontSmallAnk">#out($!{domain.inspect.receiveResult.receiveUser.receiveUser.extNo.extensionNo})</span>&nbsp;&nbsp;
+                                                        #customSpringMessage('EXTERNAL_NO')<!--外線番号：--><span class="FontSmallAnk">#out($!{domain.inspect.receiveResult.receiveUser.receiveUser.externalNo.externalNo})</span>
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <td><img class="Mark" src="../../image/mrkMail.gif"></td>
+                                                    <td class="FontMiniAnkBold" nowrap>
+                                                        <span class="FontMiniAnk">
+                                                            <A HREF='mailto:#out($!{domain.inspect.receiveResult.receiveUser.receiveUser.userName})<#out($!{domain.inspect.receiveResult.receiveUser.receiveUser.mailAddr.mail})>'>#out($!{domain.inspect.receiveResult.receiveUser.receiveUser.mailAddr.mail})</A>
+                                                        </span>
+                                                    </td>
+                                                    <td align="right" valign="bottom"></td>
+                                                </tr>
+                                            </table>
+                                        </td>
+                                    </tr>
+                                    #foreach($!item in $!PSTST020PageCreater.getItemListById("extend"))
+                                        #if($!{patternName} == 'Cancel' || ($!{patternName} == 'Correct' && $!{domain.inspect.correctInd.correctInd} == '3'))
+                                            $!PSTST020PageCreater.printDefaultForCancelForDispPos(2, $!item)
+                                        #else
+                                            $!PSTST020PageCreater.PageDefaultForDispPos(2, $!item)
+                                        #end
+                                    #end
+                                </tbody>
+                                <tr><td class="NoBorder">&nbsp;</td></tr>
+                                <tbody class="Box1H FontBoxHeader ListBorderWidth">
+                                   #if($!{patternName} == 'Cancel' || ($!{patternName} == 'Correct' && $!{domain.inspect.correctInd.correctInd} == '3'))
+                                        #foreach($!item in $!PSTST020PageCreater.getItemListForBody())
+                                            #if($!item.getColumnName()=="T_INSPECT.INSPECT_DATE")
+                                                $!PSTST020PageCreater.printSpecial('s00_label',$!item)
+                                            #elseif($!item.getColumnName()=="T_INSPECT.INSPECT_PASS_QUANT")
+                                                $!PSTST020PageCreater.printSpecial("s00_label",$!item)
+                                            #elseif($!item.getColumnName()=="T_INSPECT.INSPECT_ACCOUNT")
+                                                $!PSTST020PageCreater.printSpecial("s00_label",$!item)
+                                            #elseif($!item.getColumnName()=="T_INSPECT.INSPECT_USER_ID")
+                                                $!PSTST020PageCreater.printSpecial("INSPECTION_USER",'m15_showUser',$!item)
+                                            #elseif($!item.getColumnName()=="T_INSPECT.APP_ROUTE_NO")
+                                            #else
+                                                $!PSTST020PageCreater.printDefaultForCancelForDispPos(3, $!item)
+                                           #end
+                                        #end
+                                        <script language="javascript" type="text/javascript">
+                                        function downloadExt(filename, file) {
+                                            iframeChange("${flowExecutionUrl}&_eventId=downloadext", 'filename', filename, 'file', file);
+                                        }
+                                        </script>
+                                    #else
+                                        #foreach($!item in $!PSTST020PageCreater.getItemListForBody())
+                                            #if($!item.getColumnName()=="T_INSPECT.INSPECT_DATE")
+                                                $!PSTST020PageCreater.printDefault($!item)
+                                            #elseif($!item.getColumnName()=="T_INSPECT.INSPECT_PASS_QUANT")
+                                                $!PSTST020PageCreater.printSpecial("s21_volUnit",$!item,'_item_style','SmallRightDsp')
+                                            #elseif($!item.getColumnName()=="T_INSPECT.INSPECT_ACCOUNT")
+                                                $!PSTST020PageCreater.printDefault($!item)
+                                            #elseif($!item.getColumnName()=="T_INSPECT.INSPECT_USER_ID")
+                                                 #if($!{patternName} != 'Input')
+                                                    $!PSTST020PageCreater.printSpecial("INSPECTION_USER",'m15_showUser',$!item)
+                                                #end
+                                            #elseif($!item.getColumnName()=="T_INSPECT.APP_ROUTE_NO")
+                                            #else
+                                                $!PSTST020PageCreater.PageDefaultForDispPos(3, $!item)
+                                            #end
+                                        #end
+                                    #end
+                                </tbody>
+                                <tr><td class="NoBorder">&nbsp;</td></tr>
+                                <tbody class="Box1H FontBoxHeader ListBorderWidth">
+                                     #foreach($!item in $!PSTST020PageCreater.getItemListForBody())
+                                         #if($!item.getColumnName()=="T_INSPECT.APP_ROUTE_NO")
+                                            $!PSTST020PageCreater.printSpecial('m02_inputAppRoute',$!item,'_voucherType','4','_item_style','class="Small" onchange="setAppRouteName();setShowButton();"','_companyCd',$!loginUserCompanyCd,'_sectionCd',$!loginUserSectionCd,'_currentAppRoute',"$!domain.inspect.inspectAppRoute.approute.appRouteNo")
+                                         #end
+                                     #end
+                                </tbody>
+                            </table>
+                            <br>
+                            <table class="NoBorder" width="98%">
+                                <tr>
+                                    <td align="left" valign="top">                                            
+                                        #customSpringMessage('PSTST020_FOOTER_COMMENT') ## ※印の項目は、必須入力です。
+                                    </td>
+                                    <td align="right" valign="middle" id="Submit3">
+                                        #if($!{patternName} == 'Correct')
+                                            <input type="button" class="LargeButton" value="#customSpringMessage('RE_REQ')" onclick="applyAgain();">
+                                        #else
+                                            <input type="button" class="LargeButton" value="#customSpringMessage('REQ')" onclick="apply();">
+                                        #end
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+</form>
+</body>
+<script language="javascript" type="text/javascript">
+    getObj("inspect.inspectResult.inspectAccount.comment").style.width="99.2%";
+    for(var i = 1; i < 6; i++){
+        if(getObj("inspect.inspectResult.editExtItem.editAreaExtItem.arrayExtItem"+i+".value")!=null && 
+            getObj("inspect.inspectResult.editExtItem.editAreaExtItem.arrayExtItem"+i+".value")!="undefined"){
+            getObj("inspect.inspectResult.editExtItem.editAreaExtItem.arrayExtItem"+i+".value").style.width="99.2%";
+        }
+    }
+</script>
+</html>

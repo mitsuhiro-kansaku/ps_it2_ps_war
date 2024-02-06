@@ -1,0 +1,133 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="ps.check.impl.business.ValidPeriodIsExistMapper">
+
+    <select id="getMasterValidPeriodCount" resultType="int">
+        SELECT 
+          COUNT(A.BUYER_COMPANY_CD)
+        FROM 
+          M_PUR_PRICE A
+        WHERE A.BUYER_COMPANY_CD = #{buyerCompanyCd}
+          AND A.BUYER_SECTION_CD = #{buyerSectionCd}
+          AND A.ITEM_CD= #{itemCd}
+          AND A.SUP_CD = #{supCd}
+          AND A.VALID_END_DATE &gt;= #{validPeriodFrom}
+          AND A.VALID_START_DATE &lt;= #{validPeriodTo}
+          AND NOT EXISTS 
+          (SELECT '1' FROM 
+            (SELECT T.BUYER_COMPANY_CD,
+                    T.BUYER_SECTION_CD,
+                    T.ITEM_CD,T.SUP_CD,
+                    T.VALID_END_DATE,
+                    T.VALID_START_DATE,
+                    T.LAST_UPD_DATE 
+             FROM
+                   M_PUR_PRICE T
+             WHERE T.BUYER_COMPANY_CD = #{buyerCompanyCd}
+              AND  T.BUYER_SECTION_CD =#{buyerSectionCd}
+              AND  T.ITEM_CD= #{itemCd}
+              AND  T.SUP_CD =#{supCd}
+              AND  T.VALID_END_DATE = #{validityPeriodEndPre}
+              AND  T.VALID_START_DATE = #{validityPeriodStartPre}) B 
+             WHERE B.VALID_END_DATE = A.VALID_END_DATE 
+               AND B.VALID_START_DATE = A.VALID_START_DATE 
+               AND B.BUYER_COMPANY_CD=A.BUYER_COMPANY_CD 
+               AND B.BUYER_SECTION_CD=A.BUYER_SECTION_CD 
+               AND B.ITEM_CD=A.ITEM_CD 
+               AND B.SUP_CD=A.SUP_CD)
+    </select>
+    
+    <select id="getValidPeriodCount" resultType="int">
+        SELECT 
+          COUNT(BUYER_COMPANY_CD)
+        FROM 
+          M_PUR_PRICE
+        WHERE BUYER_COMPANY_CD = #{buyerCompanyCd}
+          AND BUYER_SECTION_CD = #{buyerSectionCd}
+          AND ITEM_CD= #{itemCd}
+          AND SUP_CD = #{supCd}
+          AND VALID_END_DATE &gt;= #{validPeriodFrom}
+          AND VALID_START_DATE &lt;= #{validPeriodTo}
+    </select>
+    
+    <select id="getFutureValidPeriodCount" resultType="int">
+        SELECT 
+          COUNT(BUYER_COMPANY_CD)
+        FROM 
+          M_PUR_PRICE
+        WHERE BUYER_COMPANY_CD = #{buyerCompanyCd}
+          AND BUYER_SECTION_CD = #{buyerSectionCd}
+          AND ITEM_CD= #{itemCd}
+          AND SUP_CD = #{supCd}
+          <!-- 2013/05/30 DEL DAIKO_TAKEDA 
+          AND VALID_START_DATE &gt; #{validPeriodFrom}
+          -->
+          <!-- 2013/05/30 ADD DAIKO_TAKEDA -->
+          AND VALID_START_DATE &gt;= #{validPeriodFrom}
+          AND TERM_FLG = '0'
+    </select>
+   
+     <select id="getFutureValidPeriodCountPre" resultType="int">
+        SELECT 
+          COUNT(A.BUYER_COMPANY_CD)
+        FROM 
+          M_PUR_PRICE A
+        WHERE A.BUYER_COMPANY_CD = #{buyerCompanyCd}
+          AND A.BUYER_SECTION_CD = #{buyerSectionCd}
+          AND A.ITEM_CD= #{itemCd}
+          AND A.SUP_CD = #{supCd}
+          <!-- 2013/05/30 DEL DAIKO_TAKEDA 
+          AND VALID_START_DATE &gt; #{validPeriodFrom}
+          -->
+          <!-- 2013/05/30 ADD DAIKO_TAKEDA -->
+          AND VALID_START_DATE &gt;= #{validPeriodFrom}
+          AND A.TERM_FLG = '0'
+          AND NOT EXISTS
+          (SELECT '1' FROM
+	          (SELECT T.BUYER_COMPANY_CD,
+	                    T.BUYER_SECTION_CD,
+	                    T.ITEM_CD,T.SUP_CD,
+	                    T.VALID_END_DATE,
+	                    T.VALID_START_DATE,
+	                    T.LAST_UPD_DATE 
+	             FROM
+	                   M_PUR_PRICE T
+	             WHERE T.BUYER_COMPANY_CD = #{buyerCompanyCd}
+		              AND  T.BUYER_SECTION_CD =#{buyerSectionCd}
+		              AND  T.ITEM_CD= #{itemCd}
+		              AND  T.SUP_CD =#{supCd}
+		              AND  T.VALID_START_DATE = #{validPeriodFromPre}
+		              AND  T.VALID_END_DATE = #{validPeriodEndPre})B
+	        WHERE B.VALID_END_DATE = A.VALID_END_DATE 
+              AND B.VALID_START_DATE = A.VALID_START_DATE 
+              AND B.BUYER_COMPANY_CD=A.BUYER_COMPANY_CD 
+              AND B.BUYER_SECTION_CD=A.BUYER_SECTION_CD 
+              AND B.ITEM_CD=A.ITEM_CD 
+              AND B.SUP_CD=A.SUP_CD)
+	              
+    </select>
+    
+    <select id="getBuyerSupItemCount" resultType="int">
+        SELECT 
+          COUNT(BUYER_COMPANY_CD)
+        FROM 
+          M_PUR_PRICE
+        WHERE BUYER_COMPANY_CD = #{buyerCompanyCd}
+          AND BUYER_SECTION_CD = #{buyerSectionCd}
+          AND ITEM_CD= #{itemCd}
+          AND SUP_CD = #{supCd}
+    </select>
+    
+    <select id="getExternalBuyerSupItemCount" resultType="int">
+        SELECT 
+          COUNT(BUYER_COMPANY_CD)
+        FROM 
+          M_PUR_PRICE
+        WHERE BUYER_COMPANY_CD = #{buyerCompanyCd}
+          AND BUYER_SECTION_CD = #{buyerSectionCd}
+          AND SUP_CD = #{supCd}
+    </select>
+
+</mapper>

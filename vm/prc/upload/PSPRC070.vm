@@ -1,0 +1,202 @@
+<!doctype html><html xmlns="http://www.w3.org/1999/xhtml" xml:lang="ja" lang="ja">
+<html LANG="ja">
+<head>
+<META http-equiv="Content-type" content="text/html; charset=UTF-8">
+<title>#customSpringMessage('PRICE_M_PACKAGE_REGISTER')</title>## 価格マスタ一括登録 
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Content-script-type" CONTENT="text/javascript">
+<link id="CSS_FONT" rel="stylesheet" href="../../include/FontS.css" type="text/css">
+<link rel="stylesheet" href="../../include/Layout.css" type="text/css">
+<link rel="stylesheet" href="../../include/Color.css" type="text/css">
+<link rel="stylesheet" href="../../include/searchbox.css" type="text/css">
+<link rel="stylesheet" href="../../include/ime.css" type="text/css">
+<script language="javascript" type="text/javascript" src="../../include/common.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/date.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/check.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/searchbox.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/jquery-1.7.2.min.js"></script>
+<script language="javascript" type="text/javascript">
+<!--
+#parse("./common/common_js.vm")
+var isClickable = false;
+function onLoad() {
+    setShowButton();
+    setFocusForInput();
+    top.document.title = document.title;
+    changeFontSize0();
+    initAppRoute($!domain.application.approute.appRouteNo);
+    setAppRouteName();
+    setShowButton();
+    var alertMessage = "$!alertMessage";
+    if (alertMessage != ""){
+        alert(alertMessage);
+    }
+    var errorMsg = "$!errorMessage";
+    if (errorMsg != ""){
+        isClickable = true;
+        return;
+    }
+    var isShowInfo = "#jsEscape($!isShowInfo)";
+    if (isShowInfo == 'true'){
+         buttonDisable();
+         top.iframeChange("${flowExecutionUrl}&_eventId=showUploadResult");
+         return;
+    } else {
+        var errorList = "#jsEscape($!errorList)";
+        var errorSize = "#jsEscape($!errorList.size())";
+        if (errorList == "" || errorSize == "0") {
+            var isSuccess = "#jsEscape($!isSuccess)";
+            if (isSuccess == "true") {
+                #set( $mPurPrice = "#customSpringMessage('M_PRICE')" )
+                alert("#customMessageArgs('I005',[$mPurPrice])");
+                buttonDisable();
+                parent.iframeChange("${flowExecutionUrl}&_eventId=reset");
+                return;
+            }
+        }
+    }
+    isClickable = true;
+}
+function initAppRoute(currentRoute){
+        $.ajax({
+            type: "POST", 
+            async:false, 
+            url:"../../appRouteController/getAppRoute",
+            data: {
+                "approuteVoucherInd.approuteVoucherInd":'D',
+                current:currentRoute
+            },
+            success:function(data){
+                $("[id='application.approute.appRouteNo']").empty();
+                $.each(data,function(index,element){
+                    var varItem = new Option(element.text, element.value);
+                    varItem.selected = element.selected;
+                    getObj('application.approute.appRouteNo').options.add(varItem);
+                  });
+            }
+         });   
+}
+function upload() {
+    if(!isClickable) {
+        return;
+    }
+    #set( $mPurPrice = "#customSpringMessage('M_PRICE')" )
+    #set( $register = "#customSpringMessage('ACTION_REGISTER')" )
+    if( confirm('#customMessageArgs("W001",[$mPurPrice,$register])') ) {
+        buttonDisable();
+        getObj("Body").action = "${flowExecutionUrl}&_eventId=upload";
+        getObj("Body").submit();
+    }
+}
+function appRoutePopup() { 
+    var appRouteNo = getObj('application.approute.appRouteNo').value; 
+    appRouteDetailPopup.setParam('#jsEscape($!domain.application.applicant.section.company.companyCd)','#jsEscape($!domain.application.applicant.section.sectionCd)','D',appRouteNo);
+    masterSearch('../../src/apr/PSCMN030?pageid=appRouteDetailPopup','PLACESEARCHBOX','700','300');
+}
+function setAppRouteName() {
+    var selObj = getObj('application.approute.appRouteNo');
+    var index = selObj.selectedIndex;
+    if(!selObj.options[0].selected){
+        getObj('application.approute.appRouteName').value = selObj.options[index].text;
+    } else {
+        getObj('application.approute.appRouteName').value = "";
+    }
+}
+function setShowButton() {
+    var selObj = getObj('application.approute.appRouteNo');
+    if (!selObj.options[0].selected) {
+      getObj("ViewRoot").disabled = false;
+    } else {
+      getObj("ViewRoot").disabled = true;
+    }
+}
+//-->
+</script>
+<style>
+table.HomeBox {
+    background-color:#FFFFFF;
+    border: 1px solid #333333;
+    -moz-border-radius: 16px;
+    -webkit-border-radius: 16px;
+    border-radius: 16px;
+    behavior: url("../../include/ie-css3.htc");
+    zoom:1;
+    position: relative;
+    z-index:200;
+    padding:16px;
+    box-shadow: 3px 3px 0px #000000;
+    margin-left:auto;
+    margin-right:auto;
+}
+</style>
+</head>
+<body class="CreateArea" style="text-align:center;vertical-align:top;" onload="onLoad();" >
+<form name="Body" id="Body" method="post" enctype="multipart/form-data">
+    <table class="HomeBox" width="620">
+        <tr>
+            <td>
+                <table class="Base" style="width:100%;">
+                    <tr>
+                        <td align="left">
+                            <table class="NoBorder" width="98%">
+                                <tr>
+                                    <td>
+                                        <u><img src="../../image/mrkCircle.gif"><span id="StepTitle" class="FontStepTitle">#customSpringMessage('PRICE_M_PACKAGE_REGISTER')</span></u><br><br>## 価格マスタ一括登録
+                                        <span id="STEPMSG" class="FontSmallBold DarkBlue">#customSpringMessage('PSPRC070_HEADER_COMMENT')</span>
+                                        <br><br>
+                                    </td>
+                                    <td align="right" valign="middle" id="Submit1">
+                                        <input type="button" class="LargeButton" value="#customSpringMessage('ACTION_UPLOAD')" onclick="upload();">##アップロード
+                                    </td>
+                                </tr>
+                            </table>
+                            #if($!errorMessage && $!errorMessage!="")
+                            <div class="error">
+                                $!errorMessage
+                            </div>
+                            #end
+                            <table class="NoBorder" style="width:100%;">
+                                <tbody class="Box1H FontBoxHeader ListBorderWidth">
+                                    <tr>
+                                        <td nowrap class="Box1H FontBoxHeader">#customSpringMessage('APP_ROUTE')<span class="FontWarn">&nbsp;※</span>## 承認ルート
+                                        </td>
+                                        <td nowrap class="Box1D FontSmallAnk">
+                                             #customFormSingleSelect("domain.application.approute.appRouteNo" $appRouteList "class='Small' onchange='setAppRouteName();setShowButton();'")
+                                             #customFormHiddenInput("application.approute.appRouteName" "$!domain.application.approute.appRouteName")
+                                             <input type="button" id="ViewRoot" name="ViewRoot" class="SmallButton" value="#customSpringMessage('SHOW')" onclick="appRoutePopup();" disabled>##表示
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td nowrap class="Box1H FontBoxHeader">#customSpringMessage('PRC_NEW_UPLOAD_TITLE_NAME')<span class="FontWarn">&nbsp;※</span></td>## 新規価格表アップロード件名
+                                        <td nowrap class="Box1D FontSmallAnk">
+                                            #springFormInput("domain.priceMstPackageReg.titleName.titleName" "size='50' maxlength='30' class='Small onIME'")
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td nowrap class="Box1H FontBoxHeader">#customSpringMessage('UPLOAD_FILE')<span class="FontWarn">&nbsp;※</span></td>## アップロードファイル
+                                        <td nowrap class="Box1D">
+                                            #if($!domain.priceMstPackageReg.pricePackageRegTable.attachFile.fileName!='') 
+                                            <span id="filename">#out($!domain.priceMstPackageReg.pricePackageRegTable.attachFile.fileName)</span>
+                                            #end
+                                            <input type="file" class="Small" name="priceMstPackageReg.pricePackageRegTable.attachFile.screenFile" id="priceMstPackageReg.pricePackageRegTable.attachFile.screenFile" style="width:400px;">
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                            <br>
+                            <table class="NoBorder" width="100%">
+                                <tr>
+                                    <td>
+                                        #customSpringMessage("PSPRC070_FOOTER_COMMENT")
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+</form>
+</body>
+</html>

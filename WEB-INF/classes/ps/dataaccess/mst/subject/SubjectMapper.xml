@@ -1,0 +1,343 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="ps.dataaccess.mst.subject.SubjectMapper">
+
+    <!-- SRC-00115-00 include化共通-->
+    <sql id="listKeyIdentityWhereCondition">
+        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(companyCd)">
+            AND M_SUBJECT.COMPANY_CD = #{companyCd, jdbcType=VARCHAR}
+        </if>
+        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(subjectCd)">
+            AND M_SUBJECT.SUBJECT_CD ${@fw.common.util.SearchModeUtil@getSearchSQL("fw.domain.mst.material.subject.SubjectSearchCondition","subjectCd")}
+        </if>
+        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(subjectName)">
+            <!-- ＩＴ２-01494-000 20130724 SBO_SOKOU DEL START -->
+            <!-- AND subject_lang_system.SUBJECT_NAME ${@fw.common.util.SearchModeUtil@getSearchSQL("fw.domain.mst.material.subject.SubjectSearchCondition","subjectName")} -->
+            <!-- ＩＴ２-01494-000 20130724 SBO_SOKOU DEL -END- -->
+            <!-- ＩＴ２-01494-000 20130724 SBO_SOKOU ADD START -->
+            AND (subject_lang_company.SUBJECT_NAME ${@fw.common.util.SearchModeUtil@getSearchSQL("fw.domain.mst.material.subject.SubjectSearchCondition","subjectName")}
+             OR subject_lang_system.SUBJECT_NAME ${@fw.common.util.SearchModeUtil@getSearchSQL("fw.domain.mst.material.subject.SubjectSearchCondition","subjectName")})
+            <!-- ＩＴ２-01494-000 20130724 SBO_SOKOU ADD -END- -->
+        </if>
+        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(validStartDateFrom.dateOfymd)">
+            AND M_SUBJECT.VALID_START_DATE >=#{validStartDateFrom.dateOfymd}
+        </if>
+        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(validStartDateTo.dateOfymd)">
+            AND M_SUBJECT.VALID_START_DATE &lt;=#{validStartDateTo.dateOfymd} 
+        </if>
+        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(validEndDateFrom.dateOfymd)">
+            AND M_SUBJECT.VALID_END_DATE >=#{validEndDateFrom.dateOfymd}  
+        </if>
+        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(validEndDateTo.dateOfymd)">
+            AND M_SUBJECT.VALID_END_DATE &lt;=#{validEndDateTo.dateOfymd} 
+        </if>
+        <if test="@fw.domain.mst.searchcondition.SearchCondition@termFlgIsNotEmpty(searchCondition.termFlg)">
+            AND M_SUBJECT.TERM_FLG = #{searchCondition.termFlg, jdbcType=VARCHAR}
+        </if>
+    </sql>
+
+    <select id="listKeyIdentity"
+            parameterType="fw.domain.mst.material.subject.SubjectSearchCondition"
+            resultType="fw.domain.mst.material.subject.SubjectIdentify">
+        SELECT M_SUBJECT.COMPANY_CD as "companyCd",
+               M_SUBJECT.SUBJECT_CD as "subjectCd",
+               CASE WHEN subject_lang_company.SUBJECT_NAME IS NOT NULL 
+                    THEN subject_lang_company.SUBJECT_NAME
+                    ELSE subject_lang_system.SUBJECT_NAME
+                     END as subjectName
+          FROM M_SUBJECT 
+          <if test="companyCd!='ALL'">
+          LEFT JOIN M_COMPANY
+                 ON M_SUBJECT.COMPANY_CD = M_COMPANY.COMPANY_CD
+          </if>
+          LEFT JOIN M_SUBJECT_LANG subject_lang_company
+                 ON M_SUBJECT.COMPANY_CD = subject_lang_company.COMPANY_CD
+                AND M_SUBJECT.SUBJECT_CD = subject_lang_company.SUBJECT_CD
+                <if test="companyCd!='ALL'">
+                AND subject_lang_company.LANGUAGE_IND = M_COMPANY.COMPANY_USE_LANGUAGE_IND
+                AND subject_lang_company.COMPANY_CD = M_COMPANY.COMPANY_CD
+                </if>
+                <!-- ＩＴ２-01494-000 20130724 SBO_SOKOU ADD START -->
+                <if test="companyCd == 'ALL'">
+                AND subject_lang_company.LANGUAGE_IND = '${@fw.security.SecurityUtil@getCompanyUseLanguageIndByEscapeSql()}'
+                </if>
+                <!-- ＩＴ２-01494-000 20130724 SBO_SOKOU ADD -END- -->
+           LEFT JOIN M_SUBJECT_LANG subject_lang_system 
+                  ON M_SUBJECT.COMPANY_CD = subject_lang_system.COMPANY_CD
+                 AND M_SUBJECT.SUBJECT_CD = subject_lang_system.SUBJECT_CD
+                 AND subject_lang_system.LANGUAGE_IND = '${@fw.common.util.AppUtil@getSysLanguageByEscapeSql()}'
+                 <if test="companyCd!='ALL'">
+                 AND subject_lang_system.COMPANY_CD = M_COMPANY.COMPANY_CD
+                 </if>
+        <where>
+            <include refid="listKeyIdentityWhereCondition"/>
+        </where> 
+        ORDER BY ${searchCondition.columnOrder.columnOrder()}
+    </select>
+
+    <select id="listPageItem"
+            resultType="fw.domain.mst.material.subject.SubjectItem">
+        SELECT M_SUBJECT.COMPANY_CD as "subjectIdentify.companyCd",
+               M_SUBJECT.SUBJECT_CD as "subjectIdentify.subjectCd",
+               M_SUBJECT.LAST_UPD_DATE as "subjectIdentify.lastUpdDate",
+               CASE WHEN subject_lang_company.SUBJECT_NAME IS NOT NULL
+                    THEN subject_lang_company.SUBJECT_NAME
+                    ELSE subject_lang_system.SUBJECT_NAME
+                     END AS subjectName,
+               M_SUBJECT.VALID_START_DATE as "validStartDate.dateOfymd",
+               M_SUBJECT.VALID_END_DATE as "validEndDate.dateOfymd",
+               M_SUBJECT.TERM_FLG as "termFlg"
+          FROM M_SUBJECT 
+          <!-- ＩＴ２-01494-000 20130724 SBO_SOKOU ADD START -->
+          <if test="companyCd != 'ALL'">
+          <!-- ＩＴ２-01494-000 20130724 SBO_SOKOU ADD -END- -->
+          LEFT JOIN M_COMPANY
+                 ON M_SUBJECT.COMPANY_CD = M_COMPANY.COMPANY_CD
+          <!-- ＩＴ２-01494-000 20130724 SBO_SOKOU ADD START -->
+          </if>
+          <!-- ＩＴ２-01494-000 20130724 SBO_SOKOU ADD -END- -->
+          LEFT JOIN M_SUBJECT_LANG subject_lang_company
+                 ON M_SUBJECT.COMPANY_CD = subject_lang_company.COMPANY_CD
+                AND M_SUBJECT.SUBJECT_CD = subject_lang_company.SUBJECT_CD
+                <!-- ＩＴ２-01494-000 20130724 SBO_SOKOU ADD START -->
+                <if test="companyCd != 'ALL'">
+                <!-- ＩＴ２-01494-000 20130724 SBO_SOKOU ADD -END- -->
+                AND subject_lang_company.LANGUAGE_IND = M_COMPANY.COMPANY_USE_LANGUAGE_IND
+                <!-- ＩＴ２-01494-000 20130724 SBO_SOKOU ADD START -->
+                AND subject_lang_company.COMPANY_CD = M_COMPANY.COMPANY_CD
+                </if>
+                <if test="companyCd == 'ALL'">
+                AND subject_lang_company.LANGUAGE_IND = '${@fw.security.SecurityUtil@getCompanyUseLanguageIndByEscapeSql()}'
+                </if>
+                <!-- ＩＴ２-01494-000 20130724 SBO_SOKOU ADD -END- -->
+           LEFT JOIN M_SUBJECT_LANG subject_lang_system 
+                  ON M_SUBJECT.COMPANY_CD = subject_lang_system.COMPANY_CD
+                 AND M_SUBJECT.SUBJECT_CD = subject_lang_system.SUBJECT_CD
+                 AND subject_lang_system.LANGUAGE_IND = '${@fw.common.util.AppUtil@getSysLanguageByEscapeSql()}'
+                 <!-- ＩＴ２-01494-000 20130724 SBO_SOKOU ADD START -->
+                 <if test="companyCd != 'ALL'">
+                 AND subject_lang_system.COMPANY_CD = M_COMPANY.COMPANY_CD
+                 </if>
+                 <!-- ＩＴ２-01494-000 20130724 SBO_SOKOU ADD -END- -->
+            <where> 
+                (M_SUBJECT.SUBJECT_CD , M_SUBJECT.COMPANY_CD) IN
+                <foreach collection="searchCondition.page.keyDomainEntityList" item="keyList"  open="(" separator="," close=")">  
+                    (#{keyList.subjectCd},#{keyList.companyCd})
+                </foreach>
+                <include refid="listKeyIdentityWhereCondition"/>
+            </where>
+            ORDER BY ${searchCondition.columnOrder.columnOrder()}
+    </select>
+    
+    <select id="listSubjectLanguage"
+            parameterType="fw.domain.mst.material.subject.SubjectIdentify"
+            resultType="fw.domain.mst.material.subject.SubjectLanguage">
+        SELECT M_SUBJECT_LANG.COMPANY_CD as "subjectIdentify.companyCd",
+               M_SUBJECT.SUBJECT_CD as "subjectIdentify.subjectCd",
+               M_SUBJECT.LAST_UPD_DATE as "subjectIdentify.lastUpdDate",
+               M_SUBJECT_LANG.LANGUAGE_IND as "languageInd.languageInd",
+               M_SUBJECT_LANG.SUBJECT_NAME as "subjectName"
+          FROM M_SUBJECT
+          LEFT JOIN M_SUBJECT_LANG 
+                 ON M_SUBJECT_LANG.COMPANY_CD = M_SUBJECT.COMPANY_CD
+                AND M_SUBJECT_LANG.SUBJECT_CD = M_SUBJECT.SUBJECT_CD
+          <if test="companyCd=='ALL'">
+                AND M_SUBJECT_LANG.LANGUAGE_IND != '${@fw.common.util.AppUtil@getSysLanguageByEscapeSql()}'
+          </if>
+          <if test="companyCd!='ALL'">
+          INNER JOIN M_COMPANY
+                  ON M_SUBJECT.COMPANY_CD = M_COMPANY.COMPANY_CD
+                 AND M_SUBJECT_LANG.LANGUAGE_IND != M_COMPANY.COMPANY_USE_LANGUAGE_IND
+          </if>
+          INNER JOIN M_CODE_NAME
+                  ON M_SUBJECT_LANG.LANGUAGE_IND = M_CODE_NAME.CODE_VALUE
+                 AND M_CODE_NAME.CODE_KEY = 'LANGUAGE_IND'
+          WHERE M_SUBJECT_LANG.COMPANY_CD=#{companyCd}
+            AND M_SUBJECT_LANG.SUBJECT_CD = #{subjectCd}
+          ORDER BY M_CODE_NAME.DSP_ORDER
+    </select>
+
+    <resultMap type="fw.domain.mst.material.subject.SubjectManagement" id="SubjectManagement_Map">
+        <result column="VALID_START_DATE" property="validity.validityPeriod.period.startDate.dateOfymd"/>
+        <result column="VALID_END_DATE" property="validity.validityPeriod.period.endDate.dateOfymd"/>
+    </resultMap>
+
+    <select id="search"
+            parameterType="fw.domain.mst.material.subject.SubjectIdentify"
+            resultMap="SubjectManagement_Map">
+        SELECT M_SUBJECT.COMPANY_CD as "subjectIdentify.companyCd",
+               M_SUBJECT.SUBJECT_CD as "subjectIdentify.subjectCd",
+               M_SUBJECT.LAST_UPD_DATE as "subjectIdentify.lastUpdDate",
+               CASE WHEN subject_lang_company.SUBJECT_NAME IS NOT NULL
+                    THEN subject_lang_company.SUBJECT_NAME
+                    ELSE subject_lang_system.SUBJECT_NAME
+                     END AS "subjectName",
+               M_SUBJECT.VALID_START_DATE as "VALID_START_DATE",
+               M_SUBJECT.VALID_END_DATE as "VALID_END_DATE",
+               M_SUBJECT.TERM_FLG as "validity.term.termFlg",
+               M_SUBJECT.LAST_UPD_DATE as "registInfo.lastUpdDate",
+               M_SUBJECT.LAST_UPD_COMPANY_CD as "registInfo.lastUpdCompanyCd",
+               M_SUBJECT.LAST_UPD_SECTION_CD as "registInfo.lastUpdSectionCd",
+               M_SUBJECT.LAST_UPD_USER_ID as "registInfo.lastUpdUserId",
+               M_SUBJECT.REG_DATE as "registInfo.regDate",
+               M_SUBJECT.REG_COMPANY_CD as "registInfo.regCompanyCd",
+               M_SUBJECT.REG_SECTION_CD as "registInfo.regSectionCd",
+               M_SUBJECT.REG_USER_ID as "registInfo.regUserId",
+               M_SUBJECT.COMPANY_CD as "companySummary.companyCd",
+               M_COMPANY_LANG.COMPANY_NAME as "companySummary.companyName",
+               <if test="companyCd=='ALL'">
+               '${@fw.common.util.AppUtil@getSysLanguageByEscapeSql()}' as "companySummary.languageInd"
+               </if>
+               <if test="companyCd!='ALL'">
+               M_COMPANY.COMPANY_USE_LANGUAGE_IND as "companySummary.languageInd"
+               </if>
+          FROM M_SUBJECT
+          LEFT JOIN M_COMPANY
+                 ON M_SUBJECT.COMPANY_CD = M_COMPANY.COMPANY_CD
+          LEFT JOIN M_SUBJECT_LANG subject_lang_company
+                 ON M_SUBJECT.COMPANY_CD = subject_lang_company.COMPANY_CD
+                AND M_SUBJECT.SUBJECT_CD = subject_lang_company.SUBJECT_CD
+                AND subject_lang_company.LANGUAGE_IND = M_COMPANY.COMPANY_USE_LANGUAGE_IND
+          LEFT JOIN M_COMPANY_LANG
+                 ON M_COMPANY.COMPANY_CD = M_COMPANY_LANG.COMPANY_CD
+                AND M_COMPANY.COMPANY_USE_LANGUAGE_IND = M_COMPANY_LANG.LANGUAGE_IND
+          LEFT JOIN M_SUBJECT_LANG subject_lang_system
+                 ON M_SUBJECT.COMPANY_CD = subject_lang_system.COMPANY_CD
+                AND M_SUBJECT.SUBJECT_CD = subject_lang_system.SUBJECT_CD
+                AND subject_lang_system.LANGUAGE_IND='${@fw.common.util.AppUtil@getSysLanguageByEscapeSql()}'
+          WHERE M_SUBJECT.COMPANY_CD=#{companyCd}
+            AND M_SUBJECT.SUBJECT_CD = #{subjectCd}
+    </select>
+
+    <select id="searchExclusive"
+            parameterType="fw.domain.mst.material.subject.SubjectIdentify"
+            resultType="fw.domain.mst.material.subject.SubjectIdentify">
+        SELECT M_SUBJECT.COMPANY_CD as "companyCd",
+               M_SUBJECT.SUBJECT_CD as "subjectCd",
+               M_SUBJECT.LAST_UPD_DATE as "lastUpdDate"
+          FROM M_SUBJECT 
+         WHERE M_SUBJECT.COMPANY_CD=#{companyCd}
+           AND M_SUBJECT.SUBJECT_CD = #{subjectCd}
+           AND M_SUBJECT.LAST_UPD_DATE = #{lastUpdDate}
+    </select>
+
+    <insert id="insert"
+            parameterType="fw.domain.mst.material.subject.SubjectManagement">
+        INSERT INTO M_SUBJECT
+        (
+            COMPANY_CD,
+            SUBJECT_CD,
+            VALID_START_DATE,
+            VALID_END_DATE,
+            TERM_FLG,
+            LAST_UPD_DATE,
+            LAST_UPD_COMPANY_CD,
+            LAST_UPD_SECTION_CD,
+            LAST_UPD_USER_ID,
+            REG_DATE,
+            REG_COMPANY_CD,
+            REG_SECTION_CD,
+            REG_USER_ID
+        ) VALUES (
+            #{subjectIdentify.companyCd, jdbcType=VARCHAR},
+            #{subjectIdentify.subjectCd, jdbcType=VARCHAR},
+            <if test="@org.apache.commons.lang.StringUtils@isBlank(validity.validityPeriod.period.startDate.dateOfymd)">
+            '00000000',
+            </if>
+            <if test="@org.apache.commons.lang.StringUtils@isNotBlank(validity.validityPeriod.period.startDate.dateOfymd)">
+            #{validity.validityPeriod.period.startDate.dateOfymd},
+            </if>
+            <if test="@org.apache.commons.lang.StringUtils@isBlank(validity.validityPeriod.period.endDate.dateOfymd)">
+            '99999999',
+            </if>
+            <if test="@org.apache.commons.lang.StringUtils@isNotBlank(validity.validityPeriod.period.endDate.dateOfymd)">
+            #{validity.validityPeriod.period.endDate.dateOfymd},
+            </if>
+            #{validity.term.termFlg, jdbcType=VARCHAR},
+            #{registInfo.lastUpdDate, jdbcType=VARCHAR},
+            #{registInfo.lastUpdCompanyCd, jdbcType=VARCHAR},
+            #{registInfo.lastUpdSectionCd, jdbcType=VARCHAR},
+            #{registInfo.lastUpdUserId, jdbcType=VARCHAR},
+            #{registInfo.regDate, jdbcType=VARCHAR},
+            #{registInfo.regCompanyCd, jdbcType=VARCHAR},
+            #{registInfo.regSectionCd, jdbcType=VARCHAR},
+            #{registInfo.regUserId, jdbcType=VARCHAR}
+        )
+    </insert>
+
+    <insert id="insertSubjectLanguage" parameterType="fw.domain.mst.material.subject.SubjectLanguage">
+        INSERT INTO M_SUBJECT_LANG
+        (
+            COMPANY_CD,
+            SUBJECT_CD,
+            LANGUAGE_IND,
+            SUBJECT_NAME,
+            LAST_UPD_DATE,
+            LAST_UPD_COMPANY_CD,
+            LAST_UPD_SECTION_CD,
+            LAST_UPD_USER_ID,
+            REG_DATE,
+            REG_COMPANY_CD,
+            REG_SECTION_CD,
+            REG_USER_ID
+        )VALUES(
+            #{subjectIdentify.companyCd, jdbcType=VARCHAR},
+            #{subjectIdentify.subjectCd, jdbcType=VARCHAR},
+            #{languageInd.languageInd, jdbcType=VARCHAR},
+            #{subjectName, jdbcType=VARCHAR},
+            #{registInfo.lastUpdDate, jdbcType=VARCHAR},
+            #{registInfo.lastUpdCompanyCd, jdbcType=VARCHAR},
+            #{registInfo.lastUpdSectionCd, jdbcType=VARCHAR},
+            #{registInfo.lastUpdUserId, jdbcType=VARCHAR},
+            #{registInfo.regDate, jdbcType=VARCHAR},
+            #{registInfo.regCompanyCd, jdbcType=VARCHAR},
+            #{registInfo.regSectionCd, jdbcType=VARCHAR},
+            #{registInfo.regUserId, jdbcType=VARCHAR}
+        )
+    </insert>
+
+    <update id="update" parameterType="fw.domain.mst.material.subject.SubjectManagement">
+        UPDATE M_SUBJECT
+           SET
+            <if test="@org.apache.commons.lang.StringUtils@isBlank(validity.validityPeriod.period.startDate.dateOfymd)">
+             VALID_START_DATE = '00000000',
+            </if>
+            <if test="@org.apache.commons.lang.StringUtils@isNotBlank(validity.validityPeriod.period.startDate.dateOfymd)">
+             VALID_START_DATE = #{validity.validityPeriod.period.startDate.dateOfymd},
+            </if>
+            <if test="@org.apache.commons.lang.StringUtils@isBlank(validity.validityPeriod.period.endDate.dateOfymd)">
+            VALID_END_DATE = '99999999',
+            </if>
+            <if test="@org.apache.commons.lang.StringUtils@isNotBlank(validity.validityPeriod.period.endDate.dateOfymd)">
+            VALID_END_DATE = #{validity.validityPeriod.period.endDate.dateOfymd},
+            </if>
+            TERM_FLG = #{validity.term.termFlg},
+            LAST_UPD_DATE = #{registInfo.lastUpdDate},
+            LAST_UPD_COMPANY_CD = #{registInfo.lastUpdCompanyCd},
+            LAST_UPD_SECTION_CD = #{registInfo.lastUpdSectionCd},
+            LAST_UPD_USER_ID = #{registInfo.lastUpdUserId}
+        WHERE 
+            COMPANY_CD =  #{subjectIdentify.companyCd}
+        AND
+            SUBJECT_CD = #{subjectIdentify.subjectCd}
+    </update>
+
+    <delete id="delete"
+            parameterType="fw.domain.mst.material.subject.SubjectIdentify">
+        DELETE
+          FROM M_SUBJECT
+         WHERE COMPANY_CD =  #{companyCd}
+           AND SUBJECT_CD = #{subjectCd}
+    </delete>
+
+    <delete id="deleteSubjectLanguage"
+            parameterType="fw.domain.mst.material.subject.SubjectIdentify">
+        DELETE
+          FROM M_SUBJECT_LANG
+         WHERE COMPANY_CD =  #{companyCd}
+           AND SUBJECT_CD = #{subjectCd}
+    </delete>
+
+</mapper>

@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<flow xmlns="http://www.springframework.org/schema/webflow"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.springframework.org/schema/webflow
+        http://www.springframework.org/schema/webflow/spring-webflow-2.0.xsd"
+    parent="base">
+
+    <input name="acp050Identify" />
+    <input name="range"/>
+    <input name="approveFlg" />
+    <input name="historyIdentify" />
+    <input name="isSearchByHistory" />
+    <input name="isSearchByAll" />
+    <input name="isSearchByHistoryAll" />
+
+    <decision-state id="isSearchByHistory">
+        <if test="isSearchByAll" then="searchByAll" />
+        <if test="isSearchByHistoryAll" then="searchByHistoryAll" />
+        <if test="isSearchByHistory" then="searchByHistory" else="searchByCondition" />
+    </decision-state>
+
+    <action-state id="searchByCondition">
+        <evaluate expression="PSACP050Service.init(acp050Identify,range,approveFlg)"
+            result="flowScope.domain" />
+        <transition to="PSACP050"/> 
+    </action-state>
+
+    <action-state  id="searchByHistory" >
+        <evaluate expression="PSACP050Service.initFromHistory(historyIdentify.historySeq)" result="flowScope.domain" />
+        <transition to="PSACP050"/>
+    </action-state>
+    
+    <action-state id="searchByAll">
+        <evaluate expression="PSACP050Service.initAll(acp050Identify,range,approveFlg)"
+            result="flowScope.domain" />
+        <transition to="PSACP050"/> 
+    </action-state>
+
+    <action-state  id="searchByHistoryAll" >
+        <evaluate expression="PSACP050Service.initFromHistoryAll(historyIdentify.historySeq)" result="flowScope.domain" />
+        <transition to="PSACP050"/>
+    </action-state>
+
+    <view-state id="PSACP050" model="domain" view="acp/acc/PSACP050">
+        <transition on="downloadext" validate="false">
+            <evaluate expression="PSACP050Service.downloadFileExt(domain)"/>
+        </transition>
+    </view-state> 
+    
+
+</flow>

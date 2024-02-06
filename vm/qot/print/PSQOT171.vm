@@ -1,0 +1,308 @@
+<!doctype html>
+<html LANG="ja">
+<head>
+<title>
+ #if("" != "$!quickLink")
+        #customSpringMessage('QUOT_REQ_ISSUE')(#customSpringMessage('NOT_ISSUE'))
+ #else
+        #customSpringMessage('QUOT_REQ_ISSUE')
+ #end
+
+</title><!--見積依頼書発行(未発行)-->
+<meta http-equiv="Content-type" content="text/html; charset=UTF-8">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Content-script-type" content="text/javascript">
+<link id="CSS_FONT" rel="stylesheet" href="../../include/FontS.css" type="text/css">
+<link rel="stylesheet" href="../../include/Layout.css" type="text/css">
+<link rel="stylesheet" href="../../include/Color.css" type="text/css">
+<link rel="stylesheet" href="../../include/searchbox.css" type="text/css">
+<script language="javascript" type="text/javascript" src="../../include/jquery-1.7.2.min.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/jquery.tablefix.js"></script>
+<script language="javascript" TYPE="text/javascript" src="../../include/common.js"></script>
+<script language="javascript" TYPE="text/javascript" src="../../include/check.js"></script>
+<script language="javascript" TYPE="text/javascript" src="../../include/date.js"></script>
+<script language="javascript" TYPE="text/javascript" src="../../include/tablesort.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/searchbox.js"></script>
+<script language="javascript" TYPE="text/javascript">
+<!--
+#parse("./common/common_js.vm")
+function onLoad() {
+    parent.getObj("button_exec_nm").disabled="";
+    dataLoadHasPage();
+
+    var alertMessage = "$!alertMessage";
+    if (alertMessage != ""){
+        buttonUsableForList(alertMessage);
+        alert(alertMessage);
+    }
+
+    var isSuccess = '#jsEscape($!isSuccess)';
+    if(isSuccess == 'true'){
+        alert('#customMessageArgs("I032", "")');
+    }
+
+    var errorMsg = "$!errorMessage";
+    var noData="1"+" I004" +"#customSpringMessage('I004')" +"<br>";
+    if (errorMsg != ""){
+        return;
+    }
+
+    window.parent.getObj("DownLoadSection").style.display = "";
+    var isShowDetail = "#jsEscape($isShowDetail)";
+    if (isShowDetail == 'true'){
+        parent.poppage('${flowExecutionUrl}&_eventId=detail','DETAIL','800','700');
+    }
+}
+
+//check /uncheck all
+$(function(){
+    $(document).delegate('#ParentCheck','change',function() {
+        var chk = $(this).prop("checked");
+        var status = 0;
+        $("input:[type=checkbox][name^=status_]").prop("checked",chk)
+
+        if(chk){
+            $("tr:[id^=Row_]").css("background-color","#ffff99");
+            status = 1;
+        }else{
+            $("tr:[id^=Row_]").each(function(){
+                var count = $(this).attr("id").substring(4);
+                if (Number(count) % 2 != 0) {
+                    $(this).css("background-color","#ffffff");
+                } else {
+                    $(this).css("background-color","#dce4ef");
+                }
+            });
+        }
+        $("input:[type=hidden][id^=identifyList][id$=checkStatus]").val(status);
+    });
+
+    var count = "$!itemList.quotReqIssueListItemList.size()";
+    if(count == "" || count == "0"){
+        window.parent.getObj("DownLoadSection").style.display = "none";
+    }
+});
+
+function exec(){
+    //parent.getObj("ERRORAREA").src="../../layout/error.vm";
+    var count=0;
+    $("input:[type=checkbox][name^=status_]").each(function(){
+        if($(this).prop("checked"))
+            count ++;
+    });
+    if(count==0){
+        #set($selection = ["#customSpringMessage('SELECTION')"] )
+        alert("#customMessageArgs("E210",$selection)");
+    }else{
+        #set( $print = "#customSpringMessage('PRINT')" )   
+        #set( $actionRun = "#customSpringMessage('ACTION_RUN')" ) 
+        if( !confirm("#customMessageArgs("W001",[$print,$actionRun])") ) 
+            return;
+
+        parent.document.getElementById('button_exec_nm').disabled="true";
+
+        getObj("BodyForm").action="${flowExecutionUrl}&_eventId=print";
+        getObj("BodyForm").submit();
+    }
+}
+
+//check one 
+function chkData(obj, index){
+    var status = 0;
+
+    if(obj.checked == true){
+        $("tr:[id=Row_" + index+"]").css("backgroundColor","#ff9");
+        status = 1;
+    }else{
+        if (index % 2 != 0) {
+            $("tr:[id=Row_" + index+"]").css("backgroundColor","#fff");
+        } else {
+            $("tr:[id=Row_" + index+"]").css("backgroundColor","#dce4ef");
+        }
+    }
+    document.getElementById("identifyList["+index+"].checkStatus").value = status;
+}
+
+//詳細
+function openDetail(seqNumber,lastUpdDate) {
+    parent.iframeChange('${flowExecutionUrl}&_eventId=detailValidate&seqNumber='+ seqNumber+'&lastUpdDate='+ lastUpdDate,"HIDDENAREA");
+}
+//-->
+</script>
+
+</head>
+<body id="BODY" topmargin="0" leftmargin="0" marginwidth="0" marginheight="0" align="left" onload="onLoad();setTablefix('#TABLEFIX', 1, 3+$!PSQOT171PageCreaterForList.printLockColumn());">
+#if($!errorMessage && $!errorMessage!="")
+<div id="error" name="error" class="error">
+    $!errorMessage
+</div>
+#end
+<form id="BodyForm" name="Body" method="post">
+#if($!itemList.quotReqIssueListItemList && ($!itemList.quotReqIssueListItemList.size() > 0))
+<div id="show">
+    #set( $index = 0)
+    #foreach($!quotReqIssueListDetails in $!itemList.quotReqIssueListItemList)
+        #customFormHiddenInput("identifyList[$index].checkStatus" "")
+        #customFormHiddenInput("identifyList[$index].lastUpdDate" "$!quotReqIssueListDetails.quotReqIdentify.lastUpdDate")
+        #customFormHiddenInput("identifyList[$index].supLastUpdDate" "$!quotReqIssueListDetails.quotReqIdentify.supLastUpdDate")
+        #customFormHiddenInput("identifyList[$index].quotSupLineNo" "$!quotReqIssueListDetails.quotReqIdentify.quotSupLineNo")
+        #customFormHiddenInput("identifyList[$index].quotReqSeqNo.seqNumber" "$!quotReqIssueListDetails.quotReqIdentify.quotReqSeqNo.seqNumber")
+        #customFormHiddenInput("identifyList[$index].supCd" "$!quotReqIssueListDetails.supCd")
+        #customFormHiddenInput("identifyList[$index].supName" "$!quotReqIssueListDetails.supAbbrName")
+        #customFormHiddenInput("identifyList[$index].supCompanyCd" "$!quotReqIssueListDetails.supCompanyCd")
+        #customFormHiddenInput("identifyList[$index].ediInd" "$!quotReqIssueListDetails.quotReqIdentify.ediInd")
+        #customFormHiddenInput("identifyList[$index].exclusiveSlipId.slipNo" "$!quotReqIssueListDetails.quotReqIdentify.exclusiveSlipId.slipNo")
+        #customFormHiddenInput("identifyList[$index].exclusiveSlipId.lastUpdDate" "$!quotReqIssueListDetails.quotReqIdentify.exclusiveSlipId.lastUpdDate")
+        #customFormHiddenInput("identifyList[$index].printInd" "$!quotReqIssueListDetails.printInd")
+#set( $index = $index + 1 )
+    #end
+</div>
+<table id="TABLEFIX" class="ListArea" width="100%">
+    <thead>
+        <tr id="Header">
+           <th class="BoxHeaderCenter FontSmall">No.<!--No.--></th>
+            <th id="CheckCol_H" label="chk" class="BoxHeaderCenter FontSmall">
+                <input name="ParentCheck" id="ParentCheck" type="checkbox"><!--全選択/全選択解除-->
+            </th>
+            <th class="BoxHeaderCenter FontSmall">#customSpringMessage("DETAIL")<!--詳細--></th>
+            #foreach($!item in $!PSQOT171PageCreaterForList.getItemListForBody())
+                #set($currentOneColumnFlag = $!PSQOT171PageCreaterForList.getOneColumnFlag($!item))
+                #if($velocityCount == 0)
+                    $!PSQOT171PageCreaterForList.printTHtag($!item,'class="BoxHeaderCenter FontSmall"')
+                #elseif($currentOneColumnFlag)
+                    $!PSQOT171PageCreaterForList.printBRtag($!item)
+                #else
+                    $!PSQOT171PageCreaterForList.printTHtagClose()
+                    $!PSQOT171PageCreaterForList.printTHtag($!item,'class="BoxHeaderCenter FontSmall"')
+                #end
+                #if($!item.getColumnName()=="T_QUOT_REQUEST.QUOT_REQ_NO")
+                    $!PSQOT171PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName()=="T_QUOT_REQ_SUP.PRINT_IND")
+                    $!PSQOT171PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName()=="T_QUOT_REQ_SUP.QUOT_REQ_DATE")
+                    $!PSQOT171PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName()=="T_QUOT_REQUEST.QUOT_RESP_LIMIT_DATE")
+                    $!PSQOT171PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName()=="T_QUOT_REQUEST.TITLE_NAME")
+                    $!PSQOT171PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName()=="T_QUOT_REQ_SUP.SUP_CD")
+                    $!PSQOT171PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName()=="T_QUOT_REQ_SUP.SUP_ABBR_NAME")
+                    $!PSQOT171PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName()=="T_QUOT_REQ_SUP.SUBCON_IND")
+                    $!PSQOT171PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName()=="T_QUOT_REQ_SUP.EDI_IND")
+                    $!PSQOT171PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName()=="T_QUOT_REQ_DTL.ITEM_CD")
+                    $!PSQOT171PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName()=="T_QUOT_REQ_DTL.ITEM_NAME")
+                    $!PSQOT171PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName()=="T_QUOT_REQUEST.DELIV_PLACE_CD")
+                    $!PSQOT171PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName()=="T_QUOT_REQUEST.DELIV_PLACE_NAME")
+                    $!PSQOT171PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName()=="T_QUOT_REQUEST.REQ_SECTION_CD")
+                    $!PSQOT171PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName()=="T_QUOT_REQUEST.REQ_SECTION_NAME")
+                    $!PSQOT171PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName()=="T_QUOT_REQUEST.REQ_USER_ID")
+                    $!PSQOT171PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName()=="T_QUOT_REQUEST.REQ_USER_NAME")
+                    $!PSQOT171PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName()=="T_QUOT_REQUEST.BUYER_SECTION_CD")
+                    $!PSQOT171PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName()=="T_QUOT_REQUEST.BUYER_SECTION_NAME")
+                    $!PSQOT171PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName()=="T_QUOT_REQUEST.BUYER_USER_ID")
+                    $!PSQOT171PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName()=="T_QUOT_REQUEST.BUYER_USER_NAME")
+                    $!PSQOT171PageCreaterForList.printHead($!item)
+                #else
+                    $!PSQOT171PageCreaterForList.printHead($!item)
+                #end
+            #end
+            $!PSQOT171PageCreaterForList.printTHtagClose()
+        </tr>
+    </thead>
+    <tbody id="Tbody">
+         #foreach($!quotReqIssueListItem in $!itemList.quotReqIssueListItemList)
+        <tr id="Row_$velocityCount" #if($velocityCount % 2 == 0) bgcolor="#dce4ef" #else bgcolor="#ffffff" #end>
+            <td class="BoxDetailCenter FontList">#set( $index = $velocityCount + 1 )$index</td>
+            <td id="CheckCol_$velocityCount" class="BoxDetailCenter FontList">
+                <input type="checkbox" onclick="chkData(this,$velocityCount)" class="Icon" name="status_$velocityCount">
+            </td>
+            <td class="BoxDetailCenter">
+                <img id="DetailButton_0" class="Icon" src="../../image/btnDetailDisp.gif" onclick="openDetail('#jsEscapeInHTML($!quotReqIssueListItem.quotReqIdentify.quotReqSeqNo.seqNumber)','#jsEscapeInHTML($!quotReqIssueListItem.quotReqIdentify.lastUpdDate)')"><!--詳細-->
+            </td>
+            #foreach($!item in $!PSQOT171PageCreaterForList.getItemListForBody($velocityCount))
+                #set($currentOneColumnFlag = $!PSQOT171PageCreaterForList.getOneColumnFlag($!item))
+                #if($velocityCount == 0)
+                    $!PSQOT171PageCreaterForList.printTDtag('class="BoxDetailLeft FontList"')
+                #elseif(!$currentOneColumnFlag)
+                    $!PSQOT171PageCreaterForList.printTDtagClose()
+                    $!PSQOT171PageCreaterForList.printTDtag('class="BoxDetailLeft FontList"')
+                #end
+                #if($!item.getColumnName()=="T_QUOT_REQUEST.QUOT_REQ_NO")
+                    $!PSQOT171PageCreaterForList.printDefault($!item,"_data_style",'class="FontSlipNo" align="center"')
+                #elseif($!item.getColumnName()=="T_QUOT_REQ_SUP.PRINT_IND")
+                    $!PSQOT171PageCreaterForList.printSpecial("s25_codeName",$!item,'PRINT_IND','',"_data_style",'class="FontMiniAnkBold" align="center"')
+                #elseif($!item.getColumnName()=="T_QUOT_REQ_SUP.QUOT_REQ_DATE")
+                    $!PSQOT171PageCreaterForList.printDefault($!item,"_data_style",'align="center"')
+                #elseif($!item.getColumnName()=="T_QUOT_REQUEST.QUOT_RESP_LIMIT_DATE")
+                    $!PSQOT171PageCreaterForList.printDefault($!item,"_data_style",'align="center"')
+                #elseif($!item.getColumnName()=="T_QUOT_REQUEST.TITLE_NAME")
+                    $!PSQOT171PageCreaterForList.printDefault($!item)
+                #elseif($!item.getColumnName()=="T_QUOT_REQ_SUP.SUP_CD")
+                    $!PSQOT171PageCreaterForList.printDefault($!item,"_data_style",'align="center"')
+                #elseif($!item.getColumnName()=="T_QUOT_REQ_SUP.SUP_ABBR_NAME")
+                    $!PSQOT171PageCreaterForList.printDefault($!item)
+                #elseif($!item.getColumnName()=="T_QUOT_REQ_SUP.SUBCON_IND")
+                    #if("$quotReqIssueListItem.subconInd"=="1")
+                        <div>$!quotReqIssueListItem.subconInd_PageValue</div>
+                    #end
+                #elseif($!item.getColumnName()=="T_QUOT_REQ_SUP.EDI_IND")
+                    #if("$quotReqIssueListItem.quotReqIdentify.ediInd"!="0" 
+                        && "$quotReqIssueListItem.quotReqIdentify.ediInd"!=""
+                        && "$quotReqIssueListItem.quotReqIdentify.ediInd"!="null")
+                        <div align="center">#customSpringMessage('EDI')</div>
+                    #end
+                #elseif($!item.getColumnName()=="T_QUOT_REQ_DTL.ITEM_CD")
+                    $!PSQOT171PageCreaterForList.printDefault($!item,"_data_style",'align="center"')
+                #elseif($!item.getColumnName()=="T_QUOT_REQ_DTL.ITEM_NAME")
+                    $!PSQOT171PageCreaterForList.printDefault($!item)
+                #elseif($!item.getColumnName()=="T_QUOT_REQUEST.DELIV_PLACE_CD")
+                    $!PSQOT171PageCreaterForList.printDefault($!item,"_data_style",'align="center"')
+                #elseif($!item.getColumnName()=="T_QUOT_REQUEST.DELIV_PLACE_NAME")
+                    $!PSQOT171PageCreaterForList.printDefault($!item)
+                #elseif($!item.getColumnName()=="T_QUOT_REQUEST.REQ_SECTION_CD")
+                    $!PSQOT171PageCreaterForList.printDefault($!item,"_data_style",'align="center"')
+                #elseif($!item.getColumnName()=="T_QUOT_REQUEST.REQ_SECTION_NAME")
+                    $!PSQOT171PageCreaterForList.printDefault($!item)
+                #elseif($!item.getColumnName()=="T_QUOT_REQUEST.REQ_USER_ID")
+                    $!PSQOT171PageCreaterForList.printDefault($!item,"_data_style",'align="center"')
+                #elseif($!item.getColumnName()=="T_QUOT_REQUEST.REQ_USER_NAME")
+                    $!PSQOT171PageCreaterForList.printDefault($!item)
+                #elseif($!item.getColumnName()=="T_QUOT_REQUEST.BUYER_SECTION_CD")
+                    $!PSQOT171PageCreaterForList.printDefault($!item,"_data_style",'align="center"')
+                #elseif($!item.getColumnName()=="T_QUOT_REQUEST.BUYER_SECTION_NAME")
+                    $!PSQOT171PageCreaterForList.printDefault($!item)
+                #elseif($!item.getColumnName()=="T_QUOT_REQUEST.BUYER_USER_ID")
+                    $!PSQOT171PageCreaterForList.printDefault($!item,"_data_style",'align="center"')
+                #elseif($!item.getColumnName()=="T_QUOT_REQUEST.BUYER_USER_NAME")
+                    $!PSQOT171PageCreaterForList.printDefault($!item)
+                #else
+                    $!PSQOT171PageCreaterForList.printDefault($!item)
+                #end
+            #end
+                $!PSQOT171PageCreaterForList.printTDtagClose()
+        </tr>
+     #end
+   </tbody>
+</table>
+#end
+<br>
+<table id="WAIT" class="NoBorder" style="display:none;width:100%;"><tr><td style="text-align:center;"><br><br>
+<img src="../../image/wait.gif"><br><span class="FontMini"><br>#customSpringMessage('SEARCH_MESSAGE')</span></td></tr></table><!--問い合わせ中...-->
+</form>
+</body>
+</html>

@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<flow xmlns="http://www.springframework.org/schema/webflow"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.springframework.org/schema/webflow
+        http://www.springframework.org/schema/webflow/spring-webflow-2.0.xsd"
+    parent="base">
+    
+    <var name="payReqIdentify" class="fw.domain.slip.payreq.payreq.payreqinput.PayReqIdentify" />
+    
+    <input name="searchCondition" />
+    <input name="isCurrentPageSearch" />
+    
+    <decision-state id="isSearchByKey">
+       <if test="flowScope.isCurrentPageSearch" then="searchByKey" else="searchByCondition" />
+    </decision-state>
+    
+    <action-state id="searchByCondition">
+        <evaluate expression="PSPAY041Service.init(searchCondition)" result="flowScope.itemList" />
+        <transition to="PSPAY041"/> 
+    </action-state>
+
+    <action-state  id="searchByKey" >
+        <evaluate expression="PSPAY041Service.page(searchCondition)" result="flowScope.itemList" />
+        <transition to="PSPAY041"/>
+    </action-state>
+     
+    <view-state id="PSPAY041" view="pay/claim/PSPAY041" model="payReqIdentify">
+        <transition on="page" validate="false">
+            <evaluate expression="PSPAY041Service.page(searchCondition)"
+                result="flowScope.itemList" />
+        </transition>
+        <transition on="order" validate="false">
+            <evaluate expression="PSPAY041Service.order(searchCondition)"
+                result="flowScope.itemList" />
+        </transition>
+        <transition on="back" to="home" validate="false" />
+         
+       <transition on="editValidate" validate="false">
+           <set name="flashScope.isShowEdit" value="true" />
+       </transition>
+       <transition on="edit" to="PSPAY010" validate="false" />
+       
+        <transition on="applyAgainValidate" validate="false">
+            <set name="flashScope.isShowApplyAgain" value="true" />
+            <set name="flashScope.pattern" value="requestParameters.pattern"></set>
+        </transition>
+        <transition on="applyAgain" to="PSPAY010" validate="false" />
+
+        <transition on="applyCancel" validate="false" to="searchByKey">
+	       <evaluate expression="PSPAY041Service.applyCancel(payReqIdentify)"/>
+	       <set name="flashScope.isApplyCancel" value="true"></set>
+        </transition>
+        <transition on="delete" validate="false" to="searchByKey">
+	       <evaluate expression="PSPAY041Service.delete(payReqIdentify)"/>
+	       <set name="flashScope.isDelete" value="true"></set>
+        </transition>
+        <transition on="detailValidate" validate="true">
+            <set name="flashScope.isShowDetail" value="true"></set>
+             <set name="payReqIdentify.payReqSeq" value="requestParameters.payReqSeq"/>
+        </transition>
+        <transition on="detail" to="PSPAY050" validate="false" />
+    </view-state>
+    
+    <subflow-state id="PSPAY010" subflow="pay/claim/PSPAY010" >
+        <input name="identify" value="payReqIdentify" />
+        <input name="isFromList" value="true" />
+         <input name="SessionKey" value="SessionKey" />
+    </subflow-state>
+    
+    <subflow-state id="PSPAY050" subflow="pay/claim/PSPAY050TOP" >
+        <input name="payReqIdentify" value="payReqIdentify" />
+    </subflow-state>
+<!--     
+	<subflow-state id="PSCAT020Update" subflow="pay/claim/PSCAT020Update" >
+        <input name="payReqIdentify" value="payReqIdentify" />
+        <input name="fromPattern" value="'List'" />
+    </subflow-state>
+    
+    <subflow-state id="PSCAT020Correct" subflow="pay/claim/PSCAT020Correct" >
+        <input name="payReqIdentify" value="payReqIdentify" />
+        <input name="fromPattern" value="'List'" />
+    </subflow-state>
+    
+    <subflow-state id="PSCAT040" subflow="pay/claim/PSCAT040" >
+        <input name="payReqIdentify" value="payReqIdentify" />
+    </subflow-state>
+ -->
+</flow> 

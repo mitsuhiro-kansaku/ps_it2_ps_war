@@ -1,0 +1,144 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="ps.dataaccess.options.stock.inv.inventorysettle.InventorySettleMapper">
+
+    <sql id="listKeyIdentityWhereCondition">
+        <!-- 個人設定未定義の場合、条件に入らないため追加している -->
+        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(companyCd)">
+         AND T_INVENTORY.COMPANY_CD = #{companyCd, jdbcType=VARCHAR}
+        </if>
+        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(sectionPlaceCd)">
+         AND T_INVENTORY.SECTION_PLACE_CD = #{sectionPlaceCd, jdbcType=VARCHAR}
+        </if>
+        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(invYearMonthFrom.dateOfym)">
+         AND T_INVENTORY.INV_YEAR_MONTH &gt;= #{invYearMonthFrom.dateOfym, jdbcType=VARCHAR}
+        </if>
+        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(invYearMonthTo.dateOfym)">
+         AND T_INVENTORY.INV_YEAR_MONTH &lt;= #{invYearMonthTo.dateOfym, jdbcType=VARCHAR}
+        </if>
+             ${@ps.common.util.ItemSettingUtil@getItemSettingWhereSQL()}
+        <if test="@org.apache.commons.lang.StringUtils@equals('1',searchInd)">
+         AND T_INVENTORY.INV_STATUS IN (
+               '${@fw.common.options.stock.constant.CodeNameConstantForStock@INV_STATUS_IND_INVENTORY_STARTING}'
+             , '${@fw.common.options.stock.constant.CodeNameConstantForStock@INV_STATUS_IND_INVENTORY}'
+             , '${@fw.common.options.stock.constant.CodeNameConstantForStock@INV_STATUS_IND_INVENTORY_CANCELLING}'
+             , '${@fw.common.options.stock.constant.CodeNameConstantForStock@INV_STATUS_IND_SETTLING}'
+             )
+        </if>
+        <if test="@org.apache.commons.lang.StringUtils@equals('2',searchInd)">
+         AND T_INVENTORY.INV_STATUS IN (
+               '${@fw.common.options.stock.constant.CodeNameConstantForStock@INV_STATUS_IND_SETTLE_END}'
+             , '${@fw.common.options.stock.constant.CodeNameConstantForStock@INV_STATUS_IND_SETTLE_CANCELLING}'
+             )
+        </if>
+    </sql>
+
+    <sql id="viewSql">
+             <!-- 棚卸テーブルを元に在庫場所、棚卸状態を抽出。棚卸年月から前回棚卸年月を算出 -->
+        WITH V_INVENTORY_MNG AS
+     (SELECT T_INVENTORY_MNG.COMPANY_CD
+           , T_INVENTORY_MNG.SECTION_PLACE_CD
+           , T_INVENTORY_MNG.STOCK_PLACE_CD
+           , T_INVENTORY_MNG.INV_YEAR_MONTH
+           ,(SELECT MAX(NEXT.INV_YEAR_MONTH) FROM T_INVENTORY_MNG NEXT
+              WHERE T_INVENTORY_MNG.COMPANY_CD       = NEXT.COMPANY_CD
+                AND T_INVENTORY_MNG.SECTION_PLACE_CD = NEXT.SECTION_PLACE_CD
+                AND T_INVENTORY_MNG.STOCK_PLACE_CD   = NEXT.STOCK_PLACE_CD
+                AND T_INVENTORY_MNG.INV_YEAR_MONTH &lt; NEXT.INV_YEAR_MONTH
+             ) AS NEXT_INV_YEAR_MONTH
+           , T_INVENTORY_MNG.INV_STATUS_IND
+           , T_INVENTORY_MNG.LAST_UPD_DATE
+        FROM T_INVENTORY_MNG)
+    </sql>
+
+    <sql id="listSql">
+             <!--上記 viewSql で抽出したビューを整形-->
+      SELECT V_INVENTORY_MNG.COMPANY_CD
+           , V_INVENTORY_MNG.SECTION_PLACE_CD
+           , V_INVENTORY_MNG.STOCK_PLACE_CD
+           , V_INVENTORY_MNG.INV_STATUS_IND AS INV_STATUS
+           , V_INVENTORY_MNG.INV_YEAR_MONTH
+           , V_INVENTORY_MNG.NEXT_INV_YEAR_MONTH
+           , V_INVENTORY_MNG.LAST_UPD_DATE
+           , M_STOCK_PLACE.STOCK_LOCK_FLG
+           , M_COMPANY_LANG.COMPANY_NAME
+           , M_SECTION_PLACE_LANG.SECTION_PLACE_NAME
+           , M_STOCK_PLACE_LANG.STOCK_PLACE_NAME
+        FROM V_INVENTORY_MNG
+       INNER JOIN M_COMPANY
+          ON V_INVENTORY_MNG.COMPANY_CD = M_COMPANY.COMPANY_CD
+       INNER JOIN M_STOCK_PLACE
+          ON V_INVENTORY_MNG.COMPANY_CD       = M_STOCK_PLACE.COMPANY_CD
+         AND V_INVENTORY_MNG.SECTION_PLACE_CD = M_STOCK_PLACE.SECTION_PLACE_CD
+         AND V_INVENTORY_MNG.STOCK_PLACE_CD   = M_STOCK_PLACE.STOCK_PLACE_CD
+        LEFT OUTER JOIN M_COMPANY_LANG
+          ON M_COMPANY.COMPANY_CD = M_COMPANY_LANG.COMPANY_CD
+         AND M_COMPANY_LANG.LANGUAGE_IND = '${@fw.security.SecurityUtil@getCompanyUseLanguageIndByEscapeSql()}'
+        LEFT OUTER JOIN M_SECTION_PLACE_LANG
+          ON M_STOCK_PLACE.COMPANY_CD       = M_SECTION_PLACE_LANG.COMPANY_CD
+         AND M_STOCK_PLACE.SECTION_PLACE_CD = M_SECTION_PLACE_LANG.SECTION_PLACE_CD
+         AND M_COMPANY_LANG.LANGUAGE_IND    = M_SECTION_PLACE_LANG.LANGUAGE_IND
+        LEFT OUTER JOIN M_STOCK_PLACE_LANG
+          ON M_STOCK_PLACE.COMPANY_CD       = M_STOCK_PLACE_LANG.COMPANY_CD
+         AND M_STOCK_PLACE.SECTION_PLACE_CD = M_STOCK_PLACE_LANG.SECTION_PLACE_CD
+         AND M_STOCK_PLACE.STOCK_PLACE_CD   = M_STOCK_PLACE_LANG.STOCK_PLACE_CD
+         AND M_COMPANY_LANG.LANGUAGE_IND    = M_STOCK_PLACE_LANG.LANGUAGE_IND
+    </sql>
+
+    <resultMap id="identity_Map" type="fw.domain.options.stock.inv.inventorysettle.InventorySettleIdentify">
+        <id column="COMPANY_CD"       property="companyCd" />
+        <id column="SECTION_PLACE_CD" property="sectionPlaceCd" />
+        <id column="STOCK_PLACE_CD"   property="stockPlaceCd" />
+        <id column="INV_YEAR_MONTH"   property="invYearMonth.dateOfym" />
+        <id column="LAST_UPD_DATE"    property="lastUpdDate" />
+    </resultMap>
+
+    <resultMap id="item_Map" type="fw.domain.options.stock.inv.inventorysettle.InventorySettleItem">
+        <id column="COMPANY_CD"       property="inventorySettleIdentify.companyCd" />
+        <id column="SECTION_PLACE_CD" property="inventorySettleIdentify.sectionPlaceCd" />
+        <id column="STOCK_PLACE_CD"   property="inventorySettleIdentify.stockPlaceCd" />
+        <id column="INV_YEAR_MONTH"   property="inventorySettleIdentify.invYearMonth.dateOfym" />
+        <id column="LAST_UPD_DATE"    property="inventorySettleIdentify.lastUpdDate" />
+        <id column="INV_STATUS"       property="invStatus.status" />
+        <id column="NEXT_INV_YEAR_MONTH" property="nextInvYearMonth.dateOfym" />
+        <id column="COMPANY_NAME"        property="companyName" />
+        <id column="SECTION_PLACE_NAME"  property="sectionPlaceName" />
+        <id column="STOCK_PLACE_NAME"    property="stockPlaceName" />
+    </resultMap>
+
+    <select id="listKeyIdentity" parameterType="fw.domain.options.stock.inv.inventorysettle.InventorySettleSearchCondition" resultMap="identity_Map">
+        <include refid="viewSql"/>
+      SELECT T_INVENTORY.COMPANY_CD
+           , T_INVENTORY.SECTION_PLACE_CD
+           , T_INVENTORY.STOCK_PLACE_CD
+           , T_INVENTORY.INV_YEAR_MONTH
+           , T_INVENTORY.LAST_UPD_DATE
+        FROM(<include refid="listSql"/>) T_INVENTORY
+        <where>
+            <include refid="listKeyIdentityWhereCondition"/>
+        </where>
+    ORDER BY ${searchCondition.columnOrder.columnOrder()}
+    </select>
+
+    <select id="listPageItem" parameterType="fw.domain.options.stock.inv.inventorysettle.InventorySettleSearchCondition" resultMap="item_Map">
+        <include refid="viewSql"/>
+      SELECT *
+        FROM(<include refid="listSql"/>) T_INVENTORY
+        <where>
+            (T_INVENTORY.COMPANY_CD
+           , T_INVENTORY.SECTION_PLACE_CD
+           , T_INVENTORY.STOCK_PLACE_CD
+           , T_INVENTORY.INV_YEAR_MONTH) IN
+        <foreach collection="searchCondition.page.keyDomainEntityList" item="keyList" open="(" separator="," close=")">
+            (#{keyList.companyCd, jdbcType=VARCHAR}
+           , #{keyList.sectionPlaceCd, jdbcType=VARCHAR}
+           , #{keyList.stockPlaceCd, jdbcType=VARCHAR}
+           , #{keyList.invYearMonth.dateOfym, jdbcType=VARCHAR})
+        </foreach>
+            <include refid="listKeyIdentityWhereCondition"/>
+        </where>
+    ORDER BY ${searchCondition.columnOrder.columnOrder()}
+    </select>
+
+</mapper>

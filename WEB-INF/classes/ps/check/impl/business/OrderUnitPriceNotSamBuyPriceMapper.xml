@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="ps.check.impl.business.OrderUnitPriceNotSamBuyPriceMapper">
+
+    <select id="searchBuyPrice" resultType="String">
+       SELECT
+		      CASE WHEN M_PUR_PRICE_DTL.BUY_PRICE IS NOT NULL THEN M_PUR_PRICE_DTL.BUY_PRICE
+		      ELSE M_PUR_PRICE.BUY_PRICE END AS BUY_PRICE
+         FROM M_PUR_PRICE
+    LEFT JOIN M_PUR_PRICE_DTL ON M_PUR_PRICE.BUYER_COMPANY_CD = M_PUR_PRICE_DTL.BUYER_COMPANY_CD
+                             AND M_PUR_PRICE.BUYER_SECTION_CD = M_PUR_PRICE_DTL.BUYER_SECTION_CD
+					         AND M_PUR_PRICE.ITEM_CD = M_PUR_PRICE_DTL.ITEM_CD
+					         AND M_PUR_PRICE.SUP_CD = M_PUR_PRICE_DTL.SUP_CD
+					         AND M_PUR_PRICE.VALID_START_DATE = M_PUR_PRICE_DTL.VALID_START_DATE
+					         AND M_PUR_PRICE.VALID_END_DATE = M_PUR_PRICE_DTL.VALID_END_DATE
+					         AND M_PUR_PRICE_DTL.LOWER_VOL &lt;= #{vol}
+					         AND M_PUR_PRICE_DTL.UPPER_VOL &gt; #{vol}
+        WHERE M_PUR_PRICE.BUYER_COMPANY_CD = #{companyCd}
+	      AND M_PUR_PRICE.BUYER_SECTION_CD = #{sectionCd}
+	      AND M_PUR_PRICE.ITEM_CD = #{itemCd}
+	      AND M_PUR_PRICE.SUP_CD = #{supCd}
+	      AND M_PUR_PRICE.VALID_START_DATE &lt;= '${@fw.common.util.AppUtil@getSysDate()}'
+	      AND M_PUR_PRICE.VALID_END_DATE &gt;= '${@fw.common.util.AppUtil@getSysDate()}'
+          AND (M_PUR_PRICE.PUR_STOP_FROM &gt; '${@fw.common.util.AppUtil@getSysDate()}' OR
+               M_PUR_PRICE.PUR_STOP_TO &lt; '${@fw.common.util.AppUtil@getSysDate()}'
+               OR (M_PUR_PRICE.PUR_STOP_FROM is null and M_PUR_PRICE.PUR_STOP_TO is null))
+          AND M_PUR_PRICE.APP_STATUS_IND = '2'
+    </select>
+    
+    <select id="getPriceRegFlg" resultType="String">
+        SELECT T_PUR_REQUEST.PRICE_REG_FLG
+		  FROM T_PUR_REQUEST
+		 WHERE T_PUR_REQUEST.PUR_REQ_SEQ = #{purReqSeq}
+		       AND T_PUR_REQUEST.DELETE_FLG = '0'
+    </select>
+    
+</mapper>

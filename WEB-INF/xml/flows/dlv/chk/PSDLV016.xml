@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<flow xmlns="http://www.springframework.org/schema/webflow"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.springframework.org/schema/webflow
+        http://www.springframework.org/schema/webflow/spring-webflow-2.0.xsd"
+    parent="base">
+    
+    <var name="identify" class="fw.domain.slip.order.order.OrderIdentify" />
+    <var name="orderNo" class="java.lang.String"/>
+    <var name="preDelivRespDate" class="java.lang.String"/>
+    <input name="isBuyer" />
+    <input name="searchCondition" />
+    <input name="isCurrentPageSearch" />
+    
+    <decision-state id="isSearchByKey">
+       <if test="flowScope.isCurrentPageSearch" then="searchByKey" else="searchByCondition" />
+    </decision-state>
+    
+    <action-state id="searchByCondition">
+        <evaluate expression="PSDLV011_16Service.init(searchCondition)"
+            result="flowScope.itemList" />
+        <transition to="PSDLV016"/> 
+    </action-state>
+
+    <action-state  id="searchByKey" >
+        <evaluate expression="PSDLV011_16Service.page(searchCondition)"
+            result="flowScope.itemList" />
+        <transition to="PSDLV016"/>
+    </action-state>
+
+    <view-state id="PSDLV016" model="itemList" view="dlv/chk/PSDLV011_16">
+       <transition on="order" validate="false">
+            <evaluate expression="PSDLV011_16Service.order(searchCondition)"
+             result="flowScope.itemList" />
+        </transition>
+        <transition on="page" validate="false">
+             <evaluate expression="PSDLV011_16Service.page(searchCondition)"
+              result="flowScope.itemList" />
+        </transition>
+        <transition on="newConfirm" validate="false" to="searchByKey">
+             <evaluate expression="PSDLV011_16Service.newConfirm(itemList)"/>
+             <set name="flashScope.isSuccess" value="true"></set> 
+        </transition>
+        <transition on="print" validate="true" to="searchByKey">
+            <evaluate expression="PSDLV011_16Service.print(itemList)"/>
+            <set name="flashScope.isPrintSuccess" value="true"></set>
+        </transition>
+         <!-- 注文詳細 -->
+        <transition on="detailValidate" validate="false">
+             <set name="identify.orderSeq" value="requestParameters.orderSeq"/>
+             <set name="identify.lastUpdDate" value="requestParameters.lastUpdDate"/>
+             <set name="flashScope.isShowDetail" value="true"/>
+        </transition>
+        <transition on="detail" to="PSORD090TOP" validate="false"/>
+        
+        <!-- 納期回答詳細 -->
+        <transition on="answerDetailValidate" validate="false">
+             <set name="orderNo" value="requestParameters.orderNo"/>
+             <set name="identify.orderSeq" value="requestParameters.orderSeq"/>
+             <set name="identify.lastUpdDate" value="requestParameters.lastUpdDate"/>
+             <set name="flashScope.isShowAnswerDetail" value="true"/>
+             <set name="preDelivRespDate" value="requestParameters.preDelivRespDate"/>
+        </transition>
+        <transition on="answerDetail" to="PSDLV021TOP" validate="false"/>
+        
+        <transition on="download" validate="false">
+            <evaluate expression="PSDLV011_16Service.download(searchCondition)"/>
+        </transition>
+        
+        <transition on="back" to="home" validate="false" />
+    </view-state>
+    
+    <subflow-state id="PSORD090TOP" subflow="ord/order/PSORD090TOP">
+        <input name="orderIdentify" value="identify" />
+    </subflow-state>
+    <subflow-state id="PSDLV021TOP" subflow="dlv/ans/PSDLV021TOP">
+        <input name="orderNo" value="orderNo" />
+        <input name="orderIdentify" value="identify"/>
+        <input name="isResp" value="true" />
+        <input name="preDelivRespDate" value="preDelivRespDate" />
+    </subflow-state>
+</flow>

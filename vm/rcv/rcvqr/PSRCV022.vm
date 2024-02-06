@@ -1,0 +1,677 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<title>#customSpringMessage("RCV_QR_INPUT_LIST")</title> <!--受入QR入力一覧 -->
+<meta http-equiv="Content-type" content="text/html; charset=UTF-8">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Content-script-type" content="text/javascript">
+<link id="CSS_FONT" rel="stylesheet" href="../../include/FontS.css" type="text/css">
+<link rel="stylesheet" href="../../include/Layout.css" type="text/css">
+<link rel="stylesheet" href="../../include/Color.css" type="text/css">
+<link rel="stylesheet" href="../../include/searchbox.css" type="text/css">
+<link rel="stylesheet" href="../../include/ime.css" type="text/css">
+<script language="javascript" TYPE="text/javascript" src="../../include/common.js"></script>
+<script language="javascript" TYPE="text/javascript" src="../../include/check.js"></script>
+<script language="javascript" TYPE="text/javascript" src="../../include/date.js"></script>
+<script language="javascript" TYPE="text/javascript" src="../../include/tablesort.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/searchbox.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/jquery-1.7.2.min.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/jquery.tablefix.js"></script>
+<script language="javascript" type="text/javascript">
+<!--
+#set($isActiveProfileStock = "#isActiveProfile('stock')")
+#set($commonTitle = "#customSpringMessage('RCV_QR_INPUT_LIST')")
+#parse("./common/common_js.vm")
+var countTotal = 0;
+var CompanyCd="#jsEscape($!userCompanyCd)";
+var SectionCd="#jsEscape($!userSectionCd)";
+var isClickable = false;
+function onLoad() {
+    setFocus();
+    top.document.title = document.title;
+    routeChange();
+    var alertMessage = "$!alertMessage";
+    var errorMsg = "$!errorMessage";
+    if (alertMessage != "" && errorMsg == ""){
+        buttonUsableForList(alertMessage);
+        if(alertMessage.indexOf("W")!=-1){
+            if (confirm("$!alertMessage")) {
+                buttonDisable();
+                getObj("Body").action = "${flowExecutionUrl}&_eventId=save&checkPass=1";
+                getObj('Body').submit();
+                return;
+            }
+        }else{
+        	alert(alertMessage);
+        }
+    }
+    if (errorMsg != "") {
+        document.getElementById("TR_ERROR").style.display = "";
+    }
+    var checkFlg = "#jsEscape($!inputCheck)";
+    if (checkFlg == "") {
+        var isSuccess = '#jsEscape($!isSuccess)';
+        if(isSuccess == 'true'){
+
+        #set( $updateParam = ["$!successCount"])
+            alert('#customMessageArgs("I006", $updateParam)');
+        }
+    }
+    isClickable = true;
+}
+function exec() {
+    if(!isClickable) {
+        return;
+    }
+     var count=0;
+    var checkBoxs = document.getElementsByName('Chk');
+
+   for(var i=0;i<checkBoxs.length;i++){
+        var checkBox = checkBoxs[i];
+        if(checkBox.checked){
+        count = count + 1;
+        }
+    }
+    var receive = "#customSpringMessage('RECEIVE')";
+    if(count==0){
+        alert("#nothingSelectedMessage()");
+        return;
+    }
+    var ac = "#customMessageArgs("W006","")";
+    ac = ac.replace("{0}", count);
+    ac = ac.replace("{1}", receive);
+    if( !confirm(ac)) {
+        return;
+    }
+    buttonDisable();
+    getObj("Body").action = "${flowExecutionUrl}&_eventId=save";
+    getObj('Body').submit();
+}
+function openDetail(orderNo,orderSeq) {
+    poppage('${flowExecutionUrl}&_eventId=detail&&orderNo='+orderNo + '&&orderSeq='+orderSeq,'DETAIL','800','700');
+}
+function setAppRoute() {
+    #foreach ( $item in $itemList.packageReceiveList)
+        var checkName = "packageReceiveList[$velocityCount].receiveApl.receive.order.appManagement.routeNo";
+        if (!getObj(checkName).disabled) {
+           var exist = false;
+           var options = getObj(checkName).options;
+           for(var i=0;i<options.length;i++){
+                if(options[i].value == getObj("routeNo").value) {
+                     exist = true;
+                }
+           }
+
+           if(exist){
+               getObj(checkName).value = getObj("routeNo").value;
+           }
+        }
+    #end
+}
+function setDate() {
+     #foreach ( $item in $itemList.packageReceiveList)
+        var checkName = "packageReceiveList[$velocityCount].receiveApl.receive.receiveResult.receiveDate.receiveDate.dateOfymdFormat";
+        if (!getObj(checkName).disabled) {
+           getObj(checkName).value = getObj("date").value;
+           }
+    #end
+}
+function routeChange() {
+    var route = getObj('routeNo');
+  if(route.value != "") {
+    getObj("show").disabled=false;
+  }
+  else {
+    getObj("show").disabled=true;
+  }
+}
+function appRoutePopup() {
+    var appRouteNo = getObj('routeNo').value;
+    if (appRouteNo != "") {
+        appRouteDetailPopup.setParam(CompanyCd,SectionCd,'3',appRouteNo);
+        masterSearch('../../src/apr/PSCMN030?pageid=appRouteDetailPopup','PLACESEARCHBOX','700','300');
+    }
+
+}
+function chkHead(obj) {
+    #foreach ( $item in $itemList.packageReceiveList)
+        if(obj.checked) {
+            if(getObj("check$velocityCount") != null){
+                getObj("check$velocityCount").checked = true;
+                getObj("Row_$velocityCount").style.backgroundColor = "#ffff99";
+                $("tr:[id=Row_$velocityCount]").css("background-color","#ff9");
+                getObj("packageReceiveList[$velocityCount].select").value = '1';
+            }
+        } else {
+            if(getObj("check$velocityCount") != null){
+                getObj("check$velocityCount").checked = false;
+                #if ($velocityCount % 2 == 0)
+                    $("tr:[id=Row_$velocityCount]").css("background-color","#dce4ef");
+                #else
+                    $("tr:[id=Row_$velocityCount]").css("background-color","#fff");
+                #end
+                getObj("packageReceiveList[$velocityCount].select").value = '';
+            }
+        }
+    #end
+}
+function initAppRoute() {
+    #foreach ( $item in $itemList.packageReceiveList)
+        var checkName = "packageReceiveList[$velocityCount].receiveApl.receive.order.appManagement.routeNo";
+        if (!getObj(checkName).disabled) {
+            setAppRouteByAmount('$velocityCount'
+                                ,'3'
+                                ,'$!item.receiveApl.receive.order.accounting.orderAmount.orderAmount.amount'
+                                ,'$!item.receiveApl.receive.order.accounting.orderAmount.orderAmount.currencyCd'
+                                ,'$!item.receiveApl.receive.order.appManagement.routeNo');
+        }
+    #end
+}
+function setAppRouteByAmount(rowNo, approuteVoucherInd, amount, currencyCd, currentRoute){
+    if(!amount || !currencyCd) {
+        return;
+    } else {
+        $.ajax({
+            type: "POST",
+            async:false,
+            url:"../../appRouteController/getAppRouteByAmount",
+            data: {
+                "approuteVoucherInd.approuteVoucherInd":approuteVoucherInd,
+                "amount.amountFormat":amount,
+                "amount.currencyCd":currencyCd,
+                current:currentRoute
+            },
+            success:function(data){
+                var appRouteList = 'packageReceiveList['+rowNo+'].receiveApl.receive.order.appManagement.routeNo';
+                $.each(data,function(index,element){
+                    var varItem = new Option(element.text, element.value);
+                    if(element.selected) {
+                       getObj("selectedAppRouteIndex_"+rowNo).value = index;
+                    }
+                    getObj(appRouteList).options.add(varItem);
+                  });
+            }
+         });
+    }
+}
+function setAppRouteSelected(){
+    #foreach ( $item in $itemList.packageReceiveList)
+        var checkName = "packageReceiveList[$velocityCount].receiveApl.receive.order.appManagement.routeNo";
+        if (!getObj(checkName).disabled) {
+            getObj(checkName).selectedIndex = getObj("selectedAppRouteIndex_$velocityCount").value
+        }
+    #end
+}
+function chkData(obj, index){
+	if(obj.checked){
+	    $("tr:[id=Row_"+index+"]").css("background-color","#ff9");
+		getObj("packageReceiveList[" + index + "].select").value = '1';
+	}else{
+		getObj("packageReceiveList[" + index + "].select").value = '';
+		if (index % 2 == 0) {
+            $("tr:[id=Row_"+index+"]").css("background-color","#dce4ef");
+        } else {
+            $("tr:[id=Row_"+index+"]").css("background-color","#fff");
+        }
+	}
+}
+function chkInspectData(obj, index){
+	if(getObj('packageReceiveList['+index+'].receiveApl.receive.receiveResult.inspectInd.inspectInd') != null){
+    	if(obj.checked){
+    		getObj('packageReceiveList['+index+'].receiveApl.receive.receiveResult.inspectInd.inspectInd').value = '1';
+    	}else{
+    		getObj('packageReceiveList['+index+'].receiveApl.receive.receiveResult.inspectInd.inspectInd').value = '0';
+    	}
+	}
+}
+## 「在庫場所」検索POPUPボタンをクリックしたとき発生します。
+function stockPlacePopupOnClick(obj,index, referenceRangeInd){
+    stockPlacePopup.setParam('0'
+    ,getObj('packageReceiveList['+index+'].receiveApl.receive.receiveResult.stockPlace.company.companyCd').value
+    ,getObj('packageReceiveList['+index+'].receiveApl.receive.receiveResult.stockPlace.sectionPlace.sectionPlaceCd').value,referenceRangeInd);
+    stockPlacePopup.setObject(
+     getObj('packageReceiveList['+index+'].receiveApl.receive.receiveResult.stockPlace.sectionPlace.sectionPlaceCd')
+    ,getObj('packageReceiveList['+index+'].receiveApl.receive.receiveResult.stockPlace.sectionPlace.sectionPlaceName')
+    ,getObj('packageReceiveList['+index+'].receiveApl.receive.receiveResult.stockPlace.stockPlaceCd')
+    ,getObj('packageReceiveList['+index+'].receiveApl.receive.receiveResult.stockPlace.stockPlaceName'));
+    masterSearch('../../src/stockPlacePopup/search?pageid=stockPlacePopupSearch&popupPageid=PSRCV022','StockPlaceSearch','700','500');
+}
+var stockPlaceCd_x=[];## 変更前の出庫場所コード
+## 「在庫場所」を変更したとき発生します。
+function stockPlaceOnblur(obj,index){
+    var companyCdObj=getObj("packageReceiveList["+index+"].receiveApl.receive.receiveResult.stockPlace.company.companyCd");
+    var sectionPlaceCdObj=getObj("packageReceiveList["+index+"].receiveApl.receive.receiveResult.stockPlace.sectionPlace.sectionPlaceCd");
+    var stockPlaceNameObj=getObj("packageReceiveList["+index+"].receiveApl.receive.receiveResult.stockPlace.stockPlaceName");
+    var stockPlaceCd=getObj("packageReceiveList["+index+"].receiveApl.receive.receiveResult.stockPlace.stockPlaceCd").value;
+    if(stockPlaceCd==stockPlaceCd_x[index]){
+        return;
+    }else{
+        stockPlaceCd_x[index]=stockPlaceCd;
+    }
+    if(!stockPlaceCd){
+        if(stockPlaceNameObj){ stockPlaceNameObj.value=""; }
+    }else{
+        $.ajax({
+            type:"POST",
+            async:false,
+            url:"../../getStockPlaceInfoOnBlur",
+            data:{
+                termFlag:"0",
+                companyCd:cleanXss(companyCdObj.value),
+                sectionPlaceCd:cleanXss(sectionPlaceCdObj.value),
+                stockPlaceCd:cleanXss(stockPlaceCd)
+            },
+            success:function(data){
+                if(stockPlaceNameObj){ stockPlaceNameObj.value=data.stockPlaceName; }
+            }
+        });
+    }
+}
+## 「在庫場所」がフォーカスを受け取ったとき発生します。
+function stockPlaceCdGetfocus(obj,index){
+    stockPlaceCd_x[index]=obj.value;
+}
+//-->
+</script>
+</head>
+<body topmargin="0" leftmargin="0" marginwidth="0" marginheight="0" align="left" onload="onLoad();initAppRoute();setTablefix('#PSRCV022ICHIRANTABLEFIX', 1, 3);setAppRouteSelected();" style="overflow-y:scroll;">
+<form id="Body" name="Body" method="post">
+<!-- ＊＊＊＊＊　カレンダーボックス　＊＊＊＊＊ -->
+    <iframe id="CALENDARBOX" class="CALENDARBOX" framespacing="0"scrolling="no" frameborder="0" src="../../sbxCalendar/body.vm"></iframe>
+    <table class="SearchBody" style="height:5%;width:100%">
+
+        <tr id="TR_1">
+            <td id="SEARCH_AREA" class="SearchArea"><!-- onLoadで変更 -->
+                 <span class="CornerTopGray">
+                <span class="Corner1"></span><span class="Corner2"></span><span class="Corner3"></span><span class="Corner4"></span>
+                </span>
+                <table class="CornerMidGray" width="100%"><tr>
+                    <td>
+                        <table class="NoBorder" width="100%"><tr>
+                            <td WIDTH="30%" ALIGN="left">
+                                <table class="NoBorder"><tr>
+                                    <td class="ScreenName">#out($!commonTitle)</td><!-- 一覧 -->
+                                </tr>
+                                </table>
+                            </td>
+                            <td WIDTH="5%" ALIGN="left" ></td>
+                            <td WIDTH="5%" ALIGN="left"></td>
+                            <td WIDTH="20%" ALIGN="center" class="FontSmallBold" nowrap>
+                                <B>#customSpringMessage('PAGING_TOTAL')&nbsp;<span id="COUNT" class="FontMiddleAnkBold">$itemList.packageReceiveList.size()</span>&nbsp;#customSpringMessage('PAGING_COUNT')&nbsp;&nbsp;</B>
+                            </td>
+                            <td WIDTH="5%" ALIGN="right"></td>
+                            <td WIDTH="5%" ALIGN="right" ></td>
+                            <td width="20%" align="center" class="FontSmall"></td>
+                            <td width="10%" align="right"><input type="button" class="MiddleButton" value="#customSpringMessage('ACTION_REGISTER')" onclick="javascript:exec();"></td>
+                        </tr></table>
+                    </td>
+                </tr>
+                </table>
+                <span class="CornerBtmGray">
+                <span class="Corner4"></span><span class="Corner3"></span><span class="Corner2"></span><span class="Corner1"></span></span>
+            </td>
+        </tr>
+        <tr id ="TR_ERROR" style="display:none;"><td  class="error">
+            $!errorMessage
+        </td></tr>
+        <tr>
+            <td class="UploadArea" class="NoBorder" style="height:35px;border-bottom:1px solid #999999;text-align:left;vertical-align:middle;">
+                <table class="NoBorder" width="100%"  class="DataArea">
+                    <tr>
+                        <td align="left">
+                            <table width="100%">
+                                <tr>
+                                    <td width="20%"></td>
+                                    <td width="40%" nowrap>
+                                        <table class="NoBorder">
+                                            <tr>
+                                                <td class="FontSmallBold" nowrap>#customSpringMessage("RCV_DATE"):&nbsp;
+                                                    <input id="date" name="date" class="Small noIME" maxlength="8" type="text" size="12" onblur='dateOnBlur(this);' onfocus='dateOnFocus(this);' >
+                                                </td>
+                                                <td>
+                                                    <img class="Icon" name="dateSearch" src="../../image/btnCalendar.gif" onclick="initSearchBox(1,document.getElementById('date'));" >
+                                                </td>
+                                                <td>
+                                                    <input id="button_exec_nm" class="SmallButton" type="button" value="#customSpringMessage('PACKAGE_COND')(#customSpringMessage('RCV_DATE'))" onclick="setDate();">
+                                                </td>
+                                            </tr>
+                                        </table>
+                                    </td>
+                                    <td width="40%" nowrap>
+                                        <table class="NoBorder">
+                                            <tr>
+                                                <td class="FontSmallBold" nowrap>#customSpringMessage("APP_ROUTE"):&nbsp;
+                                                     <select id="routeNo" name="routeNo" class='Small' onchange="routeChange()">
+                                                            #foreach($option in $approuteList)
+                                                                <option value="#out(${option.value})"
+                                                                #if($option.selected)
+                                                                    selected="selected"
+                                                                #end>
+                                                                #out(${option.text})</option>
+                                                            #end
+                                                    </select>
+                                                </td>
+                                                <td>
+                                                    <input id="show" type="button"  class="SmallButton" value="#customSpringMessage('SHOW')" onclick="appRoutePopup()" disabled>
+                                                </td>
+                                                <td>
+                                                    <input id="button_exec_nm" class="SmallButton" type="button" value="#customSpringMessage('PACKAGE_COND')(#customSpringMessage('APP_ROUTE'))" onclick="setAppRoute();">
+                                                </td>
+                                            </tr>
+                                        </table>
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+        </table>
+    <table id="PSRCV022ICHIRANTABLEFIX" class="ListArea"  WIDTH="100%">
+    <thead>
+    #if($itemList.packageReceiveList.size()!=0)
+        <tr id="Header">
+            <th class="BoxHeaderCenter FontSmall">No.</th>
+            <th id="CheckCol_H" label="chk" class="BoxHeaderCenter FontSmall"><input name="ParentCheck" type="checkbox" onclick="chkHead(this);"></th><!--全選択/全選択解除-->
+            <th class="BoxHeaderCenter FontSmall">#customSpringMessage('DETAIL')</th>
+            <th class="BoxHeaderCenter FontSmall" id="DELIV_KEY_NO">
+            #customSpringMessage('DELIV_KEY_NO')
+            </th>
+            <th class="BoxHeaderCenter FontSmall" id="STATUS">
+            #customSpringMessage('STATUS')
+            </th>
+            <th class="BoxHeaderCenter FontSmall" id="REQ_TYPE_IND">
+            #customSpringMessage('REQ_TYPE_IND')
+            </th>
+            <th class="BoxHeaderCenter FontSmall" id="RCV_DATE">
+            #customSpringMessage('RCV_DATE')<span class="FontWarn">&nbsp;※</span>
+            </th>
+            <th class="BoxHeaderCenter FontSmall" id="RCV_AMOUNT">
+            #customSpringMessage('RCV_AMOUNT')<span class="FontWarn">&nbsp;※</span>
+            </th>
+        #if($isActiveProfileStock == "true")## 在庫オプション
+            <th class="BoxHeaderCenter FontSmall" id="HAVE_IN_STOCK_FLG">
+            #customSpringMessage('HAVE_IN_STOCK')
+            </th>
+            <th class="BoxHeaderCenter FontSmall" id="STOCK_PLACE_CD">
+            #customSpringMessage('STOCK_PLACE')
+            </th>
+        #end
+            <th class="BoxHeaderCenter FontSmall" id="RCV_REMARK">
+            #customSpringMessage('RCV_REMARK')
+            </th>
+            <th class="BoxHeaderCenter FontSmall" id="INSPECTION_EXIST">
+            #customSpringMessage('INSPECTION_EXIST')
+            </th>
+            <th class="BoxHeaderCenter FontSmall" id="APP_ROUTE">
+            #customSpringMessage('APP_ROUTE')<span class="FontWarn">&nbsp;※</span>
+            </th>
+            <th class="BoxHeaderCenter FontSmall" id="TITLE_NAME">
+            #customSpringMessage('TITLE_NAME')
+            </th>
+            <th class="BoxHeaderCenter FontSmall" id="ITEM_CD">
+            #customSpringMessage('ITEM_CD')
+            </th>
+            <th class="BoxHeaderCenter FontSmall" id="ITEM_NAME">
+            #customSpringMessage('ITEM_NAME')
+            </th>
+            <th class="BoxHeaderCenter FontSmall" id="KATASHIKI">
+            #customSpringMessage('KATASHIKI')
+            </th>
+            <th class="BoxHeaderCenter FontSmall" id="MANUFACT_CD">
+            #customSpringMessage('MANUFACT_CD')
+            </th>
+            <th class="BoxHeaderCenter FontSmall" id="MANUFACT_NAME">
+            #customSpringMessage('MANUFACT_NAME')
+            </th>
+            <th class="BoxHeaderCenter FontSmall" id="SUP_CD">
+            #customSpringMessage('SUP_CD')
+            </th>
+            <th class="BoxHeaderCenter FontSmall" id="SUP_NAME">
+            #customSpringMessage('SUP_NAME')
+            </th>
+            <th class="BoxHeaderCenter FontSmall" id="SUBCON">
+            #customSpringMessage('SUBCONTRACTOR')
+            </th>
+            <th class="BoxHeaderCenter FontSmall" id="EDI">
+            #customSpringMessage('EDI')
+            </th>
+            <th class="BoxHeaderCenter FontSmall" id="DELIV_PLACE_CD">
+            #customSpringMessage('DELIV_PLACE_CD')
+            </th>
+            <th class="BoxHeaderCenter FontSmall" id="DELIV_PLACE_NAME">
+            #customSpringMessage('DELIV_PLACE_NAME')
+            </th>
+            <th class="BoxHeaderCenter FontSmall" id="ORDER_VOL">
+            #customSpringMessage('ORDER_VOL')
+            </th>
+            <th class="BoxHeaderCenter FontSmall" id="UNIT">
+            #customSpringMessage('UNIT')
+            </th>
+            <th class="BoxHeaderCenter FontSmall" id="CURRENCY_CD">
+            #customSpringMessage('CURRENCY_CD')
+            </th>
+            <th class="BoxHeaderCenter FontSmall" id="ORDER_UNIT_PRICE">
+            #customSpringMessage('ORDER_UNIT_PRICE')
+            </th>
+            <th class="BoxHeaderCenter FontSmall" id="ORDER_AMOUNT">
+            #customSpringMessage('ORDER_AMOUNT')
+            </th>
+            <th class="BoxHeaderCenter FontSmall" id="UNIT_PRICE_IND">
+            #customSpringMessage('UNIT_PRICE_IND')
+            </th>
+            <th class="BoxHeaderCenter FontSmall" id="DELIV_DATE">
+            #customSpringMessage('DELIV_DATE')
+            </th>
+            <th class="BoxHeaderCenter FontSmall" id="SHIPMENT_VOL">
+            #customSpringMessage('SHIPMENT_VOL')
+            </th>
+            <th class="BoxHeaderCenter FontSmall" id="ARVEXP_DATE">
+            #customSpringMessage('ARVEXP_DATE')
+            </th>
+            <th class="BoxHeaderCenter FontSmall" id="RCV_SETTLED_AMOUNT">
+            #customSpringMessage('RCV_SETTLED_AMOUNT')
+            </th>
+            <th class="BoxHeaderCenter FontSmall" id="RCV_REMAIN_AMOUNT">
+            #customSpringMessage('RCV_REMAIN_AMOUNT')
+            </th>
+            <th class="BoxHeaderCenter FontSmall" id="ORDER_DATE">
+            #customSpringMessage('ORDER_DATE')
+            </th>
+            <th class="BoxHeaderCenter FontSmall" id="FOR_SUPPRIER_COMMENT">
+            #customSpringMessage('FOR_SUPPRIER_COMMENT')
+            </th>
+            <th class="BoxHeaderCenter FontSmall" id="REQ_SECTION_CD">
+            #customSpringMessage('REQ_SECTION_CD')
+            </th>
+            <th class="BoxHeaderCenter FontSmall" id="REQ_SECTION_NAME">
+            #customSpringMessage('REQ_SECTION_NAME')
+            </th>
+            <th class="BoxHeaderCenter FontSmall" id="REQ_USER_ID">
+            #customSpringMessage('REQ_USER_ID')
+            </th>
+            <th class="BoxHeaderCenter FontSmall" id="REQ_USER_NAME">
+            #customSpringMessage('REQ_USER_NAME')
+            </th>
+        </tr>
+    </thead>
+    <tbody>
+    #foreach($!item in $itemList.packageReceiveList)
+        <input type="hidden" id="selectedAppRouteIndex_$velocityCount" />
+        #if("$!item.select"=="1")
+            <tr id="Row_$velocityCount" bgcolor="#ffff99">
+        #else
+            #if($velocityCount % 2 == 0)
+                <tr id="Row_$velocityCount" bgcolor="#dce4ef">
+            #else
+                <tr id="Row_$velocityCount" bgcolor="#ffffff">
+            #end
+        #end
+            <td class="BoxDetailCenter FontList">#set( $no = $velocityCount + 1 )$no</td>
+            <td id="CheckCol_0" class="BoxDetailCenter FontList">
+                #if($!item.editFlg=='1')
+                    #customFormHiddenInput("packageReceiveList[$velocityCount].select" "$!item.select")
+                    #customFormHiddenInput("packageReceiveList[$velocityCount].receiveApl.receive.identify.rcvSettledListIdentify.exclusiveSlipId.slipNo" "$!item.receiveApl.receive.identify.rcvSettledListIdentify.exclusiveSlipId.slipNo")
+                    #customFormHiddenInput("packageReceiveList[$velocityCount].receiveApl.receive.identify.rcvSettledListIdentify.exclusiveSlipId.lastUpdDate" "$!item.receiveApl.receive.identify.rcvSettledListIdentify.exclusiveSlipId.lastUpdDate")
+                    <input class="Icon" name="Chk" id="check$velocityCount" type="checkbox" #if("$!item.select"=="1") checked="checked"  #end onclick="chkData(this,'$velocityCount');"/>
+                #end
+            </td>
+            <td class="BoxDetailCenter FontList">
+                #if($!item.showFlg=='1')
+                <img id="DetailButton_0" class="Icon" src="../../image/btnDetailDisp.gif" style="margin-right:4px;" onclick="openDetail('#jsEscapeInHTML($!item.receiveApl.receive.order.orderNo.orderNo)', '#jsEscapeInHTML($!item.receiveApl.receive.order.orderIdentify.orderSeq)');">
+                 #end
+            </td>
+            <td class="BoxDetailCenter">
+                <table class="NoBorder">
+                        <tr>
+                            <td nowrap class="FontSlipNo">#out($!item.receiveApl.receive.delivKeyNo.delivKeyNo)</td>
+                        </tr>
+                    </table></td>
+            <td class="BoxDetailCenter FontStatus">#out($!item.receiveApl.receive.slipManagement.status_PageValue)</td>
+            <td class="BoxDetailCenter FontStatus">#out($!item.receiveApl.receive.order.reqInd.reqInd_PageValue)</td>
+            <td class="BoxDetailRight">
+                #if($!item.editFlg=='1')
+                    <table class="NoBorder">
+                        <tr>
+                            <td>
+                                #springFormInput("itemList.packageReceiveList[$velocityCount].receiveApl.receive.receiveResult.receiveDate.receiveDate.dateOfymdFormat" "size=12 maxLength=8 class='SmallAnk noIME' onblur='dateOnBlur(this);' onfocus='dateOnFocus(this);' ")
+                            </td>
+                            <td>
+                                <img class="Icon" name="dateSearch" src="../../image/btnCalendar.gif" onclick="initSearchBox(1,document.getElementById('packageReceiveList[$velocityCount].receiveApl.receive.receiveResult.receiveDate.receiveDate.dateOfymdFormat'));" >
+                            </td>
+                        </tr>
+                    </table>
+                    #else
+                        <table class="NoBorder">
+                        <tr>
+                            <td>
+                                #springFormInput("itemList.packageReceiveList[$velocityCount].receiveApl.receive.receiveResult.receiveDate.receiveDate.dateOfymdFormat" "size=12 maxLength=8 disabled class='SmallAnk noIME' onblur='dateOnBlur(this);' onfocus='dateOnFocus(this);' ")
+                            </td>
+                            <td>
+                                <img class="Icon" name="dateSearch" src="../../image/btnCalendar.gif" >
+                            </td>
+                        </tr>
+                    </table>
+                #end
+                </td>
+            <td class="BoxDetailRight">
+                #if($!item.editFlg=='1')
+                    #springFormInput("itemList.packageReceiveList[$velocityCount].receiveApl.receive.receiveResult.receiveVol.receiveVol.volFormat" "size=18 maxLength=13 class='SmallRight noIME' onblur='editVal(this);' onfocus='deleteComma(this);'")
+                #else
+                    #springFormInput("itemList.packageReceiveList[$velocityCount].receiveApl.receive.receiveResult.receiveVol.receiveVol.volFormat" "size=18 maxLength=13 class='SmallRight' disabled")
+                #end
+              </td>
+            #if($isActiveProfileStock == "true")## 在庫オプション
+             <td class="BoxDetailCenter FontStatus" nowrap>
+              #if($!item.receiveApl.receive.order.accounting.orderItem.item.itemCd != '')
+                #if($!item.editFlg=='1')
+                    #customFormCheckbox("itemList.packageReceiveList[$velocityCount].receiveApl.receive.receiveResult.haveInStockFlg.haveInStockFlg" "" "1" "0")
+                #else
+                    #customFormCheckbox("itemList.packageReceiveList[$velocityCount].receiveApl.receive.receiveResult.haveInStockFlg.haveInStockFlg" "disabled" "1" "0")
+                #end
+              #else
+                #out($!item.receiveApl.receive.receiveResult.haveInStockFlg.haveInStockFlg_PageValue)
+              #end
+             </td>
+             <td class="BoxDetailLeft" nowrap>
+              #if($!item.receiveApl.receive.order.accounting.orderItem.item.itemCd != '')
+                #if($!item.editFlg=='1')
+                    #springFormInput("itemList.packageReceiveList[$velocityCount].receiveApl.receive.receiveResult.stockPlace.stockPlaceCd" "class='SmallAnk noIME' size='16' maxLength='12' onblur='stockPlaceOnblur(this,$velocityCount);' onfocus='stockPlaceCdGetfocus(this,$velocityCount);'")
+                    #springFormInput("itemList.packageReceiveList[$velocityCount].receiveApl.receive.receiveResult.stockPlace.stockPlaceName" 'class="SmallDsp" size="56" readonly tabIndex="-1"')
+                  #if($!item.receiveApl.receive.receiveResult.stockPlace.stockPlaceCd == '')
+                    <img class="Icon to_stockplace" src="../../image/btnLupe.gif" onclick="stockPlacePopupOnClick(this,$velocityCount);">
+                  #else
+                    <img class="Icon to_stockplace" src="../../image/btnLupe.gif" onclick="stockPlacePopupOnClick(this,$velocityCount);">
+                  #end
+                #else
+                    #springFormInput("itemList.packageReceiveList[$velocityCount].receiveApl.receive.receiveResult.stockPlace.stockPlaceCd" 'class="SmallDsp" size="16" readonly tabIndex="-1"')
+                    #springFormInput("itemList.packageReceiveList[$velocityCount].receiveApl.receive.receiveResult.stockPlace.stockPlaceName" 'class="SmallDsp" size="56" readonly tabIndex="-1"')
+                #end
+                #customFormHiddenInput("packageReceiveList[$velocityCount].receiveApl.receive.receiveResult.stockPlace.company.companyCd" "$!item.receiveApl.receive.receiveResult.stockPlace.company.companyCd")
+                #customFormHiddenInput("packageReceiveList[$velocityCount].receiveApl.receive.receiveResult.stockPlace.sectionPlace.sectionPlaceCd" "$!item.receiveApl.receive.receiveResult.stockPlace.sectionPlace.sectionPlaceCd")
+                #customFormHiddenInput("packageReceiveList[$velocityCount].receiveApl.receive.receiveResult.stockPlace.sectionPlace.sectionPlaceName" "$!item.receiveApl.receive.receiveResult.stockPlace.sectionPlace.sectionPlaceName")
+              #else
+                #out($!item.receiveApl.receive.receiveResult.stockPlace.stockPlaceCd)&nbsp;
+                #out($!item.receiveApl.receive.receiveResult.stockPlace.stockPlaceName)
+              #end
+             </td>
+            #end
+             <td class="BoxDetailCenter">
+                #if($!item.editFlg=='1')
+                    #springFormInput("itemList.packageReceiveList[$velocityCount].receiveApl.receive.receiveResult.receiveRemark.remark.comment" "size=50 maxLength=200 class='Small' ")
+                #else
+                    #springFormInput("itemList.packageReceiveList[$velocityCount].receiveApl.receive.receiveResult.receiveRemark.remark.comment" "size=50 maxLength=200 class='Small' disabled ")
+                #end
+             </td>
+             <td id="CheckCol_0" class="BoxDetailCenter FontList">
+                #customFormHiddenInput("packageReceiveList[$velocityCount].receiveApl.receive.receiveResult.inspectInd.inspectInd" "$!item.receiveApl.receive.receiveResult.inspectInd.inspectInd")
+                #if($!item.editFlg=='1')
+                    <input type = "checkbox" name="inspectInd" id="inspectInd$velocityCount" class='Icon' #if("$!item.receiveApl.receive.receiveResult.inspectInd.inspectInd"=="1") checked="checked" #end onclick="chkInspectData(this,'$velocityCount');">
+                #else
+                    <input type = "checkbox" name="inspectInd" id="inspectInd$velocityCount" class='Icon' #if("$!item.receiveApl.receive.receiveResult.inspectInd.inspectInd"=="1") checked="checked" #end disabled onclick="chkInspectData(this,'$velocityCount');">
+                #end
+            </td>
+            <td class="BoxDetailRight">
+                #if($!item.editFlg=='1')
+                    <select id="packageReceiveList[$velocityCount].receiveApl.receive.order.appManagement.routeNo" name="packageReceiveList[$velocityCount].receiveApl.receive.order.appManagement.routeNo" class='Small'>
+                                                        </select>
+                #else
+                     <select id="packageReceiveList[$velocityCount].receiveApl.receive.order.appManagement.routeNo" name="packageReceiveList[$velocityCount].receiveApl.receive.order.appManagement.routeNo" class='Small' disabled>
+                                                            #foreach($option in $approuteList)
+                                                                <option value="#out(${option.value})"
+                                                                #if($option.selected)
+                                                                    selected="selected"
+                                                                #end>
+                                                                #out(${option.text})</option>
+                                                            #end
+                                                        </select>
+                #end
+            </td>
+            <td class="BoxDetailLeft FontList" nowrap>#out($!item.receiveApl.receive.order.titleName.titleName)</td>
+            <td class="BoxDetailLeft FontList" nowrap>#out($!item.receiveApl.receive.order.accounting.orderItem.item.itemCd)</td>
+            <td class="BoxDetailLeft FontList" nowrap>#out($!item.receiveApl.receive.order.accounting.orderItem.item.itemName)</td>
+            <td class="BoxDetailLeft FontList" nowrap>#out($!item.receiveApl.receive.order.accounting.orderItem.item.katashiki)</td>
+            <td class="BoxDetailLeft FontList" nowrap>#out($!item.receiveApl.receive.order.accounting.orderItem.item.manufact.manufactCd)</td>
+            <td class="BoxDetailLeft FontList" nowrap>#out($!item.receiveApl.receive.order.accounting.orderItem.item.manufact.manufactName)</td>
+            <td class="BoxDetailCenter FontList" nowrap>#out($!item.receiveApl.receive.order.supplierFrom.supCd)</td>
+            <td class="BoxDetailLeft FontList" nowrap>#out($!item.receiveApl.receive.order.supplierFrom.supplierName.supplierAbbrName)</td>
+            #if ($!item.receiveApl.receive.order.supplierFrom.subcon.subconInd == '1')
+            <td class="BoxDetailLeft FontList" nowrap>#out($!item.receiveApl.receive.order.supplierFrom.subcon.subconInd_PageValue)</td>
+            #else
+            <td class="BoxDetailLeft FontList" nowrap></td>
+            #end
+            <td class="BoxDetailLeft FontList" nowrap>#out($!item.receiveApl.receive.order.supplierFrom.ediInd.ediInd_PageValue)</td>
+            <td class="BoxDetailCenter FontList" nowrap>#out($!item.receiveApl.receive.order.complement.delivPlace.delivPlaceCd)</td>
+            <td class="BoxDetailLeft FontList" nowrap>#out($!item.receiveApl.receive.order.complement.delivPlace.delivPlaceName)</td>
+            <td class="BoxDetailRight FontList">#out($!item.receiveApl.receive.order.originVol.volFormat)</td>
+            <td class="BoxDetailLeft FontList">#out($!item.receiveApl.receive.order.accounting.orderItem.item.unit.unitName)</td>
+            <td class="BoxDetailLeft FontList">#out($!item.receiveApl.receive.order.accounting.orderAmount.orderAmount.currencyCd)</td>
+            <td class="BoxDetailRight FontCurrSmall">
+                #out($!item.receiveApl.receive.order.accounting.orderAmount.orderAmount.currencyMark)
+                #out($!item.receiveApl.receive.order.accounting.orderAmount.unitPrice.amount.amountFormat)
+            </td>
+            <td class="BoxDetailRight FontCurrSmall">
+                #out($!item.receiveApl.receive.order.accounting.orderAmount.orderAmount.currencyMark)
+                #out($!item.receiveApl.receive.order.originAmount.amountFormat)
+            </td>
+            <td class="BoxDetailLeft FontList">#out($!item.receiveApl.receive.order.status.priceManagement.unitPriceInd_PageValue)</td>
+            <td class="BoxDetailCenter FontList" nowrap>#out($!item.receiveApl.receive.order.schedule.dlvEst.dlvEst.dateOfymdFormat)</td>
+            <td class="BoxDetailRight FontList">#out($!item.receiveApl.receive.shipment.shipmentVol.shipmentVol.volFormat)</td>
+            <td class="BoxDetailCenter FontList" nowrap>#out($!item.receiveApl.receive.shipment.arrivalDate.arrivalDate.dateOfymdFormat)</td>
+            <td class="BoxDetailRight FontList">#out($!item.receiveApl.receive.receiveResult.receiveSettledVol.volFormat)</td>
+            <td class="BoxDetailRight FontList">#out($!item.receiveApl.receive.receiveResult.receiveRemainingVol.volFormat)</td>
+            <td class="BoxDetailCenter FontList" nowrap>#out($!item.receiveApl.receive.order.schedule.orderDate.orderDate.dateOfymdFormat)</td>
+            <td class="BoxDetailLeft FontList" nowrap>#out($!item.receiveApl.receive.order.orderComment.forSupplierComment.forSupplierComment.comment)</td>
+            <td class="BoxDetailLeft FontList" nowrap>#out($!item.receiveApl.receive.order.user.reqUser.reqUser.section.sectionCd)</td>
+            <td class="BoxDetailLeft FontList" nowrap>#out($!item.receiveApl.receive.order.user.reqUser.reqUser.section.sectionName)</td>
+            <td class="BoxDetailLeft FontList" nowrap>#out($!item.receiveApl.receive.order.user.reqUser.reqUser.userID)</td>
+            <td class="BoxDetailLeft FontList" nowrap>#out($!item.receiveApl.receive.order.user.reqUser.reqUser.userName)</td>
+        </tr>
+    #end
+    </tbody>
+    #end
+</table>
+</form>
+</body>
+</html>

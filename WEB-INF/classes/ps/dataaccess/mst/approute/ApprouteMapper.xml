@@ -1,0 +1,643 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="ps.dataaccess.mst.approute.ApprouteMapper">
+
+    <sql id="listKeyIdentityWhereCondition">
+        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(companyCd)">
+         AND M_APP_ROUTE.COMPANY_CD = #{companyCd, jdbcType=VARCHAR}
+        </if>
+        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(sectionCd)">
+         AND M_APP_ROUTE.SECTION_CD = #{sectionCd, jdbcType=VARCHAR}
+        </if>
+        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(appuserId)">
+         AND EXISTS
+         (   SELECT *
+               FROM M_APP_ROUTE_DTL M_APP_ROUTE_DTL_B
+              WHERE M_APP_ROUTE_DTL.COMPANY_CD = M_APP_ROUTE_DTL_B.COMPANY_CD
+                AND M_APP_ROUTE_DTL.SECTION_CD = M_APP_ROUTE_DTL_B.SECTION_CD
+                AND M_APP_ROUTE_DTL.APP_VOUCHER_IND = M_APP_ROUTE_DTL_B.APP_VOUCHER_IND
+                AND M_APP_ROUTE_DTL.APP_ROUTE_NO = M_APP_ROUTE_DTL_B.APP_ROUTE_NO
+                AND M_APP_ROUTE_DTL_B.APP_USER_ID = #{appuserId, jdbcType=VARCHAR}
+         )
+        </if>
+        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(approuteVoucherInd.approuteVoucherInd)">
+         AND M_APP_ROUTE.APP_VOUCHER_IND = #{approuteVoucherInd.approuteVoucherInd, jdbcType=VARCHAR}
+        </if>
+        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(validStartTargetPriceFrom.amount)">
+         AND M_APP_ROUTE.TARGET_PRICE_FROM >= #{validStartTargetPriceFrom.amount, jdbcType=VARCHAR}
+        </if>
+        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(validStartTargetPriceTo.amount)">
+         AND M_APP_ROUTE.TARGET_PRICE_FROM &lt;= #{validStartTargetPriceTo.amount, jdbcType=VARCHAR}
+        </if>
+        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(validEndTargetPriceFrom.amount)">
+         AND M_APP_ROUTE.TARGET_PRICE_TO >= #{validEndTargetPriceFrom.amount, jdbcType=VARCHAR}
+        </if>
+        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(validEndTargetPriceTo.amount)">
+         AND M_APP_ROUTE.TARGET_PRICE_TO &lt;= #{validEndTargetPriceTo.amount, jdbcType=VARCHAR}
+        </if>
+        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(validStartDateFrom.dateOfymd)">
+         AND M_APP_ROUTE.VALID_START_DATE >= #{validStartDateFrom.dateOfymd, jdbcType=VARCHAR}
+        </if>
+        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(validStartDateTo.dateOfymd)">
+         AND M_APP_ROUTE.VALID_START_DATE &lt;= #{validStartDateTo.dateOfymd, jdbcType=VARCHAR}
+        </if>
+        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(validEndDateFrom.dateOfymd)">
+         AND M_APP_ROUTE.VALID_END_DATE >= #{validEndDateFrom.dateOfymd, jdbcType=VARCHAR}
+        </if>
+        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(validEndDateTo.dateOfymd)">
+         AND M_APP_ROUTE.VALID_END_DATE &lt;= #{validEndDateTo.dateOfymd, jdbcType=VARCHAR}
+        </if>
+        <if test="@fw.domain.mst.searchcondition.SearchCondition@termFlgIsNotEmpty(searchCondition.termFlg)">
+         AND M_APP_ROUTE.TERM_FLG = #{searchCondition.termFlg, jdbcType=VARCHAR}
+        </if>
+    </sql>
+
+    <sql id="listSql">
+      SELECT M_APP_ROUTE.COMPANY_CD
+           , M_APP_ROUTE.SECTION_CD
+           , M_APP_ROUTE.APP_VOUCHER_IND AS APPROUTE_VOUCHER_IND
+           , M_APP_ROUTE.APP_ROUTE_NO
+           , M_APP_ROUTE.LAST_UPD_DATE
+           , M_APP_ROUTE.APP_ROUTE_NAME
+           , M_APP_ROUTE.APP_PERSON_FLG
+           , M_APP_ROUTE.TARGET_PRICE_FROM
+           , M_APP_ROUTE.TARGET_PRICE_TO
+           , M_APP_ROUTE.VALID_START_DATE
+           , M_APP_ROUTE.VALID_END_DATE
+           , M_APP_ROUTE.DSP_ORDER
+           , M_APP_ROUTE.TERM_FLG
+           , M_COMPANY.BASE_CURRENCY_CD AS CURRENCY_CD
+           , MAX(COALESCE(M_SECTION_LANG_COMPANY.SECTION_NAME, M_SECTION_LANG_SYSTEM.SECTION_NAME , section_lang_company.SECTION_NAME, section_lang_system.SECTION_NAME)) AS SECTION_NAME
+           , MAX(CASE WHEN M_APP_ROUTE_DTL.APP_DTL_NO = 1 THEN COALESCE(M_SECTION_APP.SECTION_CD, section.SECTION_CD) ELSE NULL END) AS SECTION_CD_1
+           , MAX(CASE WHEN M_APP_ROUTE_DTL.APP_DTL_NO = 2 THEN COALESCE(M_SECTION_APP.SECTION_CD, section.SECTION_CD) ELSE NULL END) AS SECTION_CD_2
+           , MAX(CASE WHEN M_APP_ROUTE_DTL.APP_DTL_NO = 3 THEN COALESCE(M_SECTION_APP.SECTION_CD, section.SECTION_CD) ELSE NULL END) AS SECTION_CD_3
+           , MAX(CASE WHEN M_APP_ROUTE_DTL.APP_DTL_NO = 4 THEN COALESCE(M_SECTION_APP.SECTION_CD, section.SECTION_CD) ELSE NULL END) AS SECTION_CD_4
+           , MAX(CASE WHEN M_APP_ROUTE_DTL.APP_DTL_NO = 5 THEN COALESCE(M_SECTION_APP.SECTION_CD, section.SECTION_CD) ELSE NULL END) AS SECTION_CD_5
+           , MAX(CASE WHEN M_APP_ROUTE_DTL.APP_DTL_NO = 6 THEN COALESCE(M_SECTION_APP.SECTION_CD, section.SECTION_CD) ELSE NULL END) AS SECTION_CD_6
+           , MAX(CASE WHEN M_APP_ROUTE_DTL.APP_DTL_NO = 7 THEN COALESCE(M_SECTION_APP.SECTION_CD, section.SECTION_CD) ELSE NULL END) AS SECTION_CD_7
+           , MAX(CASE WHEN M_APP_ROUTE_DTL.APP_DTL_NO = 8 THEN COALESCE(M_SECTION_APP.SECTION_CD, section.SECTION_CD) ELSE NULL END) AS SECTION_CD_8
+           , MAX(CASE WHEN M_APP_ROUTE_DTL.APP_DTL_NO = 9 THEN COALESCE(M_SECTION_APP.SECTION_CD, section.SECTION_CD) ELSE NULL END) AS SECTION_CD_9
+           , MAX(CASE WHEN M_APP_ROUTE_DTL.APP_DTL_NO = 1 THEN COALESCE(M_SECTION_APP_LANG_COMPANY.SECTION_NAME, M_SECTION_APP_LANG_SYSTEM.SECTION_NAME, section_app_lang_company.SECTION_NAME ,section_app_lang_system.SECTION_NAME) ELSE NULL END) AS SECTION_NAME_1
+           , MAX(CASE WHEN M_APP_ROUTE_DTL.APP_DTL_NO = 2 THEN COALESCE(M_SECTION_APP_LANG_COMPANY.SECTION_NAME, M_SECTION_APP_LANG_SYSTEM.SECTION_NAME, section_app_lang_company.SECTION_NAME ,section_app_lang_system.SECTION_NAME) ELSE NULL END) AS SECTION_NAME_2
+           , MAX(CASE WHEN M_APP_ROUTE_DTL.APP_DTL_NO = 3 THEN COALESCE(M_SECTION_APP_LANG_COMPANY.SECTION_NAME, M_SECTION_APP_LANG_SYSTEM.SECTION_NAME, section_app_lang_company.SECTION_NAME ,section_app_lang_system.SECTION_NAME) ELSE NULL END) AS SECTION_NAME_3
+           , MAX(CASE WHEN M_APP_ROUTE_DTL.APP_DTL_NO = 4 THEN COALESCE(M_SECTION_APP_LANG_COMPANY.SECTION_NAME, M_SECTION_APP_LANG_SYSTEM.SECTION_NAME, section_app_lang_company.SECTION_NAME ,section_app_lang_system.SECTION_NAME) ELSE NULL END) AS SECTION_NAME_4
+           , MAX(CASE WHEN M_APP_ROUTE_DTL.APP_DTL_NO = 5 THEN COALESCE(M_SECTION_APP_LANG_COMPANY.SECTION_NAME, M_SECTION_APP_LANG_SYSTEM.SECTION_NAME, section_app_lang_company.SECTION_NAME ,section_app_lang_system.SECTION_NAME) ELSE NULL END) AS SECTION_NAME_5
+           , MAX(CASE WHEN M_APP_ROUTE_DTL.APP_DTL_NO = 6 THEN COALESCE(M_SECTION_APP_LANG_COMPANY.SECTION_NAME, M_SECTION_APP_LANG_SYSTEM.SECTION_NAME, section_app_lang_company.SECTION_NAME ,section_app_lang_system.SECTION_NAME) ELSE NULL END) AS SECTION_NAME_6
+           , MAX(CASE WHEN M_APP_ROUTE_DTL.APP_DTL_NO = 7 THEN COALESCE(M_SECTION_APP_LANG_COMPANY.SECTION_NAME, M_SECTION_APP_LANG_SYSTEM.SECTION_NAME, section_app_lang_company.SECTION_NAME ,section_app_lang_system.SECTION_NAME) ELSE NULL END) AS SECTION_NAME_7
+           , MAX(CASE WHEN M_APP_ROUTE_DTL.APP_DTL_NO = 8 THEN COALESCE(M_SECTION_APP_LANG_COMPANY.SECTION_NAME, M_SECTION_APP_LANG_SYSTEM.SECTION_NAME, section_app_lang_company.SECTION_NAME ,section_app_lang_system.SECTION_NAME) ELSE NULL END) AS SECTION_NAME_8
+           , MAX(CASE WHEN M_APP_ROUTE_DTL.APP_DTL_NO = 9 THEN COALESCE(M_SECTION_APP_LANG_COMPANY.SECTION_NAME, M_SECTION_APP_LANG_SYSTEM.SECTION_NAME, section_app_lang_company.SECTION_NAME ,section_app_lang_system.SECTION_NAME) ELSE NULL END) AS SECTION_NAME_9
+           , MAX(CASE WHEN M_APP_ROUTE_DTL.APP_DTL_NO = 1 THEN M_APP_ROUTE_DTL.APP_USER_ID ELSE NULL END) AS USER_ID_1
+           , MAX(CASE WHEN M_APP_ROUTE_DTL.APP_DTL_NO = 2 THEN M_APP_ROUTE_DTL.APP_USER_ID ELSE NULL END) AS USER_ID_2
+           , MAX(CASE WHEN M_APP_ROUTE_DTL.APP_DTL_NO = 3 THEN M_APP_ROUTE_DTL.APP_USER_ID ELSE NULL END) AS USER_ID_3
+           , MAX(CASE WHEN M_APP_ROUTE_DTL.APP_DTL_NO = 4 THEN M_APP_ROUTE_DTL.APP_USER_ID ELSE NULL END) AS USER_ID_4
+           , MAX(CASE WHEN M_APP_ROUTE_DTL.APP_DTL_NO = 5 THEN M_APP_ROUTE_DTL.APP_USER_ID ELSE NULL END) AS USER_ID_5
+           , MAX(CASE WHEN M_APP_ROUTE_DTL.APP_DTL_NO = 6 THEN M_APP_ROUTE_DTL.APP_USER_ID ELSE NULL END) AS USER_ID_6
+           , MAX(CASE WHEN M_APP_ROUTE_DTL.APP_DTL_NO = 7 THEN M_APP_ROUTE_DTL.APP_USER_ID ELSE NULL END) AS USER_ID_7
+           , MAX(CASE WHEN M_APP_ROUTE_DTL.APP_DTL_NO = 8 THEN M_APP_ROUTE_DTL.APP_USER_ID ELSE NULL END) AS USER_ID_8
+           , MAX(CASE WHEN M_APP_ROUTE_DTL.APP_DTL_NO = 9 THEN M_APP_ROUTE_DTL.APP_USER_ID ELSE NULL END) AS USER_ID_9
+           , MAX(CASE WHEN M_APP_ROUTE_DTL.APP_DTL_NO = 1 THEN COALESCE(M_B_USER_LANG_COMPANY.USER_NAME, M_B_USER_LANG_SYSTEM.USER_NAME) ELSE NULL END) AS USER_NAME_1
+           , MAX(CASE WHEN M_APP_ROUTE_DTL.APP_DTL_NO = 2 THEN COALESCE(M_B_USER_LANG_COMPANY.USER_NAME, M_B_USER_LANG_SYSTEM.USER_NAME) ELSE NULL END) AS USER_NAME_2
+           , MAX(CASE WHEN M_APP_ROUTE_DTL.APP_DTL_NO = 3 THEN COALESCE(M_B_USER_LANG_COMPANY.USER_NAME, M_B_USER_LANG_SYSTEM.USER_NAME) ELSE NULL END) AS USER_NAME_3
+           , MAX(CASE WHEN M_APP_ROUTE_DTL.APP_DTL_NO = 4 THEN COALESCE(M_B_USER_LANG_COMPANY.USER_NAME, M_B_USER_LANG_SYSTEM.USER_NAME) ELSE NULL END) AS USER_NAME_4
+           , MAX(CASE WHEN M_APP_ROUTE_DTL.APP_DTL_NO = 5 THEN COALESCE(M_B_USER_LANG_COMPANY.USER_NAME, M_B_USER_LANG_SYSTEM.USER_NAME) ELSE NULL END) AS USER_NAME_5
+           , MAX(CASE WHEN M_APP_ROUTE_DTL.APP_DTL_NO = 6 THEN COALESCE(M_B_USER_LANG_COMPANY.USER_NAME, M_B_USER_LANG_SYSTEM.USER_NAME) ELSE NULL END) AS USER_NAME_6
+           , MAX(CASE WHEN M_APP_ROUTE_DTL.APP_DTL_NO = 7 THEN COALESCE(M_B_USER_LANG_COMPANY.USER_NAME, M_B_USER_LANG_SYSTEM.USER_NAME) ELSE NULL END) AS USER_NAME_7
+           , MAX(CASE WHEN M_APP_ROUTE_DTL.APP_DTL_NO = 8 THEN COALESCE(M_B_USER_LANG_COMPANY.USER_NAME, M_B_USER_LANG_SYSTEM.USER_NAME) ELSE NULL END) AS USER_NAME_8
+           , MAX(CASE WHEN M_APP_ROUTE_DTL.APP_DTL_NO = 9 THEN COALESCE(M_B_USER_LANG_COMPANY.USER_NAME, M_B_USER_LANG_SYSTEM.USER_NAME) ELSE NULL END) AS USER_NAME_9
+           , MAX(CASE WHEN M_APP_ROUTE_DTL.APP_DTL_NO = 1 THEN M_USER.OFFICIAL_NAME ELSE NULL END) AS OFFICIAL_NAME_1
+           , MAX(CASE WHEN M_APP_ROUTE_DTL.APP_DTL_NO = 2 THEN M_USER.OFFICIAL_NAME ELSE NULL END) AS OFFICIAL_NAME_2
+           , MAX(CASE WHEN M_APP_ROUTE_DTL.APP_DTL_NO = 3 THEN M_USER.OFFICIAL_NAME ELSE NULL END) AS OFFICIAL_NAME_3
+           , MAX(CASE WHEN M_APP_ROUTE_DTL.APP_DTL_NO = 4 THEN M_USER.OFFICIAL_NAME ELSE NULL END) AS OFFICIAL_NAME_4
+           , MAX(CASE WHEN M_APP_ROUTE_DTL.APP_DTL_NO = 5 THEN M_USER.OFFICIAL_NAME ELSE NULL END) AS OFFICIAL_NAME_5
+           , MAX(CASE WHEN M_APP_ROUTE_DTL.APP_DTL_NO = 6 THEN M_USER.OFFICIAL_NAME ELSE NULL END) AS OFFICIAL_NAME_6
+           , MAX(CASE WHEN M_APP_ROUTE_DTL.APP_DTL_NO = 7 THEN M_USER.OFFICIAL_NAME ELSE NULL END) AS OFFICIAL_NAME_7
+           , MAX(CASE WHEN M_APP_ROUTE_DTL.APP_DTL_NO = 8 THEN M_USER.OFFICIAL_NAME ELSE NULL END) AS OFFICIAL_NAME_8
+           , MAX(CASE WHEN M_APP_ROUTE_DTL.APP_DTL_NO = 9 THEN M_USER.OFFICIAL_NAME ELSE NULL END) AS OFFICIAL_NAME_9
+        FROM M_APP_ROUTE
+       INNER JOIN M_COMPANY
+          ON M_APP_ROUTE.COMPANY_CD = M_COMPANY.COMPANY_CD
+        LEFT OUTER JOIN M_APP_ROUTE_DTL
+          ON M_APP_ROUTE.SECTION_CD = M_APP_ROUTE_DTL.SECTION_CD
+         AND M_APP_ROUTE.COMPANY_CD = M_APP_ROUTE_DTL.COMPANY_CD
+         AND M_APP_ROUTE.APP_VOUCHER_IND = M_APP_ROUTE_DTL.APP_VOUCHER_IND
+         AND M_APP_ROUTE.APP_ROUTE_NO = M_APP_ROUTE_DTL.APP_ROUTE_NO
+        LEFT OUTER JOIN 
+            (SELECT COMPANY_CD,
+                    SECTION_CD,
+                    VALID_START_DATE,
+                    VALID_END_DATE,
+                    ROW_NUMBER() OVER (PARTITION BY COMPANY_CD, SECTION_CD ORDER BY VALID_START_DATE DESC) AS NO
+              FROM  M_SECTION
+             WHERE  M_SECTION.VALID_START_DATE &lt;= '${@fw.common.util.AppUtil@getSysDate()}') M_SECTION
+          ON M_APP_ROUTE.COMPANY_CD = M_SECTION.COMPANY_CD
+         AND M_APP_ROUTE.SECTION_CD = M_SECTION.SECTION_CD
+         AND M_SECTION.NO = '1'
+        LEFT OUTER JOIN M_SECTION_LANG M_SECTION_LANG_SYSTEM
+          ON M_SECTION_LANG_SYSTEM.COMPANY_CD = M_SECTION.COMPANY_CD
+         AND M_SECTION_LANG_SYSTEM.SECTION_CD = M_SECTION.SECTION_CD
+         AND M_SECTION_LANG_SYSTEM.VALID_START_DATE = M_SECTION.VALID_START_DATE
+         AND M_SECTION_LANG_SYSTEM.VALID_END_DATE = M_SECTION.VALID_END_DATE
+         AND M_SECTION_LANG_SYSTEM.LANGUAGE_IND = '${@fw.common.util.AppUtil@getSysLanguageByEscapeSql()}'
+        LEFT OUTER JOIN M_SECTION_LANG M_SECTION_LANG_COMPANY
+          ON M_SECTION_LANG_COMPANY.COMPANY_CD = M_SECTION.COMPANY_CD
+         AND M_SECTION_LANG_COMPANY.SECTION_CD = M_SECTION.SECTION_CD
+         AND M_SECTION_LANG_COMPANY.VALID_START_DATE = M_SECTION.VALID_START_DATE
+         AND M_SECTION_LANG_COMPANY.VALID_END_DATE = M_SECTION.VALID_END_DATE
+         AND M_COMPANY.COMPANY_USE_LANGUAGE_IND = M_SECTION_LANG_COMPANY.LANGUAGE_IND
+        LEFT OUTER JOIN 
+            (SELECT COMPANY_CD,
+                    SECTION_CD,
+                    VALID_START_DATE,
+                    VALID_END_DATE,
+                    ROW_NUMBER() OVER (PARTITION BY COMPANY_CD, SECTION_CD ORDER BY VALID_START_DATE DESC) AS NO
+              FROM  M_SECTION
+             WHERE  M_SECTION.VALID_START_DATE &lt;= '${@fw.common.util.AppUtil@getSysDate()}') M_SECTION_APP
+          ON M_APP_ROUTE.COMPANY_CD = M_SECTION_APP.COMPANY_CD
+         AND M_APP_ROUTE_DTL.APP_SECTION_CD = M_SECTION_APP.SECTION_CD
+         AND M_SECTION_APP.NO = '1'
+        LEFT OUTER JOIN M_SECTION_LANG M_SECTION_APP_LANG_SYSTEM
+          ON M_SECTION_APP_LANG_SYSTEM.COMPANY_CD = M_SECTION_APP.COMPANY_CD
+         AND M_SECTION_APP_LANG_SYSTEM.SECTION_CD = M_SECTION_APP.SECTION_CD
+         AND M_SECTION_APP_LANG_SYSTEM.VALID_START_DATE = M_SECTION_APP.VALID_START_DATE
+         AND M_SECTION_APP_LANG_SYSTEM.VALID_END_DATE = M_SECTION_APP.VALID_END_DATE
+         AND M_SECTION_APP_LANG_SYSTEM.LANGUAGE_IND = '${@fw.common.util.AppUtil@getSysLanguageByEscapeSql()}'
+        LEFT OUTER JOIN M_SECTION_LANG M_SECTION_APP_LANG_COMPANY
+          ON M_SECTION_APP_LANG_COMPANY.COMPANY_CD = M_SECTION_APP.COMPANY_CD
+         AND M_SECTION_APP_LANG_COMPANY.SECTION_CD = M_SECTION_APP.SECTION_CD
+         AND M_SECTION_APP_LANG_COMPANY.VALID_START_DATE = M_SECTION_APP.VALID_START_DATE
+         AND M_SECTION_APP_LANG_COMPANY.VALID_END_DATE = M_SECTION_APP.VALID_END_DATE
+         AND M_COMPANY.COMPANY_USE_LANGUAGE_IND = M_SECTION_APP_LANG_COMPANY.LANGUAGE_IND
+         
+        LEFT OUTER JOIN 
+            (SELECT COMPANY_CD,
+                    SECTION_CD,
+                    VALID_START_DATE,
+                    VALID_END_DATE,
+                    ROW_NUMBER() OVER (PARTITION BY COMPANY_CD, SECTION_CD ORDER BY VALID_START_DATE DESC) AS NO
+              FROM  M_SECTION) section
+          ON M_APP_ROUTE.COMPANY_CD = section.COMPANY_CD
+         AND M_APP_ROUTE.SECTION_CD = section.SECTION_CD
+         AND section.NO = '1'
+        LEFT OUTER JOIN M_SECTION_LANG section_lang_system
+          ON section_lang_system.COMPANY_CD = section.COMPANY_CD
+         AND section_lang_system.SECTION_CD = section.SECTION_CD
+         AND section_lang_system.VALID_START_DATE = section.VALID_START_DATE
+         AND section_lang_system.VALID_END_DATE = section.VALID_END_DATE
+         AND section_lang_system.LANGUAGE_IND = '${@fw.common.util.AppUtil@getSysLanguageByEscapeSql()}'
+        LEFT OUTER JOIN M_SECTION_LANG section_lang_company
+          ON section_lang_company.COMPANY_CD = section.COMPANY_CD
+         AND section_lang_company.SECTION_CD = section.SECTION_CD
+         AND section_lang_company.VALID_START_DATE = section.VALID_START_DATE
+         AND section_lang_company.VALID_END_DATE = section.VALID_END_DATE
+         AND M_COMPANY.COMPANY_USE_LANGUAGE_IND = section_lang_company.LANGUAGE_IND
+        LEFT OUTER JOIN 
+            (SELECT COMPANY_CD,
+                    SECTION_CD,
+                    VALID_START_DATE,
+                    VALID_END_DATE,
+                    ROW_NUMBER() OVER (PARTITION BY COMPANY_CD, SECTION_CD ORDER BY VALID_START_DATE DESC) AS NO
+              FROM  M_SECTION) section_app
+          ON M_APP_ROUTE.COMPANY_CD = section_app.COMPANY_CD
+         AND M_APP_ROUTE_DTL.APP_SECTION_CD = section_app.SECTION_CD
+         AND section_app.NO = '1'
+        LEFT OUTER JOIN M_SECTION_LANG section_app_lang_system
+          ON section_app_lang_system.COMPANY_CD = section_app.COMPANY_CD
+         AND section_app_lang_system.SECTION_CD = section_app.SECTION_CD
+         AND section_app_lang_system.VALID_START_DATE = section_app.VALID_START_DATE
+         AND section_app_lang_system.VALID_END_DATE = section_app.VALID_END_DATE
+         AND section_app_lang_system.LANGUAGE_IND = '${@fw.common.util.AppUtil@getSysLanguageByEscapeSql()}'
+        LEFT OUTER JOIN M_SECTION_LANG section_app_lang_company
+          ON section_app_lang_company.COMPANY_CD = section_app.COMPANY_CD
+         AND section_app_lang_company.SECTION_CD = section_app.SECTION_CD
+         AND section_app_lang_company.VALID_START_DATE = section_app.VALID_START_DATE
+         AND section_app_lang_company.VALID_END_DATE = section_app.VALID_END_DATE
+         AND M_COMPANY.COMPANY_USE_LANGUAGE_IND = section_app_lang_company.LANGUAGE_IND
+        LEFT OUTER JOIN M_USER
+          ON M_APP_ROUTE_DTL.COMPANY_CD = M_USER.COMPANY_CD
+         AND M_APP_ROUTE_DTL.APP_SECTION_CD = M_USER.SECTION_CD
+         AND M_APP_ROUTE_DTL.APP_USER_ID = M_USER.USER_ID
+        LEFT OUTER JOIN M_B_USER
+          ON M_USER.COMPANY_CD = M_B_USER.COMPANY_CD
+         AND M_USER.USER_ID = M_B_USER.USER_ID
+        LEFT JOIN M_B_USER_LANG M_B_USER_LANG_SYSTEM
+          ON M_USER.COMPANY_CD = M_B_USER_LANG_SYSTEM.COMPANY_CD
+         AND M_USER.USER_ID = M_B_USER_LANG_SYSTEM.USER_ID
+         AND M_B_USER_LANG_SYSTEM.LANGUAGE_IND = '${@fw.common.util.AppUtil@getSysLanguageByEscapeSql()}'
+        LEFT OUTER JOIN M_B_USER_LANG M_B_USER_LANG_COMPANY
+          ON M_USER.COMPANY_CD = M_B_USER_LANG_COMPANY.COMPANY_CD
+         AND M_USER.USER_ID = M_B_USER_LANG_COMPANY.USER_ID
+         AND M_COMPANY.COMPANY_USE_LANGUAGE_IND = M_B_USER_LANG_COMPANY.LANGUAGE_IND
+    </sql>
+
+    <sql id="groupBySql">
+    GROUP BY M_APP_ROUTE.SECTION_CD
+           , M_APP_ROUTE.COMPANY_CD
+           , M_APP_ROUTE.APP_VOUCHER_IND
+           , M_APP_ROUTE.APP_ROUTE_NO
+           , M_APP_ROUTE.LAST_UPD_DATE
+           , M_APP_ROUTE.APP_ROUTE_NAME
+           , M_APP_ROUTE.APP_PERSON_FLG
+           , M_APP_ROUTE.TARGET_PRICE_FROM
+           , M_APP_ROUTE.TARGET_PRICE_TO
+           , M_APP_ROUTE.VALID_START_DATE
+           , M_APP_ROUTE.VALID_END_DATE
+           , M_APP_ROUTE.DSP_ORDER
+           , M_APP_ROUTE.TERM_FLG
+           , M_COMPANY.BASE_CURRENCY_CD
+    </sql>
+
+    <resultMap id="identity_Map" type="fw.domain.mst.userauthority.approute.ApprouteIdentify">
+        <id column="COMPANY_CD"      property="companyCd" />
+        <id column="SECTION_CD"      property="sectionCd" />
+        <id column="APPROUTE_VOUCHER_IND" property="approuteVoucherInd.approuteVoucherInd" />
+        <id column="APP_ROUTE_NO"    property="appRouteNo" />
+        <id column="LAST_UPD_DATE"   property="lastUpdDate" />
+    </resultMap>
+
+    <resultMap id="item_Map" type="fw.domain.mst.userauthority.approute.ApprouteItem">
+        <id column="COMPANY_CD"      property="approuteIdentify.companyCd" />
+        <id column="SECTION_CD"      property="approuteIdentify.sectionCd" />
+        <id column="APPROUTE_VOUCHER_IND" property="approuteIdentify.approuteVoucherInd.approuteVoucherInd" />
+        <id column="APP_ROUTE_NO"    property="approuteIdentify.appRouteNo" />
+        <id column="LAST_UPD_DATE"   property="approuteIdentify.lastUpdDate" />
+        <id column="SECTION_NAME"    property="sectionName" />
+        <id column="APP_ROUTE_NAME"  property="appRouteName" />
+        <id column="APP_PERSON_FLG"  property="appPersonFlg" />
+        <id column="CURRENCY_CD"       property="targetPriceFrom.currencyCd" />
+        <id column="TARGET_PRICE_FROM" property="targetPriceFrom.amount" />
+        <id column="CURRENCY_CD"       property="targetPriceTo.currencyCd" />
+        <id column="TARGET_PRICE_TO"   property="targetPriceTo.amount" />
+        <id column="VALID_START_DATE" property="validStartDate.dateOfymd" />
+        <id column="VALID_END_DATE"   property="validEndDate.dateOfymd" />
+        <id column="DSP_ORDER" property="dspOrder" />
+        <id column="TERM_FLG"  property="term.termFlg" />
+        <id column="SECTION_NAME_1" property="approuteSortItemList.approuteSortItem1.approuterInfo.sectionName" />
+        <id column="SECTION_NAME_2" property="approuteSortItemList.approuteSortItem2.approuterInfo.sectionName" />
+        <id column="SECTION_NAME_3" property="approuteSortItemList.approuteSortItem3.approuterInfo.sectionName" />
+        <id column="SECTION_NAME_4" property="approuteSortItemList.approuteSortItem4.approuterInfo.sectionName" />
+        <id column="SECTION_NAME_5" property="approuteSortItemList.approuteSortItem5.approuterInfo.sectionName" />
+        <id column="SECTION_NAME_6" property="approuteSortItemList.approuteSortItem6.approuterInfo.sectionName" />
+        <id column="SECTION_NAME_7" property="approuteSortItemList.approuteSortItem7.approuterInfo.sectionName" />
+        <id column="SECTION_NAME_8" property="approuteSortItemList.approuteSortItem8.approuterInfo.sectionName" />
+        <id column="SECTION_NAME_9" property="approuteSortItemList.approuteSortItem9.approuterInfo.sectionName" />
+        <id column="USER_NAME_1" property="approuteSortItemList.approuteSortItem1.approuterInfo.userName" />
+        <id column="USER_NAME_2" property="approuteSortItemList.approuteSortItem2.approuterInfo.userName" />
+        <id column="USER_NAME_3" property="approuteSortItemList.approuteSortItem3.approuterInfo.userName" />
+        <id column="USER_NAME_4" property="approuteSortItemList.approuteSortItem4.approuterInfo.userName" />
+        <id column="USER_NAME_5" property="approuteSortItemList.approuteSortItem5.approuterInfo.userName" />
+        <id column="USER_NAME_6" property="approuteSortItemList.approuteSortItem6.approuterInfo.userName" />
+        <id column="USER_NAME_7" property="approuteSortItemList.approuteSortItem7.approuterInfo.userName" />
+        <id column="USER_NAME_8" property="approuteSortItemList.approuteSortItem8.approuterInfo.userName" />
+        <id column="USER_NAME_9" property="approuteSortItemList.approuteSortItem9.approuterInfo.userName" />
+    </resultMap>
+
+    <resultMap id="management_Map" type="fw.domain.mst.userauthority.approute.ApprouteManagement">
+        <id column="COMPANY_CD"      property="approuteIdentify.companyCd" />
+        <id column="SECTION_CD"      property="approuteIdentify.sectionCd" />
+        <id column="APPROUTE_VOUCHER_IND" property="approuteIdentify.approuteVoucherInd.approuteVoucherInd" />
+        <id column="APP_ROUTE_NO"    property="approuteIdentify.appRouteNo" />
+        <id column="LAST_UPD_DATE"   property="approuteIdentify.lastUpdDate" />
+        <id column="SECTION_NAME"    property="sectionManagement.sectionName" />
+        <id column="APP_ROUTE_NAME"  property="appRouteName" />
+        <id column="APP_PERSON_FLG"  property="approuterflg" />
+        <id column="CURRENCY_CD"     property="baseCurrencyCd" />
+        <id column="CURRENCY_CD"       property="approuteTargetPrice.targetPriceFrom.currencyCd" />
+        <id column="TARGET_PRICE_FROM" property="approuteTargetPrice.targetPriceFrom.amount" />
+        <id column="CURRENCY_CD"       property="approuteTargetPrice.targetPriceTo.currencyCd" />
+        <id column="TARGET_PRICE_TO"   property="approuteTargetPrice.targetPriceTo.amount" />
+        <id column="VALID_START_DATE" property="approuteeffective.per.period.startDate.dateOfymd" />
+        <id column="VALID_END_DATE"   property="approuteeffective.per.period.endDate.dateOfymd" />
+        <id column="DSP_ORDER" property="dspOrder" />
+        <id column="TERM_FLG"  property="term.termFlg" />
+        <id column="SECTION_CD_1" property="approuteSortItemList.approuteSortItem1.approuterInfo.sectionCd" />
+        <id column="SECTION_CD_2" property="approuteSortItemList.approuteSortItem2.approuterInfo.sectionCd" />
+        <id column="SECTION_CD_3" property="approuteSortItemList.approuteSortItem3.approuterInfo.sectionCd" />
+        <id column="SECTION_CD_4" property="approuteSortItemList.approuteSortItem4.approuterInfo.sectionCd" />
+        <id column="SECTION_CD_5" property="approuteSortItemList.approuteSortItem5.approuterInfo.sectionCd" />
+        <id column="SECTION_CD_6" property="approuteSortItemList.approuteSortItem6.approuterInfo.sectionCd" />
+        <id column="SECTION_CD_7" property="approuteSortItemList.approuteSortItem7.approuterInfo.sectionCd" />
+        <id column="SECTION_CD_8" property="approuteSortItemList.approuteSortItem8.approuterInfo.sectionCd" />
+        <id column="SECTION_CD_9" property="approuteSortItemList.approuteSortItem9.approuterInfo.sectionCd" />
+        <id column="SECTION_NAME_1" property="approuteSortItemList.approuteSortItem1.approuterInfo.sectionName" />
+        <id column="SECTION_NAME_2" property="approuteSortItemList.approuteSortItem2.approuterInfo.sectionName" />
+        <id column="SECTION_NAME_3" property="approuteSortItemList.approuteSortItem3.approuterInfo.sectionName" />
+        <id column="SECTION_NAME_4" property="approuteSortItemList.approuteSortItem4.approuterInfo.sectionName" />
+        <id column="SECTION_NAME_5" property="approuteSortItemList.approuteSortItem5.approuterInfo.sectionName" />
+        <id column="SECTION_NAME_6" property="approuteSortItemList.approuteSortItem6.approuterInfo.sectionName" />
+        <id column="SECTION_NAME_7" property="approuteSortItemList.approuteSortItem7.approuterInfo.sectionName" />
+        <id column="SECTION_NAME_8" property="approuteSortItemList.approuteSortItem8.approuterInfo.sectionName" />
+        <id column="SECTION_NAME_9" property="approuteSortItemList.approuteSortItem9.approuterInfo.sectionName" />
+        <id column="USER_ID_1" property="approuteSortItemList.approuteSortItem1.approuterInfo.userId" />
+        <id column="USER_ID_2" property="approuteSortItemList.approuteSortItem2.approuterInfo.userId" />
+        <id column="USER_ID_3" property="approuteSortItemList.approuteSortItem3.approuterInfo.userId" />
+        <id column="USER_ID_4" property="approuteSortItemList.approuteSortItem4.approuterInfo.userId" />
+        <id column="USER_ID_5" property="approuteSortItemList.approuteSortItem5.approuterInfo.userId" />
+        <id column="USER_ID_6" property="approuteSortItemList.approuteSortItem6.approuterInfo.userId" />
+        <id column="USER_ID_7" property="approuteSortItemList.approuteSortItem7.approuterInfo.userId" />
+        <id column="USER_ID_8" property="approuteSortItemList.approuteSortItem8.approuterInfo.userId" />
+        <id column="USER_ID_9" property="approuteSortItemList.approuteSortItem9.approuterInfo.userId" />
+        <id column="USER_NAME_1" property="approuteSortItemList.approuteSortItem1.approuterInfo.userName" />
+        <id column="USER_NAME_2" property="approuteSortItemList.approuteSortItem2.approuterInfo.userName" />
+        <id column="USER_NAME_3" property="approuteSortItemList.approuteSortItem3.approuterInfo.userName" />
+        <id column="USER_NAME_4" property="approuteSortItemList.approuteSortItem4.approuterInfo.userName" />
+        <id column="USER_NAME_5" property="approuteSortItemList.approuteSortItem5.approuterInfo.userName" />
+        <id column="USER_NAME_6" property="approuteSortItemList.approuteSortItem6.approuterInfo.userName" />
+        <id column="USER_NAME_7" property="approuteSortItemList.approuteSortItem7.approuterInfo.userName" />
+        <id column="USER_NAME_8" property="approuteSortItemList.approuteSortItem8.approuterInfo.userName" />
+        <id column="USER_NAME_9" property="approuteSortItemList.approuteSortItem9.approuterInfo.userName" />
+        <id column="OFFICIAL_NAME_1" property="approuteSortItemList.approuteSortItem1.approuterInfo.official.officialName" />
+        <id column="OFFICIAL_NAME_2" property="approuteSortItemList.approuteSortItem2.approuterInfo.official.officialName" />
+        <id column="OFFICIAL_NAME_3" property="approuteSortItemList.approuteSortItem3.approuterInfo.official.officialName" />
+        <id column="OFFICIAL_NAME_4" property="approuteSortItemList.approuteSortItem4.approuterInfo.official.officialName" />
+        <id column="OFFICIAL_NAME_5" property="approuteSortItemList.approuteSortItem5.approuterInfo.official.officialName" />
+        <id column="OFFICIAL_NAME_6" property="approuteSortItemList.approuteSortItem6.approuterInfo.official.officialName" />
+        <id column="OFFICIAL_NAME_7" property="approuteSortItemList.approuteSortItem7.approuterInfo.official.officialName" />
+        <id column="OFFICIAL_NAME_8" property="approuteSortItemList.approuteSortItem8.approuterInfo.official.officialName" />
+        <id column="OFFICIAL_NAME_9" property="approuteSortItemList.approuteSortItem9.approuterInfo.official.officialName" />
+    </resultMap>
+
+    <select id="listKeyIdentity" parameterType="fw.domain.mst.userauthority.approute.ApprouteSearchCondition" resultMap="identity_Map">
+      SELECT M_APP_ROUTE.COMPANY_CD
+           , M_APP_ROUTE.SECTION_CD
+           , M_APP_ROUTE.APPROUTE_VOUCHER_IND
+           , M_APP_ROUTE.APP_ROUTE_NO
+           , M_APP_ROUTE.LAST_UPD_DATE
+        FROM(
+            <include refid="listSql"/>
+            <where>
+                <include refid="listKeyIdentityWhereCondition"/>
+            </where>
+            <include refid="groupBySql"/>
+    ORDER BY ${searchCondition.columnOrder.columnOrder()}
+            ) M_APP_ROUTE
+    </select>
+
+    <select id="listPageItem" parameterType="fw.domain.mst.userauthority.approute.ApprouteSearchCondition" resultMap="item_Map">
+        <include refid="listSql"/>
+        <where>
+            (M_APP_ROUTE.COMPANY_CD
+           , M_APP_ROUTE.SECTION_CD
+           , M_APP_ROUTE.APP_ROUTE_NO
+           , M_APP_ROUTE.APP_VOUCHER_IND
+            ) IN
+        <foreach collection="searchCondition.page.keyDomainEntityList" item="keyList"  open="(" separator="," close=")">  
+            (#{keyList.companyCd, jdbcType=VARCHAR}
+           , #{keyList.sectionCd, jdbcType=VARCHAR}
+           , #{keyList.appRouteNo, jdbcType=VARCHAR}
+           , #{keyList.approuteVoucherInd.approuteVoucherInd, jdbcType=VARCHAR}
+            ) 
+        </foreach>
+            <include refid="listKeyIdentityWhereCondition"/>
+        </where>
+        <include refid="groupBySql"/>
+    ORDER BY ${searchCondition.columnOrder.columnOrder()}
+    </select>
+
+    <select id="download" parameterType="fw.domain.mst.userauthority.approute.ApprouteSearchCondition" resultMap="management_Map">
+      SELECT * FROM(
+        <include refid="listSql"/>
+        <where>
+            <include refid="listKeyIdentityWhereCondition"/>
+        </where>
+        <include refid="groupBySql"/>
+    ORDER BY ${searchCondition.columnOrder.columnOrder()}
+      )WHERE ROWNUM &lt;= ${@fw.common.util.PropertiesUtil@getLong("DOWNLOAD_MAXCNT")}
+    </select>
+
+    <select id="downloadCount" parameterType="fw.domain.mst.userauthority.approute.ApprouteSearchCondition" resultType="java.lang.Long">
+      SELECT COUNT(1)
+        FROM(<include refid="listSql"/><where><include refid="listKeyIdentityWhereCondition"/></where><include refid="groupBySql"/>) M_APP_ROUTE
+    </select>
+
+    <select id="search" parameterType="fw.domain.mst.userauthority.approute.ApprouteIdentify"  resultMap="management_Map">
+        <include refid="listSql"/>
+       WHERE M_APP_ROUTE.COMPANY_CD = #{companyCd, jdbcType=VARCHAR}
+         AND M_APP_ROUTE.SECTION_CD = #{sectionCd, jdbcType=VARCHAR}
+         AND M_APP_ROUTE.APP_ROUTE_NO = #{appRouteNo, jdbcType=VARCHAR}
+         AND M_APP_ROUTE.APP_VOUCHER_IND = #{approuteVoucherInd.approuteVoucherInd, jdbcType=VARCHAR}
+         AND M_APP_ROUTE.LAST_UPD_DATE = #{lastUpdDate, jdbcType=VARCHAR}
+        <include refid="groupBySql"/>
+    </select>
+
+    <select id="searchExclusive" parameterType="fw.domain.mst.userauthority.approute.ApprouteIdentify" resultMap="identity_Map">
+      SELECT M_APP_ROUTE.COMPANY_CD
+           , M_APP_ROUTE.SECTION_CD
+           , M_APP_ROUTE.APP_VOUCHER_IND AS APPROUTE_VOUCHER_IND
+           , M_APP_ROUTE.APP_ROUTE_NO
+        FROM M_APP_ROUTE
+       WHERE M_APP_ROUTE.COMPANY_CD = #{companyCd, jdbcType=VARCHAR}
+         AND M_APP_ROUTE.SECTION_CD = #{sectionCd, jdbcType=VARCHAR}
+         AND M_APP_ROUTE.APP_VOUCHER_IND = #{approuteVoucherInd.approuteVoucherInd, jdbcType=VARCHAR}
+         AND M_APP_ROUTE.APP_ROUTE_NO = #{appRouteNo, jdbcType=VARCHAR}
+         AND M_APP_ROUTE.LAST_UPD_DATE = #{lastUpdDate, jdbcType=VARCHAR}
+    </select>
+
+    <insert id="insert" parameterType="fw.domain.mst.userauthority.approute.ApprouteManagement">
+      INSERT INTO M_APP_ROUTE (
+             COMPANY_CD
+           , SECTION_CD
+           , APP_VOUCHER_IND
+           , APP_ROUTE_NO
+           , APP_ROUTE_NAME
+           , DSP_ORDER
+           , APP_PERSON_FLG
+           , TARGET_PRICE_FROM
+           , TARGET_PRICE_TO
+           , VALID_START_DATE
+           , VALID_END_DATE
+           , TERM_FLG
+           , REG_USER_ID
+           , REG_SECTION_CD
+           , REG_DATE
+           , REG_COMPANY_CD
+           , LAST_UPD_USER_ID
+           , LAST_UPD_SECTION_CD
+           , LAST_UPD_DATE
+           , LAST_UPD_COMPANY_CD
+           ) VALUES (
+             #{approuteIdentify.companyCd, jdbcType=VARCHAR}
+           , #{approuteIdentify.sectionCd, jdbcType=VARCHAR}
+           , #{approuteIdentify.approuteVoucherInd.approuteVoucherInd, jdbcType=VARCHAR}
+           , #{approuteIdentify.appRouteNo, jdbcType=VARCHAR}
+           , #{appRouteName, jdbcType=VARCHAR}
+           , #{dspOrder, jdbcType=VARCHAR}
+           , #{approuterflg, jdbcType=VARCHAR}
+        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(approuteTargetPrice.targetPriceFrom.amount)">
+           , #{approuteTargetPrice.targetPriceFrom.amount, jdbcType=VARCHAR}
+        </if>
+        <if test="@org.apache.commons.lang.StringUtils@isBlank(approuteTargetPrice.targetPriceFrom.amount)">
+           , '0'
+        </if>
+        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(approuteTargetPrice.targetPriceTo.amount)">
+           , #{approuteTargetPrice.targetPriceTo.amount, jdbcType=VARCHAR}
+        </if>
+        <if test="@org.apache.commons.lang.StringUtils@isBlank(approuteTargetPrice.targetPriceTo.amount)">
+           , '999999999999'
+        </if>
+           , '${@fw.common.util.AppUtil@convertDateForValid(approuteeffective.per.period.startDate.dateOfymd,@fw.common.util.AppUtil@VALID_START_DATE)}'
+           , '${@fw.common.util.AppUtil@convertDateForValid(approuteeffective.per.period.endDate.dateOfymd,@fw.common.util.AppUtil@VALID_END_DATE)}'
+           , #{term.termFlg, jdbcType=VARCHAR}
+           , #{registInfo.regUserId, jdbcType=VARCHAR}
+           , #{registInfo.regSectionCd, jdbcType=VARCHAR}
+           , #{registInfo.regDate, jdbcType=VARCHAR}
+           , #{registInfo.regCompanyCd, jdbcType=VARCHAR}
+           , #{registInfo.lastUpdUserId, jdbcType=VARCHAR}
+           , #{registInfo.lastUpdSectionCd, jdbcType=VARCHAR}
+           , #{registInfo.lastUpdDate, jdbcType=VARCHAR}
+           , #{registInfo.lastUpdCompanyCd, jdbcType=VARCHAR}
+           )
+    </insert>
+
+    <insert id="insertSortItem" parameterType="fw.domain.mst.userauthority.approute.ApprouteSortItem">
+      INSERT INTO M_APP_ROUTE_DTL (
+                  COMPANY_CD
+                , SECTION_CD
+                , APP_VOUCHER_IND
+                , APP_ROUTE_NO
+                , APP_DTL_NO
+                , APP_SECTION_CD
+                , APP_USER_ID
+                , REG_USER_ID
+                , REG_SECTION_CD
+                , REG_DATE
+                , REG_COMPANY_CD
+                , LAST_UPD_USER_ID
+                , LAST_UPD_SECTION_CD
+                , LAST_UPD_DATE
+                , LAST_UPD_COMPANY_CD
+                ) VALUES (
+                  #{approuteSortItemIdentify.companyCd, jdbcType=VARCHAR}
+                , #{approuteSortItemIdentify.sectionCd, jdbcType=VARCHAR}
+                , #{approuteSortItemIdentify.approuteVoucherInd.approuteVoucherInd, jdbcType=VARCHAR}
+                , #{approuteSortItemIdentify.appRouteNo, jdbcType=VARCHAR}
+                , #{approuteSortItemIdentify.appDelNo, jdbcType=VARCHAR}
+                , #{approuterInfo.sectionCd, jdbcType=VARCHAR}
+                , #{approuterInfo.userId, jdbcType=VARCHAR}
+                , #{registInfo.regUserId, jdbcType=VARCHAR}
+                , #{registInfo.regSectionCd, jdbcType=VARCHAR}
+                , #{registInfo.regDate, jdbcType=VARCHAR}
+                , #{registInfo.regCompanyCd, jdbcType=VARCHAR}
+                , #{registInfo.lastUpdUserId, jdbcType=VARCHAR}
+                , #{registInfo.lastUpdSectionCd, jdbcType=VARCHAR}
+                , #{registInfo.lastUpdDate, jdbcType=VARCHAR}
+                , #{registInfo.lastUpdCompanyCd, jdbcType=VARCHAR}
+                )
+    </insert>
+
+    <update id="update" parameterType="fw.domain.mst.userauthority.approute.ApprouteManagement">
+      UPDATE M_APP_ROUTE
+         SET APP_ROUTE_NAME = #{appRouteName,jdbcType=VARCHAR}
+           , DSP_ORDER = #{dspOrder, jdbcType=VARCHAR}
+           , APP_PERSON_FLG = #{approuterflg, jdbcType=VARCHAR}
+           , TARGET_PRICE_FROM 
+        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(approuteTargetPrice.targetPriceFrom.amount)">
+             = #{approuteTargetPrice.targetPriceFrom.amount, jdbcType=VARCHAR}
+        </if>
+        <if test="@org.apache.commons.lang.StringUtils@isBlank(approuteTargetPrice.targetPriceFrom.amount)">
+             = '0'
+        </if>
+           , TARGET_PRICE_TO
+        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(approuteTargetPrice.targetPriceTo.amount)">
+             = #{approuteTargetPrice.targetPriceTo.amount, jdbcType=VARCHAR}
+        </if>
+        <if test="@org.apache.commons.lang.StringUtils@isBlank(approuteTargetPrice.targetPriceTo.amount)">
+             = '999999999999'
+        </if>
+           , VALID_START_DATE ='${@fw.common.util.AppUtil@convertDateForValid(approuteeffective.per.period.startDate.dateOfymd,@fw.common.util.AppUtil@VALID_START_DATE)}'
+           , VALID_END_DATE ='${@fw.common.util.AppUtil@convertDateForValid(approuteeffective.per.period.endDate.dateOfymd,@fw.common.util.AppUtil@VALID_END_DATE)}'
+           , TERM_FLG =  #{term.termFlg}
+           , LAST_UPD_DATE = #{registInfo.lastUpdDate}
+           , LAST_UPD_COMPANY_CD = #{registInfo.lastUpdCompanyCd}
+           , LAST_UPD_SECTION_CD = #{registInfo.lastUpdSectionCd}
+           , LAST_UPD_USER_ID = #{registInfo.lastUpdUserId}        
+       WHERE M_APP_ROUTE.SECTION_CD = #{approuteIdentify.sectionCd,jdbcType=VARCHAR}
+         AND M_APP_ROUTE.COMPANY_CD = #{approuteIdentify.companyCd, jdbcType=VARCHAR}
+         AND M_APP_ROUTE.APP_ROUTE_NO = #{approuteIdentify.appRouteNo, jdbcType=VARCHAR}
+         AND M_APP_ROUTE.APP_VOUCHER_IND = #{approuteIdentify.approuteVoucherInd.approuteVoucherInd}
+         <if test="!uploadFlg">
+         AND M_APP_ROUTE.LAST_UPD_DATE = #{approuteIdentify.lastUpdDate, jdbcType=VARCHAR}
+         </if>
+    </update>
+
+    <delete id="delete" parameterType="fw.domain.mst.userauthority.approute.ApprouteIdentify">
+       DELETE FROM M_APP_ROUTE
+        WHERE M_APP_ROUTE.COMPANY_CD = #{companyCd,jdbcType=VARCHAR}
+          AND M_APP_ROUTE.SECTION_CD = #{sectionCd, jdbcType=VARCHAR}
+          AND M_APP_ROUTE.APP_ROUTE_NO = #{appRouteNo, jdbcType=VARCHAR}
+          AND M_APP_ROUTE.APP_VOUCHER_IND = #{approuteVoucherInd.approuteVoucherInd}
+          AND M_APP_ROUTE.LAST_UPD_DATE = #{lastUpdDate, jdbcType=VARCHAR}  
+    </delete>
+
+    <delete id="deleteSortItem" parameterType="fw.domain.mst.userauthority.approute.ApprouteIdentify">
+      DELETE FROM M_APP_ROUTE_DTL
+       WHERE M_APP_ROUTE_DTL.COMPANY_CD = #{companyCd,jdbcType=VARCHAR}
+         AND M_APP_ROUTE_DTL.SECTION_CD = #{sectionCd, jdbcType=VARCHAR}
+         AND M_APP_ROUTE_DTL.APP_ROUTE_NO = #{appRouteNo, jdbcType=VARCHAR}
+         AND M_APP_ROUTE_DTL.APP_VOUCHER_IND = #{approuteVoucherInd.approuteVoucherInd}
+    </delete>
+
+    <select id="getUser" parameterType="fw.domain.mst.userauthority.approute.ApprouteSortItem" resultType="fw.domain.mst.userauthority.user.UserItem">
+      SELECT M_USER.COMPANY_CD as "userIdentify.companyCd"
+           , M_USER.SECTION_CD as "userIdentify.sectionCd"
+        FROM M_USER
+       WHERE M_USER.USER_ID = #{approuterInfo.userId,jdbcType=VARCHAR}
+    </select>
+    
+    <select id="getSectionName" resultType="fw.domain.mst.organization.section.Section">
+        
+        SELECT
+        CASE WHEN M2.SECTION_NAME IS NOT NULL
+        THEN M2.SECTION_NAME
+        WHEN M3.SECTION_NAME IS NOT NULL
+        THEN M3.SECTION_NAME
+        WHEN M4.SECTION_NAME IS NOT NULL
+        THEN M4.SECTION_NAME
+        ELSE M5.SECTION_NAME
+        END AS "sectionName"
+        FROM
+        (SELECT DISTINCT COMPANY_CD, SECTION_CD FROM M_SECTION) M_SECTION
+        LEFT JOIN M_SECTION M1
+        ON M1.COMPANY_CD = M_SECTION.COMPANY_CD
+        AND M1.SECTION_CD = M_SECTION.SECTION_CD
+        AND M1.VALID_START_DATE &lt;= '${@fw.common.util.AppUtil@getSysDate()}'
+        AND M1.VALID_END_DATE >= '${@fw.common.util.AppUtil@getSysDate()}'
+        LEFT JOIN M_SECTION_LANG M2
+        ON M1.COMPANY_CD = M2.COMPANY_CD
+        AND M1.SECTION_CD = M2.SECTION_CD
+        AND M1.VALID_START_DATE = M2.VALID_START_DATE
+        AND M1.VALID_END_DATE = M2.VALID_END_DATE
+        AND M2.LANGUAGE_IND = #{companyUseLanguageInd}
+        LEFT JOIN M_SECTION_LANG M3
+        ON M1.COMPANY_CD = M3.COMPANY_CD
+        AND M1.SECTION_CD = M3.SECTION_CD
+        AND M1.VALID_START_DATE = M3.VALID_START_DATE
+        AND M1.VALID_END_DATE = M3.VALID_END_DATE
+        AND M3.LANGUAGE_IND = #{systemLanguageInd}
+        LEFT JOIN (SELECT COMPANY_CD,
+                    SECTION_CD,
+                    VALID_START_DATE,
+                    VALID_END_DATE,
+                    ROW_NUMBER() OVER (PARTITION BY COMPANY_CD, SECTION_CD ORDER BY VALID_START_DATE DESC) AS NO
+              FROM  M_SECTION) section
+        ON section.COMPANY_CD  = M_SECTION.COMPANY_CD
+        AND section.SECTION_CD = M_SECTION.SECTION_CD
+        AND NO = '1'
+        LEFT JOIN M_SECTION_LANG M4
+        ON section.COMPANY_CD = M4.COMPANY_CD
+        AND section.SECTION_CD = M4.SECTION_CD
+        AND section.VALID_START_DATE = M4.VALID_START_DATE
+        AND section.VALID_END_DATE = M4.VALID_END_DATE
+        AND M4.LANGUAGE_IND = #{companyUseLanguageInd}
+        LEFT JOIN M_SECTION_LANG M5
+        ON section.COMPANY_CD = M5.COMPANY_CD
+        AND section.SECTION_CD = M5.SECTION_CD
+        AND section.VALID_START_DATE = M5.VALID_START_DATE
+        AND section.VALID_END_DATE = M5.VALID_END_DATE
+        AND M5.LANGUAGE_IND = #{systemLanguageInd}
+        WHERE
+        M_SECTION.COMPANY_CD = #{companycd}
+        AND M_SECTION.SECTION_CD = #{sectioncd}
+    </select>
+    
+</mapper>

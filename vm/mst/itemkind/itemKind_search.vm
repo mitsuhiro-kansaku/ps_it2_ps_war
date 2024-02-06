@@ -1,0 +1,235 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta http-equiv="Content-type" content="text/html; charset=UTF-8">
+<title>#customSpringMessage('M_ITEM_KIND')</title><!--品種マスタ -->
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Content-script-type" content="text/javascript">
+<link id="CSS_FONT" rel="stylesheet" href="../../include/FontS.css" type="text/css">
+<link rel="stylesheet" href="../../include/Layout.css" type="text/css">
+<link rel="stylesheet" href="../../include/Color.css" type="text/css">
+<link rel="stylesheet" href="../../include/searchbox.css" type="text/css">
+<link rel="stylesheet" href="../../include/ime.css" type="text/css">
+<script language="javascript" type="text/javascript" src="../../include/common.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/check.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/date.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/searchbox.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/jquery-1.7.2.min.js"></script>
+<script language="javascript" type="text/javascript">
+
+<!--
+#set($commonTitle = "#customSpringMessage('SCREEN_M_ITEM_KIND_LIST')")
+#set($uploadFileFlag=$LoginUser.hasAuth(${AuthNoConstant.getValue("MASTER_ITEMKIND_UPDATE_GRANT")}))
+#set($buttonLFlag=$LoginUser.hasAuth(${AuthNoConstant.getValue("MASTER_ITEMKIND_UPDATE_GRANT")}))
+#set($buttonMFlag=$LoginUser.hasAuth(${AuthNoConstant.getValue("MASTER_ITEMKIND_UPDATE_GRANT")}))
+#set($buttonSFlag=$LoginUser.hasAuth(${AuthNoConstant.getValue("MASTER_ITEMKIND_UPDATE_GRANT")}))
+var pinName="MstItemKind_Pin";
+var newPageId="itemKindRegist";
+#parse("./common/common_js.vm")
+function onLoad(){
+    bodyLoad();
+    var alertMessage = "$!alertMessage";
+    if (alertMessage != ""){
+        alert(alertMessage);
+    }
+    var errorMsg = "$!errorMessage";
+    if (errorMsg != ""){
+        setErrorMessage("ERRORDIV", errorMsg, "DATAAREA");
+        return;
+    }
+    var isDownload = "#jsEscape($!isDownLoadValidate)";
+    if (isDownload == 'true') {
+        iframeChange("${flowExecutionUrl}&_eventId=download","pageid","itemKindList","HIDDENAREA");
+    } else {
+        var isShowInfo = "#jsEscape($isShowInfo)";
+        if (isShowInfo == 'true'){
+            top.iframeChange("${flowExecutionUrl}&_eventId=showUploadResult");
+            return;
+        } else if (isShowInfo == 'false') {
+            buttonUsable();
+            #set( $mItemKind = "#customSpringMessage('M_ITEM_KIND')" )
+            alert("#customMessageArgs('I005',[$mItemKind])");
+            return;
+        }
+        
+        var isShowList = "#jsEscape($isShowList)";
+        if (isShowList == 'true' && errorMsg == ""){
+            iframeChange("${flowExecutionUrl}&_eventId=search","pageid","itemKindList");
+        }
+    }
+}
+
+function execSearch() {
+    setItemDisabled("itemClassM","itemClassS");
+    getObj("BodyForm").target="_self";
+    ## +++++ 強化-00041-000 2013/04/07 ADD SBO_KANGJW START +++++
+    buttonDisable();
+    ## +++++ 強化-00041-000 2013/04/07 ADD SBO_KANGJW END +++++
+    getObj("BodyForm").action = "${flowExecutionUrl}&_eventId=validate";
+    getObj('BodyForm').submit();
+}
+
+function doDownload() {
+    setItemDisabled("itemClassM","itemClassS");
+    //メッセージは空設定
+    getObj("TR_ERROR").style.display = "none";
+    getObj("ERRORDIV").innerHTML="";
+    getObj("BodyForm").target = "HIDDENAREA";
+    buttonDisable();
+    setTimeout(buttonUsable,1000);
+    getObj("BodyForm").action = "${flowExecutionUrl}&_eventId=downloadValidate";
+    
+    getObj("BodyForm").submit();
+}
+
+function doUpload() {
+    if(getObj('file').value!=""){
+        #set( $mItemKind = "#customSpringMessage('M_ITEM_KIND')" )
+        #set( $mUpload = "#customSpringMessage('ACTION_UPLOAD')" )
+        if( !confirm('#customMessageArgs("W001",[$mItemKind,$mUpload])'))  {
+           return;
+        }
+        buttonDisable();
+        getObj("BodyForm").target="_self";
+        getObj('BodyForm').action = "${flowExecutionUrl}&_eventId=upload";
+        getObj("BodyForm").submit();
+    }else{
+        #set( $mUploadFile = "#customSpringMessage('UPLOAD_FILE')" )
+        document.getElementById("TR_ERROR").style.display = "";
+        document.getElementById("DATAAREA").contentWindow.document.body.innerText = "";
+        document.getElementById("ERRORDIV").innerHTML="#customMessageArgs('E002',[$mUploadFile])";
+    }
+}
+
+//新規作成
+function openDetailNew(key) {
+    if(typeof(newPageId)!='undefined'){
+        top.iframeChange('${flowExecutionUrl}&_eventId=new','itemClassInd',key,'pageid',newPageId,'itemClassL',getObj('itemClassL').value,'itemClassM',getObj('itemClassM').value,'itemClassS',getObj('itemClassS').value, 'companyCd', getObj('companyCd').value);
+    }else{
+        top.iframeChange('${flowExecutionUrl}&_eventId=new','itemClassInd',key,'itemClassL',getObj('itemClassL').value,'itemClassM',getObj('itemClassM').value,'itemClassS',getObj('itemClassS').value, 'companyCd', getObj('companyCd').value);
+    }
+}
+
+//購買部門
+function buyerSectionOnchange(){
+    getObj("buyerSectionName").value= "";
+}
+
+function itemChange(){
+    initItemClass("../../listItemKindChangeNoTerm","itemClassL","itemClassM","itemClassS","","","",getObj("companyCd").value);
+}
+
+//-->
+</script>
+</head>
+<body topmargin="0" leftmargin="0" marginwidth="0" marginheight="0" align="center" width="100%" style="height:100%;overflow-y:hidden;" onload="onLoad();">
+<form id="BodyForm" name="Body" action="${flowExecutionUrl}&_eventId=validate" method="post" enctype="multipart/form-data">
+    #customFormHiddenInput("searchCondition.termFlg.hidden" "$!defaultSearchCondition.searchCondition.termFlg")
+    #customFormHiddenInput("searchCondition.page.pageRecorders.hidden" "$!defaultSearchCondition.searchCondition.page.pageRecorders")
+    #customFormHiddenInput("companyCd.hidden" "$!defaultSearchCondition.companyCd")
+    <table class="NoBorder" style="width:100%;height:100%;z-index:0;">
+        <tr>
+            <td id="SEARCH_AREA" class="SearchArea" style="height:0px;border-bottom:1px solid #999999;text-align:left;vertical-align:top;"><!-- onLoadで変更 -->
+                #parse("./common/common_title_nonew.vm")
+                <table width="100%">
+                    <tr id="SEARCH_AREA2">
+                        <td id="Adjust">
+                            <!-- 検索条件入力部 -->
+                            <table class="NoBorder" width="100%">
+                                <tr><td align="left" colspan="4" nowrap>#customSpringMessage('PSMST130_HEADER_COMMENT')</td></tr>
+                                <tr>
+                                <td class="FontSmallBold" align="right">
+                                    <table class="NoBorder" width="100%">
+                                    <tr>
+                                        <td nowrap class="FontSmallBold" align="right">
+                                            #if("$!isUseAll"=="false")
+                                                #customSpringMessage('COMPANY_NAME')<!--会社名 --><span class="FontWarn">※</span>
+                                            #end
+                                        </td>
+                                        <td nowrap class="FontSmallBold" align="left" colspan ="5">
+                                            #if("$!isUseAll"=="true")
+                                                #customFormHiddenInput("companyCd" "ALL")
+                                            #else
+                                                #customFormSingleSelect("searchCondition.companyCd" $companyList "onchange='itemChange();'")
+                                            #end
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td nowrap class="FontSmallBold" align="right">#customSpringMessage('ITEM_KIND')<!--品種 --></td>
+                                        <td nowrap colspan="5" align="left" style="padding:0px;margin:0px;">
+                                            #customItemKindSelectWithAddButton("searchCondition.itemClassL","searchCondition.itemClassM","searchCondition.itemClassS","companyCd")
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                    <td nowrap class="FontSmallBold" align="right">#customSpringMessage('BUYER_SECTION')</td><!--購買部門-->
+                                        <td nowrap align="left" colspan="5">
+                                             #springFormInput("searchCondition.buyerSectionCd" "class='Small noIME' maxlength='12' size='14' onchange='javascript:buyerSectionOnchange();'  onfocus='this.select();if(nowWarning==this) { closeWarningBox();}'")
+                                             #springFormInput("searchCondition.buyerSectionName" " class='SmallDsp' type='text' readonly tabIndex='-1' size='40' ")
+                                            <img class="Icon" name="SectionSearch" src="../../image/btnLupe.gif" onclick="sectionPopup.setParam('1',getObj('companyCd').value,'1');sectionPopup.setObject(getObj('buyerSectionCd'),getObj('buyerSectionName'),getObj('companyCd'));masterSearch('../../src/sectionPopup/search?pageid=sectionPopupSearch&popupPageid=PSMST130','SectionSearch','700','500');">
+                                            #customFormHiddenInput("searchCondition.companyCd" "$!searchCondition.companyCd")
+                                        </td>
+                                    </tr>
+                                    <tr><td nowrap class="FontSmallBold" align="right"></td>
+                                        <td nowrap class="FontSmallBold" align="left" COLSPAN="2">
+                                             #customFormRadioButtons("searchCondition.searchCondition.termFlg" $termFlagList "" "")
+                                       </td>
+                                   </tr>
+                                </table>
+                                </td>
+                                    <td nowrap class="FontSmallBold" align="right">
+                                        #customSpringMessage('DISPLAY_COUNT')<!-- 表示件数 -->&nbsp;
+                                        #customFormRadioButtons("searchCondition.searchCondition.page.pageRecorders" $pageRecordersList "" "")
+                                        <br>
+                                        <input type="button" class="LargeButton" value="#customSpringMessage('ACTION_SEARCH')" onclick="javascript:execSearch()"><!-- 検索 -->
+                                        <br>
+                                        <br>
+                                        ## 強化-00928-000 20130624 SBO_SOKOU MODIFY START
+                                        <a href="javascript:clear();" id="clearSearch">#customSpringMessage('ACTION_CLEAR_SEARCH_CRITERIA')<!-- 検索条件をクリアする --></a>
+                                        ## 強化-00928-000 20130624 SBO_SOKOU MODIFY -END-
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td align="left" colspan="4" nowrap class="FontComment">
+                                        #customSpringMessage('PSMST130_FOOTER_COMMENT') ## ＊:前方一致 / ％:中間一致 / なし:完全一致
+                                    </td>
+                                </tr>
+                            </table>
+                            <!-- 検索条件入力部 -->
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+        
+        <tr>
+           <td id="UPLOAD_AREA" class="NoBorder" style="background-color:#eaeaea;height:35px;border-bottom:1px solid #999999;text-align:left;vertical-align:top;">
+                #parse("./common/common_upload_download.vm")
+            </td>
+        </tr>
+        <tr id ="TR_ERROR" style="display:none;">
+            <td id="ERRORAREA" class="error" style="height:0px;">
+                <div id="ERRORDIV">$!errorMessage </div>
+            </td>
+        </tr>
+        <tr><td class="NoBorder" style="height:auto;">
+                <iframe id="DATAAREA" name="DATAAREA" framespacing="0" frameborder="0" src="../../layout/default.vm" scrolling="no" frameborder="no" style="position:static;width:100%;border:0px solid #999999;height:100%;z-index:0;"></iframe>
+            </td>
+        </tr>
+    </table>
+<iframe id="HIDDENAREA" name="HIDDENAREA" framespacing="0" frameborder="0" src="" scrolling="no" frameborder="no" style="display:none"></iframe>
+</form>
+<script type="text/javascript">
+    document.getElementById("clearSearch").onclick = function (){
+        var itemL = document.getElementById("itemClassL");
+        var itemM = document.getElementById("itemClassM");
+        var itemS = document.getElementById("itemClassS");
+        itemL.selectedIndex = 0;
+        itemM.selectedIndex = 0;
+        itemS.selectedIndex = 0;
+        itemM.disabled = true;
+        itemS.disabled = true;
+    }
+</script>
+
+</body>
+</html>

@@ -1,0 +1,111 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<flow xmlns="http://www.springframework.org/schema/webflow"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.springframework.org/schema/webflow
+        http://www.springframework.org/schema/webflow/spring-webflow-2.0.xsd"
+    parent="base">
+
+    <var name="domain" class="fw.domain.slip.quot.quotresp.quotrespdetail.QuotRespDetail" />
+    <var name="dlFlg" class="java.lang.String" />
+
+    <input name="quotReqNo" />
+    <input name="historyIdentify" />
+    <input name="isSearchByHistory" />
+    <input name="isSearchByAll" />
+    <input name="isSearchByHistoryAll" />
+
+    <decision-state id="isSearchByHistory">
+        <if test="isSearchByAll" then="searchByAll" />
+        <if test="isSearchByHistoryAll" then="searchByHistoryAll" />
+        <if test="isSearchByHistory" then="searchByHistory" else="searchByCondition" />
+    </decision-state>
+
+    <action-state id="searchByCondition">
+        <evaluate expression="PSQOT080Service.initDetail(quotReqNo)"
+            result="flowScope.domain" />
+        <transition to="PSQOT080_01"/>
+    </action-state>
+
+    <action-state id="searchByHistory">
+        <evaluate expression="PSQOT080Service.initFromHistory(historyIdentify.historySeq)"
+            result="flowScope.domain" />
+        <transition to="PSQOT080_01"/>
+    </action-state>
+
+    <action-state id="searchByAll">
+        <evaluate expression="PSQOT080Service.initAll(quotReqNo)"
+            result="flowScope.domain" />
+        <transition to="PSQOT080_01">
+            <set name="dlFlg" value="true"/>
+        </transition>
+    </action-state>
+
+    <action-state id="searchByHistoryAll">
+        <evaluate expression="PSQOT080Service.initFromHistoryAll(historyIdentify.historySeq)"
+            result="flowScope.domain" />
+        <transition to="PSQOT080_01">
+            <set name="dlFlg" value="true"/>
+        </transition>
+    </action-state>
+
+    <view-state id="PSQOT080_01" view="qot/ans/PSQOT080_01">
+        <transition on="PSQOT080_02" to="PSQOT080_02"/>
+        <transition on="refresh"  to="PSQOT080_01" validate="false">
+            <evaluate expression="PSQOT080Service.refreshDetail(requestParameters.quotReqSeq)" result="flowScope.domain" />
+        </transition>
+        <transition on="downloadFromAttach" to="downloadIf_01" />
+    </view-state>
+    <view-state id="PSQOT080_02" view="qot/ans/PSQOT080_02">
+        <transition on="PSQOT080_03" to="PSQOT080_03"/>
+        <transition on="download" to="downloadIf_02" />
+        <transition on="downloadext" validate="false">
+            <evaluate expression="PSQOT080Service.downloadFileExt(domain)"/>
+        </transition>
+    </view-state>
+    <view-state id="PSQOT080_03" view="qot/ans/PSQOT080_03">
+        <transition on="download" to="downloadIf_03" />
+    </view-state>
+
+    <decision-state id="downloadIf_01">
+        <if test="dlFlg" then="PSQOT080_downloadAll_01" else="PSQOT080_download_01" />
+    </decision-state>
+
+    <action-state id="PSQOT080_downloadAll_01" >
+        <evaluate expression="PSQOT080Service.downloadFromAttachMngAll(requestParameters.seqNo)"/>
+        <transition to="PSQOT080_01"/> 
+    </action-state> 
+
+    <action-state id="PSQOT080_download_01">
+        <evaluate expression="PSQOT080Service.downloadFromAttachMng(requestParameters.seqNo)"/>
+        <transition to="PSQOT080_01"/> 
+    </action-state> 
+
+    <decision-state id="downloadIf_02">
+        <if test="dlFlg" then="PSQOT080_downloadAll_02" else="PSQOT080_download_02" />
+    </decision-state>
+
+    <action-state id="PSQOT080_downloadAll_02" >
+        <evaluate expression="PSQOT080Service.downloadFromAttachMngAll(requestParameters.seqNo)"/>
+        <transition to="PSQOT080_02"/> 
+    </action-state> 
+
+    <action-state id="PSQOT080_download_02">
+        <evaluate expression="PSQOT080Service.downloadFromAttachMng(requestParameters.seqNo)"/>
+        <transition to="PSQOT080_02"/> 
+    </action-state> 
+
+    <decision-state id="downloadIf_03">
+        <if test="dlFlg" then="PSQOT080_downloadAll_03" else="PSQOT080_download_03" />
+    </decision-state>
+
+    <action-state id="PSQOT080_downloadAll_03" >
+        <evaluate expression="PSQOT080Service.downloadFromQuotRespAttachAll(requestParameters.seqNo)"/>
+        <transition to="PSQOT080_03"/> 
+    </action-state> 
+
+    <action-state id="PSQOT080_download_03">
+        <evaluate expression="PSQOT080Service.downloadFromQuotRespAttach(requestParameters.seqNo)"/>
+        <transition to="PSQOT080_03"/> 
+    </action-state> 
+
+</flow>

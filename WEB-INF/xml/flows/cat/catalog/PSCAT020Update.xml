@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<flow xmlns="http://www.springframework.org/schema/webflow"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.springframework.org/schema/webflow
+        http://www.springframework.org/schema/webflow/spring-webflow-2.0.xsd"
+    parent="base">
+    
+    <var name="priceIdentify" class="fw.domain.slip.price.pricemasterlist.PriceIdentify" />
+    <input name="catalogIdentify" />
+    <input name="fromPattern" />
+    <on-start>
+        <evaluate expression="PSCAT020UpdateService.init(catalogIdentify)"
+            result="flowScope.catalogPurReqApl" />
+        <set name="flowScope.type" value="'Update'"/>
+    </on-start>
+    
+    <view-state id="PSCAT020Update" view="cat/catalog/PSCAT020" model="catalogPurReqApl">
+        <transition on="apply" validate="true">
+            <evaluate expression="PSCAT020UpdateService.apply(catalogPurReqApl)"/>
+            <set name="flashScope.isApplySuccessForUpdate" value="true"></set>
+        </transition>
+        <transition on="tempSave" validate="true">
+            <evaluate expression="PSCAT020UpdateService.tempSave(catalogPurReqApl)"/>
+            <set name="flashScope.isTempSaveSuccessForUpdate" value="true"></set>
+        </transition>
+        <transition on="itemSelect" to="PSCAT010Search" validate="false">
+            <evaluate expression="PSCAT020UpdateService.itemSelect(catalogPurReqApl)"/>
+        </transition>
+        <transition on="back" to="PSCAT051Search" validate="false">
+        </transition>
+        <transition on="deleteCart" validate="false">
+            <evaluate
+                expression="PSCAT020InsertService.deleteCart(catalogPurReqApl, requestParameters.catalogPurReqIndex)" />
+        </transition>
+        <transition on="detail" to="PSPRC050" validate="false">
+            <set name="priceIdentify.buyerCompanyCd" value="requestParameters.buyerCompanyCd"/>
+            <set name="priceIdentify.buyerSectionCd" value="requestParameters.buyerSectionCd"/>
+            <set name="priceIdentify.itemCd" value="requestParameters.itemCd"/>
+            <set name="priceIdentify.supCd" value="requestParameters.supCd"/>
+            <set name="priceIdentify.validStartDate.dateOfymd" value="requestParameters.validStartDate"/>
+            <set name="priceIdentify.validEndDate.dateOfymd" value="requestParameters.validEndDate"/>
+            <set name="priceIdentify.lastUpdDate" value="requestParameters.lastUpdDate"/>
+        </transition>
+        <transition on="PSFAV010" to="PSFAV010" validate="false" />
+        <transition on="PSFAV010ALL" to="PSFAV010ALL" validate="false" />
+        <transition on="downloadext" validate="false">
+            <evaluate expression="PSCAT020InsertService.downloadFileExt(catalogPurReqApl)"/>
+        </transition>
+    </view-state> 
+    
+    <subflow-state id="PSCAT010Search" subflow="cat/catalog/PSCAT010Search" >
+        <input name="fromPattern" value="'Update'" />
+    </subflow-state>
+     <subflow-state id="PSPRC050" subflow="prc/price/PSPRC050" >
+        <input name="priceIdentify" value="priceIdentify" />
+    </subflow-state>
+    <subflow-state id="PSCAT051Search" subflow="cat/catalog/PSCAT051Search" >
+    </subflow-state>
+    
+    <subflow-state id="PSFAV010" subflow="fav/favorite/PSFAV010" >
+        <input name="buyerCompanyCd" value="requestParameters.buyerCompanyCd" />
+        <input name="buyerSectionCd" value="requestParameters.buyerSectionCd" />
+        <input name="itemCd" value="requestParameters.itemCd" />
+        <input name="supCd" value="requestParameters.supCd" />
+        <input name="validStartDate" value="requestParameters.validStartDate" />
+        <input name="validEndDate" value="requestParameters.validEndDate" />
+        <input name="eventType" value="'addFav'" />
+        
+    </subflow-state>
+    <subflow-state id="PSFAV010ALL" subflow="fav/favorite/PSFAV010" >
+        <input name="catalogPurReqApl" value="catalogPurReqApl" />
+        <input name="eventType" value="'addFav'" />
+        <input name="isAddFavAll" value="'true'" />
+    </subflow-state>
+</flow> 

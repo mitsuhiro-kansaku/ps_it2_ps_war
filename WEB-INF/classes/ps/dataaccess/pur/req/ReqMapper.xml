@@ -1,0 +1,2050 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="ps.dataaccess.pur.req.ReqMapper">
+
+   <select id="searchPurAplSeq"  resultType="int">
+           SELECT T_PUR_APL_SEQ.NEXTVAL FROM DUAL
+    </select>
+
+     <select id="searchPurReqSeq"  resultType="int">
+           SELECT T_PUR_REQUEST_SEQ.NEXTVAL FROM DUAL
+    </select>
+
+    <select id="searchAttachMngSeq"  resultType="int">
+           SELECT T_ATTACH_MNG_SEQ.NEXTVAL FROM DUAL
+    </select>
+
+    <select id="searchCurrency"  resultType="String">
+        SELECT
+                M_CURRENCY.CURRENCY_CD as "currencyCd"
+            FROM M_CURRENCY
+            LEFT JOIN M_CURRENCY_LANG
+                 ON M_CURRENCY.CURRENCY_CD = M_CURRENCY_LANG.CURRENCY_CD
+                 AND M_CURRENCY_LANG.LANGUAGE_IND = '${@fw.security.SecurityUtil@getCompanyUseLanguageIndByEscapeSql()}'
+            WHERE M_CURRENCY.CURRENCY_CD =
+                  (SELECT BASE_CURRENCY_CD
+                      FROM M_COMPANY
+                      WHERE COMPANY_CD='${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}')
+    </select>
+
+    <resultMap type="fw.domain.slip.purreq.everypurreq.EveryPurReqApl" id="EveryPurReqApl_Map">
+
+        <id column="PURAPLSEQ" property="purAplManagement.purAplIdentify.purAplSeqNum"/>
+        <id column="PURAPLNO" property="purAplManagement.purAplIdentify.purAplNo.purAplNo"/>
+        <id column="TITLE" property="purAplManagement.titleName.titleName"/>
+        <!-- 強化-01818-000 2013/06/22 ADD SBO_lichao START -->
+        <id column="VERSION" property="purAplManagement.version"/>
+        <!-- 強化-01818-000 2013/06/22 ADD SBO_lichao -END- -->
+        <!-- 2013/07/10 ADD DAIKO_NAKAMURA START -->
+        <id column="REQ_TYPE_IND" property="purAplManagement.reqInd.reqInd"/>
+        <!-- 2013/07/10 ADD DAIKO_NAKAMURA -END- -->
+        <id column="URGENT_IND" property="purAplManagement.urgentInd.urgentInd"/>
+        <id column="QUOT_REQ_NO" property="purAplManagement.quotReqNo"/>
+        <id column="QUOT_RESP_SEQ" property="purAplManagement.quotRespSeqNo"/>
+        <id column="LASTDATE" property="purAplManagement.purAplIdentify.lastUpdDate"/>
+        <id column="REQUSER$SECTIONPLACECD" property="purAplManagement.reqUser.reqUser.section.sectionPlace.sectionPlaceCd"/>
+        <id column="REQUSER$SECTIONPLACENAME" property="purAplManagement.reqUser.reqUser.section.sectionPlace.sectionPlaceName"/>
+        <id column="REQUSER$SECTIONCD" property="purAplManagement.reqUser.reqUser.section.sectionCd"/>
+        <id column="REQUSER$SECTIONNAME" property="purAplManagement.reqUser.reqUser.section.sectionName"/>
+        <id column="USERID" property="purAplManagement.reqUser.reqUser.userID"/>
+        <id column="USERNAME" property="purAplManagement.reqUser.reqUser.userName"/>
+        <id column="EXTENSIONNO" property="purAplManagement.reqUser.reqUser.extNo.extensionNo"/>
+        <id column="EXTERNALNO" property="purAplManagement.reqUser.reqUser.externalNo.externalNo"/>
+        <id column="APPROUTENO" property="purAplManagement.approute.appRouteNo"/>
+        <id column="APPROUTENAME" property="purAplManagement.approute.appRouteName"/>
+        <id column="FILE1$FILE" property="purAplManagement.rangeByAttachFile1.attachFile.seqNo"/>
+        <id column="FILE1$FILENAME" property="purAplManagement.rangeByAttachFile1.attachFile.fileName"/>
+        <id column="FILE1$ATTACHRANGE" property="purAplManagement.rangeByAttachFile1.attachRange.attachRange"/>
+        <id column="FILE2$FILE" property="purAplManagement.rangeByAttachFile2.attachFile.seqNo"/>
+        <id column="FILE2$FILENAME" property="purAplManagement.rangeByAttachFile2.attachFile.fileName"/>
+        <id column="FILE2$ATTACHRANGE" property="purAplManagement.rangeByAttachFile2.attachRange.attachRange"/>
+        <id column="FORAPPCOMMENT" property="purAplManagement.forAppComment.forAppComment.comment"/>
+        <id column="FORBUYERCOMMENT" property="purAplManagement.forBuyerComment.forBuyerComment.comment"/>
+        <id column="FORSUPPLIERCOMMENT" property="purAplManagement.forSupplierComment.forSupplierComment.comment"/>
+        <id column="DATEOFYMD" property="purAplManagement.purReqDate.purReqDate.reqDate.dateOfymd"/>
+        <id column="LOADSECTION$COMPANYCD" property="purAplManagement.loadSection.loadSection.company.companyCd"/>
+        <id column="LOADSECTION$COMPANYNAME" property="purAplManagement.loadSection.loadSection.company.companyName"/>
+        <id column="LOADSECTION$SECTIONPLACECD" property="purAplManagement.loadSection.loadSection.sectionPlace.sectionPlaceCd"/>
+        <id column="LOADSECTION$SECTIONPLACENAME" property="purAplManagement.loadSection.loadSection.sectionPlace.sectionPlaceName"/>
+        <id column="LOADSECTION$SECTIONCD" property="purAplManagement.loadSection.loadSection.sectionCd"/>
+        <id column="LOADSECTION$SECTIONNAME" property="purAplManagement.loadSection.loadSection.sectionName"/>
+        <id column="DELIVPLACECD" property="purAplManagement.delivPlace.delivPlaceCd"/>
+        <id column="DELIVPLACENAME" property="purAplManagement.delivPlace.delivPlaceName"/>
+        <id column="ITEMCLASSCOMPANYCD" property="purAplManagement.itemKind.itemClassCompanyCd"/> <!-- 2013/02/11 ADD DAIKO_KANEKO -->
+        <id column="ITEMCLASSL" property="purAplManagement.itemKind.itemClassL"/>
+        <id column="ITEMCLASSLNAME" property="purAplManagement.itemKind.itemClassLName"/>
+        <id column="ITEMCLASSM" property="purAplManagement.itemKind.itemClassM"/>
+        <id column="ITEMCLASSMNAME" property="purAplManagement.itemKind.itemClassMName"/>
+        <id column="ITEMCLASSS" property="purAplManagement.itemKind.itemClassS"/>
+        <id column="ITEMCLASSSNAME" property="purAplManagement.itemKind.itemClassSName"/>
+        <id column="PRICEREGISTERFLG" property="purAplManagement.priceRegisterFlg.priceRegisterFlg"/>
+        <id column="BUDGETNUMBER" property="purAplManagement.budgetNumber.budgetNumber"/>
+        <id column="MAIL" property="purAplManagement.reqUser.reqUser.mailAddr.mail"/>
+        <id column="AMOUNTTOTAL" property="purAplManagement.hopeAmountTotal.hopeAmountTotal.amount"/>
+        <id column="STATUS" property="purAplManagement.purReqStatus.status"/>
+        <id column="SUPCD" property="purAplManagement.hopeSupplier.hopeSupplier.supCd"/>
+        <id column="SUPPLIERNAME" property="purAplManagement.hopeSupplier.hopeSupplier.supplierName.supplierName"/>
+        <id column="TELNO" property="purAplManagement.hopeSupplier.hopeSupplier.supplierContact.ctc.telNo.telNo"/>
+        <id column="FAXNO" property="purAplManagement.hopeSupplier.hopeSupplier.supplierContact.ctc.faxNo.faxNo"/>
+        <id column="ZIPCD" property="purAplManagement.hopeSupplier.hopeSupplier.supplierContact.ctc.zipCd.zipCd"/>
+        <id column="ADDRESS1" property="purAplManagement.hopeSupplier.hopeSupplier.supplierContact.ctc.address1.address"/>
+        <id column="ADDRESS2" property="purAplManagement.hopeSupplier.hopeSupplier.supplierContact.ctc.address2.address"/>
+
+        <id column="SUPPLIERABBRNAM" property="purAplManagement.hopeSupplier.hopeSupplier.supplierName.supplierAbbrName"/>
+        <id column="BUYERCOMPANYCD" property="purAplManagement.itemKind.buyUser.buyUser.section.company.companyCd"/>
+        <id column="BUYERCOMPANYNAME" property="purAplManagement.itemKind.buyUser.buyUser.section.company.companyName"/>
+        <id column="BUYERSECTIONPLACECD" property="purAplManagement.itemKind.buyUser.buyUser.section.sectionPlace.sectionPlaceCd"/>
+        <id column="BUYERSECTIONPLACENAME" property="purAplManagement.itemKind.buyUser.buyUser.section.sectionPlace.sectionPlaceName"/>
+        <id column="BUYERSECTIONCD" property="purAplManagement.itemKind.buyUser.buyUser.section.sectionCd"/>
+        <id column="BUYERSECTIONNAME" property="purAplManagement.itemKind.buyUser.buyUser.section.sectionName"/>
+        <id column="BUYERUSERID" property="purAplManagement.itemKind.buyUser.buyUser.userID"/>
+        <id column="BUYERUSERNAME" property="purAplManagement.itemKind.buyUser.buyUser.userName"/>
+
+        <id column="EXT_TXT_1" property="purAplManagement.editExtItem.editTextExtItem.textExtItem1.value" />
+         <id column="EXT_TXT_2" property="purAplManagement.editExtItem.editTextExtItem.textExtItem2.value" />
+         <id column="EXT_TXT_3" property="purAplManagement.editExtItem.editTextExtItem.textExtItem3.value" />
+         <id column="EXT_TXT_4" property="purAplManagement.editExtItem.editTextExtItem.textExtItem4.value" />
+         <id column="EXT_TXT_5" property="purAplManagement.editExtItem.editTextExtItem.textExtItem5.value" />
+         <id column="EXT_TXT_6" property="purAplManagement.editExtItem.editTextExtItem.textExtItem6.value" />
+         <id column="EXT_TXT_7" property="purAplManagement.editExtItem.editTextExtItem.textExtItem7.value" />
+         <id column="EXT_TXT_8" property="purAplManagement.editExtItem.editTextExtItem.textExtItem8.value" />
+         <id column="EXT_TXT_9" property="purAplManagement.editExtItem.editTextExtItem.textExtItem9.value" />
+         <id column="EXT_TXT_10" property="purAplManagement.editExtItem.editTextExtItem.textExtItem10.value" />
+         <id column="EXT_AREA_1" property="purAplManagement.editExtItem.editAreaExtItem.arrayExtItem1.value" />
+         <id column="EXT_AREA_2" property="purAplManagement.editExtItem.editAreaExtItem.arrayExtItem2.value" />
+         <id column="EXT_AREA_3" property="purAplManagement.editExtItem.editAreaExtItem.arrayExtItem3.value" />
+         <id column="EXT_AREA_4" property="purAplManagement.editExtItem.editAreaExtItem.arrayExtItem4.value" />
+         <id column="EXT_AREA_5" property="purAplManagement.editExtItem.editAreaExtItem.arrayExtItem5.value" />
+         <id column="EXT_DATE_1" property="purAplManagement.editExtItem.editDateExtItem.dateExtItem1.dateType.dateOfymd" />
+         <id column="EXT_DATE_2" property="purAplManagement.editExtItem.editDateExtItem.dateExtItem2.dateType.dateOfymd" />
+         <id column="EXT_DATE_3" property="purAplManagement.editExtItem.editDateExtItem.dateExtItem3.dateType.dateOfymd" />
+         <id column="EXT_DATE_4" property="purAplManagement.editExtItem.editDateExtItem.dateExtItem4.dateType.dateOfymd" />
+         <id column="EXT_DATE_5" property="purAplManagement.editExtItem.editDateExtItem.dateExtItem5.dateType.dateOfymd" />
+         <id column="EXT_INT_1" property="purAplManagement.editExtItem.editIntExtItem.intExtItem1.value" />
+         <id column="EXT_INT_2" property="purAplManagement.editExtItem.editIntExtItem.intExtItem2.value" />
+         <id column="EXT_INT_3" property="purAplManagement.editExtItem.editIntExtItem.intExtItem3.value" />
+         <id column="EXT_INT_4" property="purAplManagement.editExtItem.editIntExtItem.intExtItem4.value" />
+         <id column="EXT_INT_5" property="purAplManagement.editExtItem.editIntExtItem.intExtItem5.value" />
+         <id column="EXT_INT_6" property="purAplManagement.editExtItem.editIntExtItem.intExtItem6.value" />
+         <id column="EXT_INT_7" property="purAplManagement.editExtItem.editIntExtItem.intExtItem7.value" />
+         <id column="EXT_INT_8" property="purAplManagement.editExtItem.editIntExtItem.intExtItem8.value" />
+         <id column="EXT_INT_9" property="purAplManagement.editExtItem.editIntExtItem.intExtItem9.value" />
+         <id column="EXT_INT_10" property="purAplManagement.editExtItem.editIntExtItem.intExtItem10.value" />
+         <id column="EXT_DEC_1" property="purAplManagement.editExtItem.editDecExtItem.decExtItem1.value" />
+         <id column="EXT_DEC_2" property="purAplManagement.editExtItem.editDecExtItem.decExtItem2.value" />
+         <id column="EXT_DEC_3" property="purAplManagement.editExtItem.editDecExtItem.decExtItem3.value" />
+         <id column="EXT_DEC_4" property="purAplManagement.editExtItem.editDecExtItem.decExtItem4.value" />
+         <id column="EXT_DEC_5" property="purAplManagement.editExtItem.editDecExtItem.decExtItem5.value" />
+         <id column="EXT_SEL_1" property="purAplManagement.editExtItem.editSelExtItem.selExtItem1.value" />
+         <id column="EXT_SEL_2" property="purAplManagement.editExtItem.editSelExtItem.selExtItem2.value" />
+         <id column="EXT_SEL_3" property="purAplManagement.editExtItem.editSelExtItem.selExtItem3.value" />
+         <id column="EXT_SEL_4" property="purAplManagement.editExtItem.editSelExtItem.selExtItem4.value" />
+         <id column="EXT_SEL_5" property="purAplManagement.editExtItem.editSelExtItem.selExtItem5.value" />
+         <id column="EXT_SEL_6" property="purAplManagement.editExtItem.editSelExtItem.selExtItem6.value" />
+         <id column="EXT_SEL_7" property="purAplManagement.editExtItem.editSelExtItem.selExtItem7.value" />
+         <id column="EXT_SEL_8" property="purAplManagement.editExtItem.editSelExtItem.selExtItem8.value" />
+         <id column="EXT_SEL_9" property="purAplManagement.editExtItem.editSelExtItem.selExtItem9.value" />
+         <id column="EXT_SEL_10" property="purAplManagement.editExtItem.editSelExtItem.selExtItem10.value" />
+         <id column="EXT_CHK_1" property="purAplManagement.editExtItem.editChkExtItem.chkExtItem1.value" />
+         <id column="EXT_CHK_2" property="purAplManagement.editExtItem.editChkExtItem.chkExtItem2.value" />
+         <id column="EXT_CHK_3" property="purAplManagement.editExtItem.editChkExtItem.chkExtItem3.value" />
+         <id column="EXT_CHK_4" property="purAplManagement.editExtItem.editChkExtItem.chkExtItem4.value" />
+         <id column="EXT_CHK_5" property="purAplManagement.editExtItem.editChkExtItem.chkExtItem5.value" />
+         <id column="EXT_FILE_1" property="purAplManagement.editExtItem.editFileExtItem.fileExtItem1.fileName" />
+         <id column="EXT_FILE_2" property="purAplManagement.editExtItem.editFileExtItem.fileExtItem2.fileName" />
+         <id column="EXT_FILE_3" property="purAplManagement.editExtItem.editFileExtItem.fileExtItem3.fileName" />
+         <id column="EXT_FILE_BINARY_1" property="purAplManagement.editExtItem.editFileExtItem.fileExtItem1.binary"/>
+         <id column="EXT_FILE_BINARY_2" property="purAplManagement.editExtItem.editFileExtItem.fileExtItem2.binary"/>
+         <id column="EXT_FILE_BINARY_3" property="purAplManagement.editExtItem.editFileExtItem.fileExtItem3.binary"/>
+         <id column="EXT_MST_1" property="purAplManagement.editExtItem.editMstExtItem.mstExtItem1.mstKey" />
+         <id column="EXT_MST_2" property="purAplManagement.editExtItem.editMstExtItem.mstExtItem2.mstKey" />
+         <id column="EXT_MST_3" property="purAplManagement.editExtItem.editMstExtItem.mstExtItem3.mstKey" />
+         <id column="EXT_MST_4" property="purAplManagement.editExtItem.editMstExtItem.mstExtItem4.mstKey" />
+         <id column="EXT_MST_5" property="purAplManagement.editExtItem.editMstExtItem.mstExtItem5.mstKey" />
+         <id column="EXT_MST_6" property="purAplManagement.editExtItem.editMstExtItem.mstExtItem6.mstKey" />
+         <id column="EXT_MST_7" property="purAplManagement.editExtItem.editMstExtItem.mstExtItem7.mstKey" />
+         <id column="EXT_MST_8" property="purAplManagement.editExtItem.editMstExtItem.mstExtItem8.mstKey" />
+         <id column="EXT_MST_NAME_1" property="purAplManagement.editExtItem.editMstExtItem.mstExtItem1.mstName"/>
+         <id column="EXT_MST_NAME_2" property="purAplManagement.editExtItem.editMstExtItem.mstExtItem2.mstName"/>
+         <id column="EXT_MST_NAME_3" property="purAplManagement.editExtItem.editMstExtItem.mstExtItem3.mstName"/>
+         <id column="EXT_MST_NAME_4" property="purAplManagement.editExtItem.editMstExtItem.mstExtItem4.mstName"/>
+         <id column="EXT_MST_NAME_5" property="purAplManagement.editExtItem.editMstExtItem.mstExtItem5.mstName"/>
+         <id column="EXT_MST_NAME_6" property="purAplManagement.editExtItem.editMstExtItem.mstExtItem6.mstName"/>
+         <id column="EXT_MST_NAME_7" property="purAplManagement.editExtItem.editMstExtItem.mstExtItem7.mstName"/>
+         <id column="EXT_MST_NAME_8" property="purAplManagement.editExtItem.editMstExtItem.mstExtItem8.mstName"/>
+         <!-- 強化-00636-000 2013/03/25 ADD SBOQD_jiang START -->
+         <id column="PUR_REQ_FIRST_DATE" property="purAplManagement.purReqDate.firstReqDate.reqDate.dateOfymd"/>
+         <!-- 強化-00636-000 2013/03/25 ADD SBOQD_jiang END -->
+    </resultMap>
+    <select id="searchForReApply" parameterType="fw.domain.slip.purreq.everypurreq.purreqmng.PurAplIdentify" resultMap="EveryPurReqApl_Map">
+        SELECT
+        <!-- 強化-00636-000 2013/03/25 ADD SBOQD_jiang START -->
+            T_PUR_APL.PUR_REQ_FIRST_DATE,
+        <!-- 強化-00636-000 2013/03/25 ADD SBOQD_jiang END -->
+        <!-- 強化-01818-000 2013/06/22 ADD SBO_lichao START -->
+            T_PUR_APL.PUR_APL_VERSION AS "VERSION",
+        <!-- 強化-01818-000 2013/06/22 ADD SBO_lichao -END- -->
+            T_PUR_APL.PUR_APL_STATUS AS "STATUS",
+            <!-- 2013/07/10 ADD DAIKO_NAKAMURA START -->
+            T_PUR_APL.REQ_TYPE_IND AS "REQ_TYPE_IND",
+            <!-- 2013/07/10 ADD DAIKO_NAKAMURA -END- -->
+            T_PUR_APL.PUR_APL_SEQ AS "PURAPLSEQ",
+            T_PUR_APL.PUR_APL_NO AS "PURAPLNO",
+            T_PUR_APL.PUR_REQ_DATE AS "DATEOFYMD",
+            T_PUR_APL.URGENT_IND AS "URGENT_IND",
+            T_PUR_APL.QUOT_REQ_NO AS "QUOT_REQ_NO",
+            T_PUR_APL.QUOT_RESP_SEQ,
+            T_PUR_APL.TITLE_NAME AS "TITLE",
+            T_PUR_APL.REQ_SECTION_PLACE_CD AS "REQUSER$SECTIONPLACECD",
+            T_PUR_APL.REQ_SECTION_PLACE_NAME AS "REQUSER$SECTIONPLACENAME",
+            T_PUR_APL.REQ_SECTION_CD AS "REQUSER$SECTIONCD",
+            T_PUR_APL.REQ_SECTION_NAME AS "REQUSER$SECTIONNAME",
+            T_PUR_APL.REQ_USER_ID AS "USERID",
+            T_PUR_APL.REQ_USER_NAME AS "USERNAME",
+            T_PUR_APL.REQ_USER_EXTENSION_NO AS "EXTENSIONNO",
+            T_PUR_APL.REQ_USER_TEL_NO AS "EXTERNALNO",
+            M_B_USER.MAIL_ADDR AS "MAIL",
+            T_PUR_APL.APP_ROUTE_NO AS "APPROUTENO",
+            T_PUR_APL.APP_ROUTE_NAME AS "APPROUTENAME",
+            T_PUR_APL.LOAD_COMPANY_CD AS "LOADSECTION$COMPANYCD",
+            T_PUR_APL.LOAD_COMPANY_NAME AS "LOADSECTION$COMPANYNAME",
+            T_PUR_APL.LOAD_SECTION_PLACE_CD AS "LOADSECTION$SECTIONPLACECD",
+            T_PUR_APL.LOAD_SECTION_PLACE_NAME AS "LOADSECTION$SECTIONPLACENAME",
+            T_PUR_APL.LOAD_SECTION_CD AS "LOADSECTION$SECTIONCD",
+            T_PUR_APL.LOAD_SECTION_NAME AS "LOADSECTION$SECTIONNAME",
+            T_PUR_APL.DELIV_PLACE_CD AS "DELIVPLACECD",
+            T_PUR_APL.DELIV_PLACE_NAME AS "DELIVPLACENAME",
+            T_PUR_APL.HOPE_SUPPLIER_CD AS "SUPCD",
+            T_PUR_APL.HOPE_SUPPLIER_NAME AS "SUPPLIERNAME",
+            T_PUR_APL.HOPE_SUPPLIER_ABBR_NAME AS "SUPPLIERABBRNAM",
+            T_QUOT_REQ_SUP.SUP_TEL_NO AS "TELNO",
+            T_QUOT_REQ_SUP.SUP_FAX_NO AS "FAXNO",
+            T_QUOT_REQ_SUP.SUP_ZIP_CD AS "ZIPCD",
+            T_QUOT_REQ_SUP.SUP_ADDRESS1 AS "ADDRESS1",
+            T_QUOT_REQ_SUP.SUP_ADDRESS2 AS "ADDRESS2",
+            T_PUR_APL.ITEM_CLASS_L AS "ITEMCLASSL",
+            T_PUR_APL.ITEM_CLASS_L_NAME AS "ITEMCLASSLNAME",
+            T_PUR_APL.ITEM_CLASS_M AS "ITEMCLASSM",
+            T_PUR_APL.ITEM_CLASS_M_NAME AS "ITEMCLASSMNAME",
+            T_PUR_APL.ITEM_CLASS_S AS "ITEMCLASSS",
+            T_PUR_APL.ITEM_CLASS_S_NAME AS "ITEMCLASSSNAME",
+            T_PUR_APL.PRICE_REQ_FLG AS "PRICEREGISTERFLG",
+            T_PUR_APL.BUDGET_NO AS "BUDGETNUMBER",
+            T_PUR_APL.ATTACH_FILE_SEQ1 AS "FILE1$FILE",
+            T_ATTACH_MNG_A.ATTACH_FILE_NAME AS "FILE1$FILENAME",
+            T_ATTACH_MNG_A.ATTACH_SCOPE AS "FILE1$ATTACHRANGE",
+            T_PUR_APL.ATTACH_FILE_SEQ2 AS "FILE2$FILE",
+            T_ATTACH_MNG_B.ATTACH_FILE_NAME AS "FILE2$FILENAME",
+            T_ATTACH_MNG_B.ATTACH_SCOPE AS "FILE2$ATTACHRANGE",
+            T_PUR_APL.FOR_BOSS_COMMENT AS "FORAPPCOMMENT",
+            T_PUR_APL.FOR_BUYER_COMMENT AS "FORBUYERCOMMENT",
+            T_PUR_APL.FOR_SUPPRIER_COMMENT AS "FORSUPPLIERCOMMENT",
+            T_PUR_APL.LAST_UPD_DATE AS "LASTDATE",
+            ${@ps.common.util.ItemSettingUtil@getItemSettingSelectSQL("T_PUR_APL")}
+        FROM T_PUR_APL
+        LEFT JOIN T_QUOT_REQUEST ON T_QUOT_REQUEST.QUOT_REQ_NO = T_PUR_APL.PUR_APL_NO
+                  AND T_QUOT_REQUEST.NEW_FLG = '1'
+        LEFT JOIN T_QUOT_RESPONSE ON T_QUOT_RESPONSE.QUOT_RESP_SEQ = T_PUR_APL.QUOT_RESP_SEQ
+        LEFT JOIN T_QUOT_REQ_SUP ON T_QUOT_REQUEST.QUOT_REQ_SEQ =
+                              T_QUOT_REQ_SUP.QUOT_REQ_SEQ
+                          AND T_QUOT_REQ_SUP.DELETE_FLG = '0'
+                          AND T_QUOT_RESPONSE.QUOT_SUP_LINE_NO = T_QUOT_REQ_SUP.QUOT_SUP_LINE_NO
+        LEFT JOIN T_ATTACH_MNG  T_ATTACH_MNG_A
+          ON T_PUR_APL.ATTACH_FILE_SEQ1 = T_ATTACH_MNG_A.ATTACH_FILE_SEQ
+            AND T_ATTACH_MNG_A.DELETE_FLG = '0'
+        LEFT JOIN T_ATTACH_MNG  T_ATTACH_MNG_B
+            ON T_PUR_APL.ATTACH_FILE_SEQ2 = T_ATTACH_MNG_B.ATTACH_FILE_SEQ
+            AND T_ATTACH_MNG_B.DELETE_FLG = '0'
+        LEFT JOIN M_B_USER
+            ON M_B_USER.COMPANY_CD = T_PUR_APL.REQ_COMPANY_CD
+            AND M_B_USER.USER_ID= T_PUR_APL.REQ_USER_ID
+            AND M_B_USER.TERM_FLG= '0'
+        WHERE T_PUR_APL.DELETE_FLG= '0'
+              AND T_PUR_APL.PUR_APL_SEQ = #{purAplSeqNo,jdbcType=VARCHAR}
+    </select>
+
+    <select id="searchTotalAmountForApply" resultType="String">
+         SELECT
+            <!-- 強化-00348-000 2013/07/30 ADD SBO_lichao START -->
+            <!-- SUM(T_PUR_REQUEST.PUR_REQ_CNV_AMOUNT) -->
+            SUM(T_PUR_REQUEST.REQ_AMOUNT)
+            <!-- 強化-00348-000 2013/07/30 ADD SBO_lichao -END- -->
+            FROM T_PUR_APL,T_PUR_REQUEST
+            WHERE T_PUR_APL.PUR_APL_NO = T_PUR_REQUEST.PUR_APL_NO
+            AND T_PUR_APL.PUR_APL_SEQ = T_PUR_REQUEST.PUR_APL_SEQ
+            AND T_PUR_APL.PUR_APL_SEQ = #{purAplSeqNo,jdbcType=VARCHAR}
+            <if test="@org.apache.commons.lang.StringUtils@isNotBlank(appUnitNo)">
+            AND T_PUR_REQUEST.APP_UNIT_NO = #{appUnitNo,jdbcType=VARCHAR}
+            </if>
+            GROUP BY T_PUR_REQUEST.PUR_APL_NO
+    </select>
+
+        <select id="searchForHistory" parameterType="fw.domain.slip.purreq.everypurreq.purreqmng.PurAplIdentify"  resultMap="EveryPurReqApl_Map">
+        SELECT
+            T_PUR_APL.ITEM_CLASS_COMPANY_CD AS "ITEMCLASSCOMPANYCD" , <!-- 2013/02/11 ADD DAIKO_KANEKO -->
+            T_PUR_APL.ITEM_CLASS_L AS "ITEMCLASSL",
+            T_PUR_APL.ITEM_CLASS_L_NAME AS "ITEMCLASSLNAME",
+            T_PUR_APL.ITEM_CLASS_M AS "ITEMCLASSM",
+            T_PUR_APL.ITEM_CLASS_M_NAME AS "ITEMCLASSMNAME",
+            T_PUR_APL.ITEM_CLASS_S AS "ITEMCLASSS",
+            '' as "QUOT_REQ_NO",
+            T_PUR_APL.TITLE_NAME AS "TITLE",
+            T_PUR_APL.ITEM_CLASS_S_NAME AS "ITEMCLASSSNAME",
+            T_PUR_APL.DELIV_PLACE_CD AS "DELIVPLACECD",
+            T_PUR_APL.DELIV_PLACE_NAME AS "DELIVPLACENAME",
+            T_PUR_APL.HOPE_SUPPLIER_CD AS "SUPCD",
+            T_PUR_APL.HOPE_SUPPLIER_NAME AS "SUPPLIERNAME",
+            T_PUR_APL.HOPE_SUPPLIER_ABBR_NAME AS "SUPPLIERABBRNAM",
+            T_PUR_APL.BUDGET_NO AS "BUDGETNUMBER",
+            T_PUR_APL.PRICE_REQ_FLG AS "PRICEREGISTERFLG",
+            T_PUR_APL.APP_ROUTE_NO AS "APPROUTENO",
+            T_PUR_APL.APP_ROUTE_NAME AS "APPROUTENAME",
+            T_PUR_APL.LOAD_SECTION_CD AS "LOADSECTION$SECTIONCD",
+            T_PUR_APL.LOAD_SECTION_NAME AS "LOADSECTION$SECTIONNAME",
+            T_PUR_APL.FOR_BOSS_COMMENT AS "FORAPPCOMMENT",
+            T_PUR_APL.FOR_BUYER_COMMENT AS "FORBUYERCOMMENT",
+            T_PUR_APL.FOR_SUPPRIER_COMMENT AS "FORSUPPLIERCOMMENT",
+            T_PUR_APL.LAST_UPD_DATE AS "lastUpdDate",
+            T_PUR_APL.REQ_SECTION_CD AS "REQUSER$SECTIONCD",
+            T_PUR_APL.REQ_SECTION_NAME AS "REQUSER$SECTIONNAME",
+            T_PUR_APL.REQ_USER_ID AS "USERID",
+            T_PUR_APL.REQ_USER_NAME AS "USERNAME",
+            ${@ps.common.util.ItemSettingUtil@getItemSettingSelectSQL("T_PUR_APL")}
+        FROM T_PUR_APL
+        WHERE T_PUR_APL.DELETE_FLG = '0'
+            AND T_PUR_APL.PUR_APL_SEQ = #{purAplSeqNo,jdbcType=VARCHAR}
+    </select>
+
+    <select id="searchForSituation" resultMap="EveryPurReqApl_Map">
+        SELECT
+            T_QUOT_ACQ_APL.TITLE_NAME AS "TITLE",
+            T_QUOT_REQUEST.BUYER_COMPANY_CD AS "BUYERCOMPANYCD",
+            T_QUOT_REQUEST.BUYER_COMPANY_NAME AS "BUYERCOMPANYNAME",
+            T_QUOT_REQUEST.BUYER_SECTION_PLACE_CD AS "BUYERSECTIONPLACECD",
+            T_QUOT_REQUEST.BUYER_SECTION_PLACE_NAME AS "BUYERSECTIONPLACENAME",
+            T_QUOT_REQUEST.BUYER_SECTION_CD AS "BUYERSECTIONCD",
+            T_QUOT_REQUEST.BUYER_SECTION_NAME AS "BUYERSECTIONNAME",
+            T_QUOT_REQUEST.BUYER_USER_ID AS "BUYERUSERID",
+            T_QUOT_REQUEST.QUOT_REQ_NO as "QUOT_REQ_NO",
+            T_QUOT_REQUEST.QUOT_ACQ_APL_NO as "PURAPLNO",
+            T_QUOT_REQUEST.BUYER_USER_NAME AS "BUYERUSERNAME",
+            T_QUOT_REQUEST.ITEM_CLASS_L AS "ITEMCLASSL",
+            T_QUOT_REQUEST.ITEM_CLASS_L_NAME AS "ITEMCLASSLNAME",
+            T_QUOT_REQUEST.ITEM_CLASS_M AS "ITEMCLASSM",
+            T_QUOT_REQUEST.ITEM_CLASS_M_NAME AS "ITEMCLASSMNAME",
+            T_QUOT_REQUEST.ITEM_CLASS_S AS "ITEMCLASSS",
+            T_QUOT_REQUEST.ITEM_CLASS_S_NAME AS "ITEMCLASSSNAME",
+            T_QUOT_REQUEST.DELIV_PLACE_CD AS "DELIVPLACECD",
+            T_QUOT_REQUEST.DELIV_PLACE_NAME AS "DELIVPLACENAME",
+            T_QUOT_REQUEST.ATTACH_FILE_SEQ1 AS "FILE1$FILE",
+            T_ATTACH_MNG_A.ATTACH_FILE_NAME AS "FILE1$FILENAME",
+            T_ATTACH_MNG_A.ATTACH_SCOPE AS "FILE1$ATTACHRANGE",
+            T_QUOT_REQUEST. ATTACH_FILE_SEQ2 AS "FILE2$FILE",
+            T_ATTACH_MNG_B.ATTACH_FILE_NAME AS "FILE2$FILENAME",
+            T_ATTACH_MNG_B.ATTACH_SCOPE AS "FILE2$ATTACHRANGE",
+            T_QUOT_REQ_SUP.SUP_CD AS "SUPCD",
+            T_QUOT_REQ_SUP.SUP_NAME AS "SUPPLIERNAME",
+            T_QUOT_REQ_SUP.SUP_ABBR_NAME AS "SUPPLIERABBRNAM",
+            T_QUOT_REQ_SUP.SUP_TEL_NO AS "TELNO",
+            T_QUOT_REQ_SUP.SUP_FAX_NO AS "FAXNO",
+            T_QUOT_REQ_SUP.SUP_ZIP_CD AS "ZIPCD",
+            T_QUOT_REQ_SUP.SUP_ADDRESS1 AS "ADDRESS1",
+            T_QUOT_REQ_SUP.SUP_ADDRESS2 AS "ADDRESS2"
+        FROM T_QUOT_REQUEST
+        LEFT JOIN T_QUOT_REQ_SUP
+        ON T_QUOT_REQUEST.QUOT_REQ_SEQ = T_QUOT_REQ_SUP.QUOT_REQ_SEQ
+            AND T_QUOT_REQ_SUP.DELETE_FLG = '0'
+        LEFT JOIN T_ATTACH_MNG  T_ATTACH_MNG_A
+        ON T_QUOT_REQUEST.ATTACH_FILE_SEQ1 = T_ATTACH_MNG_A.ATTACH_FILE_SEQ
+            AND T_ATTACH_MNG_A.DELETE_FLG = '0'
+        LEFT JOIN T_ATTACH_MNG  T_ATTACH_MNG_B
+        ON T_QUOT_REQUEST.ATTACH_FILE_SEQ2 = T_ATTACH_MNG_B.ATTACH_FILE_SEQ
+            AND T_ATTACH_MNG_B.DELETE_FLG = '0'
+        LEFT JOIN T_QUOT_ACQ_APL
+        ON T_QUOT_ACQ_APL.QUOT_ACQ_APL_NO = T_QUOT_REQUEST.QUOT_ACQ_APL_NO
+            AND T_QUOT_ACQ_APL.NEW_FLG = '1'
+            AND T_QUOT_ACQ_APL.DELETE_FLG = '0'
+        WHERE
+            T_QUOT_REQUEST.DELETE_FLG = '0'
+            AND T_QUOT_REQ_SUP.QUOT_SUP_LINE_NO =#{quotSupLineNo,jdbcType=VARCHAR}
+            AND T_QUOT_REQUEST.QUOT_REQ_SEQ = #{quotReqSeqNo,jdbcType=VARCHAR}
+
+    </select>
+
+    <select id="searchTotalAmountForSituation" resultType="String">
+         SELECT
+             SUM(QUOT_REQ_AMOUNT)
+             FROM T_QUOT_REQ_DTL
+             WHERE T_QUOT_REQ_DTL.QUOT_REQ_SEQ = #{quotReqSeqNo,jdbcType=VARCHAR}
+             GROUP BY T_QUOT_REQ_DTL.QUOT_REQ_SEQ
+    </select>
+
+    <resultMap type="fw.domain.slip.purreq.everypurreq.EveryPurReq" id="EveryPurReq_Map">
+        <id column="CURRENCYMARK" property="amountMng.currency.currencyMark"/>
+        <id column="CURRENCY_CD" property="amountMng.currency.currencyCd"/>
+        <id column="DATEOFYMD" property="hopeDlvEst.hopeDlvEst.dateOfymd"/>
+        <id column="QUOT_RESP_DELIV_DATE" property="hopeDlvEstBk.hopeDlvEst.dateOfymd"/>
+        <id column="ORDER_LT" property="standardDelivDayCount.standardDelivDayCount.dayCount"/>
+        <id column="TAXIND" property="amountMng.taxCalculationInd.taxInd.taxInd"/>
+        <id column="SEQNO" property="rangeByAttachFile.attachFile.seqNo"/>
+        <id column="FILENAME" property="rangeByAttachFile.attachFile.fileName"/>
+        <id column="ATTACHRANGE" property="rangeByAttachFile.attachRange.attachRange"/>
+        <id column="AMOUNT" property="amountMng.noTaxAmount.noTaxAmount.amount"/>
+        <id column="BUYER_SECTION_CD" property="buyUser.buyUser.section.sectionCd"/>
+        <id column="BUYER_SECTION_NAME" property="buyUser.buyUser.section.sectionName"/>
+        <id column="BUYER_USER_ID" property="buyUser.buyUser.userID"/>
+        <id column="BUYER_USER_NAME" property="buyUser.buyUser.userName"/>
+         <id column="BUYER_SECTION_PLACE_CD" property="buyUser.buyUser.section.sectionPlace.sectionPlaceCd"/>
+         <id column="BUYER_SECTION_PLACE_NAME" property="buyUser.buyUser.section.sectionPlace.sectionPlaceName"/>
+         <id column="BUYER_COMPANY_NAME" property="buyUser.buyUser.section.company.companyName"/>
+         <id column="BUYER_COMPANY_CD" property="buyUser.buyUser.section.company.companyCd"/>
+        <id column="SUP_CD" property="supplierFrom.supCd"/>
+        <id column="SUP_NAME" property="supplierFrom.supplierName.supplierName"/>
+        <id column="SUP_ABBR_NAME" property="supplierFrom.supplierName.supplierAbbrName"/>
+        <id column="PRICE_REG_FLG" property="priceCreateFlg.priceCreateFlg"/>
+        <id column="AUTO_ORDER_FLG" property="autoOrderFlg"/>
+        <id column="BUYER_BACK_COMPANY_CD" property="purReturnUser.user.section.company.companyCd"/>
+        <id column="BUYER_BACK_COMPANY_NAME" property="purReturnUser.user.section.company.companyName"/>
+        <id column="BUYER_BACK_SECTION_PLACE_CD" property="purReturnUser.user.section.sectionPlace.sectionPlaceCd"/>
+        <id column="BUYER_BACK_SECTION_PLACE_NAME" property="purReturnUser.user.section.sectionPlace.sectionPlaceName"/>
+        <id column="BUYER_BACK_SECTION_CD" property="purReturnUser.user.section.sectionCd"/>
+        <id column="BUYER_BACK_SECTION_NAME" property="purReturnUser.user.section.sectionName"/>
+        <id column="BUYER_BACK_USER_ID" property="purReturnUser.user.userID"/>
+        <id column="BUYER_BACK_USER_NAME" property="purReturnUser.user.userName"/>
+        <id column="EXT_TXT_1" property="editExtItem.editTextExtItem.textExtItem1.value" />
+         <id column="EXT_TXT_2" property="editExtItem.editTextExtItem.textExtItem2.value" />
+         <id column="EXT_TXT_3" property="editExtItem.editTextExtItem.textExtItem3.value" />
+         <id column="EXT_TXT_4" property="editExtItem.editTextExtItem.textExtItem4.value" />
+         <id column="EXT_TXT_5" property="editExtItem.editTextExtItem.textExtItem5.value" />
+         <id column="EXT_TXT_6" property="editExtItem.editTextExtItem.textExtItem6.value" />
+         <id column="EXT_TXT_7" property="editExtItem.editTextExtItem.textExtItem7.value" />
+         <id column="EXT_TXT_8" property="editExtItem.editTextExtItem.textExtItem8.value" />
+         <id column="EXT_TXT_9" property="editExtItem.editTextExtItem.textExtItem9.value" />
+         <id column="EXT_TXT_10" property="editExtItem.editTextExtItem.textExtItem10.value" />
+         <id column="EXT_AREA_1" property="editExtItem.editAreaExtItem.arrayExtItem1.value" />
+         <id column="EXT_AREA_2" property="editExtItem.editAreaExtItem.arrayExtItem2.value" />
+         <id column="EXT_AREA_3" property="editExtItem.editAreaExtItem.arrayExtItem3.value" />
+         <id column="EXT_AREA_4" property="editExtItem.editAreaExtItem.arrayExtItem4.value" />
+         <id column="EXT_AREA_5" property="editExtItem.editAreaExtItem.arrayExtItem5.value" />
+         <id column="EXT_DATE_1" property="editExtItem.editDateExtItem.dateExtItem1.dateType.dateOfymd" />
+         <id column="EXT_DATE_2" property="editExtItem.editDateExtItem.dateExtItem2.dateType.dateOfymd" />
+         <id column="EXT_DATE_3" property="editExtItem.editDateExtItem.dateExtItem3.dateType.dateOfymd" />
+         <id column="EXT_DATE_4" property="editExtItem.editDateExtItem.dateExtItem4.dateType.dateOfymd" />
+         <id column="EXT_DATE_5" property="editExtItem.editDateExtItem.dateExtItem5.dateType.dateOfymd" />
+         <id column="EXT_INT_1" property="editExtItem.editIntExtItem.intExtItem1.value" />
+         <id column="EXT_INT_2" property="editExtItem.editIntExtItem.intExtItem2.value" />
+         <id column="EXT_INT_3" property="editExtItem.editIntExtItem.intExtItem3.value" />
+         <id column="EXT_INT_4" property="editExtItem.editIntExtItem.intExtItem4.value" />
+         <id column="EXT_INT_5" property="editExtItem.editIntExtItem.intExtItem5.value" />
+         <id column="EXT_INT_6" property="editExtItem.editIntExtItem.intExtItem6.value" />
+         <id column="EXT_INT_7" property="editExtItem.editIntExtItem.intExtItem7.value" />
+         <id column="EXT_INT_8" property="editExtItem.editIntExtItem.intExtItem8.value" />
+         <id column="EXT_INT_9" property="editExtItem.editIntExtItem.intExtItem9.value" />
+         <id column="EXT_INT_10" property="editExtItem.editIntExtItem.intExtItem10.value" />
+         <id column="EXT_DEC_1" property="editExtItem.editDecExtItem.decExtItem1.value" />
+         <id column="EXT_DEC_2" property="editExtItem.editDecExtItem.decExtItem2.value" />
+         <id column="EXT_DEC_3" property="editExtItem.editDecExtItem.decExtItem3.value" />
+         <id column="EXT_DEC_4" property="editExtItem.editDecExtItem.decExtItem4.value" />
+         <id column="EXT_DEC_5" property="editExtItem.editDecExtItem.decExtItem5.value" />
+         <id column="EXT_SEL_1" property="editExtItem.editSelExtItem.selExtItem1.value" />
+         <id column="EXT_SEL_2" property="editExtItem.editSelExtItem.selExtItem2.value" />
+         <id column="EXT_SEL_3" property="editExtItem.editSelExtItem.selExtItem3.value" />
+         <id column="EXT_SEL_4" property="editExtItem.editSelExtItem.selExtItem4.value" />
+         <id column="EXT_SEL_5" property="editExtItem.editSelExtItem.selExtItem5.value" />
+         <id column="EXT_SEL_6" property="editExtItem.editSelExtItem.selExtItem6.value" />
+         <id column="EXT_SEL_7" property="editExtItem.editSelExtItem.selExtItem7.value" />
+         <id column="EXT_SEL_8" property="editExtItem.editSelExtItem.selExtItem8.value" />
+         <id column="EXT_SEL_9" property="editExtItem.editSelExtItem.selExtItem9.value" />
+         <id column="EXT_SEL_10" property="editExtItem.editSelExtItem.selExtItem10.value" />
+         <id column="EXT_CHK_1" property="editExtItem.editChkExtItem.chkExtItem1.value" />
+         <id column="EXT_CHK_2" property="editExtItem.editChkExtItem.chkExtItem2.value" />
+         <id column="EXT_CHK_3" property="editExtItem.editChkExtItem.chkExtItem3.value" />
+         <id column="EXT_CHK_4" property="editExtItem.editChkExtItem.chkExtItem4.value" />
+         <id column="EXT_CHK_5" property="editExtItem.editChkExtItem.chkExtItem5.value" />
+         <id column="EXT_FILE_1" property="editExtItem.editFileExtItem.fileExtItem1.fileName" />
+         <id column="EXT_FILE_2" property="editExtItem.editFileExtItem.fileExtItem2.fileName" />
+         <id column="EXT_FILE_3" property="editExtItem.editFileExtItem.fileExtItem3.fileName" />
+         <id column="EXT_FILE_BINARY_1" property="editExtItem.editFileExtItem.fileExtItem1.binary"/>
+         <id column="EXT_FILE_BINARY_2" property="editExtItem.editFileExtItem.fileExtItem2.binary"/>
+         <id column="EXT_FILE_BINARY_3" property="editExtItem.editFileExtItem.fileExtItem3.binary"/>
+         <id column="EXT_MST_1" property="editExtItem.editMstExtItem.mstExtItem1.mstKey" />
+         <id column="EXT_MST_2" property="editExtItem.editMstExtItem.mstExtItem2.mstKey" />
+         <id column="EXT_MST_3" property="editExtItem.editMstExtItem.mstExtItem3.mstKey" />
+         <id column="EXT_MST_4" property="editExtItem.editMstExtItem.mstExtItem4.mstKey" />
+         <id column="EXT_MST_5" property="editExtItem.editMstExtItem.mstExtItem5.mstKey" />
+         <id column="EXT_MST_6" property="editExtItem.editMstExtItem.mstExtItem6.mstKey" />
+         <id column="EXT_MST_7" property="editExtItem.editMstExtItem.mstExtItem7.mstKey" />
+         <id column="EXT_MST_8" property="editExtItem.editMstExtItem.mstExtItem8.mstKey" />
+         <id column="EXT_MST_NAME_1" property="editExtItem.editMstExtItem.mstExtItem1.mstName"/>
+         <id column="EXT_MST_NAME_2" property="editExtItem.editMstExtItem.mstExtItem2.mstName"/>
+         <id column="EXT_MST_NAME_3" property="editExtItem.editMstExtItem.mstExtItem3.mstName"/>
+         <id column="EXT_MST_NAME_4" property="editExtItem.editMstExtItem.mstExtItem4.mstName"/>
+         <id column="EXT_MST_NAME_5" property="editExtItem.editMstExtItem.mstExtItem5.mstName"/>
+         <id column="EXT_MST_NAME_6" property="editExtItem.editMstExtItem.mstExtItem6.mstName"/>
+         <id column="EXT_MST_NAME_7" property="editExtItem.editMstExtItem.mstExtItem7.mstName"/>
+         <id column="EXT_MST_NAME_8" property="editExtItem.editMstExtItem.mstExtItem8.mstName"/>
+        <result column="SLIP_NO" property="exclusiveSlipId.slipNo"/>
+        <result column="SLIP_LAST_UPD_DATE" property="exclusiveSlipId.lastUpdDate"/>
+    </resultMap>
+    <select id="listForReApply" parameterType="fw.domain.slip.purreq.everypurreq.purreqmng.PurAplIdentify" resultMap="EveryPurReq_Map">
+        SELECT
+            T_PUR_REQUEST.PUR_REQ_SEQ AS "purReqSeq",
+            T_PUR_REQUEST.PUR_REQ_NO AS "purReqNo.purReqNo",
+            T_PUR_REQUEST.CURRENCY_CD AS "CURRENCY_CD",
+            T_PUR_REQUEST.PUR_REQ_VERSION AS "version",
+            T_PUR_REQUEST.PUR_REQ_STATUS  AS "purReqStatus.status",
+            M_CURRENCY.CURRENCY_MARK AS "CURRENCYMARK",
+            T_PUR_REQUEST.SUBJECT_CD AS "subject.subjectCd",
+            T_PUR_REQUEST.SUBJECT_NAME AS "subject.subjectName",
+            T_PUR_REQUEST.ITEM_CD AS "itemName.itemCd",
+            T_PUR_REQUEST.ITEM_NAME AS "itemName.itemName",
+            T_PUR_REQUEST.BUYER_SECTION_CD,
+            T_PUR_REQUEST.BUYER_SECTION_NAME,
+            T_PUR_REQUEST.BUYER_USER_ID,
+            T_PUR_REQUEST.BUYER_USER_NAME,
+            T_PUR_REQUEST.BUYER_SECTION_PLACE_CD,
+            T_PUR_REQUEST.BUYER_SECTION_PLACE_NAME,
+            T_PUR_REQUEST.BUYER_COMPANY_NAME,
+            T_PUR_REQUEST.BUYER_COMPANY_CD,
+            T_PUR_REQUEST.SUP_CD,
+            T_PUR_REQUEST.SUP_NAME,
+            T_PUR_REQUEST.SUP_ABBR_NAME,
+            T_PUR_REQUEST.KATASHIKI AS "itemName.katashiki",
+            T_PUR_REQUEST.MANUFACT_CD AS "itemName.manufact.manufactCd",
+            T_PUR_REQUEST.MANUFACT_NAME AS "itemName.manufact.manufactName",
+            T_PUR_REQUEST.INSPECT_IND AS "inspectInd.inspectInd",
+            T_PUR_REQUEST.REQ_DELIV_DATE AS "DATEOFYMD",
+            T_QUOT_RESP_DTL.QUOT_RESP_DELIV_DATE,
+            T_QUOT_RESP_DTL.ORDER_LT AS ORDER_LT,
+            T_PUR_REQUEST.REQ_VOL AS "vol.vol",
+            T_PUR_REQUEST.UNIT_CD AS "itemName.unit.unitCd",
+            T_PUR_REQUEST.UNIT_NAME AS "itemName.unit.unitName",
+            T_PUR_REQUEST.UNIT_PRICE AS "hopePrice.hopePrice.amount",
+            T_PUR_REQUEST.REQ_AMOUNT AS "AMOUNT",
+            T_PUR_REQUEST.TAX_IND AS "TAXIND",
+            T_PUR_REQUEST.ATTACH_FILE_SEQ AS "SEQNO",
+            T_ATTACH_MNG.ATTACH_FILE_NAME AS "FILENAME",
+            T_ATTACH_MNG.ATTACH_SCOPE AS "ATTACHRANGE",
+            T_PUR_REQUEST.LAST_UPD_DATE AS "lastUpdDate",
+            T_PUR_REQUEST.PRICE_REG_FLG,
+            T_PUR_REQUEST.AUTO_ORDER_FLG,
+            T_PUR_REQUEST.BUYER_BACK_COMPANY_CD,
+            T_PUR_REQUEST.BUYER_BACK_COMPANY_NAME,
+            T_PUR_REQUEST.BUYER_BACK_SECTION_PLACE_CD,
+            T_PUR_REQUEST.BUYER_BACK_SECTION_PLACE_NAME,
+            T_PUR_REQUEST.BUYER_BACK_SECTION_CD,
+            T_PUR_REQUEST.BUYER_BACK_SECTION_NAME,
+            T_PUR_REQUEST.BUYER_BACK_USER_ID,
+            T_PUR_REQUEST.BUYER_BACK_USER_NAME,
+            T_SLIP_MNG.SLIP_NO,
+            T_SLIP_MNG.LAST_UPD_DATE as "SLIP_LAST_UPD_DATE",
+            ${@ps.common.util.ItemSettingUtil@getItemSettingSelectSQL("T_PUR_REQUEST")}
+        FROM T_PUR_REQUEST
+        INNER JOIN T_PUR_APL ON
+            T_PUR_APL.PUR_APL_SEQ = T_PUR_REQUEST.PUR_APL_SEQ
+        LEFT JOIN T_QUOT_RESP_DTL ON
+                T_QUOT_RESP_DTL.QUOT_RESP_SEQ = T_PUR_APL.QUOT_RESP_SEQ
+            AND T_QUOT_RESP_DTL.QUOT_REQ_DTL_NO = T_PUR_REQUEST.PUR_REQ_NO
+        INNER JOIN T_SLIP_MNG ON
+            T_PUR_REQUEST.PUR_REQ_NO = T_SLIP_MNG.SLIP_NO
+        LEFT JOIN T_ATTACH_MNG
+        ON T_PUR_REQUEST.ATTACH_FILE_SEQ = T_ATTACH_MNG.ATTACH_FILE_SEQ
+            AND T_ATTACH_MNG.DELETE_FLG = '0'
+        LEFT JOIN M_CURRENCY
+        ON M_CURRENCY.CURRENCY_CD = T_PUR_REQUEST.CURRENCY_CD
+            AND M_CURRENCY.TERM_FLG = '0'
+        WHERE
+           T_PUR_REQUEST.PUR_APL_SEQ =  #{purAplSeqNo,jdbcType=VARCHAR}
+           <if test="@org.apache.commons.lang.StringUtils@isNotBlank(purReqNo)">
+               AND T_PUR_REQUEST.PUR_REQ_NO = #{purReqNo,jdbcType=VARCHAR}
+           </if>
+           <if test="@org.apache.commons.lang.StringUtils@isNotBlank(appUnitNo)">
+             AND T_PUR_REQUEST.APP_UNIT_NO = #{appUnitNo,jdbcType=VARCHAR}
+           </if>
+        ORDER BY  T_PUR_REQUEST.PUR_REQ_NO
+
+    </select>
+        <select id="listForHistory" parameterType="fw.domain.slip.purreq.everypurreq.purreqmng.PurAplIdentify" resultMap="EveryPurReq_Map">
+        SELECT
+            T_PUR_REQUEST.SUBJECT_CD AS "subject.subjectCd",
+            T_PUR_REQUEST.SUBJECT_NAME AS "subject.subjectName",
+            T_PUR_REQUEST.ITEM_CD AS "itemName.itemCd",
+            T_PUR_REQUEST.ITEM_NAME AS "itemName.itemName",
+            T_PUR_REQUEST.BUYER_SECTION_CD,
+            T_PUR_REQUEST.KATASHIKI AS "itemName.katashiki",
+            T_PUR_REQUEST.MANUFACT_CD AS "itemName.manufact.manufactCd",
+            T_PUR_REQUEST.MANUFACT_NAME AS "itemName.manufact.manufactName",
+            T_PUR_REQUEST.INSPECT_IND AS "inspectInd.inspectInd",
+            T_PUR_REQUEST.UNIT_PRICE AS "hopePrice.hopePrice.amount",
+            T_PUR_REQUEST.REQ_VOL AS "vol.vol",
+            T_PUR_REQUEST.UNIT_CD AS "itemName.unit.unitCd",
+            T_PUR_REQUEST.UNIT_NAME AS "itemName.unit.unitName",
+            T_PUR_REQUEST.REQ_AMOUNT AS "AMOUNT",
+            T_PUR_REQUEST.TAX_IND AS "TAXIND",
+            T_PUR_REQUEST.SUP_CD,
+            T_PUR_REQUEST.SUP_NAME,
+            T_PUR_REQUEST.SUP_ABBR_NAME,
+            T_PUR_REQUEST.CURRENCY_CD AS "CURRENCY_CD",
+            T_PUR_REQUEST.LAST_UPD_DATE AS "lastUpdDate",
+            T_PUR_REQUEST.PRICE_REG_FLG,
+            T_PUR_REQUEST.AUTO_ORDER_FLG,
+            T_PUR_REQUEST.BUYER_BACK_COMPANY_CD,
+            T_PUR_REQUEST.BUYER_BACK_COMPANY_NAME,
+            T_PUR_REQUEST.BUYER_BACK_SECTION_PLACE_CD,
+            T_PUR_REQUEST.BUYER_BACK_SECTION_PLACE_NAME,
+            T_PUR_REQUEST.BUYER_BACK_SECTION_CD,
+            T_PUR_REQUEST.BUYER_BACK_SECTION_NAME,
+            T_PUR_REQUEST.BUYER_BACK_USER_ID,
+            T_PUR_REQUEST.BUYER_BACK_USER_NAME,
+            ${@ps.common.util.ItemSettingUtil@getItemSettingSelectSQL("T_PUR_REQUEST")}
+        FROM T_PUR_REQUEST
+        WHERE   T_PUR_REQUEST.DELETE_FLG = '0'
+        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(appUnitNo)">
+        AND     T_PUR_REQUEST.APP_UNIT_NO = #{appUnitNo,jdbcType=VARCHAR}
+        </if>
+        <if test="@org.apache.commons.lang.StringUtils@isBlank(appUnitNo)">
+        AND     T_PUR_REQUEST.APP_UNIT_NO IS NULL
+        </if>
+        AND     T_PUR_REQUEST.PUR_APL_SEQ =  #{purAplSeqNo,jdbcType=VARCHAR}
+        ORDER BY T_PUR_REQUEST.PUR_REQ_NO
+    </select>
+
+    <select id="listForSituation" resultMap="EveryPurReq_Map">
+        SELECT
+            <!-- 見積依頼明細.見積依頼明細番号 -->
+            T_QUOT_REQ_DTL.QUOT_REQ_DTL_NO AS "purReqNo.purReqNo",
+            <!-- 見積回答明細.品名コード -->
+            T_QUOT_RESP_DTL.ITEM_CD AS "itemName.itemCd",
+            <!-- 見積回答明細.回答品名 -->
+            T_QUOT_RESP_DTL.QUOT_RESP_ITEM_NAME AS "itemName.itemName",
+            <!-- 見積回答明細.回答型式 -->
+            T_QUOT_RESP_DTL.QUOT_RESP_KATASHIKI AS "itemName.katashiki",
+            <!-- 見積回答明細.回答メーカーコード -->
+            T_QUOT_RESP_DTL.QUOT_RESP_MANUFACT_CD AS "itemName.manufact.manufactCd",
+            <!-- 見積回答明細.回答メーカー名 -->
+            T_QUOT_RESP_DTL.QUOT_RESP_MANUFACT_NAME AS "itemName.manufact.manufactName",
+            <!-- 見積回答明細.回答納期 -->
+            T_QUOT_RESP_DTL.QUOT_RESP_DELIV_DATE AS "DATEOFYMD",
+            <!-- 見積回答明細.標準納入日数 -->
+            T_QUOT_RESP_DTL.ORDER_LT AS ORDER_LT,
+            <!-- 見積回答明細.回答数量 -->
+            T_QUOT_RESP_DTL.QUOT_RESP_VOL AS "vol.vol",
+            <!-- 見積回答明細.単位コード  TODO EDI側存在しないため、一時対応NULLの場合、PKをセットする -->
+            NVL(T_QUOT_RESP_DTL.UNIT_CD, 'PK') AS "itemName.unit.unitCd",
+            <!-- 見積回答明細.単位名 -->
+            T_QUOT_RESP_DTL.UNIT_NAME AS "itemName.unit.unitName",
+            <!-- 見積回答明細.通貨コード-->
+            T_QUOT_RESP_DTL.CURRENCY_CD AS "CURRENCY_CD",
+            M_CURRENCY.CURRENCY_MARK AS "CURRENCYMARK",
+            <!-- 見積回答明細.単価 -->
+            T_QUOT_RESP_DTL.UNIT_PRICE AS "hopePrice.hopePrice.amount",
+            <!-- 見積回答明細.課税区分 -->
+            T_QUOT_RESP_DTL.TAX_IND as "TAXIND",
+            <!-- 見積依頼明細.添付ファイルシーケンス番号 -->
+            T_QUOT_REQ_DTL.ATTACH_FILE_SEQ AS "SEQNO",
+            <!-- 添付管理.添付ファイル名 -->
+            T_ATTACH_MNG_C.ATTACH_FILE_NAME AS "FILENAME",
+            <!-- 見積依頼明細.添付範囲 -->
+            T_ATTACH_MNG_C.ATTACH_SCOPE AS "ATTACHRANGE",
+            '0' AS "PRICE_REG_FLG",
+            '' as "BUYER_BACK_COMPANY_CD",
+            '' as "BUYER_BACK_COMPANY_NAME",
+            '' as "BUYER_BACK_SECTION_PLACE_CD",
+            '' as "BUYER_BACK_SECTION_PLACE_NAME",
+            '' as "BUYER_BACK_SECTION_CD",
+            '' as "BUYER_BACK_SECTION_NAME",
+            '' as "BUYER_BACK_USER_ID",
+            '' as "BUYER_BACK_USER_NAME",
+            T_SLIP_MNG.SLIP_NO,
+            T_SLIP_MNG.LAST_UPD_DATE as "SLIP_LAST_UPD_DATE"
+        FROM T_QUOT_REQ_DTL
+        INNER JOIN T_SLIP_MNG ON
+            T_QUOT_REQ_DTL.QUOT_REQ_DTL_NO = T_SLIP_MNG.SLIP_NO
+        INNER JOIN T_QUOT_RESP_DTL
+        ON T_QUOT_RESP_DTL.QUOT_REQ_DTL_NO = T_QUOT_REQ_DTL.QUOT_REQ_DTL_NO
+            AND T_QUOT_RESP_DTL.QUOT_REQ_VERSION = T_QUOT_REQ_DTL.QUOT_REQ_VERSION
+            AND T_QUOT_RESP_DTL.DELETE_FLG = '0'
+        LEFT JOIN M_CURRENCY
+        ON T_QUOT_REQ_DTL.CURRENCY_CD = M_CURRENCY.CURRENCY_CD
+            AND M_CURRENCY.TERM_FLG = '0'
+        LEFT JOIN T_ATTACH_MNG  T_ATTACH_MNG_C
+        ON T_QUOT_REQ_DTL.ATTACH_FILE_SEQ = T_ATTACH_MNG_C.ATTACH_FILE_SEQ
+            AND T_ATTACH_MNG_C.DELETE_FLG = '0'
+        WHERE T_QUOT_REQ_DTL.QUOT_REQ_SEQ = #{quotReqSeqNo,jdbcType=VARCHAR}
+            AND T_QUOT_RESP_DTL.QUOT_SUP_LINE_NO =#{quotSupLineNo,jdbcType=VARCHAR}
+        ORDER BY T_QUOT_REQ_DTL.QUOT_REQ_SEQ
+    </select>
+
+    <insert id="insert" >
+      INSERT INTO  T_PUR_APL (
+          PUR_APL_SEQ,
+          PUR_APL_NO,
+          PUR_APL_VERSION,
+          PUR_APL_STATUS,
+          REQ_TYPE_IND,
+          CORRECT_CD,
+          PRE_SEQ,
+          QUOT_REQ_NO,
+          QUOT_RESP_SEQ,
+          NEW_FLG,
+          NEW_APP_FLG,
+          PUR_REQ_FIRST_DATE,
+          PUR_REQ_DATE,
+          REQ_COMPANY_CD,
+          REQ_COMPANY_NAME,
+          REQ_SECTION_PLACE_CD,
+          REQ_SECTION_PLACE_NAME,
+          REQ_SECTION_CD,
+          REQ_SECTION_NAME,
+          REQ_USER_ID,
+          REQ_USER_NAME,
+          REQ_USER_EXTENSION_NO,
+          REQ_USER_TEL_NO,
+          INPUT_COMPANY_CD,
+          INPUT_COMPANY_NAME,
+          INPUT_SECTION_PLACE_CD,
+          INPUT_SECTION_PLACE_NAME,
+          INPUT_SECTION_CD,
+          INPUT_SECTION_NAME,
+          INPUT_USER_ID,
+          INPUT_USER_NAME,
+          LOAD_COMPANY_CD,
+          LOAD_COMPANY_NAME,
+          LOAD_SECTION_PLACE_CD,
+          LOAD_SECTION_PLACE_NAME,
+          LOAD_SECTION_CD,
+          LOAD_SECTION_NAME,
+          FOR_BOSS_COMMENT,
+          FOR_BUYER_COMMENT,
+          FOR_SUPPRIER_COMMENT,
+          URGENT_IND,
+          PRICE_REQ_FLG,
+          TITLE_NAME,
+          ITEM_CLASS_COMPANY_CD,
+          ITEM_CLASS_L,
+          ITEM_CLASS_L_NAME,
+          ITEM_CLASS_M,
+          ITEM_CLASS_M_NAME,
+          ITEM_CLASS_S,
+          ITEM_CLASS_S_NAME,
+          HOPE_SUPPLIER_COMPANY_CD,
+          HOPE_SUPPLIER_CD,
+          HOPE_SUPPLIER_NAME,
+          HOPE_SUPPLIER_ABBR_NAME,
+          BUDGET_NO,
+          DELIV_PLACE_COMPANY_CD,
+          DELIV_PLACE_CD,
+          DELIV_PLACE_NAME,
+          ATTACH_FILE_SEQ1,
+          ATTACH_FILE_SEQ2,
+          APP_ROUTE_NO,
+          APP_ROUTE_NAME,
+          LAST_APP_DATE,
+          DELETE_FLG,
+          AUTO_DELETE_FLG,
+          AUTO_DELETE_DATE,
+          LAST_UPD_DATE,
+          LAST_UPD_COMPANY_CD,
+          LAST_UPD_SECTION_CD,
+          LAST_UPD_USER_ID,
+          REG_DATE,
+          REG_COMPANY_CD,
+          REG_SECTION_CD,
+          REG_USER_ID,
+          ${@ps.common.util.ItemSettingUtil@getItemSettingInsertSQL()})
+        VALUES (
+            #{purAplSeq},
+            #{purAplManagement.purAplIdentify.purAplNo.purAplNo, jdbcType=VARCHAR},
+            #{purAplManagement.version},
+            #{purAplManagement.purReqStatus.status, jdbcType=VARCHAR},
+            <if test="purAplManagement.reqInd.reqInd != ''">
+            #{purAplManagement.reqInd.reqInd},
+            </if>
+            <if test="purAplManagement.reqInd.reqInd == ''">
+            '3',
+            </if>
+            '1',
+            '',
+            #{purAplManagement.quotReqNo, jdbcType=VARCHAR},
+            #{purAplManagement.quotRespSeqNo, jdbcType=VARCHAR},
+            #{purAplManagement.newFlg.newFlg, jdbcType=VARCHAR},
+            #{purAplManagement.newAppFlg.newAppFlg, jdbcType=VARCHAR},
+            #{purAplManagement.purReqDate.firstReqDate.reqDate.dateOfymd, jdbcType=VARCHAR},
+            #{purAplManagement.purReqDate.purReqDate.reqDate.dateOfymd, jdbcType=VARCHAR},
+            '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}',
+            '${@fw.security.SecurityUtil@getCompanyNameByEscapeSql()}',
+            '${@fw.security.SecurityUtil@getSectionPlaceCdByEscapeSql()}',
+            '${@fw.security.SecurityUtil@getSectionPlaceNameByEscapeSql()}',
+             #{purAplManagement.reqUser.reqUser.section.sectionCd, jdbcType=VARCHAR},
+             #{purAplManagement.reqUser.reqUser.section.sectionName, jdbcType=VARCHAR},
+             #{purAplManagement.reqUser.reqUser.userID, jdbcType=VARCHAR},
+             #{purAplManagement.reqUser.reqUser.userName, jdbcType=VARCHAR},
+             #{purAplManagement.reqUser.reqUser.extNo.extensionNo, jdbcType=VARCHAR},
+             #{purAplManagement.reqUser.reqUser.externalNo.externalNo, jdbcType=VARCHAR},
+            '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}',
+            '${@fw.security.SecurityUtil@getCompanyNameByEscapeSql()}',
+            '${@fw.security.SecurityUtil@getSectionPlaceCdByEscapeSql()}',
+            '${@fw.security.SecurityUtil@getSectionPlaceNameByEscapeSql()}',
+            '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}',
+            '${@fw.security.SecurityUtil@getDefaultSectionNameByEscapeSql()}',
+            '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}',
+            '${@fw.security.SecurityUtil@getUserNameByEscapeSql()}',
+            '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}',
+            '${@fw.security.SecurityUtil@getCompanyNameByEscapeSql()}',
+            #{purAplManagement.loadSection.loadSection.sectionPlace.sectionPlaceCd, jdbcType=VARCHAR},
+            #{purAplManagement.loadSection.loadSection.sectionPlace.sectionPlaceName, jdbcType=VARCHAR},
+            #{purAplManagement.loadSection.loadSection.sectionCd, jdbcType=VARCHAR},
+            #{purAplManagement.loadSection.loadSection.sectionName, jdbcType=VARCHAR},
+            #{purAplManagement.forAppComment.forAppComment.comment, jdbcType=VARCHAR},
+            #{purAplManagement.forBuyerComment.forBuyerComment.comment, jdbcType=VARCHAR},
+            #{purAplManagement.forSupplierComment.forSupplierComment.comment, jdbcType=VARCHAR},
+            #{purAplManagement.urgentInd.urgentInd, jdbcType=VARCHAR},
+            #{purAplManagement.priceRegisterFlg.priceRegisterFlg, jdbcType=VARCHAR},
+            #{purAplManagement.titleName.titleName, jdbcType=VARCHAR},
+            '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}',
+            #{purAplManagement.itemKind.itemClassL, jdbcType=VARCHAR},
+            #{purAplManagement.itemKind.itemClassLName, jdbcType=VARCHAR},
+            #{purAplManagement.itemKind.itemClassM, jdbcType=VARCHAR},
+            #{purAplManagement.itemKind.itemClassMName, jdbcType=VARCHAR},
+            #{purAplManagement.itemKind.itemClassS, jdbcType=VARCHAR},
+            #{purAplManagement.itemKind.itemClassSName, jdbcType=VARCHAR},
+            '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}',
+            #{purAplManagement.hopeSupplier.hopeSupplier.supCd, jdbcType=VARCHAR},
+            #{purAplManagement.hopeSupplier.hopeSupplier.supplierName.supplierName, jdbcType=VARCHAR},
+            #{purAplManagement.hopeSupplier.hopeSupplier.supplierName.supplierAbbrName, jdbcType=VARCHAR},
+            #{purAplManagement.budgetNumber.budgetNumber, jdbcType=VARCHAR},
+            '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}',
+            #{purAplManagement.delivPlace.delivPlaceCd, jdbcType=VARCHAR},
+            #{purAplManagement.delivPlace.delivPlaceName, jdbcType=VARCHAR},
+            #{attachMngSeq1},
+            #{attachMngSeq2},
+            #{purAplManagement.approute.appRouteNo},
+            #{purAplManagement.approute.appRouteName, jdbcType=VARCHAR},
+            #{purAplManagement.approute.lastAppDate.dateOfymd, jdbcType=VARCHAR},
+            '0',
+            '0',
+            '',
+            #{purAplManagement.purAplIdentify.lastUpdDate},
+            '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}',
+            '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}',
+            '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}',
+            '${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}',
+            '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}',
+            '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}',
+            '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}',
+             ${@ps.common.util.ItemSettingUtil@getItemSettingInsertValueSQL("purAplManagement.editExtItem.")})
+    </insert>
+
+<insert id="insertPurRequest" >
+        INSERT INTO  T_PUR_REQUEST(
+               PUR_REQ_SEQ,
+               PUR_REQ_NO,
+               PUR_REQ_VERSION,
+               PUR_APL_NO,
+               PUR_REQ_STATUS,
+               CORRECT_CD,
+               PRE_SEQ,
+               NEW_FLG,
+               NEW_APP_FLG,
+               PUR_APL_SEQ,
+               APP_UNIT_NO,
+               BUYER_COMPANY_CD,
+               BUYER_COMPANY_NAME,
+               BUYER_SECTION_PLACE_CD,
+               BUYER_SECTION_PLACE_NAME,
+               BUYER_SECTION_CD,
+               BUYER_SECTION_NAME,
+               BUYER_USER_ID,
+               BUYER_USER_NAME,
+               RECEIVE_COMPANY_CD,
+               RECEIVE_COMPANY_NAME,
+               RECEIVE_SECTION_PLACE_CD,
+               RECEIVE_SECTION_PLACE_NAME,
+               RECEIVE_SECTION_CD,
+               RECEIVE_SECTION_NAME,
+               AUTO_ORDER_FLG,
+               PRICE_REG_FLG,
+               INSPECT_IND,
+               ITEM_CLASS_COMPANY_CD,
+               ITEM_CLASS_L,
+               ITEM_CLASS_L_NAME,
+               ITEM_CLASS_M,
+               ITEM_CLASS_M_NAME,
+               ITEM_CLASS_S,
+               ITEM_CLASS_S_NAME,
+               ITEM_COMPANY_CD,
+               ITEM_CD,
+               ITEM_NAME,
+               KATASHIKI,
+               MANUFACT_CD,
+               MANUFACT_NAME,
+               SUBJECT_COMPANY_CD,
+               SUBJECT_CD,
+               SUBJECT_NAME,
+               SUP_COMPANY_CD,
+               SUP_CD,
+               SUP_NAME,
+               SUP_ABBR_NAME,
+               REQ_DELIV_DATE,
+               CURRENCY_CD,
+               TAX_IND,
+               CONSUMPT_IND,
+               TAX_RATE,
+               REQ_VOL,
+               UNIT_CD,
+               UNIT_NAME,
+               UNIT_PRICE,
+               REQ_AMOUNT,
+               CONSUMPT_AMOUNT,
+               TOTAL_AMOUNT,
+               PUR_REQ_CNV_CURRENCY_CD,
+               PUR_REQ_CNV_RATE,
+               PUR_REQ_CNV_AMOUNT,
+               ATTACH_FILE_SEQ,
+               BUYER_BACK_COMPANY_CD,
+               BUYER_BACK_COMPANY_NAME,
+               BUYER_BACK_SECTION_PLACE_CD,
+               BUYER_BACK_SECTION_PLACE_NAME,
+               BUYER_BACK_SECTION_CD,
+               BUYER_BACK_SECTION_NAME,
+               BUYER_BACK_USER_ID,
+               BUYER_BACK_USER_NAME,
+               BUYER_BACK_USER_COMMENTS,
+               APP_ROUTE_NO,
+               APP_ROUTE_NAME,
+               DELETE_FLG,
+               AUTO_DELETE_FLG,
+               AUTO_DELETE_DATE,
+               LAST_UPD_DATE,
+               LAST_UPD_COMPANY_CD,
+               LAST_UPD_SECTION_CD,
+               LAST_UPD_USER_ID,
+               REG_DATE,
+               REG_COMPANY_CD,
+               REG_SECTION_CD,
+               REG_USER_ID,
+               ${@ps.common.util.ItemSettingUtil@getItemSettingInsertSQL()}
+            ) VALUES(
+            #{purReqSeq},
+            #{purReqItem.purReqNo.purReqNo, jdbcType=VARCHAR},
+            #{purReqItem.version},
+            #{purAplManagement.purAplIdentify.purAplNo.purAplNo, jdbcType=VARCHAR},
+            #{purReqItem.purReqStatus.status, jdbcType=VARCHAR},
+            #{purReqItem.correctCd, jdbcType=VARCHAR},
+            '',
+            '1',
+            #{purReqItem.newAppFlg.newAppFlg, jdbcType=VARCHAR},
+            #{purAplSeq},
+            <if test="@org.apache.commons.lang.StringUtils@isBlank(purAplManagement.purAplIdentify.purReqNo)">
+                '',
+            </if>
+            <if test="@org.apache.commons.lang.StringUtils@isNotBlank(purAplManagement.purAplIdentify.purReqNo)">
+                #{purAplManagement.purAplIdentify.purReqNo, jdbcType=VARCHAR},
+            </if>
+            #{purAplManagement.itemKind.buyUser.buyUser.section.company.companyCd, jdbcType=VARCHAR},
+            #{purAplManagement.itemKind.buyUser.buyUser.section.company.companyName, jdbcType=VARCHAR},
+            #{purAplManagement.itemKind.buyUser.buyUser.section.sectionPlace.sectionPlaceCd, jdbcType=VARCHAR},
+            #{purAplManagement.itemKind.buyUser.buyUser.section.sectionPlace.sectionPlaceName, jdbcType=VARCHAR},
+            #{purAplManagement.itemKind.buyUser.buyUser.section.sectionCd, jdbcType=VARCHAR},
+            #{purAplManagement.itemKind.buyUser.buyUser.section.sectionName, jdbcType=VARCHAR},
+            #{purAplManagement.itemKind.buyUser.buyUser.userID, jdbcType=VARCHAR},
+            #{purAplManagement.itemKind.buyUser.buyUser.userName, jdbcType=VARCHAR},
+            '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}',
+            '${@fw.security.SecurityUtil@getCompanyNameByEscapeSql()}',
+            '${@fw.security.SecurityUtil@getSectionPlaceCdByEscapeSql()}',
+            '${@fw.security.SecurityUtil@getSectionPlaceNameByEscapeSql()}',
+            #{purAplManagement.reqUser.reqUser.section.sectionCd, jdbcType=VARCHAR},
+            #{purAplManagement.reqUser.reqUser.section.sectionName, jdbcType=VARCHAR},
+            #{purReqItem.autoOrderFlg},
+            #{purReqItem.priceCreateFlg.priceCreateFlg},
+            #{purReqItem.inspectInd.inspectInd, jdbcType=VARCHAR},
+            '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}',
+            #{purAplManagement.itemKind.itemClassL, jdbcType=VARCHAR},
+            #{purAplManagement.itemKind.itemClassLName, jdbcType=VARCHAR},
+            #{purAplManagement.itemKind.itemClassM, jdbcType=VARCHAR},
+            #{purAplManagement.itemKind.itemClassMName, jdbcType=VARCHAR},
+            #{purAplManagement.itemKind.itemClassS, jdbcType=VARCHAR},
+            #{purAplManagement.itemKind.itemClassSName, jdbcType=VARCHAR},
+            '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}',
+            #{purReqItem.itemName.itemCd, jdbcType=VARCHAR},
+            #{purReqItem.itemName.itemName, jdbcType=VARCHAR},
+            #{purReqItem.itemName.katashiki, jdbcType=VARCHAR},
+            #{purReqItem.itemName.manufact.manufactCd, jdbcType=VARCHAR},
+            #{purReqItem.itemName.manufact.manufactName, jdbcType=VARCHAR},
+            '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}',
+            #{purReqItem.subject.subjectCd, jdbcType=VARCHAR},
+            #{purReqItem.subject.subjectName, jdbcType=VARCHAR},
+            '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}',
+            #{purAplManagement.hopeSupplier.hopeSupplier.supCd, jdbcType=VARCHAR},
+            #{purAplManagement.hopeSupplier.hopeSupplier.supplierName.supplierName, jdbcType=VARCHAR},
+            #{purAplManagement.hopeSupplier.hopeSupplier.supplierName.supplierAbbrName, jdbcType=VARCHAR},
+            #{purReqItem.hopeDlvEst.hopeDlvEst.dateOfymd, jdbcType=VARCHAR},
+            #{purReqItem.amountMng.currency.currencyCd, jdbcType=VARCHAR},
+            #{purReqItem.amountMng.taxCalculationInd.taxInd.taxInd, jdbcType=VARCHAR},
+            '2',
+            #{purReqItem.amountMng.taxRate.taxRate, jdbcType=VARCHAR},
+            #{purReqItem.vol.vol, jdbcType=VARCHAR},  <!-- 依頼数量  -->
+            #{purReqItem.itemName.unit.unitCd, jdbcType=VARCHAR},
+            #{purReqItem.itemName.unit.unitName, jdbcType=VARCHAR},
+            #{purReqItem.hopePrice.hopePrice.amount, jdbcType=VARCHAR}, <!-- 単価   -->
+            #{purReqItem.amountMng.noTaxAmount.noTaxAmount.amount, jdbcType=VARCHAR},<!-- 依頼金額 -->
+            #{purReqItem.amountMng.consumptAmount.consumptAmount.amount, jdbcType=VARCHAR},<!-- 消費税額 -->
+            #{purReqItem.amountMng.totalAmount.totalAmount.amount, jdbcType=VARCHAR},<!-- 合計金額 -->
+            #{purReqItem.cnvAmount.currency.currencyCd, jdbcType=VARCHAR},<!-- 購入依頼時換算通貨-->
+            #{purReqItem.cnvAmount.rate.rate, jdbcType=VARCHAR},<!-- 購入依頼時換算レート -->
+            #{purReqItem.cnvAmount.cnvAmount.amount, jdbcType=VARCHAR},<!-- 購入依頼時換算金額 -->
+             #{attachMngSeq},
+             '',
+             '',
+             '',
+             '',
+             '',
+             '',
+             '',
+             '',
+             '',
+             #{purAplManagement.approute.appRouteNo},
+             #{purAplManagement.approute.appRouteName, jdbcType=VARCHAR},
+            '0',
+            '0',
+            '',
+              '${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}',
+              '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}',
+             '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}',
+             '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}',
+              '${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}',
+              '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}',
+              '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}',
+              '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}',
+              ${@ps.common.util.ItemSettingUtil@getItemSettingInsertValueSQL("purReqItem.editExtItem.")}
+           )
+    </insert>
+
+    <insert id="upload" >
+        INSERT INTO T_ATTACH_MNG(
+          ATTACH_FILE_SEQ,
+          ATTACH_FILE_NAME,
+          ATTACH_FILE ,
+          ATTACH_FILE_SIZE,
+          ATTACH_SCOPE,
+          DELETE_FLG,
+          LAST_UPD_DATE,
+          LAST_UPD_COMPANY_CD,
+          LAST_UPD_SECTION_CD,
+          LAST_UPD_USER_ID,
+          REG_DATE,
+          REG_COMPANY_CD,
+          REG_SECTION_CD ,
+          REG_USER_ID
+        )
+        VALUES (
+          #{purAplSeq},
+          #{rangeByAttachFile.attachFile.fileName, jdbcType=VARCHAR},
+          #{rangeByAttachFile.attachFile.compressData},
+          #{rangeByAttachFile.attachFile.size},
+          #{rangeByAttachFile.attachRange.attachRange},
+          0,
+          '${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}',
+          '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}',
+          '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}',
+          '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}',
+           '${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}',
+           '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}',
+           '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}',
+           '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}'
+        )
+    </insert>
+     <update id="update" parameterType="fw.domain.slip.purreq.everypurreq.PurAplManagement">
+        UPDATE T_PUR_APL
+        SET
+            PUR_APL_STATUS = #{purReqStatus.status, jdbcType=VARCHAR},
+            NEW_APP_FLG = #{newAppFlg.newAppFlg, jdbcType=VARCHAR},
+            PUR_REQ_DATE = #{purReqDate.purReqDate.reqDate.dateOfymd, jdbcType=VARCHAR},
+            REQ_COMPANY_CD = '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}',
+            REQ_COMPANY_NAME = '${@fw.security.SecurityUtil@getCompanyNameByEscapeSql()}',
+            REQ_SECTION_PLACE_CD = '${@fw.security.SecurityUtil@getSectionPlaceCdByEscapeSql()}',
+            REQ_SECTION_PLACE_NAME = '${@fw.security.SecurityUtil@getSectionPlaceNameByEscapeSql()}',
+            REQ_SECTION_CD =  #{reqUser.reqUser.section.sectionCd, jdbcType=VARCHAR},
+            REQ_SECTION_NAME = #{reqUser.reqUser.section.sectionName, jdbcType=VARCHAR},
+            REQ_USER_ID =  #{reqUser.reqUser.userID, jdbcType=VARCHAR},
+            REQ_USER_NAME = #{reqUser.reqUser.userName, jdbcType=VARCHAR},
+            REQ_USER_EXTENSION_NO = #{reqUser.reqUser.extNo.extensionNo, jdbcType=VARCHAR},
+            REQ_USER_TEL_NO = #{reqUser.reqUser.externalNo.externalNo, jdbcType=VARCHAR},
+            INPUT_COMPANY_CD = '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}',
+            INPUT_COMPANY_NAME = '${@fw.security.SecurityUtil@getCompanyNameByEscapeSql()}',
+            INPUT_SECTION_PLACE_CD = '${@fw.security.SecurityUtil@getSectionPlaceCdByEscapeSql()}',
+            INPUT_SECTION_PLACE_NAME = '${@fw.security.SecurityUtil@getSectionPlaceNameByEscapeSql()}',
+            INPUT_SECTION_CD = '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}',
+            INPUT_SECTION_NAME = '${@fw.security.SecurityUtil@getDefaultSectionNameByEscapeSql()}',
+            INPUT_USER_ID = '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}',
+            INPUT_USER_NAME = '${@fw.security.SecurityUtil@getUserNameByEscapeSql()}',
+            LOAD_COMPANY_CD = '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}',
+            LOAD_COMPANY_NAME = '${@fw.security.SecurityUtil@getCompanyNameByEscapeSql()}',
+            LOAD_SECTION_PLACE_CD = #{loadSection.loadSection.sectionPlace.sectionPlaceCd, jdbcType=VARCHAR},
+            LOAD_SECTION_PLACE_NAME = #{loadSection.loadSection.sectionPlace.sectionPlaceName, jdbcType=VARCHAR},
+            LOAD_SECTION_CD = #{loadSection.loadSection.sectionCd, jdbcType=VARCHAR},
+            LOAD_SECTION_NAME = #{loadSection.loadSection.sectionName, jdbcType=VARCHAR},
+            FOR_BOSS_COMMENT = #{forAppComment.forAppComment.comment, jdbcType=VARCHAR},
+            FOR_BUYER_COMMENT = #{forBuyerComment.forBuyerComment.comment, jdbcType=VARCHAR},
+            FOR_SUPPRIER_COMMENT = #{forSupplierComment.forSupplierComment.comment, jdbcType=VARCHAR},
+            URGENT_IND = #{urgentInd.urgentInd, jdbcType=VARCHAR},
+            PRICE_REQ_FLG = #{priceRegisterFlg.priceRegisterFlg, jdbcType=VARCHAR},
+            TITLE_NAME = #{titleName.titleName, jdbcType=VARCHAR},
+            ITEM_CLASS_COMPANY_CD = '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}',
+            ITEM_CLASS_L = #{itemKind.itemClassL, jdbcType=VARCHAR},
+            ITEM_CLASS_L_NAME = #{itemKind.itemClassLName, jdbcType=VARCHAR},
+            ITEM_CLASS_M = #{itemKind.itemClassM, jdbcType=VARCHAR},
+            ITEM_CLASS_M_NAME = #{itemKind.itemClassMName, jdbcType=VARCHAR},
+            ITEM_CLASS_S = #{itemKind.itemClassS, jdbcType=VARCHAR},
+            ITEM_CLASS_S_NAME = #{itemKind.itemClassSName, jdbcType=VARCHAR},
+            HOPE_SUPPLIER_COMPANY_CD = '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}',
+            HOPE_SUPPLIER_CD = #{hopeSupplier.hopeSupplier.supCd, jdbcType=VARCHAR},
+            HOPE_SUPPLIER_NAME = #{hopeSupplier.hopeSupplier.supplierName.supplierName, jdbcType=VARCHAR},
+            HOPE_SUPPLIER_ABBR_NAME = #{hopeSupplier.hopeSupplier.supplierName.supplierAbbrName, jdbcType=VARCHAR},
+            BUDGET_NO = #{budgetNumber.budgetNumber, jdbcType=VARCHAR},
+            DELIV_PLACE_COMPANY_CD = '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}',
+            DELIV_PLACE_CD = #{delivPlace.delivPlaceCd, jdbcType=VARCHAR},
+            DELIV_PLACE_NAME = #{delivPlace.delivPlaceName, jdbcType=VARCHAR},
+            ATTACH_FILE_SEQ1 = #{rangeByAttachFile1.attachFile.seqNo},
+            ATTACH_FILE_SEQ2 = #{rangeByAttachFile2.attachFile.seqNo},
+            APP_ROUTE_NO = #{approute.appRouteNo},
+            APP_ROUTE_NAME = #{approute.appRouteName, jdbcType=VARCHAR},
+            LAST_UPD_DATE = #{purAplIdentify.lastUpdDate},
+            LAST_UPD_COMPANY_CD = '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}',
+            LAST_UPD_SECTION_CD = '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}',
+            LAST_UPD_USER_ID = '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}',
+            ${@ps.common.util.ItemSettingUtil@getItemSettingUpdateValueSQL("editExtItem.")}
+        WHERE
+             PUR_APL_SEQ = #{purAplIdentify.purAplSeqNum, jdbcType=VARCHAR}
+
+    </update>
+    <update id="updatePurRequest">
+        UPDATE T_PUR_REQUEST
+        SET
+            PUR_REQ_STATUS = #{purReqItem.purReqStatus.status, jdbcType=VARCHAR},
+            NEW_APP_FLG = #{purReqItem.newAppFlg.newAppFlg, jdbcType=VARCHAR},
+            BUYER_COMPANY_CD = #{purAplManagement.itemKind.buyUser.buyUser.section.company.companyCd, jdbcType=VARCHAR},
+            BUYER_COMPANY_NAME = #{purAplManagement.itemKind.buyUser.buyUser.section.company.companyName, jdbcType=VARCHAR},
+            BUYER_SECTION_PLACE_CD = #{purAplManagement.itemKind.buyUser.buyUser.section.sectionPlace.sectionPlaceCd, jdbcType=VARCHAR},
+            BUYER_SECTION_PLACE_NAME = #{purAplManagement.itemKind.buyUser.buyUser.section.sectionPlace.sectionPlaceName, jdbcType=VARCHAR},
+            BUYER_SECTION_CD = #{purAplManagement.itemKind.buyUser.buyUser.section.sectionCd, jdbcType=VARCHAR},
+            BUYER_SECTION_NAME = #{purAplManagement.itemKind.buyUser.buyUser.section.sectionName, jdbcType=VARCHAR},
+            BUYER_USER_ID = #{purAplManagement.itemKind.buyUser.buyUser.userID, jdbcType=VARCHAR},
+            BUYER_USER_NAME = #{purAplManagement.itemKind.buyUser.buyUser.userName, jdbcType=VARCHAR},
+            RECEIVE_COMPANY_CD = '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}',
+            RECEIVE_COMPANY_NAME = '${@fw.security.SecurityUtil@getCompanyNameByEscapeSql()}',
+            RECEIVE_SECTION_PLACE_CD = '${@fw.security.SecurityUtil@getSectionPlaceCdByEscapeSql()}',
+            RECEIVE_SECTION_PLACE_NAME = '${@fw.security.SecurityUtil@getSectionPlaceNameByEscapeSql()}',
+            RECEIVE_SECTION_CD = #{purAplManagement.reqUser.reqUser.section.sectionCd, jdbcType=VARCHAR},
+            RECEIVE_SECTION_NAME = #{purAplManagement.reqUser.reqUser.section.sectionName, jdbcType=VARCHAR},
+            AUTO_ORDER_FLG = #{purReqItem.autoOrderFlg, jdbcType=VARCHAR},
+            PRICE_REG_FLG = #{purReqItem.priceCreateFlg.priceCreateFlg, jdbcType=VARCHAR},
+            INSPECT_IND = #{purReqItem.inspectInd.inspectInd, jdbcType=VARCHAR},
+            ITEM_CLASS_COMPANY_CD = '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}',
+            ITEM_CLASS_L = #{purAplManagement.itemKind.itemClassL, jdbcType=VARCHAR},
+            ITEM_CLASS_L_NAME = #{purAplManagement.itemKind.itemClassLName, jdbcType=VARCHAR},
+            ITEM_CLASS_M = #{purAplManagement.itemKind.itemClassM, jdbcType=VARCHAR},
+            ITEM_CLASS_M_NAME = #{purAplManagement.itemKind.itemClassMName, jdbcType=VARCHAR},
+            ITEM_CLASS_S = #{purAplManagement.itemKind.itemClassS, jdbcType=VARCHAR},
+            ITEM_CLASS_S_NAME = #{purAplManagement.itemKind.itemClassSName, jdbcType=VARCHAR},
+            ITEM_COMPANY_CD = '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}',
+            ITEM_CD = #{purReqItem.itemName.itemCd, jdbcType=VARCHAR},
+            ITEM_NAME = #{purReqItem.itemName.itemName, jdbcType=VARCHAR},
+            KATASHIKI = #{purReqItem.itemName.katashiki, jdbcType=VARCHAR},
+            MANUFACT_CD = #{purReqItem.itemName.manufact.manufactCd, jdbcType=VARCHAR},
+            MANUFACT_NAME = #{purReqItem.itemName.manufact.manufactName, jdbcType=VARCHAR},
+            SUBJECT_COMPANY_CD = '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}',
+            SUBJECT_CD = #{purReqItem.subject.subjectCd, jdbcType=VARCHAR},
+            SUBJECT_NAME = #{purReqItem.subject.subjectName, jdbcType=VARCHAR},
+            SUP_COMPANY_CD = '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}',
+            SUP_CD = #{purAplManagement.hopeSupplier.hopeSupplier.supCd, jdbcType=VARCHAR},
+            SUP_NAME = #{purAplManagement.hopeSupplier.hopeSupplier.supplierName.supplierName, jdbcType=VARCHAR},
+            SUP_ABBR_NAME = #{purAplManagement.hopeSupplier.hopeSupplier.supplierName.supplierAbbrName, jdbcType=VARCHAR},
+            REQ_DELIV_DATE = #{purReqItem.hopeDlvEst.hopeDlvEst.dateOfymd, jdbcType=VARCHAR},
+            CURRENCY_CD = #{purReqItem.amountMng.currency.currencyCd, jdbcType=VARCHAR},
+            TAX_IND = #{purReqItem.amountMng.taxCalculationInd.taxInd.taxInd, jdbcType=VARCHAR},
+            CONSUMPT_IND = '2',
+            TAX_RATE = #{purReqItem.amountMng.taxRate.taxRate, jdbcType=VARCHAR},
+            REQ_VOL = #{purReqItem.vol.vol, jdbcType=VARCHAR},
+            UNIT_CD = #{purReqItem.itemName.unit.unitCd, jdbcType=VARCHAR},
+            UNIT_NAME = #{purReqItem.itemName.unit.unitName, jdbcType=VARCHAR},
+            UNIT_PRICE = #{purReqItem.hopePrice.hopePrice.amount, jdbcType=VARCHAR},
+            REQ_AMOUNT = #{purReqItem.amountMng.noTaxAmount.noTaxAmount.amount, jdbcType=VARCHAR},
+            CONSUMPT_AMOUNT = #{purReqItem.amountMng.consumptAmount.consumptAmount.amount, jdbcType=VARCHAR},
+            TOTAL_AMOUNT = #{purReqItem.amountMng.totalAmount.totalAmount.amount, jdbcType=VARCHAR},
+            PUR_REQ_CNV_CURRENCY_CD = #{purReqItem.cnvAmount.currency.currencyCd, jdbcType=VARCHAR},
+            PUR_REQ_CNV_RATE = #{purReqItem.cnvAmount.rate.rate, jdbcType=VARCHAR},
+            PUR_REQ_CNV_AMOUNT = #{purReqItem.cnvAmount.cnvAmount.amount, jdbcType=VARCHAR},
+            ATTACH_FILE_SEQ = #{purReqItem.rangeByAttachFile.attachFile.seqNo},
+            APP_ROUTE_NO = #{purAplManagement.approute.appRouteNo},
+            APP_ROUTE_NAME = #{purAplManagement.approute.appRouteName, jdbcType=VARCHAR},
+            LAST_UPD_DATE = '${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}',
+            LAST_UPD_COMPANY_CD = '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}',
+            LAST_UPD_SECTION_CD = '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}',
+            LAST_UPD_USER_ID = '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}',
+            ${@ps.common.util.ItemSettingUtil@getItemSettingUpdateValueSQL("purReqItem.editExtItem.")}
+        WHERE
+             PUR_REQ_SEQ = #{purReqItem.purReqSeq, jdbcType=VARCHAR}
+    </update>
+
+    <update id="reUpdate">
+        UPDATE T_PUR_APL
+        SET
+            NEW_FLG = '0',
+            DELETE_FLG = '1',
+            <if test="@org.apache.commons.lang.StringUtils@isNotBlank(newAppFlg.newAppFlg)">
+                NEW_APP_FLG = #{newAppFlg.newAppFlg, jdbcType=VARCHAR},
+            </if>
+            LAST_UPD_DATE = '${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}',
+            LAST_UPD_COMPANY_CD = '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}',
+            LAST_UPD_SECTION_CD = '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}',
+            LAST_UPD_USER_ID = '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}'
+        WHERE
+            PUR_APL_SEQ = #{purAplIdentify.purAplSeqNum, jdbcType=VARCHAR}
+    </update>
+
+    <update id="reUpdatePurRequest">
+        UPDATE T_PUR_REQUEST
+        SET
+            NEW_FLG = '0',
+            NEW_APP_FLG = #{newAppFlg.newAppFlg, jdbcType=VARCHAR},
+            DELETE_FLG = '1',
+            LAST_UPD_DATE = '${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}',
+            LAST_UPD_COMPANY_CD = '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}',
+            LAST_UPD_SECTION_CD = '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}',
+            LAST_UPD_USER_ID = '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}'
+        WHERE
+          PUR_REQ_SEQ = #{purReqSeq, jdbcType=VARCHAR}
+    </update>
+
+    <update id="reUpdatePurRequestByAplSeq">
+        UPDATE T_PUR_REQUEST
+        SET
+            NEW_FLG = '0',
+            NEW_APP_FLG = '0',
+            DELETE_FLG = '1',
+            LAST_UPD_DATE = '${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}',
+            LAST_UPD_COMPANY_CD = '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}',
+            LAST_UPD_SECTION_CD = '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}',
+            LAST_UPD_USER_ID = '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}'
+        WHERE
+          PUR_APL_SEQ = #{purAplSeq, jdbcType=VARCHAR}
+    </update>
+
+    <update id="updateUpload">
+        UPDATE T_ATTACH_MNG
+        SET ATTACH_SCOPE = #{attachRange.attachRange},
+            DELETE_FLG ='0'
+            LAST_UPD_DATE = '${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}',
+            LAST_UPD_COMPANY_CD = '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}',
+            LAST_UPD_SECTION_CD = '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}',
+            LAST_UPD_USER_ID = '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}'
+        WHERE ATTACH_FILE_SEQ = #{attachFile.seqNo}
+    </update>
+
+    <delete id="deleteUpload"
+            parameterType="fw.domain.slip.common.attachfile.RangeByAttachFile">
+        UPDATE T_ATTACH_MNG
+           SET ATTACH_SCOPE = #{attachRange.attachRange},
+               LAST_UPD_DATE = '${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}',
+               LAST_UPD_COMPANY_CD = '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}',
+               LAST_UPD_SECTION_CD = '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}',
+               LAST_UPD_USER_ID = '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}'
+         WHERE ATTACH_FILE_SEQ = #{attachFile.seqNo}
+    </delete>
+
+    <sql id="listKeyIdentityWhereCondition">
+                   AND T_PUR_APL.INPUT_COMPANY_CD =
+                       '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}'
+                   AND T_PUR_APL.INPUT_SECTION_PLACE_CD =
+                       '${@fw.security.SecurityUtil@getSectionPlaceCdByEscapeSql()}'
+                   AND T_PUR_APL.INPUT_SECTION_CD =
+                       '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}'
+            <choose>
+                <when test="@org.apache.commons.lang.StringUtils@isBlank(issueVousher)">
+                </when>
+                <otherwise>
+                    AND T_PUR_APL.INPUT_USER_ID = #{issueVousher}
+                </otherwise>
+            </choose>
+                   AND T_PUR_APL.PUR_APL_SEQ = T_PUR_REQUEST.PUR_APL_SEQ
+                   AND T_PUR_APL.REQ_TYPE_IND IN ('3','9')
+                   <if test="@org.apache.commons.lang.StringUtils@isBlank(status)">
+                        <choose>
+                            <when test="@org.apache.commons.lang.StringUtils@equals(issueVousher,@fw.security.SecurityUtil@getUserId())">
+                                AND T_PUR_REQUEST.PUR_REQ_STATUS IN ('01','02','03','04')
+                            </when>
+                            <otherwise>
+                                 AND T_PUR_REQUEST.PUR_REQ_STATUS IN ('01','02','03')
+                            </otherwise>
+                        </choose>
+                   </if>
+                   <if test="@org.apache.commons.lang.StringUtils@isNotBlank(status)">
+                        AND T_PUR_REQUEST.PUR_REQ_STATUS = #{status}
+                   </if>
+                   AND T_PUR_APL.DELETE_FLG = '0'
+                   AND T_PUR_APL.NEW_FLG = '1'
+                   AND T_PUR_REQUEST.DELETE_FLG = '0'
+    </sql>
+
+    <select id="listKeyIdentity"
+        parameterType="fw.domain.slip.purreq.everypurreq.purreqmng.EveryPurReqSearchCondition"
+        resultType="fw.domain.slip.purreq.everypurreq.purreqmng.PurAplIdentify">
+        SELECT T_PUR_APL.PUR_APL_SEQ ||
+               T_PUR_APL_INFO.APP_UNIT_NO as purAplSeqAndAppUnitNo
+          FROM T_PUR_APL,
+               (SELECT T_PUR_APL.PUR_APL_SEQ,
+                       (CASE
+                         WHEN T_PUR_REQUEST.APP_UNIT_NO IS NULL THEN
+                           N''
+                         ELSE
+                           T_PUR_REQUEST.APP_UNIT_NO
+                       END) as APP_UNIT_NO
+                  FROM T_PUR_APL, T_PUR_REQUEST
+				<where>
+				    <include refid="listKeyIdentityWhereCondition"/>
+				</where>
+				GROUP BY T_PUR_APL.PUR_APL_SEQ, T_PUR_REQUEST.APP_UNIT_NO, T_PUR_APL.PUR_APL_NO
+                ORDER BY T_PUR_APL.PUR_APL_NO
+               ) T_PUR_APL_INFO
+         WHERE T_PUR_APL.PUR_APL_SEQ = T_PUR_APL_INFO.PUR_APL_SEQ
+         ORDER BY ${searchCondition.columnOrder.columnOrder()}
+  </select>
+
+  <select id="listKeyIdentityCount"
+        parameterType="fw.domain.slip.purreq.everypurreq.purreqmng.EveryPurReqSearchCondition"
+        resultType="java.lang.Integer">
+        SELECT COUNT(*)
+          FROM T_PUR_APL,
+               (SELECT T_PUR_APL.PUR_APL_SEQ,
+                       (CASE
+                         WHEN T_PUR_REQUEST.APP_UNIT_NO IS NULL THEN
+                           N''
+                         ELSE
+                           T_PUR_REQUEST.APP_UNIT_NO
+                       END) as APP_UNIT_NO
+                  FROM T_PUR_APL, T_PUR_REQUEST
+                <where>
+                    <include refid="listKeyIdentityWhereCondition"/>
+                </where>
+                GROUP BY T_PUR_APL.PUR_APL_SEQ, T_PUR_REQUEST.APP_UNIT_NO, T_PUR_APL.PUR_APL_NO
+                ORDER BY T_PUR_APL.PUR_APL_NO
+               ) T_PUR_APL_INFO
+         WHERE T_PUR_APL.PUR_APL_SEQ = T_PUR_APL_INFO.PUR_APL_SEQ
+  </select>
+
+    <resultMap type="fw.domain.slip.purreq.everypurreq.purreqmng.EveryPurReqItem" id="EveryPurReqItem_Map">
+        <id column="purAplSeqAndAppUnitNo" property="purAplIdentify.purAplSeqAndAppUnitNo"/>
+        <id column="PUR_APL_SEQ" property="purAplIdentify.purAplSeqNum"/>
+        <id column="LAST_UPD_DATE" property="purAplIdentify.lastUpdDate"/>
+        <result column="SLIP_NO" property="purAplIdentify.exclusiveSlipId.slipNo"/>
+        <result column="SLIP_LAST_UPD_DATE" property="purAplIdentify.exclusiveSlipId.lastUpdDate"/>
+    </resultMap>
+
+    <select id="listPageItem"
+    parameterType="fw.domain.slip.purreq.everypurreq.purreqmng.EveryPurReqSearchCondition"
+    resultMap="EveryPurReqItem_Map">
+    SELECT DISTINCT
+               T_PUR_APL.PUR_APL_SEQ ||
+               T_PUR_APL_INFO.APP_UNIT_NO as purAplSeqAndAppUnitNo,
+               T_PUR_APL.PUR_APL_NO         as purAplNo,
+               T_PUR_APL.URGENT_IND         as urgentInd,
+               T_PUR_APL.INPUT_USER_NAME as issueVousherName,
+               T_PUR_APL.PUR_APL_STATUS     as status,
+               T_PUR_APL.PUR_REQ_DATE       as "reqDate.dateOfymd",
+               T_PUR_APL.ITEM_CLASS_L_NAME  as itemClassL,
+               T_PUR_APL.ITEM_CLASS_M_NAME  as itemClassM,
+               T_PUR_APL.ITEM_CLASS_S_NAME  as itemClassS,
+               T_PUR_APL.HOPE_SUPPLIER_CD   as hopeSupplierCd,
+               T_PUR_APL.HOPE_SUPPLIER_ABBR_NAME as hopeSupplierName,
+               T_PUR_APL.TITLE_NAME         as titleName,
+               T_PUR_APL.REQ_SECTION_CD     as reqSectionCd,
+               T_PUR_APL.REQ_SECTION_NAME   as reqSectionName,
+               T_PUR_APL.REQ_USER_ID        as reqUserCd,
+               T_PUR_APL.REQ_USER_NAME      as reqUserName,
+               T_PUR_APL.PUR_APL_SEQ        as "PUR_APL_SEQ" ,
+               T_PUR_APL.LAST_UPD_DATE      as "LAST_UPD_DATE",
+               T_PUR_APL_INFO.APP_UNIT_NO    as "purAplIdentify.purReqNo",
+               ${@ps.common.util.ItemSettingUtil@getItemSettingSelectSQLDomainAliasNonBinary("T_PUR_APL", "searchResExtItem")},
+               T_SLIP_MNG.SLIP_NO as "SLIP_NO",
+               T_SLIP_MNG.LAST_UPD_DATE as "SLIP_LAST_UPD_DATE"
+          FROM T_PUR_APL,
+               (SELECT T_PUR_APL.PUR_APL_SEQ,
+                       (CASE
+                         WHEN T_PUR_REQUEST.APP_UNIT_NO IS NULL THEN
+                           N''
+                         ELSE
+                           T_PUR_REQUEST.APP_UNIT_NO
+                       END) as APP_UNIT_NO,
+                       MIN(T_PUR_REQUEST.PUR_REQ_NO) as PUR_REQ_NO
+                  FROM T_PUR_APL, T_PUR_REQUEST
+                <where>
+                    <include refid="listKeyIdentityWhereCondition"/>
+                </where>
+                GROUP BY T_PUR_APL.PUR_APL_SEQ, T_PUR_REQUEST.APP_UNIT_NO, T_PUR_APL.PUR_APL_NO
+                ORDER BY T_PUR_APL.PUR_APL_NO
+               ) T_PUR_APL_INFO,
+               T_SLIP_MNG
+        WHERE T_PUR_APL.PUR_APL_SEQ = T_PUR_APL_INFO.PUR_APL_SEQ
+          AND T_PUR_APL_INFO.PUR_REQ_NO =  T_SLIP_MNG.SLIP_NO
+          AND T_PUR_APL.PUR_APL_SEQ || T_PUR_APL_INFO.APP_UNIT_NO IN
+            <foreach collection="searchCondition.page.keyDomainEntityList" item="keyList"
+                open="(" separator="," close=")">
+                #{keyList.purAplSeqAndAppUnitNo}
+            </foreach>
+          AND T_PUR_APL.DELETE_FLG = '0'
+    ORDER BY ${searchCondition.columnOrder.columnOrder()}
+    </select>
+
+    <select id="listPageItemReq"
+    parameterType="fw.domain.slip.purreq.everypurreq.purreqmng.EveryPurReqItem"
+    resultType="fw.domain.slip.purreq.everypurreq.purreqmng.EveryPurReqItemReq">
+        SELECT T_PUR_REQUEST.PUR_APL_SEQ as "purAplIdentify.purAplSeqNum",
+               T_PUR_REQUEST.APP_UNIT_NO as "purAplIdentify.purReqNo",
+               T_PUR_REQUEST.PUR_REQ_STATUS as purReqStatus,
+               T_PUR_REQUEST.CURRENCY_CD as currencyCd,
+               SUM(CASE WHEN T_PUR_REQUEST.REQ_AMOUNT IS NULL THEN 0 ELSE T_PUR_REQUEST.REQ_AMOUNT END) as "reqAmount.amount",
+               SUM(CASE WHEN T_PUR_REQUEST.TOTAL_AMOUNT IS NULL THEN 0 ELSE T_PUR_REQUEST.TOTAL_AMOUNT END) as "totalAmount.amount",
+               MIN(T_PUR_REQUEST.REQ_DELIV_DATE) as "delivDate.dateOfymd"
+          FROM T_PUR_REQUEST
+         WHERE T_PUR_REQUEST.PUR_APL_SEQ = #{purAplIdentify.purAplSeqNum}
+         <if test="@org.apache.commons.lang.StringUtils@isBlank(purAplIdentify.purReqNo)">
+           AND T_PUR_REQUEST.APP_UNIT_NO IS NULL
+         </if>
+         <if test="!@org.apache.commons.lang.StringUtils@isBlank(purAplIdentify.purReqNo)">
+           AND T_PUR_REQUEST.APP_UNIT_NO = #{purAplIdentify.purReqNo}
+         </if>
+           AND T_PUR_REQUEST.DELETE_FLG = '0'
+      GROUP BY T_PUR_REQUEST.PUR_APL_SEQ,
+               T_PUR_REQUEST.APP_UNIT_NO,
+               T_PUR_REQUEST.PUR_REQ_STATUS,
+               T_PUR_REQUEST.CURRENCY_CD
+    </select>
+
+    <select id="updPurAplBefore"
+        parameterType="fw.domain.slip.purreq.everypurreq.purreqmng.PurAplIdentify" resultType="int">
+           SELECT COUNT(1)
+              FROM T_PUR_REQUEST
+             WHERE T_PUR_REQUEST.PUR_APL_SEQ = #{purAplSeqNum}
+               AND T_PUR_REQUEST.DELETE_FLG = '0'
+               AND T_PUR_REQUEST.NEW_FLG = '1'
+    </select>
+
+    <update id="updPurApl"
+        parameterType="fw.domain.slip.purreq.everypurreq.purreqmng.PurAplIdentify">
+        UPDATE T_PUR_APL
+           SET DELETE_FLG = '1',
+               LAST_UPD_DATE =
+                  '${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}',
+               LAST_UPD_COMPANY_CD =
+                  '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}',
+               LAST_UPD_SECTION_CD =
+                  '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}',
+               LAST_UPD_USER_ID =
+                  '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}'
+         WHERE PUR_APL_SEQ = #{purAplSeqNum}
+    </update>
+
+    <update id="updPurReq"
+        parameterType="fw.domain.slip.purreq.everypurreq.purreqmng.PurAplIdentify">
+        UPDATE T_PUR_REQUEST
+           SET DELETE_FLG = '1',
+               LAST_UPD_DATE =
+                  '${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}',
+               LAST_UPD_COMPANY_CD =
+                  '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}',
+               LAST_UPD_SECTION_CD =
+                  '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}',
+               LAST_UPD_USER_ID =
+                  '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}'
+         WHERE PUR_APL_SEQ = #{purAplSeqNum}
+               <if test="@org.apache.commons.lang.StringUtils@isNotBlank(purReqNo)">
+               AND APP_UNIT_NO = #{purReqNo}
+               </if>
+    </update>
+
+        <resultMap type="fw.domain.slip.purreq.everypurreq.EveryPurReqApl" id="PurApl_Map">
+            <id column="PUR_APL_NO" property="purAplManagement.purAplIdentify.purAplNo.purAplNo"/>
+            <id column="URGENT_IND" property="purAplManagement.urgentInd.urgentInd"/>
+            <id column="PUR_APL_STATUS" property="purAplManagement.status"/>
+            <id column="PUR_REQ_DATE" property="purAplManagement.purReqDate.purReqDate.reqDate.dateOfymd"/>
+            <id column="TITLE_NAME" property="purAplManagement.titleName.titleName"/>
+            <id column="INPUT_COMPANY_CD" property="purAplManagement.inputUser.inputUser.section.company.companyCd"/>
+            <id column="INPUT_SECTION_CD" property="purAplManagement.inputUser.inputUser.section.sectionCd"/>
+            <id column="INPUT_SECTION_NAME" property="purAplManagement.inputUser.inputUser.section.sectionName"/>
+            <id column="INPUT_USER_ID" property="purAplManagement.inputUser.inputUser.userID"/>
+            <id column="INPUT_USER_NAME" property="purAplManagement.inputUser.inputUser.userName"/>
+            <id column="REQ_COMPANY_CD" property="purAplManagement.reqUser.reqUser.section.company.companyCd"/>
+            <id column="REQ_SECTION_CD" property="purAplManagement.reqUser.reqUser.section.sectionCd"/>
+            <id column="REQ_SECTION_NAME" property="purAplManagement.reqUser.reqUser.section.sectionName"/>
+            <id column="REQ_USER_EXTENSION_NO" property="purAplManagement.reqUser.reqUser.extNo.extensionNo"/>
+            <id column="REQ_USER_TEL_NO" property="purAplManagement.reqUser.reqUser.externalNo.externalNo"/>
+            <id column="REQ_USER_ID" property="purAplManagement.reqUser.reqUser.userID"/>
+            <id column="REQ_USER_NAME" property="purAplManagement.reqUser.reqUser.userName"/>
+            <id column="BACK_APP_COMMENTS" property="purAplManagement.appManagement.backApp.backAppReason.backReason.comment"/>
+            <id column="LOAD_SECTION_CD" property="purAplManagement.loadSection.loadSection.sectionCd"/>
+            <id column="LOAD_SECTION_NAME" property="purAplManagement.loadSection.loadSection.sectionName"/>
+            <id column="DELIV_PLACE_CD" property="purAplManagement.delivPlace.delivPlaceCd"/>
+            <id column="DELIV_PLACE_NAME" property="purAplManagement.delivPlace.delivPlaceName"/>
+            <id column="HOPE_SUPPLIER_CD" property="purAplManagement.hopeSupplier.hopeSupplier.supCd"/>
+            <id column="HOPE_SUPPLIER_ABBR_NAME" property="purAplManagement.hopeSupplier.hopeSupplier.supplierName.supplierAbbrName"/>
+            <id column="HOPE_SUPPLIER_COMPANY_CD" property="purAplManagement.hopeSupplier.hopeSupplier.supCompanyCd"/>
+            <id column="ITEM_CLASS_L_NAME" property="purAplManagement.itemKind.itemClassLName"/>
+            <id column="ITEM_CLASS_M_NAME" property="purAplManagement.itemKind.itemClassMName"/>
+            <id column="ITEM_CLASS_S_NAME" property="purAplManagement.itemKind.itemClassSName"/>
+            <id column="ITEM_CLASS_L" property="purAplManagement.itemKind.itemClassL"/>
+            <id column="ITEM_CLASS_M" property="purAplManagement.itemKind.itemClassM"/>
+            <id column="ITEM_CLASS_S" property="purAplManagement.itemKind.itemClassS"/>
+            <id column="PRICE_REQ_FLG" property="purAplManagement.priceRegisterFlg.priceRegisterFlg"/>
+            <id column="BUDGET_NO" property="purAplManagement.budgetNumber.budgetNumber"/>
+            <id column="BUDGET_NAME" property="purAplManagement.budgetNumber.titleName.titleName"/>
+            <id column="ATTACH_FILE_NAME_A" property="purAplManagement.rangeByAttachFile1.attachFile.fileName"/>
+            <id column="ATTACH_SCOPE_A" property="purAplManagement.rangeByAttachFile1.attachRange.attachRange"/>
+            <id column="ATTACH_FILE_NAME_B" property="purAplManagement.rangeByAttachFile2.attachFile.fileName"/>
+            <id column="ATTACH_SCOPE_B" property="purAplManagement.rangeByAttachFile2.attachRange.attachRange"/>
+            <id column="FOR_BOSS_COMMENT" property="purAplManagement.forAppComment.forAppComment.comment"/>
+            <id column="FOR_BUYER_COMMENT" property="purAplManagement.forBuyerComment.forBuyerComment.comment"/>
+            <id column="FOR_SUPPRIER_COMMENT" property="purAplManagement.forSupplierComment.forSupplierComment.comment"/>
+            <id column="APP_ROUTE_NAME" property="application.approute.appRouteName"/>
+            <id column="APP_ROUTE_NO" property="application.approute.appRouteNo"/>
+            <id column="ATTACH_FILE_SEQ1" property="purAplManagement.rangeByAttachFile1.attachFile.seqNo"/>
+            <id column="ATTACH_FILE_SEQ2" property="purAplManagement.rangeByAttachFile2.attachFile.seqNo"/>
+            <id column="EXT_TXT_1" property="purAplManagement.detailExtItem.extendTxt.extendTxt1" />
+            <id column="EXT_TXT_2" property="purAplManagement.detailExtItem.extendTxt.extendTxt2" />
+            <id column="EXT_TXT_3" property="purAplManagement.detailExtItem.extendTxt.extendTxt3" />
+            <id column="EXT_TXT_4" property="purAplManagement.detailExtItem.extendTxt.extendTxt4" />
+            <id column="EXT_TXT_5" property="purAplManagement.detailExtItem.extendTxt.extendTxt5" />
+            <id column="EXT_TXT_6" property="purAplManagement.detailExtItem.extendTxt.extendTxt6" />
+            <id column="EXT_TXT_7" property="purAplManagement.detailExtItem.extendTxt.extendTxt7" />
+            <id column="EXT_TXT_8" property="purAplManagement.detailExtItem.extendTxt.extendTxt8" />
+            <id column="EXT_TXT_9" property="purAplManagement.detailExtItem.extendTxt.extendTxt9" />
+            <id column="EXT_TXT_10" property="purAplManagement.detailExtItem.extendTxt.extendTxt10" />
+            <id column="EXT_AREA_1" property="purAplManagement.detailExtItem.extendArea.extendArea1" />
+            <id column="EXT_AREA_2" property="purAplManagement.detailExtItem.extendArea.extendArea2" />
+            <id column="EXT_AREA_3" property="purAplManagement.detailExtItem.extendArea.extendArea3" />
+            <id column="EXT_AREA_4" property="purAplManagement.detailExtItem.extendArea.extendArea4" />
+            <id column="EXT_AREA_5" property="purAplManagement.detailExtItem.extendArea.extendArea5" />
+            <id column="EXT_DATE_1" property="purAplManagement.detailExtItem.extendDate.extendDate1.dateOfymd" />
+            <id column="EXT_DATE_2" property="purAplManagement.detailExtItem.extendDate.extendDate2.dateOfymd" />
+            <id column="EXT_DATE_3" property="purAplManagement.detailExtItem.extendDate.extendDate3.dateOfymd" />
+            <id column="EXT_DATE_4" property="purAplManagement.detailExtItem.extendDate.extendDate4.dateOfymd" />
+            <id column="EXT_DATE_5" property="purAplManagement.detailExtItem.extendDate.extendDate5.dateOfymd" />
+            <id column="EXT_INT_1" property="purAplManagement.detailExtItem.extendInt.extendInt1.value" />
+            <id column="EXT_INT_2" property="purAplManagement.detailExtItem.extendInt.extendInt2.value" />
+            <id column="EXT_INT_3" property="purAplManagement.detailExtItem.extendInt.extendInt3.value" />
+            <id column="EXT_INT_4" property="purAplManagement.detailExtItem.extendInt.extendInt4.value" />
+            <id column="EXT_INT_5" property="purAplManagement.detailExtItem.extendInt.extendInt5.value" />
+            <id column="EXT_INT_6" property="purAplManagement.detailExtItem.extendInt.extendInt6.value" />
+            <id column="EXT_INT_7" property="purAplManagement.detailExtItem.extendInt.extendInt7.value" />
+            <id column="EXT_INT_8" property="purAplManagement.detailExtItem.extendInt.extendInt8.value" />
+            <id column="EXT_INT_9" property="purAplManagement.detailExtItem.extendInt.extendInt9.value" />
+            <id column="EXT_INT_10" property="purAplManagement.detailExtItem.extendInt.extendInt10.value" />
+            <id column="EXT_DEC_1" property="purAplManagement.detailExtItem.extendDec.extendDec1.value" />
+            <id column="EXT_DEC_2" property="purAplManagement.detailExtItem.extendDec.extendDec2.value" />
+            <id column="EXT_DEC_3" property="purAplManagement.detailExtItem.extendDec.extendDec3.value" />
+            <id column="EXT_DEC_4" property="purAplManagement.detailExtItem.extendDec.extendDec4.value" />
+            <id column="EXT_DEC_5" property="purAplManagement.detailExtItem.extendDec.extendDec5.value" />
+            <id column="EXT_SEL_1" property="purAplManagement.detailExtItem.extendSel.extendSel1" />
+            <id column="EXT_SEL_2" property="purAplManagement.detailExtItem.extendSel.extendSel2" />
+            <id column="EXT_SEL_3" property="purAplManagement.detailExtItem.extendSel.extendSel3" />
+            <id column="EXT_SEL_4" property="purAplManagement.detailExtItem.extendSel.extendSel4" />
+            <id column="EXT_SEL_5" property="purAplManagement.detailExtItem.extendSel.extendSel5" />
+            <id column="EXT_SEL_6" property="purAplManagement.detailExtItem.extendSel.extendSel6" />
+            <id column="EXT_SEL_7" property="purAplManagement.detailExtItem.extendSel.extendSel7" />
+            <id column="EXT_SEL_8" property="purAplManagement.detailExtItem.extendSel.extendSel8" />
+            <id column="EXT_SEL_9" property="purAplManagement.detailExtItem.extendSel.extendSel9" />
+            <id column="EXT_SEL_10" property="purAplManagement.detailExtItem.extendSel.extendSel10" />
+            <id column="EXT_CHK_1" property="purAplManagement.detailExtItem.extendChk.extendChk1" />
+            <id column="EXT_CHK_2" property="purAplManagement.detailExtItem.extendChk.extendChk2" />
+            <id column="EXT_CHK_3" property="purAplManagement.detailExtItem.extendChk.extendChk3" />
+            <id column="EXT_CHK_4" property="purAplManagement.detailExtItem.extendChk.extendChk4" />
+            <id column="EXT_CHK_5" property="purAplManagement.detailExtItem.extendChk.extendChk5" />
+            <id column="EXT_FILE_1" property="purAplManagement.detailExtItem.extendFile.extendFile1.fileName" />
+            <id column="EXT_FILE_2" property="purAplManagement.detailExtItem.extendFile.extendFile2.fileName" />
+            <id column="EXT_FILE_3" property="purAplManagement.detailExtItem.extendFile.extendFile3.fileName" />
+            <id column="EXT_FILE_BINARY_1" property="purAplManagement.detailExtItem.extendFile.extendFile1.binary" />
+            <id column="EXT_FILE_BINARY_2" property="purAplManagement.detailExtItem.extendFile.extendFile2.binary" />
+            <id column="EXT_FILE_BINARY_3" property="purAplManagement.detailExtItem.extendFile.extendFile3.binary" />
+            <id column="EXT_MST_1" property="purAplManagement.detailExtItem.extendMst.extendMst1.mstKey" />
+            <id column="EXT_MST_2" property="purAplManagement.detailExtItem.extendMst.extendMst2.mstKey" />
+            <id column="EXT_MST_3" property="purAplManagement.detailExtItem.extendMst.extendMst3.mstKey" />
+            <id column="EXT_MST_4" property="purAplManagement.detailExtItem.extendMst.extendMst4.mstKey" />
+            <id column="EXT_MST_5" property="purAplManagement.detailExtItem.extendMst.extendMst5.mstKey" />
+            <id column="EXT_MST_6" property="purAplManagement.detailExtItem.extendMst.extendMst6.mstKey" />
+            <id column="EXT_MST_7" property="purAplManagement.detailExtItem.extendMst.extendMst7.mstKey" />
+            <id column="EXT_MST_8" property="purAplManagement.detailExtItem.extendMst.extendMst8.mstKey" />
+            <id column="EXT_MST_NAME_1" property="purAplManagement.detailExtItem.extendMst.extendMst1.mstName" />
+            <id column="EXT_MST_NAME_2" property="purAplManagement.detailExtItem.extendMst.extendMst2.mstName" />
+            <id column="EXT_MST_NAME_3" property="purAplManagement.detailExtItem.extendMst.extendMst3.mstName" />
+            <id column="EXT_MST_NAME_4" property="purAplManagement.detailExtItem.extendMst.extendMst4.mstName" />
+            <id column="EXT_MST_NAME_5" property="purAplManagement.detailExtItem.extendMst.extendMst5.mstName" />
+            <id column="EXT_MST_NAME_6" property="purAplManagement.detailExtItem.extendMst.extendMst6.mstName" />
+            <id column="EXT_MST_NAME_7" property="purAplManagement.detailExtItem.extendMst.extendMst7.mstName" />
+            <id column="EXT_MST_NAME_8" property="purAplManagement.detailExtItem.extendMst.extendMst8.mstName" />
+    </resultMap>
+
+    <select id="getPurApl"  resultMap="PurApl_Map">
+          SELECT T_PUR_APL.PUR_APL_NO,
+                 T_PUR_APL.URGENT_IND,
+                 T_PUR_APL.PUR_APL_STATUS,
+                 T_PUR_APL.PUR_REQ_DATE,
+                 T_PUR_APL.TITLE_NAME,
+                 T_PUR_APL.INPUT_COMPANY_CD,
+                 T_PUR_APL.INPUT_SECTION_CD,
+                 T_PUR_APL.INPUT_SECTION_NAME,
+                 T_PUR_APL.INPUT_USER_ID,
+                 T_PUR_APL.INPUT_USER_NAME,
+                 T_PUR_APL.REQ_COMPANY_CD,
+                 T_PUR_APL.REQ_SECTION_CD,
+                 T_PUR_APL.REQ_SECTION_NAME,
+                 T_PUR_APL.REQ_USER_EXTENSION_NO,
+                 T_PUR_APL.REQ_USER_TEL_NO,
+                 T_PUR_APL.REQ_USER_ID,
+                 T_PUR_APL.REQ_USER_NAME,
+                 T_APPROVAL.BACK_APP_COMMENTS,
+                 T_PUR_APL.LOAD_SECTION_CD,
+                 T_PUR_APL.LOAD_SECTION_NAME,
+                 T_PUR_APL.DELIV_PLACE_CD,
+                 T_PUR_APL.DELIV_PLACE_NAME,
+                 T_PUR_APL.ITEM_CLASS_L_NAME,
+                 T_PUR_APL.ITEM_CLASS_M_NAME,
+                 T_PUR_APL.ITEM_CLASS_S_NAME,
+                 T_PUR_APL.ITEM_CLASS_L,
+                 T_PUR_APL.ITEM_CLASS_M,
+                 T_PUR_APL.ITEM_CLASS_S,
+                 T_PUR_APL.HOPE_SUPPLIER_CD,
+                 T_PUR_APL.HOPE_SUPPLIER_ABBR_NAME,
+                 T_PUR_APL.HOPE_SUPPLIER_COMPANY_CD,
+                 T_PUR_APL.PRICE_REQ_FLG,
+                 T_PUR_APL.BUDGET_NO,
+                 T_RINGI_BUDGET_DTL.BUDGET_NAME ,
+                 T_ATTACH_MNG_A.ATTACH_FILE_NAME AS ATTACH_FILE_NAME_A,
+                 T_ATTACH_MNG_A.ATTACH_SCOPE AS ATTACH_SCOPE_A,
+                 T_ATTACH_MNG_B.ATTACH_FILE_NAME AS ATTACH_FILE_NAME_B,
+                 T_ATTACH_MNG_B.ATTACH_SCOPE AS ATTACH_SCOPE_B,
+                 T_PUR_APL.FOR_BOSS_COMMENT,
+                 T_PUR_APL.FOR_BUYER_COMMENT,
+                 T_PUR_APL.FOR_SUPPRIER_COMMENT,
+                 T_PUR_APL.APP_ROUTE_NAME,
+                 T_PUR_APL.APP_ROUTE_NO,
+                 T_PUR_APL.ATTACH_FILE_SEQ1,
+                 T_PUR_APL.ATTACH_FILE_SEQ2,
+                 ${@ps.common.util.ItemSettingUtil@getItemSettingSelectSQL("T_PUR_APL")}
+            FROM T_PUR_APL
+            LEFT JOIN T_ATTACH_MNG T_ATTACH_MNG_A ON T_PUR_APL.ATTACH_FILE_SEQ1 =
+                                                     T_ATTACH_MNG_A.ATTACH_FILE_SEQ
+            AND T_ATTACH_MNG_A.DELETE_FLG = '0'
+            LEFT JOIN T_ATTACH_MNG T_ATTACH_MNG_B ON T_PUR_APL.ATTACH_FILE_SEQ2 =
+                                                     T_ATTACH_MNG_B.ATTACH_FILE_SEQ
+            AND T_ATTACH_MNG_B.DELETE_FLG = '0'
+            LEFT JOIN T_APPROVAL ON T_PUR_APL.PUR_APL_SEQ =
+                                    T_APPROVAL.APP_VOUCHER_KEY
+                                AND T_APPROVAL.APP_VOUCHER_IND = '1'
+                                AND T_APPROVAL.APP_ROUTE_NO =
+                                    T_PUR_APL.APP_ROUTE_NO
+            LEFT JOIN T_RINGI_BUDGET_DTL
+              ON T_RINGI_BUDGET_DTL.COMPANY_CD = T_PUR_APL.LOAD_COMPANY_CD
+             AND T_RINGI_BUDGET_DTL.SECTION_PLACE_CD = T_PUR_APL.LOAD_SECTION_PLACE_CD
+             AND T_RINGI_BUDGET_DTL.BUDGET_DTL_NO = T_PUR_APL.BUDGET_NO
+           WHERE T_PUR_APL.PUR_APL_SEQ = #{purAplSeq}
+             AND T_PUR_APL.NEW_FLG = '1'
+             AND T_PUR_APL.DELETE_FLG = '0'
+    </select>
+
+
+    <resultMap type="fw.domain.slip.purreq.everypurreq.EveryPurReq" id="PurRequest_Map">
+            <id column="SUBJECT_CD" property="subject.subjectCd"/>
+            <id column="SUBJECT_NAME" property="subject.subjectName"/>
+            <id column="ITEM_CD" property="itemName.itemCd"/>
+            <id column="ITEM_NAME" property="itemName.itemName"/>
+            <id column="KATASHIKI" property="itemName.katashiki"/>
+            <id column="MANUFACT_CD" property="itemName.manufact.manufactCd"/>
+            <id column="MANUFACT_NAME" property="itemName.manufact.manufactName"/>
+            <id column="INSPECT_IND" property="inspectInd.inspectInd"/>
+            <id column="REQ_DELIV_DATE" property="hopeDlvEst.hopeDlvEst.dateOfymd"/>
+            <id column="CURRENCY_CD" property="amountMng.currency.currencyCd"/>
+            <id column="CURRENCY_MARK" property="amountMng.currency.currencyMark"/>
+            <id column="UNIT_PRICE" property="hopePrice.hopePrice.amount"/>
+            <id column="REQ_VOL" property="vol.vol"/>
+            <id column="UNIT_NAME" property="itemName.unit.unitName"/>
+            <id column="REQ_AMOUNT" property="amountMng.totalAmount.totalAmount.amount"/>
+            <id column="TAX_IND" property="amountMng.taxCalculationInd.taxInd.taxInd"/>
+            <id column="ATTACH_FILE_NAME" property="rangeByAttachFile.attachFile.fileName"/>
+            <id column="ATTACH_FILE_SEQ" property="rangeByAttachFile.attachFile.seqNo"/>
+            <id column="ATTACH_SCOPE" property="rangeByAttachFile.attachRange.attachRange"/>
+            <id column="BUYER_COMPANY_CD" property="buyUser.buyUser.section.company.companyCd"/>
+            <id column="BUYER_SECTION_CD" property="buyUser.buyUser.section.sectionCd"/>
+            <id column="BUYER_BACK_USER_COMMENTS" property="purReturnUser.backReason.backReason.comment"/>
+            <id column="BUYER_SECTION_NAME" property="buyUser.buyUser.section.sectionName"/>
+            <id column="BUYER_USER_ID" property="buyUser.buyUser.userID"/>
+            <id column="BUYER_USER_NAME" property="buyUser.buyUser.userName"/>
+             <id column="EXT_TXT_1" property="detailExtItem.extendTxt.extendTxt1" />
+            <id column="EXT_TXT_2" property="detailExtItem.extendTxt.extendTxt2" />
+            <id column="EXT_TXT_3" property="detailExtItem.extendTxt.extendTxt3" />
+            <id column="EXT_TXT_4" property="detailExtItem.extendTxt.extendTxt4" />
+            <id column="EXT_TXT_5" property="detailExtItem.extendTxt.extendTxt5" />
+            <id column="EXT_TXT_6" property="detailExtItem.extendTxt.extendTxt6" />
+            <id column="EXT_TXT_7" property="detailExtItem.extendTxt.extendTxt7" />
+            <id column="EXT_TXT_8" property="detailExtItem.extendTxt.extendTxt8" />
+            <id column="EXT_TXT_9" property="detailExtItem.extendTxt.extendTxt9" />
+            <id column="EXT_TXT_10" property="detailExtItem.extendTxt.extendTxt10" />
+            <id column="EXT_AREA_1" property="detailExtItem.extendArea.extendArea1" />
+            <id column="EXT_AREA_2" property="detailExtItem.extendArea.extendArea2" />
+            <id column="EXT_AREA_3" property="detailExtItem.extendArea.extendArea3" />
+            <id column="EXT_AREA_4" property="detailExtItem.extendArea.extendArea4" />
+            <id column="EXT_AREA_5" property="detailExtItem.extendArea.extendArea5" />
+            <id column="EXT_DATE_1" property="detailExtItem.extendDate.extendDate1.dateOfymd" />
+            <id column="EXT_DATE_2" property="detailExtItem.extendDate.extendDate2.dateOfymd" />
+            <id column="EXT_DATE_3" property="detailExtItem.extendDate.extendDate3.dateOfymd" />
+            <id column="EXT_DATE_4" property="detailExtItem.extendDate.extendDate4.dateOfymd" />
+            <id column="EXT_DATE_5" property="detailExtItem.extendDate.extendDate5.dateOfymd" />
+            <id column="EXT_INT_1" property="detailExtItem.extendInt.extendInt1.value" />
+            <id column="EXT_INT_2" property="detailExtItem.extendInt.extendInt2.value" />
+            <id column="EXT_INT_3" property="detailExtItem.extendInt.extendInt3.value" />
+            <id column="EXT_INT_4" property="detailExtItem.extendInt.extendInt4.value" />
+            <id column="EXT_INT_5" property="detailExtItem.extendInt.extendInt5.value" />
+            <id column="EXT_INT_6" property="detailExtItem.extendInt.extendInt6.value" />
+            <id column="EXT_INT_7" property="detailExtItem.extendInt.extendInt7.value" />
+            <id column="EXT_INT_8" property="detailExtItem.extendInt.extendInt8.value" />
+            <id column="EXT_INT_9" property="detailExtItem.extendInt.extendInt9.value" />
+            <id column="EXT_INT_10" property="detailExtItem.extendInt.extendInt10.value" />
+            <id column="EXT_DEC_1" property="detailExtItem.extendDec.extendDec1.value" />
+            <id column="EXT_DEC_2" property="detailExtItem.extendDec.extendDec2.value" />
+            <id column="EXT_DEC_3" property="detailExtItem.extendDec.extendDec3.value" />
+            <id column="EXT_DEC_4" property="detailExtItem.extendDec.extendDec4.value" />
+            <id column="EXT_DEC_5" property="detailExtItem.extendDec.extendDec5.value" />
+            <id column="EXT_SEL_1" property="detailExtItem.extendSel.extendSel1" />
+            <id column="EXT_SEL_2" property="detailExtItem.extendSel.extendSel2" />
+            <id column="EXT_SEL_3" property="detailExtItem.extendSel.extendSel3" />
+            <id column="EXT_SEL_4" property="detailExtItem.extendSel.extendSel4" />
+            <id column="EXT_SEL_5" property="detailExtItem.extendSel.extendSel5" />
+            <id column="EXT_SEL_6" property="detailExtItem.extendSel.extendSel6" />
+            <id column="EXT_SEL_7" property="detailExtItem.extendSel.extendSel7" />
+            <id column="EXT_SEL_8" property="detailExtItem.extendSel.extendSel8" />
+            <id column="EXT_SEL_9" property="detailExtItem.extendSel.extendSel9" />
+            <id column="EXT_SEL_10" property="detailExtItem.extendSel.extendSel10" />
+            <id column="EXT_CHK_1" property="detailExtItem.extendChk.extendChk1" />
+            <id column="EXT_CHK_2" property="detailExtItem.extendChk.extendChk2" />
+            <id column="EXT_CHK_3" property="detailExtItem.extendChk.extendChk3" />
+            <id column="EXT_CHK_4" property="detailExtItem.extendChk.extendChk4" />
+            <id column="EXT_CHK_5" property="detailExtItem.extendChk.extendChk5" />
+            <id column="EXT_FILE_1" property="detailExtItem.extendFile.extendFile1.fileName" />
+            <id column="EXT_FILE_2" property="detailExtItem.extendFile.extendFile2.fileName" />
+            <id column="EXT_FILE_3" property="detailExtItem.extendFile.extendFile3.fileName" />
+            <id column="EXT_FILE_BINARY_1" property="detailExtItem.extendFile.extendFile1.binary" />
+            <id column="EXT_FILE_BINARY_1" property="detailExtItem.extendFile.extendFile2.binary" />
+            <id column="EXT_FILE_BINARY_1" property="detailExtItem.extendFile.extendFile3.binary" />
+            <id column="EXT_MST_1" property="detailExtItem.extendMst.extendMst1.mstKey" />
+            <id column="EXT_MST_2" property="detailExtItem.extendMst.extendMst2.mstKey" />
+            <id column="EXT_MST_3" property="detailExtItem.extendMst.extendMst3.mstKey" />
+            <id column="EXT_MST_4" property="detailExtItem.extendMst.extendMst4.mstKey" />
+            <id column="EXT_MST_5" property="detailExtItem.extendMst.extendMst5.mstKey" />
+            <id column="EXT_MST_6" property="detailExtItem.extendMst.extendMst6.mstKey" />
+            <id column="EXT_MST_7" property="detailExtItem.extendMst.extendMst7.mstKey" />
+            <id column="EXT_MST_8" property="detailExtItem.extendMst.extendMst8.mstKey" />
+            <id column="EXT_MST_NAME_1" property="detailExtItem.extendMst.extendMst1.mstName" />
+            <id column="EXT_MST_NAME_2" property="detailExtItem.extendMst.extendMst2.mstName" />
+            <id column="EXT_MST_NAME_3" property="detailExtItem.extendMst.extendMst3.mstName" />
+            <id column="EXT_MST_NAME_4" property="detailExtItem.extendMst.extendMst4.mstName" />
+            <id column="EXT_MST_NAME_5" property="detailExtItem.extendMst.extendMst5.mstName" />
+            <id column="EXT_MST_NAME_6" property="detailExtItem.extendMst.extendMst6.mstName" />
+            <id column="EXT_MST_NAME_7" property="detailExtItem.extendMst.extendMst7.mstName" />
+            <id column="EXT_MST_NAME_8" property="detailExtItem.extendMst.extendMst8.mstName" />
+            <id column="UNIT_CD" property="itemName.unit.unitCd" />
+            <id column="PUR_REQ_NO" property="purReqNo.purReqNo" />
+            <id column="PUR_REQ_SEQ" property="purReqSeq" />
+            <id column="PUR_REQ_STATUS" property="purReqStatus.status" />
+    </resultMap>
+    <select id="getPurRequestList" resultMap="PurRequest_Map">
+          SELECT
+             T_PUR_REQUEST.SUBJECT_CD,
+             T_PUR_REQUEST.SUBJECT_NAME,
+             T_PUR_REQUEST.ITEM_CD,
+             T_PUR_REQUEST.ITEM_NAME,
+             T_PUR_REQUEST.KATASHIKI,
+             T_PUR_REQUEST.MANUFACT_CD,
+             T_PUR_REQUEST.MANUFACT_NAME,
+             T_PUR_REQUEST.INSPECT_IND,
+             T_PUR_REQUEST.REQ_DELIV_DATE,
+             T_PUR_REQUEST.CURRENCY_CD,
+             M_CURRENCY.CURRENCY_MARK,
+             T_PUR_REQUEST.UNIT_PRICE,
+             T_PUR_REQUEST.REQ_VOL,
+             T_PUR_REQUEST.UNIT_NAME,
+             T_PUR_REQUEST.REQ_AMOUNT,
+             T_PUR_REQUEST.TAX_IND,
+             T_ATTACH_MNG.ATTACH_FILE_NAME,
+             T_PUR_REQUEST.ATTACH_FILE_SEQ,
+             T_ATTACH_MNG.ATTACH_SCOPE,
+             T_PUR_REQUEST.BUYER_COMPANY_CD,
+             T_PUR_REQUEST.BUYER_SECTION_CD,
+             T_PUR_REQUEST.BUYER_SECTION_NAME,
+             T_PUR_REQUEST.BUYER_USER_ID,
+             T_PUR_REQUEST.BUYER_USER_NAME,
+             T_PUR_REQUEST.PUR_REQ_NO,
+             T_PUR_REQUEST.UNIT_CD,
+             T_PUR_REQUEST.PUR_REQ_SEQ,
+             T_PUR_REQUEST.BUYER_BACK_USER_COMMENTS,
+             T_PUR_REQUEST.PUR_REQ_STATUS,
+             ${@ps.common.util.ItemSettingUtil@getItemSettingSelectSQL("T_PUR_REQUEST")}
+        FROM T_PUR_REQUEST
+        LEFT JOIN T_ATTACH_MNG ON  T_PUR_REQUEST.ATTACH_FILE_SEQ = T_ATTACH_MNG.ATTACH_FILE_SEQ
+             AND T_ATTACH_MNG.DELETE_FLG = '0'
+        LEFT JOIN M_CURRENCY ON   T_PUR_REQUEST.CURRENCY_CD = M_CURRENCY.CURRENCY_CD
+       WHERE
+         T_PUR_REQUEST.PUR_APL_SEQ = #{purAplSeq}
+         <if test="@org.apache.commons.lang.StringUtils@isNotBlank(purReqNo)">
+             AND T_PUR_REQUEST.PUR_REQ_NO = #{purReqNo}
+         </if>
+         <if test="@org.apache.commons.lang.StringUtils@isBlank(purReqNo)">
+             AND T_PUR_REQUEST.APP_UNIT_NO IS NULL
+         </if>
+         AND T_PUR_REQUEST.DELETE_FLG = '0'
+         ORDER  BY T_PUR_REQUEST.PUR_REQ_NO ASC
+    </select>
+
+    <resultMap type="fw.domain.slip.purreq.everypurreq.EveryPurReqApl" id="purReAmout_Map">
+            <id column="REQ_AMOUNT" property="purAplManagement.hopeAmountTotal.hopeAmountTotal.amount"/>
+    </resultMap>
+    <select id="purReAmout" resultMap="purReAmout_Map">
+        SELECT T_PUR_REQUEST.PUR_APL_NO,
+               SUM(T_PUR_REQUEST.REQ_AMOUNT) AS REQ_AMOUNT
+          FROM T_PUR_REQUEST T_PUR_REQUEST
+        INNER JOIN (
+                     SELECT DISTINCT
+                         PUR_APL_NO
+                     FROM
+                         T_PUR_REQUEST
+                     WHERE
+                         PUR_APL_SEQ = #{purAplSeq}
+                    ) PUR_APL_NO ON
+        T_PUR_REQUEST.PUR_APL_NO = PUR_APL_NO.PUR_APL_NO
+         WHERE
+                 T_PUR_REQUEST.NEW_FLG = '1'
+             AND T_PUR_REQUEST.DELETE_FLG = '0'
+        GROUP BY T_PUR_REQUEST.PUR_APL_NO
+    </select>
+    <select id="searchPurRequestValidCount" resultType="int">
+        SELECT COUNT(T.PUR_APL_NO)
+        FROM T_PUR_REQUEST T
+        WHERE T.PUR_APL_SEQ = #{purAplSeq}
+        AND T.DELETE_FLG = '0'
+    </select>
+
+    <resultMap type="fw.domain.mst.material.itemkind.ItemKind"
+        id="ItemKind_Map">
+        <id column="BUYER_COMPANY_CD" property="buyUser.buyUser.section.company.companyCd" />
+        <id column="BUYER_SECTION_CD" property="buyUser.buyUser.section.sectionCd" />
+        <id column="BUYER_USER_ID" property="buyUser.buyUser.userID" />
+    </resultMap>
+
+    <select id="getItemKindBuyerInfo" resultMap="ItemKind_Map">
+        SELECT M_ITEM_KIND.BUYER_COMPANY_CD,
+               M_ITEM_KIND.BUYER_SECTION_CD,
+               M_ITEM_KIND.BUYER_USER_ID
+          FROM M_ITEM_KIND
+         WHERE M_ITEM_KIND.TERM_FLG = '0'
+           AND (M_ITEM_KIND.COMPANY_CD = #{companycd}
+            OR M_ITEM_KIND.COMPANY_CD = '${@fw.common.constant.ApplicationConstant@COMPANY_CD_ALL}')
+           AND M_ITEM_KIND.ITEM_CLASS_L = #{itemClassL}
+           AND M_ITEM_KIND.ITEM_CLASS_M = #{itemClassM}
+           AND M_ITEM_KIND.ITEM_CLASS_S = #{itemClassS}
+    </select>
+
+   <!-- ******************************* PSPUR051 都度購入依頼履歴一覧 Start ****************************** -->
+    <sql id="listKeyIdentityHistoryWhereCondition">
+        ${@ps.common.util.ItemSettingUtil@getItemSettingWhereSQL("8")}
+        AND   T_PUR_APL.DELETE_FLG = '0'
+        AND   T_PUR_APL.REQ_TYPE_IND = '3'
+        AND   T_PUR_APL.REQ_SECTION_CD in (${@fw.common.util.AppUtil@getSectionViewRegion()})
+        AND   T_PUR_APL.REQ_COMPANY_CD = '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}'
+        AND   EXISTS(
+                SELECT      T_PUR_REQUEST.PUR_APL_SEQ
+                FROM        T_PUR_REQUEST
+                WHERE       T_PUR_APL.PUR_APL_NO = T_PUR_REQUEST.PUR_APL_NO 
+                AND         T_PUR_REQUEST.PUR_REQ_STATUS &lt;> '04'
+                AND         T_PUR_REQUEST.DELETE_FLG = '0'
+        )
+        ${@ps.common.util.ItemSettingUtil@getItemSettingWhereSQL("9")}
+    </sql>
+
+    <sql id="listKeyIdentityHistoryDtlWhereCondition">
+        ${@ps.common.util.ItemSettingUtil@getItemSettingWhereSQL("8")}
+        AND   T_PUR_APL.DELETE_FLG = '0'
+        AND   T_PUR_APL.REQ_TYPE_IND = '3'
+        AND   T_PUR_APL.REQ_SECTION_CD in (${@fw.common.util.AppUtil@getSectionViewRegion()})
+        AND   T_PUR_APL.REQ_COMPANY_CD = '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}'
+        AND   EXISTS(
+                SELECT      T_PUR_REQUEST.PUR_APL_SEQ
+                FROM        T_PUR_REQUEST
+                WHERE       T_PUR_APL.PUR_APL_NO = T_PUR_REQUEST.PUR_APL_NO 
+                AND         T_PUR_REQUEST.PUR_REQ_STATUS &lt;> '04'
+                AND         T_PUR_REQUEST.DELETE_FLG = '0'
+                ${@ps.common.util.ItemSettingUtil@getItemSettingWhereSQL("9")}
+        )
+    </sql>
+
+    <select id="listKeyIdentityHistory" parameterType="fw.domain.slip.purreq.everypurreq.purreqmng.EveryPurReqHistorySearchCondition" resultType="fw.domain.slip.purreq.everypurreq.purreqmng.PurAplIdentify">
+        SELECT      T_PUR_GROUP.PUR_APL_SEQ || T_PUR_GROUP.APP_UNIT_NO AS "purAplSeqAndAppUnitNo" 
+        FROM        T_PUR_APL
+        INNER JOIN  (
+                        SELECT      T_PUR_APL.PUR_APL_NO
+                        ,           T_PUR_APL.PUR_APL_SEQ
+                        ,           T_PUR_REQUEST.APP_UNIT_NO
+                        FROM        T_PUR_APL 
+                        INNER JOIN  T_PUR_REQUEST 
+                        ON          T_PUR_APL.PUR_APL_SEQ = T_PUR_REQUEST.PUR_APL_SEQ
+        <where>
+            <include refid="listKeyIdentityHistoryWhereCondition"/>
+        </where>
+                        AND         T_PUR_REQUEST.DELETE_FLG = '0'
+                        AND         T_PUR_REQUEST.NEW_FLG = '1'
+                        GROUP BY    T_PUR_APL.PUR_APL_NO
+                        ,           T_PUR_APL.PUR_APL_SEQ
+                        ,           T_PUR_REQUEST.APP_UNIT_NO
+                    ) T_PUR_GROUP
+        ON          T_PUR_APL.PUR_APL_SEQ = T_PUR_GROUP.PUR_APL_SEQ
+        ORDER BY    ${searchCondition.columnOrder.columnOrder()}
+    </select>
+    <resultMap type="fw.domain.slip.purreq.everypurreq.purreqmng.EveryPurReqHistoryItem"
+        id="EveryPurReqHistoryItem_Map">
+        <id column="purAplSeqAndAppUnitNo" property="purAplIdentify.purAplSeqAndAppUnitNo" />
+    </resultMap>
+    <select id="listPageItemHistory"  parameterType="fw.domain.mst.searchcondition.SearchCondition"  resultMap="EveryPurReqHistoryItem_Map">
+        SELECT  T_PUR_APL.PUR_APL_NO AS "purAplNo",
+                T_PUR_APL.INPUT_USER_NAME AS "issueVousherName",
+                T_PUR_REQUEST.PUR_REQ_STATUS AS "status",
+                T_PUR_APL.PUR_REQ_DATE AS "reqDate.dateOfymd",
+                T_PUR_APL.TITLE_NAME AS "titleName",
+                T_PUR_APL.ITEM_CLASS_L_NAME AS "itemClassNameL",
+                T_PUR_APL.ITEM_CLASS_M_NAME AS "itemClassNameM",
+                T_PUR_APL.ITEM_CLASS_S_NAME AS "itemClassNameS",
+                T_PUR_APL.HOPE_SUPPLIER_CD AS "supplierFromCd",
+                T_PUR_APL.HOPE_SUPPLIER_ABBR_NAME AS "supplierFromName",
+                T_PUR_APL.DELIV_PLACE_CD AS "delivPlaceCd",
+                T_PUR_APL.DELIV_PLACE_NAME AS "delivPlaceName",
+                T_PUR_APL.REQ_SECTION_CD AS "reqSectionCd",
+                T_PUR_APL.REQ_SECTION_NAME AS "reqSectionName",
+                T_PUR_APL.REQ_USER_ID AS "reqUserId",
+                T_PUR_APL.REQ_USER_NAME AS "reqUserName",
+                T_PUR_REQUEST.APP_UNIT_NO AS "purAplIdentify.purReqNo",
+                T_PUR_APL.PUR_APL_SEQ || T_PUR_REQUEST.APP_UNIT_NO AS "purAplSeqAndAppUnitNo",
+                T_PUR_APL.PUR_APL_SEQ AS "purAplIdentify.purAplSeqNum",
+                T_PUR_APL.LAST_UPD_DATE "purAplIdentify.lastUpdDate",
+                ${@ps.common.util.ItemSettingUtil@getItemSettingSelectSQLDomainAliasNonBinary("T_PUR_APL", "purAplExtItem")}
+        FROM T_PUR_APL
+        INNER JOIN (
+                SELECT      T_PUR_APL.PUR_APL_SEQ
+                ,           T_PUR_REQUEST.APP_UNIT_NO
+                ,           MIN(T_PUR_REQUEST.PUR_REQ_NO) as PUR_REQ_NO
+                ,           MAX(T_PUR_REQUEST.PUR_REQ_STATUS) as PUR_REQ_STATUS
+                FROM        T_PUR_APL
+                ,           T_PUR_REQUEST
+                <where>
+                    <include refid="listKeyIdentityHistoryWhereCondition"/>
+                </where>
+                AND         T_PUR_APL.PUR_APL_SEQ = T_PUR_REQUEST.PUR_APL_SEQ
+                AND         T_PUR_REQUEST.DELETE_FLG = '0'
+                AND         T_PUR_REQUEST.NEW_FLG = '1'
+                GROUP BY    T_PUR_APL.PUR_APL_SEQ
+                ,           T_PUR_REQUEST.APP_UNIT_NO
+                ,           T_PUR_APL.PUR_APL_NO
+        ) T_PUR_REQUEST 
+        ON          T_PUR_APL.PUR_APL_SEQ = T_PUR_REQUEST.PUR_APL_SEQ
+        <where>
+            AND T_PUR_APL.PUR_APL_SEQ || T_PUR_REQUEST.APP_UNIT_NO IN
+            <foreach collection="searchCondition.page.keyDomainEntityList" item="keyList"  open="(" separator="," close=")">
+            #{keyList.purAplSeqAndAppUnitNo}
+            </foreach>
+        </where>
+        ORDER BY ${searchCondition.columnOrder.columnOrder()}
+    </select>
+
+    <select id="listPageItemDtlHistory"  parameterType="fw.domain.mst.searchcondition.SearchCondition"  resultMap="EveryPurReqHistoryItem_Map">
+        SELECT  T_PUR_REQUEST.PUR_APL_NO as "purAplNo",
+                T_PUR_REQUEST.PUR_APL_SEQ AS "purAplIdentify.purAplSeqNum",
+                T_PUR_REQUEST.ITEM_CD AS "itemCd",
+                T_PUR_REQUEST.ITEM_NAME AS "itemName",
+                T_PUR_REQUEST.APP_UNIT_NO AS "purAplIdentify.purReqNo",
+                T_PUR_REQUEST.REQ_DELIV_DATE AS "hopeDelivDate.dateOfymd",
+                T_PUR_REQUEST.REQ_VOL AS "vol.vol",
+                T_PUR_REQUEST.UNIT_NAME AS "unit",
+                T_PUR_REQUEST.PUR_REQ_SEQ,
+                T_PUR_REQUEST.LAST_UPD_DATE AS "purAplIdentify.lastUpdDateReq"
+        FROM T_PUR_APL
+        INNER JOIN T_PUR_REQUEST
+        ON      T_PUR_APL.PUR_APL_SEQ = T_PUR_REQUEST.PUR_APL_SEQ
+        <where>
+            <include refid="listKeyIdentityHistoryDtlWhereCondition"/>
+            AND T_PUR_APL.PUR_APL_SEQ || T_PUR_REQUEST.APP_UNIT_NO IN
+            <foreach collection="searchCondition.page.keyDomainEntityList" item="keyList"  open="(" separator="," close=")">
+            #{keyList.purAplSeqAndAppUnitNo}
+            </foreach>
+        </where>
+        ORDER BY ${searchCondition.columnOrder.columnOrder()}
+        ,        T_PUR_REQUEST.PUR_REQ_SEQ
+    </select>
+
+    <insert id="insertAttach" >
+        INSERT INTO T_ATTACH_MNG(
+          ATTACH_FILE_SEQ,
+          ATTACH_FILE_NAME,
+          ATTACH_FILE ,
+          ATTACH_FILE_SIZE,
+          ATTACH_SCOPE,
+          DELETE_FLG,
+          LAST_UPD_DATE,
+          LAST_UPD_COMPANY_CD,
+          LAST_UPD_SECTION_CD,
+          LAST_UPD_USER_ID,
+          REG_DATE,
+          REG_COMPANY_CD,
+          REG_SECTION_CD ,
+          REG_USER_ID
+        )
+        VALUES (
+          #{attachMngSeq},
+          #{rangeByAttachFile.attachFile.fileName, jdbcType=VARCHAR},
+          #{rangeByAttachFile.attachFile.compressData},
+          #{rangeByAttachFile.attachFile.size},
+          #{rangeByAttachFile.attachRange.attachRange},
+          0,
+          '${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}',
+          '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}',
+          '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}',
+          '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}',
+           '${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}',
+           '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}',
+           '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}',
+           '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}'
+        )
+    </insert>
+
+     <update id="updateAttach" >
+        UPDATE T_ATTACH_MNG
+        SET
+          ATTACH_SCOPE = #{attachRange},
+          LAST_UPD_DATE =  '${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}',
+          LAST_UPD_COMPANY_CD = '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}',
+          LAST_UPD_SECTION_CD = '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}',
+          LAST_UPD_USER_ID = '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}'
+        WHERE
+          ATTACH_FILE_SEQ =  #{attachMngSeq}
+    </update>
+
+    <!-- ******************************* PSPUR051 都度購入依頼履歴一覧 End ****************************** -->
+    <select id="getQuotAcaRequest" resultType="String">
+        SELECT  count(0)
+        FROM T_QUOT_ACQ_APL
+        <where>
+            QUOT_ACQ_APL_NO = #{auotAcqAplNo}
+        </where>
+    </select>
+    <delete id="deletePurRequest" parameterType="String">
+        delete
+        from    T_PUR_REQUEST
+        where   PUR_REQ_SEQ = #{purAplSeqNo}
+    </delete>
+</mapper>

@@ -1,0 +1,170 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="ps.dataaccess.mst.news.NewsMapper">
+
+	<!-- SRC-00115-00 include化共通-->
+	<sql id="listKeyIdentityWhereCondition">
+        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(companyCd)">
+            AND COMPANY_CD = #{companyCd, jdbcType=VARCHAR}
+        </if>
+        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(sendUserName)">
+            AND SEND_USER_NAME
+            ${@fw.common.util.SearchModeUtil@getSearchSQL("fw.domain.mst.operation.news.NewsSearchCondition","sendUserName")}
+        </if>
+         <if test="@org.apache.commons.lang.StringUtils@isNotBlank(userKbn.recvUserInd)">
+            AND RECV_USER_IND = #{userKbn.recvUserInd, jdbcType=VARCHAR}
+        </if>
+
+        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(validStartDateFrom.dateOfymd)">
+            AND VALID_START_DATE >= #{validStartDateFrom.dateOfymd}
+        </if>
+        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(validStartDateTo.dateOfymd)">
+            AND VALID_START_DATE &lt; = #{validStartDateTo.dateOfymd}
+        </if>
+        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(validEndDateFrom.dateOfymd)">
+            AND VALID_END_DATE >= #{validEndDateFrom.dateOfymd}
+        </if>
+        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(validEndDateTo.dateOfymd)">
+             AND VALID_END_DATE &lt;= #{validEndDateTo.dateOfymd}
+        </if>
+	</sql>
+
+    <select id="listKeyIdentity"
+            parameterType="fw.domain.mst.operation.news.NewsSearchCondition"
+            resultType="fw.domain.mst.operation.news.NewsIdentify">
+        SELECT T_NEWS.NEWS_SEQ as "newsSeq"
+          FROM T_NEWS 
+        <where>
+            <include refid="listKeyIdentityWhereCondition"/>
+        </where> 
+         ORDER BY ${searchCondition.columnOrder.columnOrder()}
+    </select>
+
+    <select id="listPageItem"
+            parameterType="fw.domain.mst.searchcondition.SearchCondition"
+            resultType="fw.domain.mst.operation.news.NewsItem">
+        SELECT T_NEWS.NEWS_SEQ AS "newsIdentify.newsSeq",
+               T_NEWS.SEND_USER_NAME As "sendUserName",
+               T_NEWS.RECV_USER_IND AS "userKbn.recvUserInd",
+               T_NEWS.TITLE AS "title",
+               T_NEWS.VALID_START_DATE AS "validStartDate.dateOfymd",
+               T_NEWS.VALID_END_DATE AS "validEndDate.dateOfymd",
+               T_NEWS.LAST_UPD_DATE AS "newsIdentify.lastUpdDate"
+          FROM T_NEWS 
+        <where> 
+            NEWS_SEQ IN 
+            <foreach collection="searchCondition.page.keyDomainEntityList" item="keyList"  open="(" separator="," close=")">  
+                #{keyList.newsSeq}  
+            </foreach>
+            <include refid="listKeyIdentityWhereCondition"/>
+        </where>
+        ORDER BY ${searchCondition.columnOrder.columnOrder()}
+    </select>
+
+    <resultMap type="fw.domain.mst.operation.news.NewsManagement" id="NewsManagement_Map">
+        <id  column="VALID_START_DATE" property="validityPeriod.period.startDate.dateOfymd"/>
+        <id  column="VALID_END_DATE" property="validityPeriod.period.endDate.dateOfymd"/>
+    </resultMap>
+
+    <!-- 強化-00180-000 2013/03/11 MODIFY SBO_SOKOU START -->
+    <select id="search"
+            parameterType="fw.domain.mst.operation.news.NewsIdentify"
+            resultMap="NewsManagement_Map">
+        SELECT T_NEWS.NEWS_SEQ as "newsIdentify.newsSeq",
+               T_NEWS.SEND_USER_NAME as "sendUserName",
+               T_NEWS.RECV_USER_IND as "userKbn.recvUserInd",
+               T_NEWS.TITLE as "title",
+               T_NEWS.CONTENTS as "contents",
+               T_NEWS.VALID_START_DATE as "VALID_START_DATE",
+               T_NEWS.VALID_END_DATE as "VALID_END_DATE",
+               T_NEWS.LAST_UPD_DATE as "newsIdentify.lastUpdDate",
+               M_COMPANY.COMPANY_CD as "companySummary.companyCd",
+               CASE WHEN COMPANY_LANG.COMPANY_NAME IS NOT NULL
+                    THEN COMPANY_LANG.COMPANY_NAME
+                    ELSE M_COMPANY_LANG_SYSTEM.COMPANY_NAME
+                     END AS "companySummary.companyName"
+          FROM T_NEWS 
+          LEFT JOIN M_COMPANY
+                 ON T_NEWS.COMPANY_CD = M_COMPANY.COMPANY_CD
+          LEFT JOIN M_COMPANY_LANG COMPANY_LANG
+                 ON M_COMPANY.COMPANY_CD = COMPANY_LANG.COMPANY_CD
+                AND M_COMPANY.COMPANY_USE_LANGUAGE_IND = COMPANY_LANG.LANGUAGE_IND
+          LEFT JOIN M_COMPANY_LANG M_COMPANY_LANG_SYSTEM
+                 ON M_COMPANY.COMPANY_CD = M_COMPANY_LANG_SYSTEM.COMPANY_CD
+                AND M_COMPANY_LANG_SYSTEM.LANGUAGE_IND = '${@fw.common.util.AppUtil@getSysLanguageByEscapeSql()}'
+         WHERE NEWS_SEQ=#{newsSeq}
+    </select>
+    <!-- 強化-00180-000 2013/03/11 MODIFY SBO_SOKOU END -->
+
+    <select id="searchExclusive"
+            parameterType="fw.domain.mst.operation.news.NewsIdentify"
+            resultType="fw.domain.mst.operation.news.NewsIdentify">
+        SELECT NEWS_SEQ as "newsSeq"
+          FROM T_NEWS
+         WHERE NEWS_SEQ =#{newsSeq}
+           AND LAST_UPD_DATE = #{lastUpdDate}
+    </select>
+
+    <insert id="insert" parameterType="fw.domain.mst.operation.news.NewsManagement">
+        INSERT INTO T_NEWS
+          (NEWS_SEQ,
+           COMPANY_CD,
+           SEND_USER_NAME,
+           RECV_USER_IND,
+           TITLE,
+           CONTENTS,
+           VALID_START_DATE,
+           VALID_END_DATE,
+           LAST_UPD_DATE,
+           LAST_UPD_COMPANY_CD,
+           LAST_UPD_SECTION_CD,
+           LAST_UPD_USER_ID,
+           REG_DATE,
+           REG_COMPANY_CD,
+           REG_SECTION_CD,
+           REG_USER_ID)
+        VALUES
+        (
+          #{newsIdentify.newsSeq, jdbcType=VARCHAR},
+           #{companySummary.companyCd, jdbcType=VARCHAR},
+           #{sendUserName, jdbcType=VARCHAR},
+           #{userKbn.recvUserInd, jdbcType=VARCHAR},
+           #{title, jdbcType=VARCHAR},
+           #{contents, jdbcType=VARCHAR},
+           '${@fw.common.util.AppUtil@convertDateForValid(validityPeriod.period.startDate.dateOfymd,@fw.common.util.AppUtil@VALID_START_DATE)}',
+           '${@fw.common.util.AppUtil@convertDateForValid(validityPeriod.period.endDate.dateOfymd,@fw.common.util.AppUtil@VALID_END_DATE)}',
+           #{registInfo.lastUpdDate, jdbcType=VARCHAR},
+           #{registInfo.lastUpdCompanyCd, jdbcType=VARCHAR},
+           #{registInfo.lastUpdSectionCd, jdbcType=VARCHAR},
+           #{registInfo.lastUpdUserId, jdbcType=VARCHAR},
+           #{registInfo.regDate, jdbcType=VARCHAR},
+           #{registInfo.regCompanyCd, jdbcType=VARCHAR},
+           #{registInfo.regSectionCd, jdbcType=VARCHAR},
+           #{registInfo.regUserId, jdbcType=VARCHAR}
+        )
+    </insert>
+
+    <update id="update" parameterType="fw.domain.mst.operation.news.NewsManagement">
+       UPDATE T_NEWS
+       SET COMPANY_CD          = #{companySummary.companyCd, jdbcType=VARCHAR},
+           SEND_USER_NAME      = #{sendUserName, jdbcType=VARCHAR},
+           RECV_USER_IND       = #{userKbn.recvUserInd, jdbcType=VARCHAR},
+           TITLE               = #{title, jdbcType=VARCHAR},
+           CONTENTS            = #{contents, jdbcType=VARCHAR},
+           VALID_START_DATE    = '${@fw.common.util.AppUtil@convertDateForValid(validityPeriod.period.startDate.dateOfymd,@fw.common.util.AppUtil@VALID_START_DATE)}',
+           VALID_END_DATE = '${@fw.common.util.AppUtil@convertDateForValid(validityPeriod.period.endDate.dateOfymd,@fw.common.util.AppUtil@VALID_END_DATE)}',
+           LAST_UPD_DATE       = #{registInfo.lastUpdDate},
+           LAST_UPD_COMPANY_CD = #{registInfo.lastUpdCompanyCd},
+           LAST_UPD_SECTION_CD = #{registInfo.lastUpdSectionCd},
+           LAST_UPD_USER_ID    = #{registInfo.lastUpdUserId} 
+     WHERE NEWS_SEQ = #{newsIdentify.newsSeq, jdbcType=VARCHAR}
+    </update>
+
+    <delete id="delete" parameterType="fw.domain.mst.operation.news.NewsIdentify">
+        DELETE
+          FROM T_NEWS
+         WHERE NEWS_SEQ = #{newsSeq}
+    </delete>
+</mapper>

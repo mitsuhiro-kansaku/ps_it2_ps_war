@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<flow xmlns="http://www.springframework.org/schema/webflow"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.springframework.org/schema/webflow
+        http://www.springframework.org/schema/webflow/spring-webflow-2.0.xsd"
+    parent="base">
+    <var name="identify" class="fw.domain.slip.common.identify.OrderNo" />
+    <var name="identify090" class="fw.domain.slip.order.order.OrderIdentify" />
+    <input name="itemKeyList" />
+    <on-start>
+    <evaluate expression="PSRCV022Service.init(itemKeyList)"
+            result="flowScope.itemList" />
+    </on-start>
+
+    <view-state id="PSRCV022" view="rcv/rcvqr/PSRCV022" model="itemList">
+        <transition on="save" validate="false">
+            <evaluate expression="PSRCV022Service.update(itemList)" />
+            <set name="flashScope.isSuccess" value="true"></set>
+        </transition>
+        <transition on="back" to="PSRCV020" validate="false">
+        <evaluate expression="PSRCV022Service.reset(itemKeyList)" />
+        </transition>
+        <transition on="search" validate="false">
+            <evaluate expression="PSRCV022Service.init(itemKeyList)" />
+        </transition>
+        <transition on="detail" to="PSRCV050" validate="false" >
+            <set name="identify.orderNo" value="requestParameters.orderNo"/>
+            <set name="identify090.orderSeq" value="requestParameters.orderSeq"/>
+        </transition>
+         <!--  ＩＴ３-00335-000  2013/07/23 DEL SBO_wangzf START-->
+         <!--<transition on="return" to="PSRCV020" validate="false"/>-->
+         <!--  ＩＴ３-00335-000  2013/07/23 DEL SBO_wangzf END-->
+    </view-state>
+     <subflow-state id="PSRCV050" subflow="rcv/rcv/PSRCV050TOP">
+        <input name="identify050" value="identify" />
+        <input name="identify090" value="identify090" />
+        <!--  2013.01.09 DEL DAIKO_KANEKO
+        <input name="range" value="0"/>
+        <input name="approveFlg" value="1"/>
+        -->
+    </subflow-state>
+    <subflow-state id="PSRCV020" subflow="rcv/rcvqr/PSRCV020" >
+    </subflow-state>
+</flow>

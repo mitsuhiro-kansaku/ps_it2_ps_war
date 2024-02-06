@@ -1,0 +1,322 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="ps.dataaccess.common.itemsetting.VoucherConfigMapper">
+   <resultMap type="fw.domain.mst.resource.customize.elementconfig.EditItemDefinitionItem" id="EditItemDefinitionItem_Map">
+        <id column="REG_FLG" property="inputMethod.regFlg.regFlg"/>
+        <id column="UPD_FLG" property="inputMethod.updFlg.updFlg"/>
+        <id column="MUST_INPUT_FLG" property="inputMethod.mustEnterFlg.mustEnterFlg"/>
+        <id column="COLUMN_NAME" property="columnName.columnName"/>
+        <id column="VOUCHER_TYPE" property="voucherType"/>
+        <id column="DECIMAL_PLACE" property="inputMethod.maxLength.decimalplace.decimalPlace"/>
+        <id column="ITEM_TYPE" property="itemType.itemType"/>
+        <id column="MASTER_TYPE" property="masterType.masterType"/>
+        <id column="IME_TYPE" property="inputMethod.imeType.imeType"/>
+        <id column="MAX_LENGTH" property="inputMethod.maxLength.maxLength"/>
+        <id column="INPUT_TYPE" property="inputMethod.inputType.inputType"/>
+        <id column="ELEMENT_NAME_CD" property="elementNameCd"/>
+        <id column="OPTION_MNG_SEQ" property="option.optionManagementSeq.optionManagementSeq"/>
+        <id column="OPTION_TYPE" property="option.optionType.optionType"/>
+        <id column="CODE_KEY" property="option.codeKey.codeKey"/>
+        <id column="DISP_POS" property="dispPos"/>
+   </resultMap>
+   <select id="listForEdit" resultMap="EditItemDefinitionItem_Map">
+        SELECT
+             S_VOUCHER_CONFIG.REG_FLG,
+             S_VOUCHER_CONFIG.UPD_FLG,
+             S_VOUCHER_CONFIG.MUST_INPUT_FLG,
+             S_VOUCHER_CONFIG.COLUMN_NAME,
+             S_VOUCHER_CONFIG.VOUCHER_TYPE,
+             S_ELEMENT_CONFIG.DECIMAL_PLACE,
+             S_ELEMENT_CONFIG.ITEM_TYPE,
+             S_ELEMENT_CONFIG.MASTER_TYPE,
+             S_ELEMENT_CONFIG.IME_TYPE,
+             S_ELEMENT_CONFIG.MAX_LENGTH,
+             S_ELEMENT_CONFIG.INPUT_TYPE,
+             S_ELEMENT_CONFIG.ELEMENT_NAME_CD,
+             S_OPTION_MNG.OPTION_MNG_SEQ,
+             S_OPTION_MNG.OPTION_TYPE,
+             S_OPTION_MNG.CODE_KEY,
+	        <if test="dispPosFlg==@fw.domain.mst.resource.customize.voucherconfig.DispPosFlg@RECIEVE_DISP_FLG">
+	         S_VOUCHER_CONFIG.RCV_DISP_POS as DISP_POS
+	        </if>
+            <if test="dispPosFlg==@fw.domain.mst.resource.customize.voucherconfig.DispPosFlg@INSPECT_DISP_FLG">
+             S_VOUCHER_CONFIG.INS_DISP_POS as DISP_POS
+            </if>
+            <if test="dispPosFlg==@fw.domain.mst.resource.customize.voucherconfig.DispPosFlg@ACCEPT_DISP_FLG">
+             S_VOUCHER_CONFIG.ACP_DISP_POS as DISP_POS
+            </if>
+            <if test="dispPosFlg==''">
+             0 as DISP_POS
+            </if>
+        FROM S_VOUCHER_CONFIG
+        INNER JOIN S_ELEMENT_CONFIG
+        ON S_ELEMENT_CONFIG.ELEMENT_SEQ =  S_VOUCHER_CONFIG.ELEMENT_SEQ
+        LEFT JOIN S_OPTION_MNG
+        ON S_OPTION_MNG.ELEMENT_SEQ = S_ELEMENT_CONFIG.ELEMENT_SEQ
+        WHERE S_VOUCHER_CONFIG.VOUCHER_TYPE = #{voucherType}
+        AND S_VOUCHER_CONFIG.USE_FLG = '1'
+        <if test="purReqType==1">
+        AND S_VOUCHER_CONFIG.PUR_DISP_IND in('0', '1')
+        </if>
+        <if test="purReqType==2">
+        AND S_VOUCHER_CONFIG.PUR_DISP_IND in('0', '2')
+        </if>
+        ORDER BY S_VOUCHER_CONFIG.DSP_ORDER
+    </select>
+   <resultMap type="fw.domain.mst.resource.customize.elementconfig.SearchConditionItemDefinitionItem" id="SearchConditionItemDefinitionItem_Map">
+        <id column="DECIMAL_PLACE" property="inputMethod.maxLength.decimalplace.decimalPlace"/>
+        <id column="MAX_LENGTH" property="inputMethod.maxLength.maxLength"/>
+        <id column="INPUT_TYPE" property="inputMethod.inputType.inputType"/>
+        <id column="DEFAULT_TXT_VALUE" property="searchMethod.searchDefaultValue.defaultTxtValue.defaultTxtValue"/>
+        <id column="DEFAULT_AREA_VALUE" property="searchMethod.searchDefaultValue.defaultAreaValue.defaultAreaValue"/>
+        <id column="DEFAULT_INT_MIN_VALUE" property="searchMethod.searchDefaultValue.defaultIntValue.minValue.minValue.value"/>
+        <id column="DEFAULT_INT_MAX_VALUE" property="searchMethod.searchDefaultValue.defaultIntValue.maxValue.maxValue.value"/>
+        <id column="DEFAULT_DEC_MIN_VALUE" property="searchMethod.searchDefaultValue.defaultDecValue.minValue.minValue.value"/>
+        <id column="DEFAULT_DEC_MAX_VALUE" property="searchMethod.searchDefaultValue.defaultDecValue.maxValue.maxValue.value"/>
+        <id column="DEFAULT_DATE_VALUE" property="searchMethod.searchDefaultValue.defaultDateValue.defaultDateValue"/>
+        <id column="DEFAULT_SEL_CD" property="searchMethod.searchDefaultValue.defaultSelCd.defaultSelCd"/>
+        <id column="DEFAULT_CHK_CD" property="searchMethod.searchDefaultValue.defaultChkCd.defaultChkCd"/>
+        <id column="SEARCH_TYPE" property="searchMethod.searchType.searchType"/>
+        <id column="SEARCH_INPUT_TYPE" property="searchMethod.searchInputType.searchInputType"/>
+        <id column="OPTION_MNG_SEQ" property="option.optionManagementSeq.optionManagementSeq"/>
+   </resultMap>
+   <select id="listForSearch" resultMap="SearchConditionItemDefinitionItem_Map">
+        SELECT
+             S_PERSONAL_SETTING.VOUCHER_TYPE as "voucherType",
+             S_VOUCHER_CONFIG.COLUMN_NAME as "columnName.columnName",
+             S_ELEMENT_CONFIG.DECIMAL_PLACE,
+             S_VOUCHER_CONFIG.SEARCH_TYPE,
+             S_VOUCHER_CONFIG.SEARCH_INPUT_TYPE,
+             S_ELEMENT_CONFIG.ITEM_TYPE as "itemType.itemType",
+             S_ELEMENT_CONFIG.MASTER_TYPE as "masterType.masterType",
+             S_ELEMENT_CONFIG.IME_TYPE as "inputMethod.imeType.imeType",
+             S_ELEMENT_CONFIG.MAX_LENGTH,
+             S_ELEMENT_CONFIG.INPUT_TYPE,
+             S_ELEMENT_CONFIG.ELEMENT_NAME_CD as "elementNameCd",
+             S_OPTION_MNG.OPTION_MNG_SEQ,
+             S_OPTION_MNG.OPTION_TYPE as "option.optionType.optionType",
+             S_OPTION_MNG.CODE_KEY as "option.codeKey.codeKey",
+             S_PERSONAL_SETTING.COMBINE_FLG as "combineFlag.combineFlag",
+             S_PERSONAL_SETTING.DSP_FLG as dspFlg,
+             CASE
+                 WHEN S_ELEMENT_CONFIG.ITEM_TYPE = '1' THEN S_VOUCHER_CONFIG.DEFAULT_TXT_VALUE
+             END AS "DEFAULT_TXT_VALUE",
+             CASE
+                 WHEN S_ELEMENT_CONFIG.ITEM_TYPE = '2' THEN S_VOUCHER_CONFIG.DEFAULT_AREA_VALUE
+             END AS "DEFAULT_AREA_VALUE",
+             CASE
+                 WHEN S_ELEMENT_CONFIG.ITEM_TYPE = '3' THEN S_VOUCHER_CONFIG.DEFAULT_INT_MIN_VALUE
+             END AS "DEFAULT_INT_MIN_VALUE",
+             CASE
+                 WHEN S_ELEMENT_CONFIG.ITEM_TYPE = '3' THEN S_VOUCHER_CONFIG.DEFAULT_INT_MAX_VALUE
+             END AS "DEFAULT_INT_MAX_VALUE",
+             CASE
+                 WHEN S_ELEMENT_CONFIG.ITEM_TYPE = '4' THEN S_VOUCHER_CONFIG.DEFAULT_DEC_MIN_VALUE
+             END AS "DEFAULT_DEC_MIN_VALUE",
+             CASE
+                 WHEN S_ELEMENT_CONFIG.ITEM_TYPE = '4' THEN S_VOUCHER_CONFIG.DEFAULT_DEC_MAX_VALUE
+             END AS "DEFAULT_DEC_MAX_VALUE",
+             CASE
+                 WHEN S_ELEMENT_CONFIG.ITEM_TYPE = '5' THEN S_VOUCHER_CONFIG.DEFAULT_DATE_VALUE
+             END AS "DEFAULT_DATE_VALUE",
+             CASE
+                 WHEN S_ELEMENT_CONFIG.ITEM_TYPE = '6' THEN S_VOUCHER_CONFIG.DEFAULT_SEL_CD
+             END AS "DEFAULT_SEL_CD",
+             CASE
+                 WHEN S_ELEMENT_CONFIG.ITEM_TYPE = '7' THEN S_VOUCHER_CONFIG.DEFAULT_CHK_CD
+             END AS "DEFAULT_CHK_CD"
+        FROM S_VOUCHER_CONFIG
+        INNER JOIN S_ELEMENT_CONFIG
+        ON S_ELEMENT_CONFIG.ELEMENT_SEQ =  S_VOUCHER_CONFIG.ELEMENT_SEQ
+        LEFT JOIN S_OPTION_MNG
+        ON S_OPTION_MNG.ELEMENT_SEQ = S_ELEMENT_CONFIG.ELEMENT_SEQ
+        INNER JOIN S_PERSONAL_SETTING
+        ON S_VOUCHER_CONFIG.ELEMENT_SEQ = S_PERSONAL_SETTING.ELEMENT_SEQ
+        AND S_VOUCHER_CONFIG.VOUCHER_TYPE = S_PERSONAL_SETTING.VOUCHER_TYPE
+        WHERE S_PERSONAL_SETTING.USER_ID = '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}'
+        AND S_PERSONAL_SETTING.FUNC_ID = '${@fw.common.util.WebFlowUtil@getViewStateIdByEscapeSql()}'
+        AND S_PERSONAL_SETTING.COMPANY_CD = '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}'
+        AND S_VOUCHER_CONFIG.USE_FLG = '1'
+        ORDER BY TO_NUMBER(S_PERSONAL_SETTING.DSP_ORDER)
+    </select>
+    <resultMap type="fw.domain.mst.resource.customize.elementconfig.SearchResultItemDefinitionItem" id="SearchResultItemDefinitionItem_Map">
+        <id column="OPTION_MNG_SEQ" property="option.optionManagementSeq.optionManagementSeq"/>
+        <id column="OPTION_TYPE" property="option.optionType.optionType"/>
+        <id column="CODE_KEY" property="option.codeKey.codeKey"/>
+        <id column="LOCK_FLG" property="lockFlag.lockFlag"/>
+        <id column="ONE_COLUMN_DSP_FLG" property="oneColumnDisplayFlag.oneColumnDisplayFlag"/>
+   </resultMap>
+   <select id="listForList" resultMap="SearchResultItemDefinitionItem_Map">
+        SELECT
+             S_VOUCHER_CONFIG.COLUMN_NAME as "columnName.columnName",
+             S_ELEMENT_CONFIG.ITEM_TYPE as "itemType.itemType",
+             S_ELEMENT_CONFIG.ELEMENT_NAME_CD as "elementNameCd",
+             S_OPTION_MNG.OPTION_MNG_SEQ,
+             S_OPTION_MNG.OPTION_TYPE,
+             S_OPTION_MNG.CODE_KEY,
+             S_PERSONAL_SETTING.LOCK_FLG,
+             S_PERSONAL_SETTING.ONE_COLUMN_DSP_FLG,
+             S_ELEMENT_CONFIG.EXTEND_FLG as "extendFlg"
+        FROM S_VOUCHER_CONFIG
+        INNER JOIN S_ELEMENT_CONFIG
+        ON S_ELEMENT_CONFIG.ELEMENT_SEQ =  S_VOUCHER_CONFIG.ELEMENT_SEQ
+        LEFT JOIN S_OPTION_MNG
+        ON S_OPTION_MNG.ELEMENT_SEQ = S_ELEMENT_CONFIG.ELEMENT_SEQ
+        INNER JOIN S_PERSONAL_SETTING
+        ON S_VOUCHER_CONFIG.ELEMENT_SEQ = S_PERSONAL_SETTING.ELEMENT_SEQ
+        AND S_VOUCHER_CONFIG.VOUCHER_TYPE = S_PERSONAL_SETTING.VOUCHER_TYPE
+        AND S_PERSONAL_SETTING.DSP_FLG = 1
+        WHERE S_PERSONAL_SETTING.USER_ID = '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}'
+        AND S_PERSONAL_SETTING.FUNC_ID = #{viewStateId}
+        AND S_PERSONAL_SETTING.COMPANY_CD = '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}'
+        AND S_VOUCHER_CONFIG.USE_FLG = '1'
+        <if test="purReqType==1">
+        AND S_VOUCHER_CONFIG.PUR_DISP_IND in('0', '1')
+        </if>
+        <if test="purReqType==2">
+        AND S_VOUCHER_CONFIG.PUR_DISP_IND in('0', '2')
+        </if>
+        ORDER BY TO_NUMBER(S_PERSONAL_SETTING.DSP_ORDER)
+    </select>
+    <resultMap type="fw.domain.mst.resource.customize.elementconfig.DetailItemDefinitionItem" id="DetailItemDefinitionItem_Map">
+        <id column="OPTION_MNG_SEQ" property="option.optionManagementSeq.optionManagementSeq"/>
+        <id column="OPTION_TYPE" property="option.optionType.optionType"/>
+        <id column="CODE_KEY" property="option.codeKey.codeKey"/>
+   </resultMap>
+    <select id="listForDetail" resultMap="DetailItemDefinitionItem_Map">
+        SELECT
+             S_VOUCHER_CONFIG.COLUMN_NAME as "columnName.columnName",
+             S_ELEMENT_CONFIG.ITEM_TYPE as "itemType.itemType",
+             S_ELEMENT_CONFIG.MASTER_TYPE as "masterType.masterType",
+             S_ELEMENT_CONFIG.ELEMENT_NAME_CD as "elementNameCd",
+             S_OPTION_MNG.OPTION_MNG_SEQ,
+             S_OPTION_MNG.OPTION_TYPE,
+             S_OPTION_MNG.CODE_KEY
+        FROM S_VOUCHER_CONFIG
+        INNER JOIN S_ELEMENT_CONFIG
+        ON S_ELEMENT_CONFIG.ELEMENT_SEQ =  S_VOUCHER_CONFIG.ELEMENT_SEQ
+        LEFT JOIN S_OPTION_MNG
+        ON S_OPTION_MNG.ELEMENT_SEQ = S_ELEMENT_CONFIG.ELEMENT_SEQ
+        INNER JOIN S_PERSONAL_SETTING
+        ON S_VOUCHER_CONFIG.ELEMENT_SEQ = S_PERSONAL_SETTING.ELEMENT_SEQ
+        AND S_VOUCHER_CONFIG.VOUCHER_TYPE = S_PERSONAL_SETTING.VOUCHER_TYPE
+        AND S_PERSONAL_SETTING.DSP_FLG = 1
+        WHERE S_PERSONAL_SETTING.USER_ID = '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}'
+        AND S_PERSONAL_SETTING.FUNC_ID = '${@fw.common.util.WebFlowUtil@getViewStateIdByEscapeSql()}'
+        AND S_PERSONAL_SETTING.COMPANY_CD = '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}'
+        AND S_PERSONAL_SETTING.VOUCHER_TYPE = #{voucherType}
+        AND S_VOUCHER_CONFIG.USE_FLG = '1'
+        <if test="purReqType==1">
+        AND S_VOUCHER_CONFIG.PUR_DISP_IND in('0', '1')
+        </if>
+        <if test="purReqType==2">
+        AND S_VOUCHER_CONFIG.PUR_DISP_IND in('0', '2')
+        </if>
+        ORDER BY TO_NUMBER(S_PERSONAL_SETTING.DSP_ORDER)
+    </select>
+    <select id="listVouchTypeForSearch" resultType="String">
+        SELECT
+             DISTINCT VOUCHER_TYPE
+        FROM S_PERSONAL_SETTING
+        WHERE S_PERSONAL_SETTING.FUNC_ID = '${@fw.common.util.WebFlowUtil@getViewStateIdByEscapeSql()}'
+        AND S_PERSONAL_SETTING.USER_ID = '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}'
+        AND S_PERSONAL_SETTING.COMPANY_CD = '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}'
+    </select>
+    <select id="listSelectOption" parameterType="String" resultType="fw.common.cache.ListItem">
+        SELECT
+             S_SELECT_OPTION.SELECT_CD as "value",
+             S_SELECT_OPTION.OPTION_MNG_SEQ as "name",
+             S_OPTION_NAME.OPTION_NAME as "text",
+             S_OPTION_NAME.LANGUAGE_IND as "language"
+        FROM S_SELECT_OPTION
+        INNER JOIN S_OPTION_NAME
+        ON S_OPTION_NAME.OPTION_NAME_CD = S_SELECT_OPTION.OPTION_NAME_CD
+        WHERE S_SELECT_OPTION.OPTION_MNG_SEQ = #{optionMngSeq}
+        AND S_SELECT_OPTION.USE_FLG = '1'
+        ORDER BY DSP_ORDER
+    </select>
+    <select id="listCheckOption" parameterType="String" resultType="fw.common.cache.ListItem">
+        SELECT
+             S_CHECK_OPTION.CHECK_CD as "value",
+             S_CHECK_OPTION.OPTION_MNG_SEQ as "name",
+             S_OPTION_NAME.OPTION_NAME as "text",
+             S_OPTION_NAME.LANGUAGE_IND as "language"
+        FROM S_CHECK_OPTION
+        INNER JOIN S_OPTION_NAME
+        ON S_OPTION_NAME.OPTION_NAME_CD = S_CHECK_OPTION.OPTION_NAME_CD
+        WHERE S_CHECK_OPTION.OPTION_MNG_SEQ = #{optionMngSeq}
+        AND S_CHECK_OPTION.USE_FLG = '1'
+        ORDER BY DSP_ORDER
+    </select>
+    <select id="getLockColumn" parameterType="String" resultType="String">
+        SELECT
+            LOCK_FLG
+        FROM S_PERSONAL_SETTING
+        WHERE
+            S_PERSONAL_SETTING.USER_ID = '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}'
+            AND S_PERSONAL_SETTING.FUNC_ID = '${@fw.common.util.WebFlowUtil@getViewStateIdByEscapeSql()}'
+            AND S_PERSONAL_SETTING.COMPANY_CD = '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}'
+            AND S_PERSONAL_SETTING.USE_FLG = '1'
+            AND S_PERSONAL_SETTING.DSP_FLG = '1'
+        ORDER BY TO_NUMBER(S_PERSONAL_SETTING.DSP_ORDER)
+    </select>
+    <select id="listForDownloadExt" resultMap="SearchResultItemDefinitionItem_Map">
+        SELECT      S_VOUCHER_CONFIG.COLUMN_NAME as "columnName.columnName",
+                    S_ELEMENT_CONFIG.ITEM_TYPE as "itemType.itemType",
+                    S_ELEMENT_CONFIG.ELEMENT_NAME_CD as "elementNameCd",
+                    S_OPTION_MNG.OPTION_MNG_SEQ,
+                    S_OPTION_MNG.OPTION_TYPE,
+                    S_OPTION_MNG.CODE_KEY,
+                    S_ELEMENT_CONFIG.EXTEND_FLG as "extendFlg"
+        FROM        S_VOUCHER_CONFIG
+        INNER JOIN  S_ELEMENT_CONFIG
+        ON          S_ELEMENT_CONFIG.ELEMENT_SEQ =  S_VOUCHER_CONFIG.ELEMENT_SEQ
+        LEFT JOIN   S_OPTION_MNG
+        ON          S_OPTION_MNG.ELEMENT_SEQ = S_ELEMENT_CONFIG.ELEMENT_SEQ
+        WHERE       S_VOUCHER_CONFIG.VOUCHER_TYPE IN
+        <foreach collection="voucherTypes" item="voucherType" open="(" separator="," close=")">
+                    #{voucherType, jdbcType=VARCHAR}
+        </foreach>
+        AND         S_ELEMENT_CONFIG.EXTEND_FLG = '1'
+        AND         S_VOUCHER_CONFIG.USE_FLG = '1'
+        <if test="purReqType==1">
+        AND         S_VOUCHER_CONFIG.PUR_DISP_IND in('0', '1')
+        </if>
+        <if test="purReqType==2">
+        AND         S_VOUCHER_CONFIG.PUR_DISP_IND in('0', '2')
+        </if>
+        ORDER BY    S_VOUCHER_CONFIG.VOUCHER_TYPE
+        ,           S_VOUCHER_CONFIG.DSP_ORDER
+    </select>
+    <select id="listForDownloadExtItem" resultMap="SearchResultItemDefinitionItem_Map">
+        SELECT      S_VOUCHER_CONFIG.COLUMN_NAME as "columnName.columnName"
+        ,           S_ELEMENT_CONFIG.ITEM_TYPE as "itemType.itemType"
+        ,           S_ELEMENT_CONFIG.ELEMENT_NAME_CD as "elementNameCd"
+        ,           S_OPTION_MNG.OPTION_MNG_SEQ
+        ,           S_OPTION_MNG.OPTION_TYPE
+        ,           S_OPTION_MNG.CODE_KEY
+        ,           S_ELEMENT_CONFIG.EXTEND_FLG as "extendFlg"
+        FROM        S_VOUCHER_CONFIG
+        INNER JOIN  S_ELEMENT_CONFIG
+        ON          S_ELEMENT_CONFIG.ELEMENT_SEQ =  S_VOUCHER_CONFIG.ELEMENT_SEQ
+        INNER JOIN  (
+                        SELECT      S_PERSONAL_SETTING.ELEMENT_SEQ
+                        ,           S_PERSONAL_SETTING.VOUCHER_TYPE
+                        ,           S_PERSONAL_SETTING.DSP_ORDER
+                        FROM        S_PERSONAL_SETTING
+                        WHERE       S_PERSONAL_SETTING.USER_ID = '-100'
+                        AND         S_PERSONAL_SETTING.FUNC_ID = #{viewStateId}
+                        AND         S_PERSONAL_SETTING.COMPANY_CD = '-100'
+                        AND         S_PERSONAL_SETTING.DSP_FLG = 1
+                    ) S_PERSONAL_SETTING
+        ON          S_VOUCHER_CONFIG.ELEMENT_SEQ = S_PERSONAL_SETTING.ELEMENT_SEQ
+        AND         S_VOUCHER_CONFIG.VOUCHER_TYPE = S_PERSONAL_SETTING.VOUCHER_TYPE
+        LEFT JOIN   S_OPTION_MNG
+        ON          S_OPTION_MNG.ELEMENT_SEQ = S_ELEMENT_CONFIG.ELEMENT_SEQ
+        WHERE       S_ELEMENT_CONFIG.EXTEND_FLG = '1'
+        AND         S_VOUCHER_CONFIG.USE_FLG = '1'
+        ORDER BY    TO_NUMBER(S_PERSONAL_SETTING.DSP_ORDER)
+    </select>
+</mapper>

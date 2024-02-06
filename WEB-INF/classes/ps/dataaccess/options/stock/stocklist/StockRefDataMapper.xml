@@ -1,0 +1,379 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="ps.dataaccess.options.stock.stocklist.StockRefDataMapper">
+
+    <sql id="pageHeader">
+       SELECT * FROM (
+    </sql>
+
+    <sql id="pageRoot">
+        ) WHERE  ROWNUM &lt;=${@fw.common.util.PropertiesUtil@getLong("DOWNLOAD_MAXCNT")}
+    </sql>
+
+    <sql id="listKeyIdentityWhereCondition">
+                T_STOCK.COMPANY_CD = '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}'
+            <choose>
+                <when test="@org.apache.commons.lang.StringUtils@equals(stockReadAllGrantFlg,'1')">
+                    <if test="@org.apache.commons.lang.StringUtils@isNotBlank(sectionPlaceCd)">
+                        AND   T_STOCK.SECTION_PLACE_CD = #{sectionPlaceCd, jdbcType=VARCHAR}
+                    </if>
+                </when>
+                <otherwise>
+                        AND   T_STOCK.SECTION_PLACE_CD = '${@fw.security.SecurityUtil@getSectionPlaceCdByEscapeSql()}'
+                </otherwise>
+            </choose>
+            <if test="@org.apache.commons.lang.StringUtils@isNotBlank(stockPlaceCd)">
+                AND   T_STOCK.STOCK_PLACE_CD = #{stockPlaceCd, jdbcType=VARCHAR}
+            </if>
+            <if test="@org.apache.commons.lang.StringUtils@isNotBlank(itemCd)">
+                AND   T_STOCK.ITEM_CD 
+                ${@fw.common.util.SearchModeUtil@getSearchSQL("fw.domain.options.stock.stocklist.StockSearchCondition","itemCd")}
+            </if>
+            <if test="@org.apache.commons.lang.StringUtils@isNotBlank(itemName)">
+                AND   M_ITEM_LANG_VALID.ITEM_NAME
+                ${@fw.common.util.SearchModeUtil@getSearchSQL("fw.domain.options.stock.stocklist.StockSearchCondition","itemName")}
+            </if>
+            <if test="@org.apache.commons.lang.StringUtils@isNotBlank(katashiki)">
+                AND   M_ITEM.KATASHIKI
+                ${@fw.common.util.SearchModeUtil@getSearchSQL("fw.domain.options.stock.stocklist.StockSearchCondition","katashiki")}
+            </if>
+            <if test="@org.apache.commons.lang.StringUtils@isBlank(stockZeroBothFlg)">
+                AND   T_STOCK.STOCK_VOL > 0 
+            </if>
+            <if test="@org.apache.commons.lang.StringUtils@isNotBlank(itemProductClassL)">
+                AND   M_ITEM.ITEM_CLASS_L = #{itemProductClassL, jdbcType=VARCHAR}
+            </if>
+            <if test="@org.apache.commons.lang.StringUtils@isNotBlank(itemProductClassM)">
+                AND   M_ITEM.ITEM_CLASS_M = #{itemProductClassM, jdbcType=VARCHAR}
+            </if>
+            <if test="@org.apache.commons.lang.StringUtils@isNotBlank(itemProductClassS)">
+                AND   M_ITEM.ITEM_CLASS_S = #{itemProductClassS, jdbcType=VARCHAR}
+            </if>
+    </sql>
+
+    <sql id="listKeyIdentityFromTable">
+                      T_STOCK 
+          LEFT JOIN   M_SECTION_PLACE 
+             ON  M_SECTION_PLACE.COMPANY_CD = T_STOCK.COMPANY_CD 
+             AND M_SECTION_PLACE.SECTION_PLACE_CD = T_STOCK.SECTION_PLACE_CD 
+             AND '${@fw.common.util.AppUtil@getSysDate()}' BETWEEN M_SECTION_PLACE.VALID_START_DATE AND M_SECTION_PLACE.VALID_END_DATE 
+             <!-- V4.4.0-00001-087-S  -->
+             <!-- AND M_SECTION_PLACE.TERM_FLG = '0'  -->
+             <!-- V4.4.0-00001-087-E  -->
+          LEFT JOIN (
+                SELECT
+                          M_SECTION_PLACE_LANG.COMPANY_CD,
+                          M_SECTION_PLACE_LANG.SECTION_PLACE_CD,
+                          CASE
+                            WHEN TRIM(M_SECTION_PLACE_LANG.SECTION_PLACE_NAME) IS NULL 
+                            THEN M_SECTION_PLACE_LANG_SYSTEM.SECTION_PLACE_NAME
+                            ELSE M_SECTION_PLACE_LANG.SECTION_PLACE_NAME
+                          END AS SECTION_PLACE_NAME
+                FROM
+                          M_SECTION_PLACE_LANG
+                LEFT JOIN M_SECTION_PLACE_LANG M_SECTION_PLACE_LANG_SYSTEM
+                    ON  M_SECTION_PLACE_LANG_SYSTEM.COMPANY_CD = M_SECTION_PLACE_LANG.COMPANY_CD 
+                    AND M_SECTION_PLACE_LANG_SYSTEM.SECTION_PLACE_CD = M_SECTION_PLACE_LANG.SECTION_PLACE_CD 
+                    AND M_SECTION_PLACE_LANG_SYSTEM.LANGUAGE_IND = '${@fw.common.util.AppUtil@getSysLanguageByEscapeSql()}'
+                WHERE 
+                          M_SECTION_PLACE_LANG.LANGUAGE_IND = '${@fw.security.SecurityUtil@getCompanyUseLanguageIndByEscapeSql()}'
+          ) M_SECTION_PLACE_LANG_VALID
+            ON  M_SECTION_PLACE_LANG_VALID.COMPANY_CD = M_SECTION_PLACE.COMPANY_CD
+            AND M_SECTION_PLACE_LANG_VALID.SECTION_PLACE_CD = M_SECTION_PLACE.SECTION_PLACE_CD 
+          
+          LEFT JOIN   M_STOCK_PLACE 
+             ON  M_STOCK_PLACE.COMPANY_CD = T_STOCK.COMPANY_CD 
+             AND M_STOCK_PLACE.SECTION_PLACE_CD = T_STOCK.SECTION_PLACE_CD 
+             AND M_STOCK_PLACE.STOCK_PLACE_CD = T_STOCK.STOCK_PLACE_CD 
+             <!-- V4.4.0-00001-087-S  -->
+             <!-- AND M_STOCK_PLACE.TERM_FLG = '0'  -->
+             <!-- V4.4.0-00001-087-E  -->
+          LEFT JOIN (
+                SELECT
+                          M_STOCK_PLACE_LANG.COMPANY_CD,
+                          M_STOCK_PLACE_LANG.SECTION_PLACE_CD,
+                          M_STOCK_PLACE_LANG.STOCK_PLACE_CD,
+                          CASE
+                            WHEN TRIM(M_STOCK_PLACE_LANG.STOCK_PLACE_NAME) IS NULL 
+                            THEN M_STOCK_PLACE_LANG_SYSTEM.STOCK_PLACE_NAME
+                            ELSE M_STOCK_PLACE_LANG.STOCK_PLACE_NAME
+                          END AS STOCK_PLACE_NAME
+                FROM
+                          M_STOCK_PLACE_LANG 
+                LEFT JOIN M_STOCK_PLACE_LANG M_STOCK_PLACE_LANG_SYSTEM
+                    ON  M_STOCK_PLACE_LANG_SYSTEM.COMPANY_CD = M_STOCK_PLACE_LANG.COMPANY_CD
+                    AND M_STOCK_PLACE_LANG_SYSTEM.SECTION_PLACE_CD = M_STOCK_PLACE_LANG.SECTION_PLACE_CD
+                    AND M_STOCK_PLACE_LANG_SYSTEM.STOCK_PLACE_CD = M_STOCK_PLACE_LANG.STOCK_PLACE_CD 
+                    AND M_STOCK_PLACE_LANG_SYSTEM.LANGUAGE_IND = '${@fw.common.util.AppUtil@getSysLanguageByEscapeSql()}'
+                WHERE 
+                          M_STOCK_PLACE_LANG.LANGUAGE_IND = '${@fw.security.SecurityUtil@getCompanyUseLanguageIndByEscapeSql()}'
+          ) M_STOCK_PLACE_LANG_VALID
+            ON  M_STOCK_PLACE_LANG_VALID.COMPANY_CD = M_STOCK_PLACE.COMPANY_CD 
+            AND M_STOCK_PLACE_LANG_VALID.SECTION_PLACE_CD = M_STOCK_PLACE.SECTION_PLACE_CD 
+            AND M_STOCK_PLACE_LANG_VALID.STOCK_PLACE_CD = M_STOCK_PLACE.STOCK_PLACE_CD 
+          LEFT JOIN    M_ITEM 
+             ON  M_ITEM.COMPANY_CD = T_STOCK.COMPANY_CD 
+             AND M_ITEM.ITEM_CD = T_STOCK.ITEM_CD 
+             <!-- V4.4.0-00001-087-S  -->
+             <!-- AND M_ITEM.TERM_FLG = '0'  -->
+             <!-- V4.4.0-00001-087-E  -->
+          LEFT JOIN ( 
+                SELECT
+                          M_ITEM_LANG.COMPANY_CD,
+                          M_ITEM_LANG.ITEM_CD,
+                          CASE 
+                             WHEN TRIM(M_ITEM_LANG.ITEM_NAME) IS NULL 
+                             THEN M_ITEM_LANG_SYSTEM.ITEM_NAME 
+                             ELSE M_ITEM_LANG.ITEM_NAME 
+                          END AS ITEM_NAME 
+                FROM
+                          M_ITEM_LANG 
+                LEFT JOIN M_ITEM_LANG  M_ITEM_LANG_SYSTEM 
+                   ON  M_ITEM_LANG_SYSTEM.COMPANY_CD = M_ITEM_LANG.COMPANY_CD 
+                   AND M_ITEM_LANG_SYSTEM.ITEM_CD = M_ITEM_LANG.ITEM_CD 
+                   AND M_ITEM_LANG_SYSTEM.LANGUAGE_IND = '${@fw.common.util.AppUtil@getSysLanguageByEscapeSql()}'
+                WHERE
+                         M_ITEM_LANG.LANGUAGE_IND = '${@fw.security.SecurityUtil@getCompanyUseLanguageIndByEscapeSql()}'
+          ) M_ITEM_LANG_VALID 
+             ON  M_ITEM_LANG_VALID.COMPANY_CD = M_ITEM.COMPANY_CD 
+             AND M_ITEM_LANG_VALID.ITEM_CD = M_ITEM.ITEM_CD 
+          LEFT JOIN    M_MANUFACT
+             ON  M_MANUFACT.MANUFACT_CD = M_ITEM.MANUFACT_CD 
+             AND '${@fw.common.util.AppUtil@getSysDate()}' BETWEEN M_MANUFACT.VALID_START_DATE AND M_MANUFACT.VALID_END_DATE
+             <!-- V4.4.0-00001-087-S  -->
+             <!-- AND M_MANUFACT.TERM_FLG = '0'  -->
+             <!-- V4.4.0-00001-087-E  -->
+        LEFT JOIN ( 
+                SELECT
+                          M_MANUFACT_LANG.MANUFACT_CD,
+                          CASE 
+                             WHEN TRIM(M_MANUFACT_LANG.MANUFACT_NAME) IS NULL 
+                             THEN M_MANUFACT_LANG_SYSTEM.MANUFACT_NAME
+                             ELSE M_MANUFACT_LANG.MANUFACT_NAME 
+                          END AS MANUFACT_NAME 
+                FROM
+                          M_MANUFACT_LANG 
+                LEFT JOIN M_MANUFACT_LANG M_MANUFACT_LANG_SYSTEM
+                   ON  M_MANUFACT_LANG_SYSTEM.MANUFACT_CD = M_MANUFACT_LANG.MANUFACT_CD
+                   AND M_MANUFACT_LANG_SYSTEM.LANGUAGE_IND = '${@fw.common.util.AppUtil@getSysLanguageByEscapeSql()}'
+                WHERE
+                         M_MANUFACT_LANG.LANGUAGE_IND = '${@fw.security.SecurityUtil@getCompanyUseLanguageIndByEscapeSql()}'
+          ) M_MANUFACT_LANG_VALID
+             ON  M_MANUFACT_LANG_VALID.MANUFACT_CD = M_MANUFACT.MANUFACT_CD 
+          LEFT JOIN    M_ITEM_CLASS M_ITEM_CLASS_L 
+             ON  M_ITEM_CLASS_L.ITEM_CLASS_L = M_ITEM.ITEM_CLASS_L 
+             AND M_ITEM_CLASS_L.ITEM_CLASS_M = ' ' 
+             AND M_ITEM_CLASS_L.ITEM_CLASS_S = ' ' 
+             <!-- V4.4.0-00001-087-S  -->
+             <!-- AND M_ITEM_CLASS_L.TERM_FLG = '0'  -->
+             <!-- V4.4.0-00001-087-E  -->
+          LEFT JOIN  (
+                SELECT 
+                        L_LANG.ITEM_CLASS_L,
+                        L_LANG.ITEM_CLASS_M,
+                        L_LANG.ITEM_CLASS_S,
+                        CASE 
+                            WHEN TRIM(L_LANG.ITEM_CLASS_NAME) IS NULL
+                            THEN L_LANG_SYSTEM.ITEM_CLASS_NAME
+                            ELSE L_LANG.ITEM_CLASS_NAME
+                        END AS ITEM_CLASS_NAME
+                FROM
+                        M_ITEM_CLASS_LANG L_LANG
+                LEFT JOIN   M_ITEM_CLASS_LANG L_LANG_SYSTEM
+                    ON  L_LANG_SYSTEM.ITEM_CLASS_L = L_LANG.ITEM_CLASS_L
+                    AND L_LANG_SYSTEM.ITEM_CLASS_M = L_LANG.ITEM_CLASS_M
+                    AND L_LANG_SYSTEM.ITEM_CLASS_S = L_LANG.ITEM_CLASS_S
+                    AND L_LANG_SYSTEM.LANGUAGE_IND = '${@fw.common.util.AppUtil@getSysLanguageByEscapeSql()}'
+                WHERE
+                        L_LANG.LANGUAGE_IND = '${@fw.security.SecurityUtil@getCompanyUseLanguageIndByEscapeSql()}'
+                    AND L_LANG.ITEM_CLASS_L != ' '
+                    AND L_LANG.ITEM_CLASS_M = ' '
+                    AND L_LANG.ITEM_CLASS_S = ' '
+          ) M_ITEM_CLASS_LANG_L
+             ON  M_ITEM_CLASS_LANG_L.ITEM_CLASS_L = M_ITEM_CLASS_L.ITEM_CLASS_L 
+             AND M_ITEM_CLASS_LANG_L.ITEM_CLASS_M = M_ITEM_CLASS_L.ITEM_CLASS_M
+             AND M_ITEM_CLASS_LANG_L.ITEM_CLASS_S = M_ITEM_CLASS_L.ITEM_CLASS_S 
+          LEFT JOIN    M_ITEM_CLASS M_ITEM_CLASS_M 
+             ON  M_ITEM_CLASS_M.ITEM_CLASS_L = M_ITEM.ITEM_CLASS_L 
+             AND M_ITEM_CLASS_M.ITEM_CLASS_M = M_ITEM.ITEM_CLASS_M 
+             AND M_ITEM_CLASS_M.ITEM_CLASS_S = ' ' 
+             <!-- V4.4.0-00001-087-S  -->
+             <!-- AND M_ITEM_CLASS_M.TERM_FLG = '0'  -->
+             <!-- V4.4.0-00001-087-E  -->
+          LEFT JOIN  (
+                SELECT 
+                        M_LANG.ITEM_CLASS_L,
+                        M_LANG.ITEM_CLASS_M,
+                        M_LANG.ITEM_CLASS_S,
+                        CASE 
+                            WHEN TRIM(M_LANG.ITEM_CLASS_NAME) IS NULL
+                            THEN M_LANG_SYSTEM.ITEM_CLASS_NAME
+                            ELSE M_LANG.ITEM_CLASS_NAME
+                        END AS ITEM_CLASS_NAME
+                FROM
+                        M_ITEM_CLASS_LANG M_LANG
+                LEFT JOIN   M_ITEM_CLASS_LANG M_LANG_SYSTEM
+                    ON  M_LANG_SYSTEM.ITEM_CLASS_L = M_LANG.ITEM_CLASS_L
+                    AND M_LANG_SYSTEM.ITEM_CLASS_M = M_LANG.ITEM_CLASS_M
+                    AND M_LANG_SYSTEM.ITEM_CLASS_S = M_LANG.ITEM_CLASS_S
+                    AND M_LANG_SYSTEM.LANGUAGE_IND = '${@fw.common.util.AppUtil@getSysLanguageByEscapeSql()}'
+                WHERE
+                        M_LANG.LANGUAGE_IND = '${@fw.security.SecurityUtil@getCompanyUseLanguageIndByEscapeSql()}'
+                    AND M_LANG.ITEM_CLASS_L != ' '
+                    AND M_LANG.ITEM_CLASS_M != ' '
+                    AND M_LANG.ITEM_CLASS_S = ' '
+          ) M_ITEM_CLASS_LANG_M
+             ON  M_ITEM_CLASS_LANG_M.ITEM_CLASS_L = M_ITEM_CLASS_M.ITEM_CLASS_L 
+             AND M_ITEM_CLASS_LANG_M.ITEM_CLASS_M = M_ITEM_CLASS_M.ITEM_CLASS_M
+             AND M_ITEM_CLASS_LANG_M.ITEM_CLASS_S = M_ITEM_CLASS_M.ITEM_CLASS_S 
+          LEFT JOIN     M_ITEM_CLASS M_ITEM_CLASS_S 
+             ON  M_ITEM_CLASS_S.ITEM_CLASS_L = M_ITEM.ITEM_CLASS_L 
+             AND M_ITEM_CLASS_S.ITEM_CLASS_M = M_ITEM.ITEM_CLASS_M 
+             AND M_ITEM_CLASS_S.ITEM_CLASS_S = M_ITEM.ITEM_CLASS_S 
+             <!-- V4.4.0-00001-087-S  -->
+             <!-- AND M_ITEM_CLASS_S.TERM_FLG = '0'  -->
+             <!-- V4.4.0-00001-087-E  -->
+          LEFT JOIN  (
+                SELECT 
+                        S_LANG.ITEM_CLASS_L,
+                        S_LANG.ITEM_CLASS_M,
+                        S_LANG.ITEM_CLASS_S,
+                        CASE 
+                            WHEN TRIM(S_LANG.ITEM_CLASS_NAME) IS NULL
+                            THEN S_LANG_SYSTEM.ITEM_CLASS_NAME
+                            ELSE S_LANG.ITEM_CLASS_NAME
+                        END AS ITEM_CLASS_NAME
+                FROM
+                        M_ITEM_CLASS_LANG S_LANG
+                LEFT JOIN   M_ITEM_CLASS_LANG S_LANG_SYSTEM
+                    ON  S_LANG_SYSTEM.ITEM_CLASS_L = S_LANG.ITEM_CLASS_L
+                    AND S_LANG_SYSTEM.ITEM_CLASS_M = S_LANG.ITEM_CLASS_M
+                    AND S_LANG_SYSTEM.ITEM_CLASS_S = S_LANG.ITEM_CLASS_S
+                    AND S_LANG_SYSTEM.LANGUAGE_IND = '${@fw.common.util.AppUtil@getSysLanguageByEscapeSql()}'
+                WHERE
+                        S_LANG.LANGUAGE_IND = '${@fw.security.SecurityUtil@getCompanyUseLanguageIndByEscapeSql()}'
+                    AND S_LANG.ITEM_CLASS_L != ' '
+                    AND S_LANG.ITEM_CLASS_M != ' '
+                    AND S_LANG.ITEM_CLASS_S != ' '
+          ) M_ITEM_CLASS_LANG_S
+             ON  M_ITEM_CLASS_LANG_S.ITEM_CLASS_L = M_ITEM_CLASS_S.ITEM_CLASS_L 
+             AND M_ITEM_CLASS_LANG_S.ITEM_CLASS_M = M_ITEM_CLASS_S.ITEM_CLASS_M
+             AND M_ITEM_CLASS_LANG_S.ITEM_CLASS_S = M_ITEM_CLASS_S.ITEM_CLASS_S 
+          LEFT JOIN     M_UNIT_NAME 
+             ON  M_UNIT_NAME.UNIT_CD = T_STOCK.UNIT_CD 
+             <!-- V4.4.0-00001-087-S  -->
+             <!-- AND M_UNIT_NAME.TERM_FLG = '0'  -->
+             <!-- V4.4.0-00001-087-E  -->
+          LEFT JOIN ( 
+                SELECT
+                          M_UNIT_NAME_LANG.UNIT_CD,
+                          CASE 
+                             WHEN TRIM(M_UNIT_NAME_LANG.UNIT_NAME) IS NULL 
+                             THEN M_UNIT_NAME_LANG_SYSTEM.UNIT_NAME
+                             ELSE M_UNIT_NAME_LANG.UNIT_NAME
+                          END AS UNIT_NAME 
+                FROM
+                          M_UNIT_NAME_LANG 
+                LEFT JOIN M_UNIT_NAME_LANG M_UNIT_NAME_LANG_SYSTEM
+                   ON  M_UNIT_NAME_LANG_SYSTEM.UNIT_CD = M_UNIT_NAME_LANG.UNIT_CD
+                   AND M_UNIT_NAME_LANG_SYSTEM.LANGUAGE_IND = '${@fw.common.util.AppUtil@getSysLanguageByEscapeSql()}'
+                WHERE
+                         M_UNIT_NAME_LANG.LANGUAGE_IND = '${@fw.security.SecurityUtil@getCompanyUseLanguageIndByEscapeSql()}'
+          ) M_UNIT_NAME_LANG_VALID
+             ON  M_UNIT_NAME_LANG_VALID.UNIT_CD = M_UNIT_NAME.UNIT_CD 
+    </sql>
+
+    <!-- 在庫一覧キーリスト取得 -->
+    <select id="listKeyIdentity" parameterType="fw.domain.options.stock.stocklist.StockSearchCondition"
+           resultType="fw.domain.options.stock.stocklist.StockIdentify">
+        SELECT
+                T_STOCK.COMPANY_CD AS "companyCd",
+                T_STOCK.SECTION_PLACE_CD AS "sectionPlaceCd",
+                T_STOCK.STOCK_PLACE_CD AS "stockPlaceCd",
+                T_STOCK.ITEM_CD AS "itemCd"
+        FROM 
+              <include refid="listKeyIdentityFromTable"/>
+        <where>
+              <include refid="listKeyIdentityWhereCondition"/>
+        </where>
+        ORDER BY ${searchCondition.columnOrder.columnOrder()}
+    </select>
+
+    <!-- 在庫一覧取得 -->
+    <select id="listPageItem" parameterType="fw.domain.options.stock.stocklist.StockSearchCondition"
+           resultType="fw.domain.options.stock.stocklist.StockItem">
+        SELECT
+                T_STOCK.SECTION_PLACE_CD AS "sectionPlaceCd",
+                M_SECTION_PLACE_LANG_VALID.SECTION_PLACE_NAME AS "sectionPlaceName",
+                T_STOCK.STOCK_PLACE_CD AS "stockPlaceCd",
+                M_STOCK_PLACE_LANG_VALID.STOCK_PLACE_NAME AS "stockPlaceName",
+                T_STOCK.ITEM_CD AS "itemCd",
+                M_ITEM_LANG_VALID.ITEM_NAME AS "itemName",
+                M_ITEM.KATASHIKI AS "katashiki",
+                M_ITEM.MANUFACT_CD AS "manufactCd",
+                M_MANUFACT_LANG_VALID.MANUFACT_NAME AS "manufactName",
+                T_STOCK.STOCK_VOL AS "nowStockVol.vol",
+                M_UNIT_NAME_LANG_VALID.UNIT_NAME "unitName",
+                M_ITEM_CLASS_LANG_L.ITEM_CLASS_NAME AS "itemClassLName",
+                M_ITEM_CLASS_LANG_M.ITEM_CLASS_NAME AS "itemClassMName",
+                M_ITEM_CLASS_LANG_S.ITEM_CLASS_NAME AS "itemClassSName" 
+        FROM 
+              <include refid="listKeyIdentityFromTable"/>
+        <where>
+            <include refid="listKeyIdentityWhereCondition"/>
+            AND (T_STOCK.COMPANY_CD,T_STOCK.SECTION_PLACE_CD,T_STOCK.STOCK_PLACE_CD,T_STOCK.ITEM_CD) IN
+            <foreach collection="searchCondition.page.keyDomainEntityList" item="keyList" open="(" separator="," close=")">
+                (#{keyList.companyCd},#{keyList.sectionPlaceCd},#{keyList.stockPlaceCd},#{keyList.itemCd})
+            </foreach>
+        </where>
+        ORDER BY ${searchCondition.columnOrder.columnOrder()}
+     </select>
+
+
+     <!-- 在庫一覧ダウンロード件数取得 -->
+     <select id="downloadCount" parameterType="fw.domain.options.stock.stocklist.StockSearchCondition"
+                                            resultType="java.lang.Long">
+         SELECT   COUNT(*)
+         FROM 
+             <include refid="listKeyIdentityFromTable"/>
+         <where>
+             <include refid="listKeyIdentityWhereCondition"/>
+         </where>
+     </select>
+
+     <!-- 在庫一覧ダウンロード情報取得 -->
+     <select id="downloadData" parameterType="fw.domain.options.stock.stocklist.StockSearchCondition"
+             resultType="fw.domain.options.stock.stocklist.StockItem">
+        <include refid="pageHeader"/>
+        SELECT
+                T_STOCK.SECTION_PLACE_CD AS "sectionPlaceCd",
+                M_SECTION_PLACE_LANG_VALID.SECTION_PLACE_NAME AS "sectionPlaceName",
+                T_STOCK.STOCK_PLACE_CD AS "stockPlaceCd",
+                M_STOCK_PLACE_LANG_VALID.STOCK_PLACE_NAME AS "stockPlaceName",
+                T_STOCK.ITEM_CD AS "itemCd",
+                M_ITEM_LANG_VALID.ITEM_NAME AS "itemName",
+                M_ITEM.KATASHIKI AS "katashiki",
+                M_ITEM.MANUFACT_CD AS "manufactCd",
+                M_MANUFACT_LANG_VALID.MANUFACT_NAME AS "manufactName",
+                T_STOCK.STOCK_VOL AS "nowStockVol.vol",
+                T_STOCK.UNIT_CD AS "unitCd",
+                M_UNIT_NAME_LANG_VALID.UNIT_NAME "unitName",
+                M_ITEM_CLASS_L.ITEM_CLASS_L AS "itemClassL",
+                M_ITEM_CLASS_LANG_L.ITEM_CLASS_NAME AS "itemClassLName",
+                M_ITEM_CLASS_M.ITEM_CLASS_M AS "itemClassM",
+                M_ITEM_CLASS_LANG_M.ITEM_CLASS_NAME AS "itemClassMName",
+                M_ITEM_CLASS_S.ITEM_CLASS_S AS "itemClassS",
+                M_ITEM_CLASS_LANG_S.ITEM_CLASS_NAME AS "itemClassSName" 
+        FROM 
+              <include refid="listKeyIdentityFromTable"/>
+        <where>
+              <include refid="listKeyIdentityWhereCondition"/>
+        </where>
+        ORDER BY T_STOCK.SECTION_PLACE_CD ASC,
+                 T_STOCK.STOCK_PLACE_CD ASC,
+                 T_STOCK.ITEM_CD ASC
+        <include refid="pageRoot"/>
+     </select>
+</mapper>

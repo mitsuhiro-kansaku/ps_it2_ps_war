@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="ps.dataaccess.src.subjectpopup.SubjectPopupMapper">
+
+    <!-- 強化-00180-000 2013/03/12 MODIFY SBO_SOKOU START -->
+    <!-- SRC-00115-00 include化共通-->
+    <sql id="listKeyIdentityWhereCondition">
+        AND '${@fw.common.util.AppUtil@getSysDate()}' BETWEEN M_SUBJECT.VALID_START_DATE AND M_SUBJECT.VALID_END_DATE
+        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(companyCd)">
+            AND (M_SUBJECT.COMPANY_CD = #{companyCd, jdbcType=VARCHAR}
+             OR M_SUBJECT.COMPANY_CD = '${@fw.common.constant.ApplicationConstant@COMPANY_CD_ALL}')
+        </if>
+        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(subjectCd)">
+            AND M_SUBJECT.SUBJECT_CD ${@fw.common.util.SearchModeUtil@getSearchSQL("fw.domain.mst.material.subject.SubjectPopupSearchCondition","subjectCd")}
+        </if>
+        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(subjectName)">
+            AND M_SUBJECT_LANG.SUBJECT_NAME ${@fw.common.util.SearchModeUtil@getSearchSQL("fw.domain.mst.material.subject.SubjectPopupSearchCondition","subjectName")}
+        </if>
+        <if test="@fw.domain.mst.searchcondition.SearchCondition@termFlgIsNotEmpty(searchCondition.termFlg) and searchCondition.termFlg==0">
+            AND M_SUBJECT.TERM_FLG = #{searchCondition.termFlg, jdbcType=VARCHAR}
+        </if>
+    </sql>
+
+    <select id="listKeyIdentity"
+            parameterType="fw.domain.mst.material.subject.SubjectPopupSearchCondition"
+            resultType="fw.domain.mst.material.subject.SubjectIdentify">
+        SELECT M_SUBJECT.COMPANY_CD as "companyCd",
+               M_SUBJECT.SUBJECT_CD as "subjectCd",
+               M_SUBJECT_LANG.SUBJECT_NAME as "subjectName"
+          FROM M_SUBJECT
+          LEFT JOIN M_SUBJECT_LANG 
+                 ON M_SUBJECT.COMPANY_CD = M_SUBJECT_LANG.COMPANY_CD
+                AND M_SUBJECT.SUBJECT_CD = M_SUBJECT_LANG.SUBJECT_CD
+                AND M_SUBJECT_LANG.LANGUAGE_IND = '${@fw.security.SecurityUtil@getCompanyUseLanguageIndByEscapeSql()}'
+         <where>
+            <include refid="listKeyIdentityWhereCondition"/>
+         </where>
+        ORDER BY ${searchCondition.columnOrder.columnOrder()}
+    </select>
+
+    <select id="listPageItem"
+            parameterType="fw.domain.mst.material.subject.SubjectPopupSearchCondition"
+            resultType="fw.domain.mst.material.subject.SubjectPopupItem">
+        SELECT M_SUBJECT.SUBJECT_CD as "subjectIdentify.subjectCd",
+               M_SUBJECT_LANG.SUBJECT_NAME as "subjectName",
+               M_SUBJECT.COMPANY_CD as "subjectIdentify.companyCd"
+          FROM M_SUBJECT
+          LEFT JOIN M_SUBJECT_LANG 
+                 ON M_SUBJECT.COMPANY_CD = M_SUBJECT_LANG.COMPANY_CD
+                AND M_SUBJECT.SUBJECT_CD = M_SUBJECT_LANG.SUBJECT_CD
+                AND M_SUBJECT_LANG.LANGUAGE_IND = '${@fw.security.SecurityUtil@getCompanyUseLanguageIndByEscapeSql()}'
+        <where>
+            (M_SUBJECT.SUBJECT_CD , M_SUBJECT.COMPANY_CD) IN
+            <foreach collection="searchCondition.page.keyDomainEntityList" item="keyList"  open="(" separator="," close=")">
+                (#{keyList.subjectCd},#{keyList.companyCd})
+            </foreach>
+            <include refid="listKeyIdentityWhereCondition"/>
+         </where>
+            ORDER BY ${searchCondition.columnOrder.columnOrder()}
+    </select>
+
+    <select id="lostFocusSearch"
+            parameterType ="fw.domain.mst.searchcondition.SearchCondition" 
+            resultType="String">
+        SELECT M_SUBJECT_LANG.SUBJECT_NAME
+          FROM M_SUBJECT
+          LEFT JOIN M_SUBJECT_LANG
+                 ON M_SUBJECT.COMPANY_CD = M_SUBJECT_LANG.COMPANY_CD
+                AND M_SUBJECT.SUBJECT_CD = M_SUBJECT_LANG.SUBJECT_CD
+                AND M_SUBJECT_LANG.LANGUAGE_IND =  '${@fw.security.SecurityUtil@getCompanyUseLanguageIndByEscapeSql()}'
+         WHERE (M_SUBJECT.COMPANY_CD = #{companyCd, jdbcType=VARCHAR}
+            OR M_SUBJECT.COMPANY_CD = '${@fw.common.constant.ApplicationConstant@COMPANY_CD_ALL}')
+           AND M_SUBJECT.SUBJECT_CD = #{subjectCd, jdbcType=VARCHAR}
+    </select>
+    <!-- 強化-00180-000 2013/03/12 MODIFY SBO_SOKOU END -->
+</mapper>

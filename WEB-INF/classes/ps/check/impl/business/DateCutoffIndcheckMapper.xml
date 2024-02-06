@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="ps.check.impl.business.DateCutoffIndcheckMapper">
+
+    <!-- 強化-00180-000 2013/03/09 MODIFY SBO_SOKOU START -->
+    <select id="getCutoffInd" resultType="java.lang.String">
+            SELECT M_CUTOFF_DATE.CUTOFF_IND
+              FROM M_CUTOFF_DATE
+             WHERE (M_CUTOFF_DATE.COMPANY_CD = #{companyCd}
+                OR M_CUTOFF_DATE.COMPANY_CD = '${@fw.common.constant.ApplicationConstant@COMPANY_CD_ALL}')
+               AND M_CUTOFF_DATE.CUTOFF_MONTH
+                IN (SELECT M_CUTOFF_DATE.CUTOFF_MONTH
+                      FROM M_CUTOFF_DATE
+                     WHERE (M_CUTOFF_DATE.COMPANY_CD = #{companyCd}
+                        OR M_CUTOFF_DATE.COMPANY_CD = '${@fw.common.constant.ApplicationConstant@COMPANY_CD_ALL}')
+                       AND M_CUTOFF_DATE.CUTOFF_DATE
+                        IN (SELECT MIN(M_CUTOFF_DATE.CUTOFF_DATE)
+                              FROM M_CUTOFF_DATE
+                             WHERE M_CUTOFF_DATE.CUTOFF_DATE >= #{date}
+                               AND (M_CUTOFF_DATE.COMPANY_CD = #{companyCd}
+                                OR M_CUTOFF_DATE.COMPANY_CD = '${@fw.common.constant.ApplicationConstant@COMPANY_CD_ALL}')
+                            )
+                    )
+    </select>
+    <!-- 強化-00180-000 2013/03/09 MODIFY SBO_SOKOU END -->
+</mapper>

@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<flow xmlns="http://www.springframework.org/schema/webflow"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.springframework.org/schema/webflow
+        http://www.springframework.org/schema/webflow/spring-webflow-2.0.xsd"
+	parent="base">
+	<!-- 受入承認（個別） -->
+
+	<!-- 受入識別情報 -->
+	<input name="receiveAppIdentify" />
+	<input name="isInitIndividualApr" />
+	<input name="SessionKey"/>
+    <input name="searchCondition" />
+
+	<decision-state id="isInitIndividualApr">
+        <if test="flowScope.isExclusiveCheck != null and flowScope.isExclusiveCheck" then="PSAPR072" />
+        <if test="flowScope.isInitIndividualApr == null or flowScope.isInitIndividualApr" then="initDetail" else="back" />
+    </decision-state>
+    
+	<action-state id="initDetail">
+        <evaluate expression="PSAPR072Service.init(receiveAppIdentify)"
+                  result="flowScope.domain" />
+        <transition to="PSAPR072"/> 
+    </action-state>
+    
+	<!-- PSAPR072_受入承認（個別）_画面 -->
+	<view-state id="PSAPR072" view="apr/rcv/PSAPR072" model="domain">
+		<!-- 承認 -->
+		<transition on="approval" validate="true">
+			<evaluate expression="PSAPR072Service.approval(domain)" />
+			<set name="flashScope.isApprovalSuccess" value="true"></set>
+		</transition>
+		<!-- 差戻し -->
+		<transition on="sendBack" validate="true">
+			<evaluate expression="PSAPR072Service.sendBack(domain)" />
+			<set name="flashScope.isSendBackSuccess" value="true"></set>
+		</transition>
+		
+		<transition on="next" validate="false" to="isInitIndividualApr">
+             <evaluate expression="PSAPR072Service.next()" result="flowScope.receiveAppIdentify"/> 
+             <set name="flashScope.isApprovalSuccess" value="false"></set> 
+             <set name="flashScope.isSendBackSuccess" value="false"></set> 
+        </transition>
+		
+		<transition on="page" validate="false" to="isInitIndividualApr">
+            <evaluate expression="PSAPR072Service.page()" result="flowScope.receiveAppIdentify" />
+        </transition>
+        
+        <transition on="downloadext" validate="false">
+            <evaluate expression="PSAPR072Service.downloadFileExt(domain)"/>
+        </transition>
+        
+         <!-- 承認者の追加  -->
+        <transition on="addAuthorizer" validate="true">
+             <evaluate expression="PSAPR072Service.addAuthorizer(domain)" result="flowScope.domain"/> 
+        </transition>
+        <!-- 承認者の削除  -->
+        <transition on="removeAuthorizer" validate="false">
+             <evaluate expression="PSAPR072Service.removeAuthorizer(domain)" result="flowScope.domain"/> 
+        </transition>
+	</view-state>
+
+</flow> 

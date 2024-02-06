@@ -1,0 +1,364 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="ps.dataaccess.mst.library.LibraryMapper">
+
+    <!-- 強化-00180-000 2013/03/11 MODIFY SBO_SOKOU START -->
+    <!-- SRC-00115-00 include化共通-->
+    <sql id="listKeyIdentityWhereCondition">
+        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(companyCd)">
+            AND M_LIBRALY.COMPANY_CD = #{companyCd, jdbcType=VARCHAR}
+        </if>
+        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(titleName)">
+            AND (libraly_lang_company.TITLE_NAME ${@fw.common.util.SearchModeUtil@getSearchSQL("fw.domain.mst.operation.library.LibrarySearchCondition","titleName")}
+            OR libraly_lang_system.TITLE_NAME ${@fw.common.util.SearchModeUtil@getSearchSQL("fw.domain.mst.operation.library.LibrarySearchCondition","titleName")})
+        </if>
+        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(validStartDateFrom.dateOfymd)">
+            AND M_LIBRALY.VALID_START_DATE >= #{validStartDateFrom.dateOfymd}
+        </if>
+        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(validStartDateTo.dateOfymd)">
+            AND M_LIBRALY.VALID_START_DATE &lt; = #{validStartDateTo.dateOfymd}
+        </if>
+        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(validEndDateFrom.dateOfymd)">
+            AND M_LIBRALY.VALID_END_DATE >= #{validEndDateFrom.dateOfymd}
+        </if>
+        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(validEndDateTo.dateOfymd)">
+            AND M_LIBRALY.VALID_END_DATE &lt; = #{validEndDateTo.dateOfymd}
+        </if>
+        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(viewSight.libralyInd) and viewSight.libralyInd !=9">
+            AND M_LIBRALY.LIBRALY_IND = #{viewSight.libralyInd, jdbcType=VARCHAR}
+        </if>
+        <if test="@fw.domain.mst.searchcondition.SearchCondition@termFlgIsNotEmpty(searchCondition.termFlg)">
+            AND M_LIBRALY.TERM_FLG = #{searchCondition.termFlg, jdbcType=VARCHAR}
+        </if>
+    </sql>
+
+    <select id="listKeyIdentity"
+            parameterType="fw.domain.mst.operation.library.LibrarySearchCondition"
+            resultType="fw.domain.mst.operation.library.LibraryIdentify">
+        SELECT M_LIBRALY.COMPANY_CD AS "companyCd",
+               M_LIBRALY.HELP_NO AS "helpNo",
+               CASE WHEN libraly_lang_company.TITLE_NAME IS NOT NULL THEN
+                         libraly_lang_company.TITLE_NAME
+                    ELSE libraly_lang_system.TITLE_NAME
+                     END AS titleName
+          FROM M_LIBRALY
+          LEFT JOIN M_COMPANY
+          <!-- 強化-01784-000 2013/06/12 DEL SBO_SOKOU START -->
+                 <!-- ON M_LIBRALY.COMPANY_CD = M_COMPANY.COMPANY_CD -->
+          <!-- 強化-01784-000 2013/06/12 DEL SBO_SOKOU -END- -->
+          <!-- 強化-01784-000 2013/06/12 ADD SBO_SOKOU START -->
+          <if test="companyCd=='ALL'">
+                 ON M_COMPANY.COMPANY_CD = '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}'
+          </if>
+          <if test="companyCd!='ALL'">
+                 ON M_LIBRALY.COMPANY_CD = M_COMPANY.COMPANY_CD
+          </if>
+          <!-- 強化-01784-000 2013/06/12 ADD SBO_SOKOU -END- -->
+          LEFT JOIN M_LIBRALY_LANG libraly_lang_company
+                 ON M_LIBRALY.COMPANY_CD = libraly_lang_company.COMPANY_CD
+                AND M_LIBRALY.HELP_NO = libraly_lang_company.HELP_NO
+                AND libraly_lang_company.LANGUAGE_IND = M_COMPANY.COMPANY_USE_LANGUAGE_IND
+          LEFT JOIN M_LIBRALY_LANG libraly_lang_system
+                 ON M_LIBRALY.COMPANY_CD = libraly_lang_system.COMPANY_CD
+                AND M_LIBRALY.HELP_NO = libraly_lang_system.HELP_NO
+                AND libraly_lang_system.LANGUAGE_IND = '${@fw.common.util.AppUtil@getSysLanguageByEscapeSql()}'
+         <where>
+            <include refid="listKeyIdentityWhereCondition"/>
+        </where> 
+        ORDER BY ${searchCondition.columnOrder.columnOrder()}
+    </select>
+
+    <select id="listPageItem"
+            parameterType="fw.domain.mst.searchcondition.SearchCondition"
+            resultType="fw.domain.mst.operation.library.LibraryItem">
+        SELECT M_LIBRALY.COMPANY_CD as "libraryIdentify.companyCd",
+               M_LIBRALY.HELP_NO as "libraryIdentify.helpNo",
+               M_LIBRALY.LAST_UPD_DATE as "libraryIdentify.lastUpdDate",
+               M_LIBRALY.FILE_NAME as "fileName",
+               M_LIBRALY.LIBRALY_IND as "libralyInd",
+               CASE WHEN libraly_lang_company.TITLE_NAME IS NOT NULL
+                    THEN libraly_lang_company.TITLE_NAME
+                    ELSE libraly_lang_system.TITLE_NAME
+                     END AS titleName,
+               CASE WHEN libraly_lang_company.DESCRIPTION IS NOT NULL
+                    THEN libraly_lang_company.DESCRIPTION
+                    ELSE libraly_lang_system.DESCRIPTION
+                     END AS description,
+               M_LIBRALY.DSP_ORDER as "dspOrder",
+               M_LIBRALY.VALID_START_DATE as "validStartDate.dateOfymd",
+               M_LIBRALY.VALID_END_DATE as"validEndDate.dateOfymd",
+               M_LIBRALY.TERM_FLG as "termFlg"
+          FROM M_LIBRALY 
+          LEFT JOIN M_COMPANY
+          <!-- 強化-01784-000 2013/06/12 DEL SBO_SOKOU START -->
+                 <!-- ON M_LIBRALY.COMPANY_CD = M_COMPANY.COMPANY_CD -->
+          <!-- 強化-01784-000 2013/06/12 DEL SBO_SOKOU -END- -->
+          <!-- 強化-01784-000 2013/06/12 ADD SBO_SOKOU START -->
+          <if test="companyCd=='ALL'">
+                 ON M_COMPANY.COMPANY_CD = '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}'
+          </if>
+          <if test="companyCd!='ALL'">
+                 ON M_LIBRALY.COMPANY_CD = M_COMPANY.COMPANY_CD
+          </if>
+          <!-- 強化-01784-000 2013/06/12 ADD SBO_SOKOU -END- -->
+          LEFT JOIN M_LIBRALY_LANG libraly_lang_company
+                 ON M_LIBRALY.COMPANY_CD = libraly_lang_company.COMPANY_CD
+                AND M_LIBRALY.HELP_NO = libraly_lang_company.HELP_NO
+                AND libraly_lang_company.LANGUAGE_IND = M_COMPANY.COMPANY_USE_LANGUAGE_IND
+          LEFT JOIN M_LIBRALY_LANG libraly_lang_system
+                 ON M_LIBRALY.COMPANY_CD = libraly_lang_system.COMPANY_CD
+                AND M_LIBRALY.HELP_NO = libraly_lang_system.HELP_NO
+                AND libraly_lang_system.LANGUAGE_IND = '${@fw.common.util.AppUtil@getSysLanguageByEscapeSql()}'
+            <where> 
+                (M_LIBRALY.COMPANY_CD,M_LIBRALY.HELP_NO) IN 
+                <foreach collection="searchCondition.page.keyDomainEntityList" item="keyList"  open="(" separator="," close=")">  
+                    (#{keyList.companyCd},#{keyList.helpNo})
+                </foreach>
+                <include refid="listKeyIdentityWhereCondition"/>
+            </where>
+              ORDER BY ${searchCondition.columnOrder.columnOrder()}
+    </select>
+
+    <resultMap type="fw.domain.mst.operation.library.LibraryManagement" id="LibraryManagement_Map">
+        <result column="VALID_START_DATE" property="validityPeriod.period.startDate.dateOfymd"/>
+        <result column="VALID_END_DATE" property="validityPeriod.period.endDate.dateOfymd"/>
+    </resultMap>
+
+    <select id="search"
+            parameterType="fw.domain.mst.operation.library.LibraryIdentify"
+            resultMap="LibraryManagement_Map">
+        SELECT M_LIBRALY.COMPANY_CD AS "libraryIdentify.companyCd",
+               M_LIBRALY.HELP_NO AS "libraryIdentify.helpNo",
+               M_LIBRALY.LAST_UPD_DATE AS "libraryIdentify.lastUpdDate",
+               M_LIBRALY.COMPANY_CD AS "companySummary.companyCd",
+               M_COMPANY_LANG.COMPANY_NAME AS "companySummary.companyName",
+               CASE WHEN libraly_lang_company.TITLE_NAME IS NOT NULL
+                    THEN libraly_lang_company.TITLE_NAME
+                    ELSE libraly_lang_system.TITLE_NAME
+                     END AS "titleName",
+               CASE WHEN libraly_lang_company.DESCRIPTION IS NOT NULL
+                    THEN libraly_lang_company.DESCRIPTION
+                    ELSE libraly_lang_system.DESCRIPTION
+                     END AS "description",
+                <if test="companyCd=='ALL'">
+                    '${@fw.common.util.AppUtil@getSysLanguageByEscapeSql()}' AS "companySummary.languageInd",
+                </if>
+                <if test="companyCd!='ALL'">
+                    M_COMPANY.COMPANY_USE_LANGUAGE_IND AS "companySummary.languageInd",
+                </if>
+                M_LIBRALY.DSP_ORDER AS "dspOrder",
+                M_LIBRALY.FILE_NAME AS "libraryFile.fileName",
+                M_LIBRALY.FILE_DATA AS "libraryFile.fileData",
+                M_LIBRALY.LIBRALY_IND AS "viewSight.libralyInd",
+                M_LIBRALY.VALID_START_DATE AS "VALID_START_DATE",
+                M_LIBRALY.VALID_END_DATE AS "VALID_END_DATE",
+                M_LIBRALY.TERM_FLG AS "term.termFlg",
+                M_LIBRALY.LAST_UPD_DATE AS "registInfo.lastUpdDate",
+                M_LIBRALY.LAST_UPD_COMPANY_CD AS "registInfo.lastUpdCompanyCd",
+                M_LIBRALY.LAST_UPD_SECTION_CD AS "registInfo.lastUpdSectionCd",
+                M_LIBRALY.LAST_UPD_USER_ID AS "registInfo.lastUpdUserId",
+                M_LIBRALY.REG_DATE AS "registInfo.regDate",
+                M_LIBRALY.REG_COMPANY_CD AS "registInfo.regCompanyCd",
+                M_LIBRALY.REG_SECTION_CD AS "registInfo.regSectionCd",
+                M_LIBRALY.REG_USER_ID AS "registInfo.regUserId"
+           FROM M_LIBRALY
+           LEFT JOIN M_COMPANY
+                  ON M_LIBRALY.COMPANY_CD = M_COMPANY.COMPANY_CD
+           LEFT JOIN M_LIBRALY_LANG libraly_lang_company
+                  ON M_LIBRALY.COMPANY_CD = libraly_lang_company.COMPANY_CD
+                 AND M_LIBRALY.HELP_NO = libraly_lang_company.HELP_NO
+                 AND libraly_lang_company.LANGUAGE_IND = M_COMPANY.COMPANY_USE_LANGUAGE_IND
+           LEFT JOIN M_LIBRALY_LANG libraly_lang_system
+                  ON M_LIBRALY.COMPANY_CD = libraly_lang_system.COMPANY_CD
+                 AND M_LIBRALY.HELP_NO = libraly_lang_system.HELP_NO
+                 AND libraly_lang_system.LANGUAGE_IND = '${@fw.common.util.AppUtil@getSysLanguageByEscapeSql()}'
+           LEFT JOIN M_COMPANY_LANG
+                  ON M_COMPANY.COMPANY_CD = M_COMPANY_LANG.COMPANY_CD
+                 AND M_COMPANY.COMPANY_USE_LANGUAGE_IND = M_COMPANY_LANG.LANGUAGE_IND
+          WHERE M_LIBRALY.COMPANY_CD = #{companyCd}
+            AND M_LIBRALY.HELP_NO = #{helpNo}
+    </select>
+    <!-- 強化-00180-000 2013/03/11 MODIFY SBO_SOKOU END -->
+
+    <select id="searchExclusive"
+            parameterType="fw.domain.mst.operation.library.LibraryIdentify"
+            resultType="fw.domain.mst.operation.library.LibraryIdentify">
+        SELECT M_LIBRALY.COMPANY_CD as "companyCd",
+               M_LIBRALY.HELP_NO as "helpNo",
+               M_LIBRALY.LAST_UPD_DATE as "lastUpdDate"
+          FROM M_LIBRALY 
+         WHERE M_LIBRALY.HELP_NO = #{helpNo}
+           AND M_LIBRALY.COMPANY_CD = #{companyCd}
+           AND M_LIBRALY.LAST_UPD_DATE = #{lastUpdDate}
+    </select>
+
+    <select id="listLibraryLanguage"
+            parameterType="fw.domain.mst.operation.library.LibraryIdentify"
+            resultType="fw.domain.mst.operation.library.LibraryLanguage">
+        SELECT M_LIBRALY_LANG.COMPANY_CD as "libraryIdentify.companyCd",
+               M_LIBRALY_LANG.HELP_NO as "libraryIdentify.helpNo",
+               M_LIBRALY_LANG.LAST_UPD_DATE as "libraryIdentify.lastUpdDate",
+               M_LIBRALY_LANG.LANGUAGE_IND as "languageInd.languageInd",
+               M_LIBRALY_LANG.TITLE_NAME as "titleName",
+               M_LIBRALY_LANG.DESCRIPTION as "description",
+               M_LIBRALY_LANG.LAST_UPD_DATE as "registInfo.lastUpdDate",
+               M_LIBRALY_LANG.LAST_UPD_COMPANY_CD as "registInfo.lastUpdCompanyCd",
+               M_LIBRALY_LANG.LAST_UPD_SECTION_CD as "registInfo.lastUpdSectionCd",
+               M_LIBRALY_LANG.LAST_UPD_USER_ID as "registInfo.lastUpdUserId",
+               M_LIBRALY_LANG.REG_DATE as "registInfo.regDate",
+               M_LIBRALY_LANG.REG_COMPANY_CD as "registInfo.regCompanyCd",
+               M_LIBRALY_LANG.REG_SECTION_CD as "registInfo.regSectionCd",
+               M_LIBRALY_LANG.REG_USER_ID as "registInfo.regUserId"
+          FROM M_LIBRALY
+          LEFT JOIN M_LIBRALY_LANG
+                 ON M_LIBRALY.COMPANY_CD = M_LIBRALY_LANG.COMPANY_CD
+                AND M_LIBRALY_LANG.HELP_NO = M_LIBRALY.HELP_NO
+            <if test="companyCd=='ALL'">
+                AND M_LIBRALY_LANG.LANGUAGE_IND != '${@fw.common.util.AppUtil@getSysLanguageByEscapeSql()}'
+            </if>
+            <if test="companyCd!='ALL'">
+                INNER JOIN M_COMPANY
+                        ON M_LIBRALY.COMPANY_CD = M_COMPANY.COMPANY_CD
+                       AND M_LIBRALY_LANG.LANGUAGE_IND != M_COMPANY.COMPANY_USE_LANGUAGE_IND
+            </if>
+          INNER JOIN M_CODE_NAME
+                  ON M_LIBRALY_LANG.LANGUAGE_IND = M_CODE_NAME.CODE_VALUE
+                 AND M_CODE_NAME.CODE_KEY = 'LANGUAGE_IND'
+          WHERE M_LIBRALY_LANG.COMPANY_CD = #{companyCd}
+            AND M_LIBRALY_LANG.HELP_NO = #{helpNo}
+          ORDER BY M_CODE_NAME.DSP_ORDER
+    </select>
+
+    <insert id="insert" parameterType="fw.domain.mst.operation.library.LibraryManagement">
+        INSERT INTO M_LIBRALY
+        (
+            COMPANY_CD,
+            HELP_NO,
+            LIBRALY_IND,
+            FILE_NAME,
+            FILE_DATA,
+            DSP_ORDER,
+            VALID_START_DATE,
+            VALID_END_DATE,
+            TERM_FLG,
+            LAST_UPD_DATE,
+            LAST_UPD_COMPANY_CD,
+            LAST_UPD_SECTION_CD,
+            LAST_UPD_USER_ID,
+            REG_DATE,
+            REG_COMPANY_CD,
+            REG_SECTION_CD,
+            REG_USER_ID
+        ) VALUES (
+            #{libraryIdentify.companyCd, jdbcType=VARCHAR},
+            #{libraryIdentify.helpNo, jdbcType=VARCHAR},
+            #{viewSight.libralyInd, jdbcType=VARCHAR},
+            #{libraryFile.fileName, jdbcType=VARCHAR},
+            #{libraryFile.fileData, jdbcType=BLOB},
+            #{dspOrder, jdbcType=VARCHAR},
+            <if test="@org.apache.commons.lang.StringUtils@isBlank(validityPeriod.period.startDate.dateOfymd)">
+            '00000000',
+            </if>
+            <if test="@org.apache.commons.lang.StringUtils@isNotBlank(validityPeriod.period.startDate.dateOfymd)">
+            #{validityPeriod.period.startDate.dateOfymd},
+            </if>
+            <if test="@org.apache.commons.lang.StringUtils@isBlank(validityPeriod.period.endDate.dateOfymd)">
+            '99999999',
+            </if>
+            <if test="@org.apache.commons.lang.StringUtils@isNotBlank(validityPeriod.period.endDate.dateOfymd)">
+            #{validityPeriod.period.endDate.dateOfymd},
+            </if>
+            #{term.termFlg, jdbcType=VARCHAR},
+            #{registInfo.lastUpdDate, jdbcType=VARCHAR},
+            #{registInfo.lastUpdCompanyCd, jdbcType=VARCHAR},
+            #{registInfo.lastUpdSectionCd, jdbcType=VARCHAR},
+            #{registInfo.lastUpdUserId, jdbcType=VARCHAR},
+            #{registInfo.regDate, jdbcType=VARCHAR},
+            #{registInfo.regCompanyCd, jdbcType=VARCHAR},
+            #{registInfo.regSectionCd, jdbcType=VARCHAR},
+            #{registInfo.regUserId, jdbcType=VARCHAR}
+        )
+    </insert>
+
+    <insert id="insertLibraryLanguage" parameterType="fw.domain.mst.operation.library.LibraryLanguage">
+        INSERT INTO M_LIBRALY_LANG
+        (
+            COMPANY_CD,
+            HELP_NO,
+            LANGUAGE_IND,
+            TITLE_NAME,
+            DESCRIPTION,
+            LAST_UPD_DATE,
+            LAST_UPD_COMPANY_CD,
+            LAST_UPD_SECTION_CD,
+            LAST_UPD_USER_ID,
+            REG_DATE,
+            REG_COMPANY_CD,
+            REG_SECTION_CD,
+            REG_USER_ID
+        )VALUES(
+            #{libraryIdentify.companyCd, jdbcType=VARCHAR},
+            #{libraryIdentify.helpNo, jdbcType=VARCHAR},
+            #{languageInd.languageInd, jdbcType=VARCHAR},
+            #{titleName, jdbcType=VARCHAR},
+            #{description, jdbcType=VARCHAR},
+            #{registInfo.lastUpdDate, jdbcType=VARCHAR},
+            #{registInfo.lastUpdCompanyCd, jdbcType=VARCHAR},
+            #{registInfo.lastUpdSectionCd, jdbcType=VARCHAR},
+            #{registInfo.lastUpdUserId, jdbcType=VARCHAR},
+            #{registInfo.regDate, jdbcType=VARCHAR},
+            #{registInfo.regCompanyCd, jdbcType=VARCHAR},
+            #{registInfo.regSectionCd, jdbcType=VARCHAR},
+            #{registInfo.regUserId, jdbcType=VARCHAR}
+        )
+    </insert>
+
+    <update id="update" parameterType="fw.domain.mst.operation.library.LibraryManagement">
+        UPDATE M_LIBRALY
+        SET
+            HELP_NO = #{libraryIdentify.helpNo},
+            LIBRALY_IND = #{viewSight.libralyInd},
+            FILE_NAME = #{libraryFile.fileName},
+            <if  test="libraryFile.file!=null and libraryFile.file.size!=0 " >
+            FILE_DATA = #{libraryFile.fileData , jdbcType=BLOB},
+            </if>
+            DSP_ORDER = #{dspOrder},
+            <if test="@org.apache.commons.lang.StringUtils@isBlank(validityPeriod.period.startDate.dateOfymd)">
+            VALID_START_DATE = '00000000',
+            </if>
+            <if test="@org.apache.commons.lang.StringUtils@isNotBlank(validityPeriod.period.startDate.dateOfymd)">
+            VALID_START_DATE = #{validityPeriod.period.startDate.dateOfymd},
+            </if>
+            <if test="@org.apache.commons.lang.StringUtils@isBlank(validityPeriod.period.endDate.dateOfymd)">
+            VALID_END_DATE = '99999999',
+            </if>
+            <if test="@org.apache.commons.lang.StringUtils@isNotBlank(validityPeriod.period.endDate.dateOfymd)">
+            VALID_END_DATE = #{validityPeriod.period.endDate.dateOfymd},
+            </if>
+            TERM_FLG = #{term.termFlg},
+            LAST_UPD_DATE = #{registInfo.lastUpdDate},
+            LAST_UPD_COMPANY_CD = #{registInfo.lastUpdCompanyCd},
+            LAST_UPD_SECTION_CD = #{registInfo.lastUpdSectionCd},
+            LAST_UPD_USER_ID = #{registInfo.lastUpdUserId}
+        WHERE 
+            COMPANY_CD = #{libraryIdentify.companyCd}
+        AND HELP_NO = #{libraryIdentify.helpNo}
+    </update>
+
+    <delete id="delete"
+            parameterType="fw.domain.mst.operation.library.LibraryIdentify">
+        DELETE
+          FROM M_LIBRALY
+         WHERE HELP_NO = #{helpNo}
+           AND COMPANY_CD = #{companyCd}
+    </delete>
+
+    <delete id="deleteLibraryLanguage" parameterType="fw.domain.mst.operation.library.LibraryIdentify">
+        DELETE
+          FROM M_LIBRALY_LANG
+         WHERE HELP_NO = #{helpNo}
+           AND COMPANY_CD = #{companyCd}
+    </delete>
+</mapper>

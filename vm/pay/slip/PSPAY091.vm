@@ -1,0 +1,447 @@
+<!doctype html>
+<html LANG="ja">
+<head>
+<title>#customSpringMessage('SCREEN_NOT_ACTION_PAY_LIST')</title>
+<meta http-equiv="Content-type" content="text/html; charset=UTF-8">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Content-script-type" content="text/javascript">
+<link id="CSS_FONT" rel="stylesheet" href="../../include/FontS.css" type="text/css">
+<link rel="stylesheet" href="../../include/Layout.css" type="text/css">
+<link rel="stylesheet" href="../../include/Color.css" type="text/css">
+<link rel="stylesheet" href="../../include/searchbox.css" type="text/css">
+<style>
+.divHandle{
+    width:100%;
+    margin-top:5px;
+    text-align:left;
+}
+</style>
+<script language="javascript" type="text/javascript" src="../../include/jquery-1.7.2.min.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/jquery.tablefix.js"></script>
+<script language="javascript" TYPE="text/javascript" src="../../include/common.js"></script>
+<script language="javascript" TYPE="text/javascript" src="../../include/check.js"></script>
+<script language="javascript" TYPE="text/javascript" src="../../include/date.js"></script>
+<script language="javascript" TYPE="text/javascript" src="../../include/tablesort.js"></script>
+<script language="javascript" TYPE="text/javascript">
+<!--
+#parse("./common/common_js.vm")
+var isOnLoaded=false;
+function onLoad() {
+    parentButtonEnable();
+    dataLoadHasPage();
+    var isExecuteSuccess = "#jsEscape($isExecuteSuccess)";
+    if (isExecuteSuccess == 'true'){
+        #set( $payCheck = "#customSpringMessage('PAY_CHECK')" );
+        alert('#customMessageArgs("I002",[$payCheck])');
+     }
+    var alertMessage = "$!alertMessage";
+    if (alertMessage != ""){
+        buttonUsableForList(alertMessage);
+        alert(alertMessage);
+    }
+    #foreach($!screenNotActionPayItem in $!itemList.screenNotActionPayItemList)
+     document.getElementById("operate_$velocityCount").onchange();
+    #end
+    var errorMsg = "$!errorMessage";
+    if (errorMsg != ""){
+        isOnLoaded=true;
+        return;
+    }
+    window.parent.getObj("DownLoadSection").style.display = "";
+    var isShowDetail = "#jsEscape($isShowDetail)";
+    if (isShowDetail == 'true'){
+        parent.poppage('${flowExecutionUrl}&_eventId=detail','DETAIL','800','700');
+    }
+    isOnLoaded=true;
+}
+
+$(function(){
+    fillHidden();
+})
+
+function addTitle(){
+    var selects = document.getElementsByTagName("select");
+    for(var k = 0 ; k < selects.length ; k++){
+        var items = selects[k].options;
+        for(var i=0; i<items.length ; i++){
+            items[i].title = items[i].text;
+        }
+    }
+}
+var _trIndex = "";
+
+function selectItemReSet(){
+    ## EDGE対応にてsetTablefixByChange後に処理列の2つのセレクトボックスが初期値になってしまうようになった為、hiddenより値をセットする
+    #if($!itemList.screenNotActionPayItemList)
+    if (isOnLoaded) {
+        var rowIndex=$!itemList.screenNotActionPayItemList.size();
+        for (var i=0; i<rowIndex;i++){
+            $("#operate_"+i).val($("input[name='screenNotActionPayItemList["+i+"].receipt.handlerType']").val());
+            if ($("input[name='screenNotActionPayItemList["+i+"].user.userID']").val()!=""){
+                $("#SelApproute_"+i).val($("input[name='screenNotActionPayItemList["+i+"].approute.appRouteNo']").val());
+            }
+        }
+    }
+    #end
+}
+//show the 振分け先 List
+function showList(select){
+    var index = select.selectedIndex;
+    var value = $(select).find("option:selected").val();
+    var trIndex = $(select).attr("id").substr(7).split('_')[1];
+    getObj("screenNotActionPayItemList[" + trIndex+"].receipt.handlerType").value = select.value;
+    document.getElementById("screenNotActionPayItemList[" + trIndex + "].receipt.handlerType").value = index;
+
+    if(index == 1){
+        $("td:[id=img_"+trIndex+"]").show();
+        $("td:[id=Sel_"+trIndex+"]").show();
+        $("td:[id=Button_" + trIndex+"]").show();
+        $("td:[id=Btn_" + trIndex+"]").hide();
+        setAppRouteByAmount(trIndex,
+                        '8',
+                        getObj("totalAmount_"+trIndex).value,
+                        getObj("currentCd_"+trIndex).value,
+                        document.getElementById("screenNotActionPayItemList["+trIndex+"].approute.appRouteNo").value);
+        obj = getObj("SelApproute_" + trIndex);
+        disabledButton(obj);
+    }else if(index == 2){
+        $("td:[id=img_"+trIndex+"]").hide();
+        $("td:[id=Sel_"+trIndex+"]").hide();
+        $("td:[id=Button_" + trIndex+"]").hide();
+        $("td:[id=Btn_" + trIndex+"]").show();
+        
+        var id = "screenNotActionPayItemList[" + trIndex + "].receipt.remand.backReason.backReason.comment";
+        var comment = document.getElementById(id).value;
+        _trIndex = trIndex;
+        getObj("screenNotActionPayItemList[" + _trIndex + "].receipt.remand.remandUser.remandUser.section.sectionCd").value = $("#inputSectionCd_"+trIndex).val();
+        getObj("screenNotActionPayItemList[" + _trIndex + "].receipt.remand.remandUser.remandUser.section.company.companyCd").value = $("#inputCompanyCd_"+trIndex).val();
+        if(isOnLoaded){
+            receipt("1",comment,$("#inputCompanyCd_"+trIndex).val(),$("#inputSectionCd_"+trIndex).val(),$("#inputUserId_"+trIndex).val(),"80",$("#backUserShowFlg_"+trIndex).val());
+        }
+    }else if(index == 3){
+        $("td:[id=img_"+trIndex+"]").hide();
+        $("td:[id=Sel_" + trIndex+"]").hide();
+        $("td:[id=Button_" + trIndex+"]").hide();
+        $("td:[id=Btn_" + trIndex+"]").hide();
+    }else if(index == 0){
+        $("td:[id=img_"+trIndex+"]").hide();
+        $("td:[id=Sel_" + trIndex+"]").hide();
+        $("td:[id=Button_" + trIndex+"]").hide();
+        $("td:[id=Btn_" + trIndex+"]").hide();
+    }
+
+    if(index != 0){
+        $("tr:[id=Row_" + trIndex+"]").css("background-color","#ffff99");
+    }else{
+        if (Number(trIndex) % 2 != 0) {
+            $("tr:[id=Row_" + trIndex+"]").css("background-color","#ffffff");
+        } else {
+            $("tr:[id=Row_" + trIndex+"]").css("background-color","#dce4ef");
+        }
+    }
+}
+
+function disabledButton(obj){
+    var value = obj.selectedIndex;
+    var index = obj.id.split('_')[1];
+    var test = $(obj).find("option:selected").val();
+    getObj("selectedIndex_" + index).value =value;
+    var selectIndexValue = getObj("selectedIndex_"+index).value;
+    if(selectIndexValue == 0){
+        $("[name=DispButton_" + index+"]").attr("disabled","true");
+        document.getElementById("screenNotActionPayItemList[" + index + "].approute.appRouteName").value = "";
+    }else{
+        $("[name=DispButton_" + index+"]").removeAttr("disabled");
+        document.getElementById("screenNotActionPayItemList[" + index + "].approute.appRouteName").value =  $(obj).find("option:selected").text();
+    }
+    
+    document.getElementById("screenNotActionPayItemList[" + index + "].approute.appRouteNo").value = test;
+    
+}
+
+// コメント編集 button click
+function actionPopup(trIndex){
+    _trIndex=trIndex;
+    var id = "screenNotActionPayItemList[" + trIndex + "].receipt.remand.backReason.backReason.comment";
+    var comment = document.getElementById(id).value;
+    receipt("1",comment,$("#inputCompanyCd_"+trIndex).val(),$("#inputSectionCd_"+trIndex).val(),$("#inputUserId_"+trIndex).val(),"80",$("#backUserShowFlg_"+trIndex).val());
+}
+
+//popup  set value
+function receipt(aprDisplayModel,aprRemandComment,companyCd,sectionCd,userId,authNo,backUserShowFlg){
+    masterSearch('${flowExecutionUrl}&_eventId=receipt','appRouteDtl','700','300');
+    iframeChange("${flowExecutionUrl}&_eventId=receipt","aprDisplayModel",aprDisplayModel, "aprRemandComment",aprRemandComment,"companyCd",companyCd,"sectionCd",sectionCd, "userId",userId,"authNo",authNo,"backUserShowFlg",backUserShowFlg,"appRouteDtl");
+}
+
+//popup  return value
+function setApr(reason,userID,userName){
+    if(_trIndex != -1){
+        var id = "screenNotActionPayItemList["+_trIndex+"].receipt.remand.backReason.backReason.comment";
+        document.getElementById(id).value = reason;
+        $("input:[id=CommentText_" + _trIndex +"]").val(userName);
+        var userId = "screenNotActionPayItemList[" + _trIndex + "].receipt.remand.remandUser.remandUser.userID";
+        document.getElementById(userId).value = userID;
+        document.getElementById("inputUserId_"+ _trIndex).value = userID;
+    }
+    _trIndex = -1
+}
+
+function appRoutePopup(Number) { 
+    var companyCd = "#jsEscape($!loginUserCompanyCd)";
+    var sectionCd = "#jsEscape($!loginUserSectionCd)";
+    var appRouteNo = document.getElementById("screenNotActionPayItemList["+Number+"].approute.appRouteNo").value;
+    appRouteDetailPopup.setParam(companyCd,sectionCd,'8',appRouteNo);
+    masterSearch('../../src/apr/PSCMN030?pageid=appRouteDetailPopup','PLACESEARCHBOX','700','300');
+}
+
+function openDetail(payReqSeq,lastUpdDate) { 
+    parent.iframeChange('${flowExecutionUrl}&_eventId=detailValidate&payReqSeq='+ payReqSeq+'&lastUpdDate='+ lastUpdDate,"HIDDENAREA");
+}
+
+function exec(){
+
+    var flag = false;
+    $(document).find("select:[id^=operate]").each(function(i,item){
+        if(item.selectedIndex != 0)
+            flag = true;
+    });
+    if(flag) {
+        #set( $actionRun = "#customSpringMessage('ACTION_RUN')" )
+        #set( $action = "#customSpringMessage('ACTION')" ) 
+        if( !confirm("#customMessageArgs("W001",[$action,$actionRun])") ) {
+            return;
+        }
+        buttonDisable();
+        parentButtonDisable();
+        getObj("BodyForm").action="${flowExecutionUrl}&_eventId=execute";
+        getObj("BodyForm").submit();
+            
+    } else {
+        #set($paramApr1 = ["#customSpringMessage('ACTION')"] )
+        alert("#customMessageArgs("E003",$paramApr1)");
+    }
+}
+
+function fillHidden(){
+    #foreach($!item in $!itemList.screenNotActionPayItemList)
+        var userId = $("#inputUserId_" + $foreach.index).val();
+        var companyCd = $("#inputCompanyCd_" + $foreach.index).val();
+        var sectionCd = $("#inputSectionCd_" + $foreach.index).val();
+        var remandUserFlg = $("#backUserShowFlg_" + $foreach.index).val();
+
+        var hiddens = [];
+        var id = "screenNotActionPayItemList["+$foreach.index+"]";
+        hiddens.push('<input type="hidden" id="' + id + '.receipt.handlerType" value="#jsEscape($!item.receipt.handlerType)" />');
+        hiddens.push('<input type="hidden" id="' + id + '.inputUserId" value="#jsEscape($!item.inputUserId)" />');
+        hiddens.push('<input type="hidden" id="' + id + '.inputCompanyCd" value="#jsEscape($!item.inputCompanyCd)" />');
+        hiddens.push('<input type="hidden" id="' + id + '.inputSectionCd" value="#jsEscape($!item.inputSectionCd)" />');
+        hiddens.push('<input type="hidden" id="' + id + '.receipt.remand.remandUser.remandUser.userID" value="' + userId + '" />');
+        hiddens.push('<input type="hidden" id="' + id + '.receipt.remand.remandUser.remandUser.section.sectionCd" value="' + sectionCd + '" />');
+        hiddens.push('<input type="hidden" id="' + id + '.receipt.remand.remandUser.remandUser.section.company.companyCd" value="' + companyCd + '" />');
+        hiddens.push('<input type="hidden" id="' + id + '.receipt.remandUserShowFlg" value="' + remandUserFlg + '" />');
+
+        $("#hideDiv").append(hiddens.join(""));
+        hiddens = [];
+    #end
+    $("#hideDiv input:hidden").each(function(i,item){
+        $(this).attr("name", $(this).attr("id"));
+    });
+}
+
+function setAppRouteByAmount(rowNo, approuteVoucherInd, amount, currencyCd, currentRoute){
+    if(!amount) {
+        return;
+    } else {
+        $.ajax({
+            type: "POST", 
+            async:false, 
+            url:"../../appRouteController/getAppRouteByAmount",
+            data: {
+                "approuteVoucherInd.approuteVoucherInd":approuteVoucherInd,
+                "amount.amountFormat":amount,
+                "amount.currencyCd":currencyCd,
+                current:currentRoute
+            },
+            success:function(data){
+                var appRouteId = 'SelApproute_' + rowNo;
+                $("#"+appRouteId).empty();
+                $.each(data,function(index,element){
+                    var varItem = new Option(element.text, element.value);
+                    varItem.selected = element.selected;
+                    getObj(appRouteId).options.add(varItem);
+                  });
+            }
+         });   
+    }
+}
+
+//-->
+</script>
+</head>
+<body id="BODY" topmargin="0" leftmargin="0" marginwidth="0" marginheight="0" align="left" onload="onLoad();setTablefix('#TABLEFIX', 1, 3+$!PSPAY091PageCreaterForList.printLockColumn());selectItemReSet();">
+#if($!errorMessage && $!errorMessage !="")
+<div class="error">
+    $!errorMessage
+</div>
+#end
+<form id="BodyForm" name="BodyForm" action="${flowExecutionUrl}&_eventId=update" method="post" enctype="multipart/form-data">
+#foreach($!screenNotActionPayItem in $!itemList.screenNotActionPayItemList)
+
+    ##初期表示時はuserの情報を取得し、それ以降はreciptの情報をセットする
+    #if ($!screenNotActionPayItem.receipt.remand.remandUser.remandUser.userID =="")
+        #customFormHiddenInput("inputUserId_$velocityCount" "$!screenNotActionPayItem.inputUserId")
+        #customFormHiddenInput("inputSectionCd_$velocityCount" "$!screenNotActionPayItem.inputSectionCd")
+        #customFormHiddenInput("inputCompanyCd_$velocityCount" "$!screenNotActionPayItem.inputCompanyCd")
+        #customFormHiddenInput("backUserShowFlg_$velocityCount" "$!screenNotActionPayItem.inputUserId")
+    #else
+        #customFormHiddenInput("inputUserId_$velocityCount" "$!screenNotActionPayItem.receipt.remand.remandUser.remandUser.userID")
+        #customFormHiddenInput("inputSectionCd_$velocityCount" "$!screenNotActionPayItem.receipt.remand.remandUser.remandUser.section.sectionCd")
+        #customFormHiddenInput("inputCompanyCd_$velocityCount" "$!screenNotActionPayItem.receipt.remand.remandUser.remandUser.section.company.companyCd")
+        #customFormHiddenInput("backUserShowFlg_$velocityCount" "$!screenNotActionPayItem.receipt.remandUserShowFlg")
+    #end
+
+    #customFormHiddenInput("currentCd_$velocityCount" "$!screenNotActionPayItem.currencyCd")
+    #customFormHiddenInput("totalAmount_$velocityCount" "$!screenNotActionPayItem.totalAmountOutTax.amount")
+    #customFormHiddenInput("screenNotActionPayItemList[$velocityCount].approute.appRouteNo" "$!screenNotActionPayItem.approute.appRouteNo")
+    #customFormHiddenInput("screenNotActionPayItemList[$velocityCount].approute.appRouteName" "$!screenNotActionPayItem.approute.appRouteName")
+    #customFormHiddenInput("screenNotActionPayItemList[$velocityCount].receipt.remand.backReason.backReason.comment" "$!screenNotActionPayItem.receipt.remand.backReason.backReason.comment")
+#end
+#if($!itemList.screenNotActionPayItemList && ($!itemList.screenNotActionPayItemList.size() > 0))
+<div id="hideDiv">
+</div>
+<table id="TABLEFIX" class="ListArea" width="100%">
+    <thead>
+        <tr id="Header">
+            <th class="BoxHeaderCenter FontSmall">No.<!--No.--></th>
+            <th class="BoxHeaderCenter FontSmall">#customSpringMessage("DETAIL")<!--詳細--></th>
+            <th class="BoxHeaderCenter FontSmall">#customSpringMessage("ACTION")<!--処理--></th>
+            #foreach($!item in $!PSPAY091PageCreaterForList.getItemListForBody())
+                #set($currentOneColumnFlag = $!PSPAY091PageCreaterForList.getOneColumnFlag($!item))
+                #if($velocityCount == 0)
+                    $!PSPAY091PageCreaterForList.printTHtag($!item,'class="BoxHeaderCenter FontSmall"')
+                #elseif($currentOneColumnFlag)
+                    $!PSPAY091PageCreaterForList.printBRtag($!item)
+                #else
+                    $!PSPAY091PageCreaterForList.printTHtagClose()
+                    $!PSPAY091PageCreaterForList.printTHtag($!item,'class="BoxHeaderCenter FontSmall"')
+                #end
+                #if($!item.getColumnName() == "T_P_PAY.PAY_NO")
+                    $!PSPAY091PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName() == "T_P_PAY.REQ_DATE")
+                    $!PSPAY091PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName() == "T_P_PAY.TITLE_NAME")
+                    $!PSPAY091PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName() == "T_P_PAY.SUP_CD")
+                    $!PSPAY091PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName() == "T_P_PAY.SUP_ABBR_NAME")
+                    $!PSPAY091PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName() == "T_P_PAY.CURRENCY_CD")
+                    $!PSPAY091PageCreaterForList.printHead($!item)
+               #elseif($!item.getColumnName() == "T_P_PAY.TOTAL_AMOUNT_IN_TAX")
+                    $!PSPAY091PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName() == "T_P_PAY.PAY_CONDITION_CD")
+                    $!PSPAY091PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName() == "T_P_PAY.REQ_SECTION_CD")
+                    $!PSPAY091PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName() == "T_P_PAY.REQ_SECTION_NAME")
+                    $!PSPAY091PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName() == "T_P_PAY.REQ_USER_ID")
+                    $!PSPAY091PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName() == "T_P_PAY.REQ_USER_NAME")
+                    $!PSPAY091PageCreaterForList.printHead($!item)
+                #else
+                    $!PSPAY091PageCreaterForList.printHead($!item)
+                #end
+            #end
+            $!PSPAY091PageCreaterForList.printTHtagClose()
+        </tr>
+    </thead>
+    <tbody>
+        #foreach($!screenNotActionPayItem in $!itemList.screenNotActionPayItemList)
+        <tr id="Row_$velocityCount" style="height:35px; #if($velocityCount % 2 == 0) background-color:#dce4ef; #else background-color=#ffffff; #end">
+        #customFormHiddenInput("selectedIndex_$velocityCount" "0")
+            <td class="BoxDetailCenter FontList">#set( $index = $velocityCount + 1 )$index</td>
+            <td class="BoxDetailCenter">
+                <img id="DetailButton_0" class="Icon" src="../../image/btnDetailDisp.gif" onclick="openDetail('#jsEscapeInHTML($!screenNotActionPayItem.payReqIdentify.payReqSeq)','#jsEscapeInHTML($!screenNotActionPayItem.payReqIdentify.lastUpdDate)');">
+            </td>
+            <td class="BoxDetailLeft">
+                <table width="100%">
+                    <tr>
+                        <td>
+                            <select id="operate_$velocityCount" class="Small" onchange="showList(this);setTablefixByChange('#TABLEFIX', 1, 3+$!PSPAY091PageCreaterForList.printLockColumn());selectItemReSet();">
+                                #foreach($!dealItem in $!dealList)
+                                    <option value="#out($!dealItem.value)" #if("$!screenNotActionPayItem.receipt.handlerType"=="$!dealItem.value") selected #end>#out($!dealItem.text)</option>
+                                #end
+                            </select>
+                        </td>
+                        <td id="img_$velocityCount" style="display: none;">
+                            <img src="../../image/mrkMiniRight.gif">
+                        </td>
+                        <td id="Sel_$velocityCount" style="display:none;" class="FontSmall divHandle">
+                            <select id="SelApproute_$velocityCount" name="SelApproute_$velocityCount" class="Small" onchange="disabledButton(this);">
+                                ## ajaxで表示幅の変更がうまくいかないため、初期状態でダミーをセット
+                                #foreach($!appRoute in $!appRouteList)
+                                    <OPTION value="" >
+                                        #out($!appRoute.text)
+                                    </OPTION>
+                                #end
+                            </select>
+                        </td>
+                         <td id="Button_$velocityCount"  name="Button_$velocityCount" style="display:none;" class="divHandle">
+                            <input id="DispButton_$velocityCount" name="DispButton_$velocityCount" type="button" class="SmallButton" value="#customSpringMessage('SHOW')" onclick="appRoutePopup($velocityCount);"><!--表示-->
+                        </td>
+                        <td id="Btn_$velocityCount" style="display:none;" class="divHandle">
+                            #customFormHiddenInput("CommentText_$velocityCount" "")
+                            <input id="RejectButton_0" onclick="actionPopup($velocityCount)" class="MiniButton" type="button" value="#customSpringMessage('COMMENT_EDIT')"><!--コメント編集-->
+                        </td>
+                    </tr>
+                </table>
+            </td>
+            #foreach($!item in $!PSPAY091PageCreaterForList.getItemListForBody($velocityCount))
+                #set($currentOneColumnFlag = $!PSPAY091PageCreaterForList.getOneColumnFlag($!item))
+                #if($velocityCount == 0)
+                    $!PSPAY091PageCreaterForList.printTDtag('class="BoxDetailLeft FontList"')
+                #elseif(!$currentOneColumnFlag)
+                    $!PSPAY091PageCreaterForList.printTDtagClose()
+                    $!PSPAY091PageCreaterForList.printTDtag('class="BoxDetailLeft FontList"')
+                #end
+                #if($!item.getColumnName() == "T_P_PAY.PAY_NO")
+                    $!PSPAY091PageCreaterForList.printDefault($!item,"_data_style",'class="FontSlipNo"')
+                #elseif($!item.getColumnName() == "T_P_PAY.REQ_DATE")
+                    $!PSPAY091PageCreaterForList.printDefault($!item,"_data_style",'align="center"')
+                #elseif($!item.getColumnName() == "T_P_PAY.TITLE_NAME")
+                    $!PSPAY091PageCreaterForList.printDefault($!item)
+                #elseif($!item.getColumnName() == "T_P_PAY.SUP_CD")
+                    $!PSPAY091PageCreaterForList.printDefault($!item,"_data_style",'align="center"')
+                #elseif($!item.getColumnName() == "T_P_PAY.SUP_ABBR_NAME")
+                    $!PSPAY091PageCreaterForList.printDefault($!item)
+                #elseif($!item.getColumnName() == "T_P_PAY.CURRENCY_CD")
+                    $!PSPAY091PageCreaterForList.printDefault($!item,"_data_style",'align="center"')
+               #elseif($!item.getColumnName() == "T_P_PAY.TOTAL_AMOUNT_IN_TAX")
+                    $!PSPAY091PageCreaterForList.printSpecial('s27_list_data_currency',$!item,"_data_style",'class="FontCurrSmall" align="right"')
+                #elseif($!item.getColumnName() == "T_P_PAY.PAY_CONDITION_CD")
+                    $!PSPAY091PageCreaterForList.printDefault($!item)
+                #elseif($!item.getColumnName() == "T_P_PAY.REQ_SECTION_CD")
+                    $!PSPAY091PageCreaterForList.printDefault($!item,"_data_style",'align="center"')
+                #elseif($!item.getColumnName() == "T_P_PAY.REQ_SECTION_NAME")
+                    $!PSPAY091PageCreaterForList.printDefault($!item)
+                #elseif($!item.getColumnName() == "T_P_PAY.REQ_USER_ID")
+                    $!PSPAY091PageCreaterForList.printDefault($!item,"_data_style",'align="center"')
+                #elseif($!item.getColumnName() == "T_P_PAY.REQ_USER_NAME")
+                    $!PSPAY091PageCreaterForList.printDefault($!item)
+                #else
+                    $!PSPAY091PageCreaterForList.printDefault($!item)
+                #end
+            #end
+            $!PSPAY091PageCreaterForList.printTDtagClose()
+        </tr>
+        #end
+    </tbody>
+</table>
+#end
+<br>
+<table id="WAIT" class="NoBorder" style="display:none;width:100%;"><tr><td style="text-align:center;"><br><br>
+<img src="../../image/wait.gif"><br><span class="FontMini"><br>#customSpringMessage('SEARCH_MESSAGE')</span></td></tr></table><!--問い合わせ中...-->
+</form>
+</body>
+</html>

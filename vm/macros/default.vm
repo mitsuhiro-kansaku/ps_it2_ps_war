@@ -1,0 +1,1049 @@
+#**
+ * springMessage
+ *
+ * Macro to translate a message code into a message.
+ *#
+#macro( customSpringMessage $code )$customMacroRequestContext.getMessageNoHtmlEscape($code)#end
+
+#**
+ * springMessageText
+ *
+ * Macro to translate a message code into a message,
+ * using the given default text if no message found.
+ *#
+#macro( customSpringMessageText $code $text )$customMacroRequestContext.getMessageNoHtmlEscape($code, $text)#end
+
+#**
+ * 初期化
+ * getCustomDefault
+*#
+#macro(getCustomDefault)
+    #set($intType="Insert")
+    #set($updType="Update")
+    #**改定**#
+    #set($revisonType="Revison")
+    #**複写**#
+    #set($copyType="Copy")
+    #set($boolTrue="true")
+#end
+
+#**
+ * customFormSingleSelect
+ *
+ * Show a selectbox (dropdown) input element allowing a single value to be chosen
+ * from a list of options.
+ *
+ * The null check for $status.value leverages Velocity's 'quiet' notation rather
+ * than the more common #if($status.value) since this method evaluates to the
+ * boolean 'false' if the content of $status.value is the String "false" - not
+ * what we want.
+ *
+ * @param path the name of the field to bind to
+ * @param options a list (value=label) of all the available options
+ * @param attributes any additional attributes for the element (such as class
+ *    or CSS styles or size
+*#
+#macro( customFormSingleSelect $path $options $attributes )
+    #springBind($path)
+    <select id="${status.expression}" name="${status.expression}" ${attributes}>
+        #foreach($option in $options)
+            <option value="#out(${option.value})"
+            #if("$!status.value" == "#out($option.value)")
+                selected="selected"
+            #end>
+            #out(${option.text})</option>
+        #end
+    </select>
+#end 
+
+##セレクトボックスにvalueとテキストを両方表示する。区切りは":"コロン
+#macro( customFormSingleSelectValueAndText $path $options $attributes )
+    #springBind($path)
+    <select id="${status.expression}" name="${status.expression}" ${attributes}>
+        #foreach($option in $options)
+            <option value="#out(${option.value})"
+            #if("$!status.value" == "#out($option.value)")
+                selected="selected"
+            #end>
+            #if("$!{option.text}" == "")
+                #out(${option.text})</option>
+            #else
+                #out(${option.value}):#out(${option.text})</option>
+            #end
+        #end
+    </select>
+#end 
+
+
+#**
+ * customFormSingleSelectForApproval
+ *
+ * Show a selectbox (dropdown) input element allowing a single value to be chosen
+ * from a list of options.
+ *
+ * @param path the name of the field to bind to
+ * @param options a list (value=label) of all the available options
+ * @param attributes any additional attributes for the element (such as class
+ *    or CSS styles or size
+*#
+#macro( customFormSingleSelectForApproval $path $options $attributes )
+    #springBind($path)
+    <select id="${status.expression}" name="${status.expression}" ${attributes}>
+        #foreach($option in $options)
+            <option value="#out(${option.value})">
+            #out(${option.text})</option>
+        #end
+    </select>
+#end 
+
+#**
+ * customFormRadioButtons
+ *
+ * Show radio buttons.
+ *
+ * @param path the name of the field to bind to
+ * @param options a list (value=label) of all the available options
+ * @param separator the html tag or other character list that should be used to
+ *    separate each option.  Typically '&nbsp;' or '<br>'
+ * @param attributes any additional attributes for the element (such as class
+ *    or CSS styles or size
+*#
+#macro( customFormRadioButtons $path $options $separator $attributes )
+    #springBind($path)
+    #foreach($option in $options)
+        <input type="radio" name="${status.expression}" value="${option.value}"
+        #if("$!status.value" == "$option.value")
+            checked="checked"
+        #end
+        ${attributes}
+        #springCloseTag()
+        #customFormSpan(${option.text} $attributes) ${separator}
+    #end
+#end
+
+#**
+ * customFormRadioButtonsVertical
+ *
+ * Show radio buttons.
+ *
+ * @param path the name of the field to bind to
+ * @param options a list (value=label) of all the available options
+ * @param separator the html tag or other character list that should be used to
+ *    separate each option.  Typically '&nbsp;' or '<br>'
+ * @param attributes any additional attributes for the element (such as class
+ *    or CSS styles or size
+*#
+#macro( customFormRadioButtonsVertical $path $options $separator $attributes )
+    #springBind($path)
+    #foreach($option in $options)
+        <input type="radio" name="${status.expression}" value="${option.value}"
+        #if("$!status.value" == "$option.value")
+            checked="checked"
+        #end
+        ${attributes}
+        #springCloseTag()
+        <span class="FontMiddle"> #out(${option.text}) #out(${separator})</span>
+        <br/>
+    #end
+#end
+
+#**
+ * springFormCheckboxes
+ *
+ * Show checkboxes.
+ *
+ * @param path the name of the field to bind to
+ * @param options a map (value=label) of all the available options
+ * @param separator the html tag or other character list that should be used to
+ *    separate each option.  Typically '&nbsp;' or '<br>'
+ * @param attributes any additional attributes for the element (such as class
+ *    or CSS styles or size
+*#
+#macro( customFormCheckboxes $path $options $separator $attributes )
+    #springBind($path)
+    #foreach($option in $options)
+        <input type="checkbox" name="${status.expression}" value="${option.value}" 
+        #foreach($item in $status.value) 
+            #if($item == $option.value) checked="checked" #end 
+        #end
+         #springCloseTag()
+        #customFormSpan(${option.text} $attributes) ${separator}
+    #end
+#end
+
+#**
+ * customFormCheckboxesOption
+ *
+ * Show checkboxes.
+ *
+ * @param path the name of the field to bind to
+ * @param options a map (value=label) of all the available options
+ * @param separator the html tag or other character list that should be used to
+ *    separate each option.  Typically '&nbsp;' or '<br>'
+ * @param attributes any additional attributes for the element (such as class
+ *    or CSS styles or size
+*#
+#macro( customFormCheckboxesOption $path $options $separator $attributes )
+    #springBind($path)
+    #foreach($option in $options)
+        #set($isSame = false)
+        #foreach($item in $status.value) 
+            #if($item == $option.value)
+                #set($isSame = true)
+            #end 
+        #end
+        #set($hiddenId = "${status.expression}$velocityCount")
+        #if($isSame)
+            <input type="hidden" id="$hiddenId" name="${status.expression}" value="$option.value"/>
+        #else
+            <input type="hidden" id="$hiddenId" name="${status.expression}" value="0"/>
+        #end
+        <input type="checkbox" id="_$hiddenId"
+        onclick="getObj('$hiddenId').value = getObj('_$hiddenId').checked?'$option.value':'0';"
+        #if($isSame) checked="checked" #end 
+        #springCloseTag()
+        #customFormSpan(${option.text} $attributes) ${separator}
+    #end
+#end
+
+#**
+ * 複数チェックボックス（BRの位置指定）
+ *
+ * Show checkboxes Specify Br Position.
+ *
+ * @param path the name of the field to bind to
+ * @param options a map (value=label) of all the available options
+ * @param separator the html tag or other character list that should be used to
+ *    separate each option.  Typically '&nbsp;' or '<br>'
+ * @param attributes any additional attributes for the element (such as class
+ *    or CSS styles or size
+ * @param Specify Br Position
+*#
+#macro( customFormCheckboxesSpecifyBrPosition $path $options $separator $attributes $brPosition )
+    #springBind($path)
+    #foreach($option in $options)
+        <input type="checkbox" name="${status.expression}" value="${option.value}" 
+        #foreach($item in $status.value) 
+            #if($item == $option.value) checked="checked" #end 
+        #end
+         #springCloseTag()
+        #customFormSpan(${option.text} $attributes) ${separator}
+        #if($velocityCount == $brPosition )
+          <br/>
+        #end
+    #end
+#end
+
+#**
+ * springFormCheckbox
+ *
+ * Show a single checkbox.
+ *
+ * @param path the name of the field to bind to
+ * @param attributes any additional attributes for the element (such as class
+ *    or CSS styles or size
+ * @param value the value of the field to bind to
+*#
+#macro( customFormCheckbox $path $attributes $checkValue $noCheckValue)
+    #springBind($path)
+    <input type="hidden" id="${status.expression}" name="${status.expression}" value="$!{status.value}"/>
+    <input type="checkbox" id="_${status.expression}" name="_${status.expression}" #if("$!{status.value}"=="$checkValue") checked="checked" #end ${attributes} onclick="getObj('${status.expression}').value = getObj('_${status.expression}').checked?'$checkValue':'$noCheckValue';"/>
+#end
+
+#**
+ * springFormCheckbox
+ *
+ * Show a single checkbox.
+ *
+ * @param path the name of the field to bind to
+ * @param attributes any additional attributes for the element (such as class
+ *    or CSS styles or size
+ * @param value the value of the field to bind to
+ * @param itemValue actual value 
+*#
+#macro( customFormCheckboxForPersonalSetting $path $attributes $checkValue $noCheckValue $itemValue)
+    #springBind($path)
+    <input type="hidden" id="${status.expression}" name="${status.expression}" value="$itemValue"/>
+    <input type="checkbox" id="_${status.expression}" name="_${status.expression}" #if("$itemValue"=="$checkValue") checked="checked" #end ${attributes} onClick="getObj('${status.expression}').value = getObj('_${status.expression}').checked?'$checkValue':'$noCheckValue';"/>
+#end
+
+#**
+ * springFormCheckbox
+ *
+ * Show a single checkbox.
+ *
+ * @param path the name of the field to bind to
+ * @param attributes any additional attributes for the element (such as class
+ *    or CSS styles or size
+ * @param value the value of the field to bind to
+*#
+#macro( customFormCheckboxOnClick $path $attributes $onclick $checkValue $noCheckValue)
+    #springBind($path)
+    <input type="hidden" id="${status.expression}" name="${status.expression}" value="$!{status.value}"/>
+    <input type="checkbox" id="_${status.expression}" name="_${status.expression}" #if("$!{status.value}"=="$checkValue") checked="checked" #end ${attributes} onclick="${onclick}getObj('${status.expression}').value = getObj('_${status.expression}').checked?'$checkValue':'$noCheckValue';"/>
+#end
+
+#**
+ * customFormInput
+ *
+ * カスタムのテキストボックス
+ *
+ * @param path the name of the field to bind to
+ * @param inputClass cssname
+ * @param maxlength inputmaxlength 
+ * @param size inputsize
+ * @param value the value of the field to bind to
+ * @param textType the value of the field to bind to
+*#
+#macro(customFormInput $path $attributes $value)
+    #springBind($path)
+     <input
+        id="${status.expression}" 
+        name="${status.expression}" 
+        value="#out($value)"
+        ${attributes}
+    >
+#end
+#**
+ * customFormSpan
+ *
+ * カスタムのスパン
+ *
+ * @param path
+ * @param value
+ * @param spanClass
+*#
+#macro(customFormSpan $value $spanAttributes)
+    <span ${spanAttributes}>#out($!{value})</span>
+#end
+
+#**
+ * customFormTable
+ *
+ * カスタムのスパン
+ *
+ * @param path
+ * @param value
+ * @param tdAttributes  
+ * @param spanAttributes
+*#
+#macro(customFormTable $value $tdAttributes $spanAttributes)
+    <table class="NoBorder" width="100%">
+        <tr>
+            <td ${tdAttributes}>
+                #customFormSpan($value $spanAttributes)
+            </td>
+        </tr>
+    </table>
+#end
+
+#**
+ * customFormInputByType
+ *
+ * カスタムのスパン
+ *
+ * @param type
+ * @param path
+ * @param value 
+ * @param inputClass 
+ * @param maxlength 
+ * @param size 
+ * @param editEnable
+ * @param tdAttributes  
+ * @param spanAttributes
+*#
+#macro(customFormInputByType $path $attributes $editEnable $tdAttributes $spanAttributes)
+    #getCustomDefault()
+    #if("$!intType" == "$!type") 
+        #springFormInput($path $attributes)
+     #elseif("$!updType" == "$!type" || "$!revisonType" == "$!type")
+        #if("$!boolTrue" == "$!editEnable")
+            #springFormInput($path $attributes)
+        #else
+            #springBindEscaped($path, false)
+            #customFormTable("$!{status.value}" $tdAttributes $spanAttributes)
+        #end
+    #end
+#end
+
+#**
+ * customFormSingSelectByType
+ *
+ * カスタムのスパン
+ *
+ * @param type
+ * @param path
+ * @param options 
+ * @param attributes 
+ * @param value 
+ * @param editEnable 
+ * @param tdAttributes  
+ * @param spanAttributes
+*#
+#macro(customFormSingSelectByType $path $options $attributes $editEnable $tdAttributes $spanAttributes)
+    #getCustomDefault()
+    #if("$!intType" == "$!type") ##新規の場合
+        #customFormSingleSelect($path $options $attributes)
+    #elseif("$!updType" == "$!type" || "$!revisonType" == "$!type") ##編集の場合
+        #if("$!boolTrue" == $editEnable)
+            #customFormSingleSelect($path $options $attributes)
+        #else
+           #springBind($path)
+           #customFormTable("$!{status.value}" $tdAttributes $spanAttributes)
+        #end
+    #end
+#end
+
+#**
+ * customFormSingleSelectForItemSetting
+ *
+ * Show a selectbox (dropdown) input element allowing a single value to be chosen
+ * from a list of options.
+ *
+ * The null check for $status.value leverages Velocity's 'quiet' notation rather
+ * than the more common #if($status.value) since this method evaluates to the
+ * boolean 'false' if the content of $status.value is the String "false" - not
+ * what we want.
+ *
+ * @param path the name of the field to bind to
+ * @param options a list (value=label) of all the available options
+ * @param attributes any additional attributes for the element (such as class
+ *    or CSS styles or size
+*#
+#macro( customFormSingleSelectForItemSetting $property $options $attributes $value)
+    <select id="${property}" name="${property}" ${attributes}>
+        <option value=""></option>
+        #foreach($option in $options)
+            <option value="#out(${option.value})"
+            #if("$!value" == "#out($option.value)")
+                selected="selected"
+            #end>
+            #out(${option.text})</option>
+        #end
+    </select>
+#end
+
+#macro( customFormSingleSelectForItemSettingWithNoSpace $property $options $attributes $value)
+    <select id="${property}" name="${property}" ${attributes}>
+        #foreach($option in $options)
+            <option value="#out(${option.value})"
+            #if("$!value" == "#out($option.value)")
+                selected="selected"
+            #end>
+            #out(${option.text})</option>
+        #end
+    </select>
+#end
+
+#**
+ * customFormAppRouteSingleSelectForItemSetting
+ *
+ * Show a selectbox (dropdown) input element allowing a single value to be chosen
+ * from a list of options.
+ *
+ * The null check for $status.value leverages Velocity's 'quiet' notation rather
+ * than the more common #if($status.value) since this method evaluates to the
+ * boolean 'false' if the content of $status.value is the String "false" - not
+ * what we want.
+ *
+ * @param path the name of the field to bind to
+ * @param options a list (value=label) of all the available options
+ * @param attributes any additional attributes for the element (such as class
+ *    or CSS styles or size
+*#
+#macro( customFormAppRouteSingleSelectForItemSetting $property $options $attributes $value)
+    <select id="${property}" name="${property}" ${attributes}>
+        #foreach($option in $options)
+            <option value="#out(${option.value})"
+            #if($option.selected)
+                selected="selected"
+            #end>
+            #out(${option.text})</option>
+        #end
+    </select>
+#end
+
+#**
+ * customFormCheckboxesForItemSetting
+ *
+ * Show checkboxes.
+ *
+ * The null check for $status.value leverages Velocity's 'quiet' notation rather
+ * than the more common #if($status.value) since this method evaluates to the
+ * boolean 'false' if the content of $status.value is the String "false" - not
+ * what we want.
+ *
+ * @param path the name of the field to bind to
+ * @param options a list (value=label) of all the available options
+ * @param attributes any additional attributes for the element (such as class
+ *    or CSS styles or size
+*#
+#macro( customFormCheckboxesForItemSetting $property $options $attributes $value $dspFlg)
+    #if($value.length > 1) 
+        #set($array = $value)
+    #else
+        #set($array = $value.split(","))
+    #end
+    #foreach($option in $options)
+        #set($checked = "off")
+        #foreach($item in $array) 
+            #if($item == $option.value) #set($checked = "on") #end 
+        #end
+        <input type="hidden" id="${property}_${velocityCount}" name="$property" value="#if($checked == "on")${option.value}#end" />
+        <input type="checkbox" value="${option.value}" id="_${property}_${velocityCount}"
+        #if($checked == "on") checked="checked" #end 
+        onclick="getObj('${property}_${velocityCount}').value = this.checked?'${option.value}':'';"
+        #if($dspFlg == "1") disabled=disabled #end 
+        #springCloseTag()
+        #customFormSpan(${option.text} $attributes)
+    #end
+#end
+
+#**
+ * customFormRadioButtonsForItemSetting
+ *
+ * Show radioButton.
+ *
+ * The null check for $status.value leverages Velocity's 'quiet' notation rather
+ * than the more common #if($status.value) since this method evaluates to the
+ * boolean 'false' if the content of $status.value is the String "false" - not
+ * what we want.
+ *
+ * @param path the name of the field to bind to
+ * @param options a list (value=label) of all the available options
+ * @param attributes any additional attributes for the element (such as class
+ *    or CSS styles or size
+*#
+#macro( customFormRadioButtonsForItemSetting $property $options $attributes $value)
+    #foreach($option in $options)
+        <input type="radio" id="$property" name="$property" value="${option.value}"
+        #if("$!value" == "$option.value")
+            checked="checked"
+        #end
+        #springCloseTag()
+        #customFormSpan(${option.text} $attributes)
+    #end
+#end
+
+#**
+ * customFormRedMessageByType
+ *
+ * カスタムのメセッジ
+ * ※
+ * @param type タイプは削除、新規、修正などある
+ * @param spanAttributes 
+ * @param isShow 
+ * @param value 
+*#
+#macro(customFormRedMessageByType $spanAttributes $isShow $value)
+        #getCustomDefault()
+        #if("$!intType" == "$!type") 
+            #customFormSpan($value $spanAttributes)
+        #elseif(("$!updType" == "$!type" ||"$!revisonType" == "$!type" ) && "$!boolTrue" == $isShow)
+            #customFormSpan($value $spanAttributes)
+        #end
+#end
+
+#**
+ * customFormRadioButtonByType
+ *
+ * カスタムのメセッジ
+ *
+ * @param type タイプは削除、新規、修正などある
+ * @param path 
+ * @param options 
+ * @param separator 
+ * @param attributes 
+ * @param value  
+ * @param editEnable  
+ * @param tableClass  
+ * @param tdClass  
+ * @param spanClass 
+*#
+#macro(customFormRadioButtonByType $path $options $separator $attributes $editEnable $tdAttributes $spanAttributes)
+    #getCustomDefault()
+    #if("$!intType" == "$!type") 
+        #customFormRadioButtons($path $options $separator $attributes)
+    #elseif("$!updType" == "$!type")
+        #if("$!boolTrue" == $editEnable)
+            #customFormRadioButtons($path $options $separator $attributes)
+        #else
+           #springBind($path)
+           #customFormTable("$!{status.value}" $tdAttributes $spanAttributes)
+        #end
+    #end
+#end
+
+#**
+ * customFormTermFlgByType
+ *
+ * カスタムの廃止表示
+ *
+ * @param type タイプは削除、新規、修正などある
+ * @param message 
+ * @param path 
+ * @param attributes 
+ * @param attributes 
+*#
+#macro(customFormSingCheckboxByType $message $path $attributes $termList $spanAttributes)
+    #getCustomDefault()
+    #if("$!updType" == "$!type") 
+        #set($checkValue = "")
+        #set($noCheckValue = "")   
+        #foreach($term in $termList)
+            #if($term.text == "#customSpringMessage($!{message})")
+                #set($checkValue = $term.value)
+            #else
+                #set($noCheckValue = $term.value)
+            #end
+        #end
+        #customFormCheckbox($path $attributes $checkValue $noCheckValue)
+        #customFormSpan("#customSpringMessage($!{message})" $spanAttributes)
+    #end
+#end
+
+#**
+ * customFormTermFlgByType
+ *
+ * カスタムの部門種 表示
+ *
+ * @param type タイプは削除、新規、修正などある
+ * @param message 
+ * @param path 
+ * @param attributes 
+ * @param attributes 
+*#
+#macro(customFormSectionCheckbox $id $path $itemList $spanAttributes)
+    #set($checkValue = "")
+    #set($noCheckValue = "")   
+    #set($chktext = "")  
+    #foreach($term in $itemList)
+        #if($term.name == $!id)
+            #set($checkValue = $term.value)
+            #set($chktext = "${term.text}") 
+        #else
+            #set($noCheckValue = "0")
+        #end
+    #end
+    #customFormCheckbox($path $attributes $checkValue $noCheckValue)
+    #customFormSpan($chktext $spanAttributes)
+#end
+
+#**
+ * customFormSingCheckbox
+ *
+ * カスタムのCheckbox表示
+ *
+ * @param message 
+ * @param path 
+ * @param attributes 
+ * @param attributes 
+*#
+#macro(customFormSingCheckbox $id $path $itemList $spanAttributes)
+    #set($checkValue = "")
+    #set($noCheckValue = "")   
+    #set($chktext = "")  
+    #foreach($term in $itemList)
+        #if($term.name == $!id)
+            #set($checkValue = $term.value)
+            #set($chktext = "${term.text}") 
+        #else
+            #set($noCheckValue = $term.value)
+        #end
+    #end
+    #customFormCheckbox($path $attributes $checkValue $noCheckValue)
+    #customFormSpan($chktext $spanAttributes)
+#end
+
+#**
+ * customMessageArgs
+ *
+ * Macro to translate a message code with arguments into a message.
+*#
+
+#macro( customMessageArgs $code $args )$code \n\n #jsEscape($customMacroRequestContext.getMessageNoHtmlEscape($code, $args))#end
+
+#**
+ * customFormHiddenInput
+ *
+ * Generate a form input field of type 'hidden' and bind it to an attribute
+ * of a command or bean.
+ *
+ * @param path the name of the field to bind to
+ * @param attributes any additional attributes for the element (such as class
+ *    or CSS styles or size
+ *
+ *#
+#macro( customFormHiddenInput $id $value)
+
+    <input type="hidden" id="$id" name="$id" value="#out($value)" />
+#end
+
+#**
+ * customFormPasswordInput
+ *
+ * Display a form input field of type 'password' and bind it to an attribute
+ * of a command or bean.  No value will ever be specified for this field regardless
+ * of whether one exists or not.  For hopefully obvious reasons!
+ *
+ * @param path the name of the field to bind to
+ * @param attributes any additional attributes for the element (such as class
+ *    or CSS styles or size
+ *
+ *#
+#macro( customFormPasswordInput $path $attributes )
+    #springBind($path)
+    <input type="password" id="${status.expression}" name="${status.expression}" value="$!status.value" ${attributes}#springCloseTag()
+#end
+
+#**
+* customFormRadio
+*
+* Show a single radio.
+*
+* @param path the name of the field to bind to
+* @param attributes any additional attributes for the element (such as class
+* or CSS styles or size
+* @param value the value of the field to bind to
+*#
+#macro( customFormRadio $path $attributes $checkValue $noCheckValue )
+#springBind($path)
+<input type="hidden" id="${status.expression}" name="${status.expression}" value="$!{status.value}"/>
+<input type="radio" id="_${status.expression}" name="_${status.expression}" #if("$!{status.value}"=="$checkValue") checked="checked" #end ${attributes} onclick="getObj('${status.expression}').value = getObj('_${status.expression}').checked?'$checkValue':'$noCheckValue';/>
+#end
+
+#**
+* customFormRadio
+*
+* Show a single radio.
+*
+* @param path the name of the field to bind to
+* @param attributes any additional attributes for the element (such as class
+* or CSS styles or size
+* @param value the value of the field to bind to
+* @param itemValue actual value 
+*#
+#macro( customFormRadioForPersonalSetting $path $attributes $checkValue $noCheckValue $itemValue)
+#springBind($path)
+<input type="hidden" id="${status.expression}" name="${status.expression}" value="$itemValue"/>
+<input type="radio" id="_${status.expression}" name="_${status.expression}" #if("$itemValue"=="$checkValue") checked="checked" #end ${attributes} onclick="onClickRadioButton(this);getObj('${status.expression}').value = getObj('_${status.expression}').checked?'$checkValue':'$noCheckValue';"/>
+#end
+
+
+#macro( customItemKindSelectForItemSetting $itemClassLId $itemClassMId $itemClassSId $itemClassLValue $itemClassMValue $itemClassSValue $companyCdValue $sectionTypeCodeValue)
+#set($url = "../../listItemKindChange")
+<table class="NoBorder">
+    <tr>
+        <td><div class="ItemKind">#customSpringMessage('ITEM_CLASS_L_ABBR')</div></td><!--大分類 -->
+        <td>
+            <select id="$itemClassLId" name="$itemClassLId" class="Small" onchange="searchItemClassL('#jsEscapeInHTML($!url)','#jsEscapeInHTML($!itemClassLId)','#jsEscapeInHTML($!itemClassMId)','#jsEscapeInHTML($!itemClassSId)',this.value,'#jsEscapeInHTML($!companyCdValue)', '#jsEscapeInHTML($!sectionTypeCodeValue)')"></select>
+        </td>
+        <td><div class="ItemKind">#customSpringMessage('ITEM_CLASS_M_ABBR')</div></td><!--中分類 -->
+        <td>
+            <select id="$itemClassMId" name="$itemClassMId" class="Small" onchange="searchItemClassM('#jsEscapeInHTML($!url)','#jsEscapeInHTML($!itemClassLId)','#jsEscapeInHTML($!itemClassMId)','#jsEscapeInHTML($!itemClassSId)',getObj('$itemClassLId').value,this.value,'#jsEscapeInHTML($!companyCdValue)', '#jsEscapeInHTML($!sectionTypeCodeValue)')"></select>
+        </td>
+        <td><div class="ItemKind">#customSpringMessage('ITEM_CLASS_S_ABBR')</div></td><!--小分類 -->
+        <td>
+            <select id="$itemClassSId" name="$itemClassSId" class="Small"></select>
+        </td>
+    </tr>
+</table>
+<script language="javascript" type="text/javascript">
+    initItemClass('#jsEscape($!url)',"#jsEscape($!itemClassLId)","#jsEscape($!itemClassMId)","#jsEscape($!itemClassSId)","#jsEscape($!itemClassLValue)","#jsEscape($!itemClassMValue)","#jsEscape($!itemClassSValue)","#jsEscape($!companyCdValue)", "#jsEscape($!sectionTypeCodeValue)");
+    itemClassSelectID.setItemClass("#jsEscape($!itemClassLId)","#jsEscape($!itemClassMId)","#jsEscape($!itemClassSId)");
+</script>
+#end
+
+## 2013/02/14 DAIKO_YAMAGUCHI:このマクロは品種検索POPUPが前提になっているので、注意が必要
+#macro( customItemKindSelectNoSmall $itemClassL $itemClassM $itemClassS $companyCdValue )
+#set($url = "../../listItemKindChange")
+#springBind($itemClassL)
+#set($itemClassLId = ${status.expression})
+#set( $status = $springMacroRequestContext.getBindStatus($itemClassL, false))
+#set($itemClassLValue = ${status.value})
+#springBind($itemClassM)
+#set($itemClassMId = ${status.expression})
+#set( $status = $springMacroRequestContext.getBindStatus($itemClassM, false))
+#set($itemClassMValue = ${status.value})
+#set($itemClassSId = $itemClassS)
+#set($itemClassSValue = "")
+<script language="javascript" type="text/javascript">
+    var itemKindPopUpSectionTypeCode = "";
+    if(window.opener && !window.opener.closed){
+        itemKindPopUpSectionTypeCode = window.opener.itemKindPopup.sectionTypeCode;
+    }
+</script>
+<table class="NoBorder">
+    <tr>
+        <td><span class="FontSmallAnk Red">&nbsp;※</span></td>
+        <td><div class="ItemKind">#customSpringMessage('ITEM_CLASS_L_ABBR')</div></td><!--大分類 -->
+        <td>
+            <select id="$itemClassLId" name="$itemClassLId" class="Small" onchange="searchItemClassL('#jsEscapeInHTML($!url)','#jsEscapeInHTML($!itemClassLId)','#jsEscapeInHTML($!itemClassMId)','#jsEscapeInHTML($!itemClassSId)',this.value,'#jsEscapeInHTML($!companyCdValue)',itemKindPopUpSectionTypeCode)"></select>
+        </td>
+        <td><div class="ItemKind">#customSpringMessage('ITEM_CLASS_M_ABBR')</div></td><!--中分類 -->
+        <td>
+            <select id="$itemClassMId" name="$itemClassMId" class="Small" onchange="searchItemClassM('#jsEscapeInHTML($!url)','#jsEscapeInHTML($!itemClassLId)','#jsEscapeInHTML($!itemClassMId)','#jsEscapeInHTML($!itemClassSId)',getObj('$itemClassLId').value,this.value,'#jsEscapeInHTML($!companyCdValue)',itemKindPopUpSectionTypeCode)"></select>
+        </td>
+        <td><div style="display:none" class="ItemKind">#customSpringMessage('ITEM_CLASS_S_ABBR')</div></td><!--小分類 -->
+        <td>
+            <select style="display:none" id="$itemClassSId" name="$itemClassSId" class="Small"></select>
+        </td>
+    </tr>
+</table>
+<script language="javascript" type="text/javascript">
+    initItemClass('#jsEscape($!url)',"#jsEscape($!itemClassLId)","#jsEscape($!itemClassMId)","#jsEscape($!itemClassSId)","#jsEscape($!itemClassLValue)","#jsEscape($!itemClassMValue)","#jsEscape($!itemClassSValue)","#jsEscape($!companyCdValue)", itemKindPopUpSectionTypeCode);
+    this.itemClassSelectID.setItemClass("#jsEscape($!itemClassLId)","#jsEscape($!itemClassMId)","#jsEscape($!itemClassSId)");
+</script>
+#end
+
+#macro( customItemKindSelectWithAddButton $itemClassL $itemClassM $itemClassS $companyCdId )
+#set($url = "../../listItemKindChangeNoTerm")
+#springBind($itemClassL)
+#set($itemClassLId = ${status.expression})
+#set( $status = $springMacroRequestContext.getBindStatus($itemClassL, false))
+#set($itemClassLValue = ${status.value})
+#springBind($itemClassM)
+#set($itemClassMId = ${status.expression})
+#set( $status = $springMacroRequestContext.getBindStatus($itemClassM, false))
+#set($itemClassMValue = ${status.value})
+#springBind($itemClassS)
+#set($itemClassSId = ${status.expression})
+#set( $status = $springMacroRequestContext.getBindStatus($itemClassS, false))
+#set($itemClassSValue = ${status.value})
+<table class="NoBorder">
+    <tr>
+        <td><div class="ItemKind">#customSpringMessage('ITEM_CLASS_L_ABBR')</div></td><!--大分類 -->
+        <td>
+            <select id="$itemClassLId" name="$itemClassLId" class="Small" onchange="searchItemClassL('#jsEscapeInHTML($!url)','#jsEscapeInHTML($!itemClassLId)','#jsEscapeInHTML($!itemClassMId)','#jsEscapeInHTML($!itemClassSId)',this.value,getObj('$!companyCdId').value)"></select>
+        </td>
+         #if($!buttonLFlag)
+        <td nowrap width="10%" class="FontMiniAnkBold">
+            <input type="button" id="buttonL" class="SmallButton" value="#customSpringMessage('ACTION_ADD')" onclick="javaScript:buttonDisable();openDetailNew('1');">&nbsp;&nbsp;<!--追加 -->
+        </td>
+         #end
+        <td><div class="ItemKind">#customSpringMessage('ITEM_CLASS_M_ABBR')</div></td><!--中分類 -->
+        <td>
+            <select id="$itemClassMId" name="$itemClassMId" class="Small" onchange="searchItemClassM('#jsEscapeInHTML($!url)','#jsEscapeInHTML($!itemClassLId)','#jsEscapeInHTML($!itemClassMId)','#jsEscapeInHTML($!itemClassSId)',getObj('$itemClassLId').value,this.value,getObj('$!companyCdId').value)"></select>
+        </td>
+         #if($!buttonMFlag)
+        <td nowrap width="10%" class="FontMiniAnkBold">
+            <input type="button" id="buttonM" class="SmallButton" value="#customSpringMessage('ACTION_ADD')" onclick="javaScript:buttonDisable();openDetailNew('2');">&nbsp;&nbsp;<!--追加 -->
+        </td>
+         #end
+        <td><div class="ItemKind">#customSpringMessage('ITEM_CLASS_S_ABBR')</div></td><!--小分類 -->
+        <td>
+            <select id="$itemClassSId" name="$itemClassSId" class="Small"></select>
+        </td>
+         #if($!buttonSFlag)
+        <td nowrap width="10%" class="FontMiniAnkBold">
+            <input type="button" id="buttonS" class="SmallButton" value="#customSpringMessage('ACTION_ADD')" onclick="javaScript:buttonDisable();openDetailNew('3');"><!--追加 -->
+        </td>
+         #end
+    </tr>
+</table>
+<script language="javascript" type="text/javascript">
+    initItemClass('#jsEscape($!url)',"#jsEscape($!itemClassLId)","#jsEscape($!itemClassMId)","#jsEscape($!itemClassSId)","#jsEscape($!itemClassLValue)","#jsEscape($!itemClassMValue)","#jsEscape($!itemClassSValue)",getObj('$!companyCdId').value);
+    this.itemClassSelectID.setItemClass("#jsEscape($!itemClassLId)","#jsEscape($!itemClassMId)","#jsEscape($!itemClassSId)");
+</script>
+#end
+
+#macro( customItemKindSelect $itemClassL $itemClassM $itemClassS )
+#set($url = "../../listItemKindChange")
+#springBind($itemClassL)
+#set($itemClassLId = ${status.expression})
+#set( $status = $springMacroRequestContext.getBindStatus($itemClassL, false))
+#set($itemClassLValue = ${status.value})
+#springBind($itemClassM)
+#set($itemClassMId = ${status.expression})
+#set( $status = $springMacroRequestContext.getBindStatus($itemClassM, false))
+#set($itemClassMValue = ${status.value})
+#springBind($itemClassS)
+#set($itemClassSId = ${status.expression})
+#set( $status = $springMacroRequestContext.getBindStatus($itemClassS, false))
+#set($itemClassSValue = ${status.value})
+<table class="NoBorder">
+    <tr>
+        ## 大分類
+        <td><div class="ItemKind">#customSpringMessage('ITEM_CLASS_L_ABBR')</div></td>
+        <td>
+            <select id="$itemClassLId" name="$itemClassLId" class="Small" onchange="searchItemClassL('#jsEscapeInHTML($!url)','#jsEscapeInHTML($!itemClassLId)','#jsEscapeInHTML($!itemClassMId)','#jsEscapeInHTML($!itemClassSId)',this.value)"></select>
+        </td>
+        ## 中分類
+        <td><div class="ItemKind">#customSpringMessage('ITEM_CLASS_M_ABBR')</div></td>
+        <td>
+            <select id="$itemClassMId" name="$itemClassMId" class="Small" onchange="searchItemClassM('#jsEscapeInHTML($!url)','#jsEscapeInHTML($!itemClassLId)','#jsEscapeInHTML($!itemClassMId)','#jsEscapeInHTML($!itemClassSId)',getObj('$itemClassLId').value,this.value)"></select>
+        </td>
+        ## 小分類
+        <td><div class="ItemKind">#customSpringMessage('ITEM_CLASS_S_ABBR')</div></td>
+        <td>
+            <select id="$itemClassSId" name="$itemClassSId" class="Small"></select>
+        </td>
+    </tr>
+</table>
+<script language="javascript" type="text/javascript">
+    initItemClass('#jsEscape($!url)',"#jsEscape($!itemClassLId)","#jsEscape($!itemClassMId)","#jsEscape($!itemClassSId)","#jsEscape($!itemClassLValue)","#jsEscape($!itemClassMValue)","#jsEscape($!itemClassSValue)");
+    this.itemClassSelectID.setItemClass("#jsEscape($!itemClassLId)","#jsEscape($!itemClassMId)","#jsEscape($!itemClassSId)");
+</script>
+#end
+
+#macro( customProductClassSelect $itemClassL $itemClassM $itemClassS)
+#set($url = "../../listProductClassChange")
+#springBind($itemClassL)
+#set($itemClassLId = ${status.expression})
+#set( $status = $springMacroRequestContext.getBindStatus($itemClassL, false))
+#set($itemClassLValue = ${status.value})
+#springBind($itemClassM)
+#set($itemClassMId = ${status.expression})
+#set( $status = $springMacroRequestContext.getBindStatus($itemClassM, false))
+#set($itemClassMValue = ${status.value})
+#springBind($itemClassS)
+#set($itemClassSId = ${status.expression})
+#set( $status = $springMacroRequestContext.getBindStatus($itemClassS, false))
+#set($itemClassSValue = ${status.value})
+<table class="NoBorder">
+    <tr>
+        <td><div class="ItemKind">#customSpringMessage('ITEM_CLASS_L_ABBR')</div></td><!--大分類 -->
+        <td>
+            <select id="$itemClassLId" name="$itemClassLId" class="Small" onchange="searchItemClassL('#jsEscapeInHTML($!url)','#jsEscapeInHTML($!itemClassLId)','#jsEscapeInHTML($!itemClassMId)','#jsEscapeInHTML($!itemClassSId)',this.value,'')"></select>
+        </td>
+        <td><div class="ItemKind">#customSpringMessage('ITEM_CLASS_M_ABBR')</div></td><!--中分類 -->
+        <td>
+            <select id="$itemClassMId" name="$itemClassMId" class="Small" onchange="searchItemClassM('#jsEscapeInHTML($!url)','#jsEscapeInHTML($!itemClassLId)','#jsEscapeInHTML($!itemClassMId)','#jsEscapeInHTML($!itemClassSId)',getObj('$itemClassLId').value,this.value,'')"></select>
+        </td>
+        <td><div class="ItemKind">#customSpringMessage('ITEM_CLASS_S_ABBR')</div></td><!--小分類 -->
+        <td>
+            <select id="$itemClassSId" name="$itemClassSId" class="Small"></select>
+        </td>
+    </tr>
+</table>
+<script language="javascript" type="text/javascript">
+    initItemClass('#jsEscape($!url)',"#jsEscape($!itemClassLId)","#jsEscape($!itemClassMId)","#jsEscape($!itemClassSId)","#jsEscape($!itemClassLValue)","#jsEscape($!itemClassMValue)","#jsEscape($!itemClassSValue)","");
+    this.itemClassSelectID.setItemClass("#jsEscape($!itemClassLId)","#jsEscape($!itemClassMId)","#jsEscape($!itemClassSId)");
+</script>
+#end
+
+#macro( customProductClassSelectForItemSetting $itemClassLId $itemClassMId $itemClassSId $itemClassLValue $itemClassMValue $itemClassSValue )
+#set($url = "../../listProductClassChange")
+<table class="NoBorder">
+    <tr>
+        <td><div class="ItemKind">#customSpringMessage('ITEM_CLASS_L_ABBR')</div></td><!--大分類 -->
+        <td>
+            <select id="$itemClassLId" name="$itemClassLId" class="Small" onchange="searchItemClassL('#jsEscapeInHTML($!url)','#jsEscapeInHTML($!itemClassLId)','#jsEscapeInHTML($!itemClassMId)','#jsEscapeInHTML($!itemClassSId)',this.value,'')"></select>
+        </td>
+        <td><div class="ItemKind">#customSpringMessage('ITEM_CLASS_M_ABBR')</div></td><!--中分類 -->
+        <td>
+            <select id="$itemClassMId" name="$itemClassMId" class="Small" onchange="searchItemClassM('#jsEscapeInHTML($!url)','#jsEscapeInHTML($!itemClassLId)','#jsEscapeInHTML($!itemClassMId)','#jsEscapeInHTML($!itemClassSId)',getObj('$itemClassLId').value,this.value,'')"></select>
+        </td>
+        <td><div class="ItemKind">#customSpringMessage('ITEM_CLASS_S_ABBR')</div></td><!--小分類 -->
+        <td>
+            <select id="$itemClassSId" name="$itemClassSId" class="Small"></select>
+        </td>
+    </tr>
+</table>
+<script language="javascript" type="text/javascript">
+    initItemClass('#jsEscape($!url)',"#jsEscape($!itemClassLId)","#jsEscape($!itemClassMId)","#jsEscape($!itemClassSId)","#jsEscape($!itemClassLValue)","#jsEscape($!itemClassMValue)","#jsEscape($!itemClassSValue)","");
+    this.itemClassSelectID.setItemClass("#jsEscape($!itemClassLId)","#jsEscape($!itemClassMId)","#jsEscape($!itemClassSId)");
+</script>
+#end
+
+#macro( customProductClassSelectWithAddButton $itemClassL $itemClassM $itemClassS)
+#set($url = "../../listProductClassChangeNoTerm")
+#springBind($itemClassL)
+#set($itemClassLId = ${status.expression})
+#set( $status = $springMacroRequestContext.getBindStatus($itemClassL, false))
+#set($itemClassLValue = ${status.value})
+#springBind($itemClassM)
+#set($itemClassMId = ${status.expression})
+#set( $status = $springMacroRequestContext.getBindStatus($itemClassM, false))
+#set($itemClassMValue = ${status.value})
+#springBind($itemClassS)
+#set($itemClassSId = ${status.expression})
+#set( $status = $springMacroRequestContext.getBindStatus($itemClassS, false))
+#set($itemClassSValue = ${status.value})
+<table class="NoBorder">
+    <tr>
+        <td><div class="ItemKind">#customSpringMessage('ITEM_CLASS_L_ABBR')</div></td><!--大分類 -->
+        <td>
+            <select id="$itemClassLId" name="$itemClassLId" class="Small" onchange="searchItemClassL('#jsEscapeInHTML($!url)','#jsEscapeInHTML($!itemClassLId)','#jsEscapeInHTML($!itemClassMId)','#jsEscapeInHTML($!itemClassSId)',this.value,'')"></select>
+        </td>
+         #if($!buttonLFlag)
+        <td nowrap width="10%" class="FontMiniAnkBold">
+            <input type="button" id="buttonL" class="SmallButton" value="#customSpringMessage('ACTION_ADD')" onclick="javaScript:buttonDisable();openDetailNew('1');">&nbsp;&nbsp;<!--追加 -->
+        </td>
+         #end
+        <td><div class="ItemKind">#customSpringMessage('ITEM_CLASS_M_ABBR')</div></td><!--中分類 -->
+        <td>
+            <select id="$itemClassMId" name="$itemClassMId" class="Small" onchange="searchItemClassM('#jsEscapeInHTML($!url)','#jsEscapeInHTML($!itemClassLId)','#jsEscapeInHTML($!itemClassMId)','#jsEscapeInHTML($!itemClassSId)',getObj('$itemClassLId').value,this.value,'')"></select>
+        </td>
+         #if($!buttonMFlag)
+        <td nowrap width="10%" class="FontMiniAnkBold">
+            <input type="button" id="buttonM" class="SmallButton" value="#customSpringMessage('ACTION_ADD')" onclick="javaScript:buttonDisable();openDetailNew('2');">&nbsp;&nbsp;<!--追加 -->
+        </td>
+         #end
+        <td><div class="ItemKind">#customSpringMessage('ITEM_CLASS_S_ABBR')</div></td><!--小分類 -->
+        <td>
+            <select id="$itemClassSId" name="$itemClassSId" class="Small"></select>
+        </td>
+         #if($!buttonSFlag)
+        <td nowrap width="10%" class="FontMiniAnkBold">
+            <input type="button" id="buttonS" class="SmallButton" value="#customSpringMessage('ACTION_ADD')" onclick="javaScript:buttonDisable();openDetailNew('3');"><!--追加 -->
+        </td>
+         #end
+    </tr>
+</table>
+<script language="javascript" type="text/javascript">
+    initItemClass('#jsEscape($!url)',"#jsEscape($!itemClassLId)","#jsEscape($!itemClassMId)","#jsEscape($!itemClassSId)","#jsEscape($!itemClassLValue)","#jsEscape($!itemClassMValue)","#jsEscape($!itemClassSValue)","");
+    this.itemClassSelectID.setItemClass("#jsEscape($!itemClassLId)","#jsEscape($!itemClassMId)","#jsEscape($!itemClassSId)");
+</script>
+#end
+
+#macro( out $value $htmlEscape )
+#if("$!htmlEscape" != "")$customMacroRequestContext.out($value, $htmlEscape)
+#else$customMacroRequestContext.out($value, true)#end
+#end
+
+#macro( jsEscape $value )
+$customMacroRequestContext.jsEscape($value, false)#end
+
+#macro( jsEscapeInHTML $value )
+$customMacroRequestContext.jsEscape($value, true)#end
+
+#macro ( isActiveProfile $profileName)
+$customMacroRequestContext.isActiveProfile($profileName)#end
+
+#macro ( optionalMenuList $type)
+#foreach($menu in $customMacroRequestContext.getOptionalMenu($type))
+#parse($menu.vmPath)
+#end
+#end
+
+#macro ( optionalScriptList $type)
+#foreach($script in $customMacroRequestContext.getOptionalScript($type))
+#parse($script.vmPath)
+#end
+#end
+
+##マスタ拡張項目追加対応
+#macro ( optionalMasterScript $type $elementNameCd $voucherType)
+#set($script = $customMacroRequestContext.getOptionalMasterScript($type, $elementNameCd, $voucherType))
+#parse($script.vmPath)
+#end
+
+#macro (catalogImage $companyCd $buyerSectionCd $itemCd $supCd $validStartDate $validEndDate)
+<script language="javascript" type="text/javascript">
+    var buyerCompanyCd = encodeURIComponent('#jsEscapeInHTML($companyCd)');
+    var buyerSectionCd = encodeURIComponent('#jsEscapeInHTML($buyerSectionCd)');
+    var itemCd = encodeURIComponent('#jsEscapeInHTML($itemCd)');
+    var supCd = encodeURIComponent('#jsEscapeInHTML($supCd)');
+    var validStartDate = '#jsEscapeInHTML($validStartDate)';
+    var validEndDate = '#jsEscapeInHTML($validEndDate)';
+
+    document.write("<img class='CatalogImage' src='$!requestContext.contextPath/imageGet.do?" + 
+                    "buyerCompanyCd=" + buyerCompanyCd + 
+                    "&buyerSectionCd=" + buyerSectionCd + 
+                    "&itemCd=" + itemCd +
+                    "&supCd=" + supCd +
+                    "&validStartDate=" + validStartDate + 
+                    "&validEndDate=" + validEndDate + "' >");
+</script>
+#end

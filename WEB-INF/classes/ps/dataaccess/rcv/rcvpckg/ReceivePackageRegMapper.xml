@@ -1,0 +1,225 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+
+<mapper namespace="ps.dataaccess.rcv.rcvpckg.ReceivePackageRegMapper">
+    <!-- 受入一括登録一覧のキーを取得する -->
+    <select id="listKeyIdentity" 
+        parameterType="fw.domain.slip.receive.receive.rcvpckg.ReceivePackageRegSearchCondition" 
+        resultMap="ReceivePackageRegIdentify_Map">
+        <include refid="receivePackageRegKeySelect" />    
+        <include refid="receivePackageRegFrom" />
+        <where>
+            <include refid="listKeyIdentityWhereCondition"/>
+        </where>  
+        ORDER BY ${searchCondition.columnOrder.columnOrder()}
+    </select>
+
+    <!-- 受入一括登録一覧を取得する -->
+    <select id="listPageItem" 
+        parameterType="fw.domain.slip.receive.receive.rcvpckg.ReceivePackageRegSearchCondition" 
+        resultMap="ReceivePackageRegItem_Map">
+        <include refid="receivePackageRegSelect"/>
+        <include refid="receivePackageRegFrom" />
+        <where>
+            <include refid="listKeyIdentityWhereCondition"/>
+            AND T_ORDER.ORDER_SEQ IN
+            <foreach collection="searchCondition.page.keyDomainEntityList" item="keyList" open="(" separator="," close=")">
+                (#{keyList.receivePackageRegIdentify.orderSeq})
+            </foreach>
+        </where>
+         ORDER BY ${searchCondition.columnOrder.columnOrder()}
+    </select>
+
+    <!-- 受入一括登録一覧のキーMAP -->
+    <resultMap type="fw.domain.slip.receive.receive.rcvpckg.ReceivePackageRegIdentify" id="ReceivePackageRegIdentify_Map">
+        <id column="ORDER_SEQ" property="receivePackageRegIdentify.orderSeq"/>
+        <id column="LAST_UPD_DATE" property="receivePackageRegIdentify.lastUpdDate"/>
+        <id column="RCV_PRICE_AMOUNT" property="rcvPriceAmount.amount" />
+    </resultMap>
+    
+    <!-- 受入一覧登録一覧のキーselect句 -->
+    <sql id="receivePackageRegKeySelect">
+        SELECT 
+            T_ORDER.ORDER_SEQ,
+            T_ORDER.LAST_UPD_DATE,
+            <!-- 受入金額 -->
+            ((CASE WHEN T_ORDER.ORDER_VOL IS NULL THEN 0  ELSE T_ORDER.ORDER_VOL END) - (CASE WHEN T_RECEIVE_MNG_A.DELIV_VOL IS NULL THEN 0  ELSE T_RECEIVE_MNG_A.DELIV_VOL END)) * (CASE WHEN T_ORDER.UNIT_PRICE IS NULL THEN 0 ELSE T_ORDER.UNIT_PRICE END) as RCV_PRICE_AMOUNT
+    </sql>
+    
+
+    <!-- 受入一括登録一覧明細MAP -->
+    <resultMap type="fw.domain.slip.receive.receive.rcvpckg.ReceivePackageRegItem" id="ReceivePackageRegItem_Map">
+        <id column="ORDER_SEQ_IDENTIFY" property="receivePackageRegIdentify.receivePackageRegIdentify.orderSeq"/>
+        <id column="DELIV_KEY_NO_IDENTIFY" property="receivePackageRegIdentify.receivePackageRegIdentify.delivKeyNo.delivKeyNo"/>
+        <id column="LAST_UPD_DATE_IDENTIFY" property="receivePackageRegIdentify.receivePackageRegIdentify.lastUpdDate"/>
+        <id column="EXCLUSIVE_SLIP_NO" property="exclusiveSlipId.slipNo"/>
+        <id column="EXCLUSIVE_LAST_UPD_DATE" property="exclusiveSlipId.lastUpdDate"/>
+        <id column="RCV_PRICE_AMOUNT" property="rcvPriceAmount.amount" />
+    </resultMap>
+
+    <!-- 受入一括登録一覧取得SELECT句 -->
+    <sql id="receivePackageRegSelect">
+        SELECT 
+            T_ORDER.ORDER_SEQ as ORDER_SEQ_IDENTIFY,
+            SHIPMENT.DELIV_KEY_NO as DELIV_KEY_NO_IDENTIFY,
+            T_ORDER.LAST_UPD_DATE AS LAST_UPD_DATE_IDENTIFY,
+            
+            <!-- 一覧表示情報 -->
+            T_ORDER.ORDER_NO as orderNo, <!-- 注文番号 -->
+            T_ORDER.ORDER_FIRST_DATE as "orderDate.dateOfymd", <!-- 注文日 -->
+            T_ORDER.ORDER_DELIV_DATE as "orderDelivDate.dateOfymd", <!-- 注文納期 -->
+            T_ORDER.REQ_TYPE_IND as reqTypeInd, <!-- 依頼区分 -->
+            T_SLIP_MNG.RECEIVE_STATUS_IND as status, <!-- 状態 -->
+            T_ORDER.TITLE_NAME AS titleName, <!-- 件名 -->
+            T_ORDER.ITEM_CD as itemCd, <!-- 品名コード -->
+            T_ORDER.ITEM_NAME as itemName, <!-- 品名 -->
+            T_ORDER.KATASHIKI as katashiki, <!-- 型式 -->
+            T_ORDER.MANUFACT_CD as manufactCd, <!-- メーカーコード -->
+            T_ORDER.MANUFACT_NAME as manufactName, <!-- メーカー名 -->
+            T_ORDER.DELIV_PLACE_CD as delivPlaceCd, <!-- 納入先先コード -->
+            T_ORDER.DELIV_PLACE_NAME as delivPlaceName, <!-- 納入先名 -->
+            T_ORDER.SUP_CD as supCd, <!-- 取引先コード -->
+            T_ORDER.SUP_NAME as supName, <!-- 取引先名 -->
+            T_ORDER.EDI_IND as ediTransAWay, <!-- EDI転送方法 -->
+            T_ORDER.SUBCON_IND as subcontract, <!-- 下請事業者 -->
+            T_ORDER.ORDER_VOL as "orderVol.vol", <!-- 注文数量 -->
+            T_ORDER.ORDER_CANCEL_VOL as "orderCancelVol.vol", <!-- 打切取消数量 -->
+            T_ORDER.UNIT_NAME as unit, <!-- 単位 -->
+            <!-- 受入数量=注文数量 - SUM（同じ注文番号の受入管理.納入数量） -->
+            (CASE WHEN T_ORDER.ORDER_VOL IS NULL THEN 0  ELSE T_ORDER.ORDER_VOL END) - (CASE WHEN T_RECEIVE_MNG_A.DELIV_VOL IS NULL THEN 0  ELSE T_RECEIVE_MNG_A.DELIV_VOL END) as "rcvAmount.vol",
+            <!-- 受入済数量=SUM（同じ注文番号の受入管理.納入数量）-->
+            (CASE WHEN T_RECEIVE_MNG_A.DELIV_VOL IS NULL THEN 0 ELSE T_RECEIVE_MNG_A.DELIV_VOL END) as "rcvSettledAmount.vol",
+            <!-- 受入残数量=注文数量 - SUM（同じ注文番号の受入管理.納入数量） -->
+            (CASE WHEN T_ORDER.ORDER_VOL IS NULL THEN 0  ELSE T_ORDER.ORDER_VOL END) - (CASE WHEN T_RECEIVE_MNG_A.DELIV_VOL IS NULL THEN 0  ELSE T_RECEIVE_MNG_A.DELIV_VOL END) as "rcvRemainAmount.vol",
+            T_ORDER.UNIT_PRICE as "unitPrice.amount", <!-- 注文単価 -->
+            T_ORDER.CURRENCY_CD as currencyCd, <!-- 通貨コード -->
+            T_ORDER.UNIT_PRICE_IND as unitPriceInd, <!-- 単価区分 -->
+            T_ORDER.ORDER_AMOUNT as "orderAmount.amount", <!-- 注文金額 -->
+            <!-- 受入金額 -->
+            ((CASE WHEN T_ORDER.ORDER_VOL IS NULL THEN 0  ELSE T_ORDER.ORDER_VOL END) - (CASE WHEN T_RECEIVE_MNG_A.DELIV_VOL IS NULL THEN 0  ELSE T_RECEIVE_MNG_A.DELIV_VOL END)) * (CASE WHEN T_ORDER.UNIT_PRICE IS NULL THEN 0 ELSE T_ORDER.UNIT_PRICE END) as RCV_PRICE_AMOUNT,
+            CASE WHEN SHIPMENT.DELIV_KEY_NO IS NULL THEN N'' ELSE SHIPMENT.DELIV_KEY_NO END as "delivKeyNo", <!-- 納品キー番号 -->
+            SHIPMENT.SHIPMENT_VOL as "shipmentVol.vol", <!-- 出荷数量 -->
+            SHIPMENT.ARVEXP_DATE as "arvexpDate.dateOfymd", <!-- 着荷予定日 -->
+            T_ORDER.INSPECT_IND as inspectInd, <!-- 検査区分 -->
+            T_ORDER.FOR_SUPPRIER_COMMENT as supplierComment, <!-- 取引先コメント -->
+            T_ORDER.BUYER_COMMENT as buyerComment, <!-- 発注コメント -->
+            T_ORDER.REQ_SECTION_CD as reqSectionCd, <!-- 依頼部門コード -->
+            T_ORDER.REQ_SECTION_NAME as reqSectionName, <!-- 依頼部門名 -->
+            T_ORDER.REQ_USER_ID as reqUseriD, <!-- 依頼者コード -->
+            T_ORDER.REQ_USER_NAME as reqUserName, <!-- 依頼者名 -->
+            T_ORDER.REQ_USER_EXTENSION_NO as extensionNo, <!-- 内線番号 -->
+            T_ORDER.REQ_USER_TEL_NO as externalNo, <!-- 外線番号 -->
+            (SELECT MAIL_ADDR FROM M_B_USER M WHERE M.COMPANY_CD = T_ORDER.REQ_COMPANY_CD AND M.USER_ID = T_ORDER.REQ_USER_ID AND M.TERM_FLG = '0') AS mailAddr, <!-- メールアドレス -->
+            T_SLIP_MNG.SLIP_NO AS EXCLUSIVE_SLIP_NO,
+            T_SLIP_MNG.LAST_UPD_DATE AS EXCLUSIVE_LAST_UPD_DATE,
+            ${@ps.common.util.ItemSettingUtil@getItemSettingSelectSQLDomainAliasNonBinary("T_ORDER", "searchResExtItem")}
+    </sql>
+
+    <!-- 受入一括一覧取得FROM句 -->
+    <sql id="receivePackageRegFrom">
+        FROM 
+            T_ORDER
+        INNER JOIN 
+            T_SLIP_MNG
+        ON 
+            T_ORDER.ORDER_NO = T_SLIP_MNG.SLIP_NO
+        AND T_SLIP_MNG.RECEIVE_STATUS_IND != '2'
+        AND T_SLIP_MNG.DELETE_FLG = '0'
+        LEFT JOIN 
+            (
+                SELECT
+                    ORDER_NO,
+                    SUM(DELIV_VOL) DELIV_VOL
+                FROM
+                    T_RECEIVE_MNG
+                WHERE 
+                    DELETE_FLG = '0'
+                GROUP BY 
+                    ORDER_NO
+            ) T_RECEIVE_MNG_A
+        ON
+            T_ORDER.ORDER_NO = T_RECEIVE_MNG_A.ORDER_NO
+        LEFT JOIN     <!-- 出荷管理データを取得 -->
+            (
+                SELECT 
+                    T_SHIPMENT_MNG.ORDER_NO,
+                    T_SHIPMENT_MNG.DELIV_KEY_NO,
+                    T_SHIPMENT.SHIPMENT_VOL,
+                    T_SHIPMENT.ARVEXP_DATE
+                FROM 
+                    T_SHIPMENT_MNG
+                LEFT JOIN 
+                    T_SHIPMENT 
+                ON 
+                    T_SHIPMENT_MNG.NEW_SHIPMENT_SEQ = T_SHIPMENT.SHIPMENT_SEQ
+                AND T_SHIPMENT.DELETE_FLG = '0'
+                WHERE 
+                    T_SHIPMENT_MNG.DELETE_FLG = '0'
+                AND T_SHIPMENT_MNG.DELIV_KEY_NO =
+                    (
+                        SELECT 
+                            MIN(T_SHIPMENT_MNG_B.DELIV_KEY_NO)
+                        FROM 
+                            T_SHIPMENT_MNG T_SHIPMENT_MNG_B
+                        WHERE 
+                            T_SHIPMENT_MNG_B.ORDER_NO = T_SHIPMENT_MNG.ORDER_NO
+                        AND T_SHIPMENT_MNG_B.DELETE_FLG = '0'
+                        AND NOT EXISTS
+                            (
+                                SELECT 
+                                    DELIV_KEY_NO
+                                FROM 
+                                    T_RECEIVE_MNG
+                                WHERE
+                                    T_RECEIVE_MNG.DELIV_STATUS != '1105'
+                                AND T_RECEIVE_MNG.DELIV_KEY_NO = T_SHIPMENT_MNG_B.DELIV_KEY_NO
+                            )
+                     )
+                AND T_SHIPMENT.CORRECT_CD != 3
+            ) SHIPMENT
+        ON
+            T_ORDER.ORDER_NO = SHIPMENT.ORDER_NO
+    </sql>
+
+    <!-- 受入一括一覧取得WHERE句 -->
+    <sql id="listKeyIdentityWhereCondition">
+        ${@ps.common.util.ItemSettingUtil@getItemSettingWhereSQL()}
+        <if test="@org.apache.commons.lang.StringUtils@isBlank(reqTypeInd)">
+            AND T_ORDER.REQ_TYPE_IND IN ('2', '3')
+        </if>
+        <if test="@fw.domain.slip.receive.receive.rcvpckg.ReceivePackageRegSearchCondition@isOptionChecked(reqTypeInd,2)">
+            AND T_ORDER.REQ_TYPE_IND = '2'
+        </if>
+        <if test="@fw.domain.slip.receive.receive.rcvpckg.ReceivePackageRegSearchCondition@isOptionChecked(reqTypeInd,3)">
+            AND T_ORDER.REQ_TYPE_IND = '3'
+        </if>
+        AND T_ORDER.ORDER_VOL > (CASE WHEN T_RECEIVE_MNG_A.DELIV_VOL IS NULL THEN 0 ELSE T_RECEIVE_MNG_A.DELIV_VOL END)
+        AND ((
+            T_ORDER.REQ_COMPANY_CD = '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}'
+            <if test="@fw.common.cache.ConstDataCacheHolder@getConstDataCache().getSystemSetting('ARRIVAL_SECTION_SCOPE').getCondValue()==1">
+                <if test="@org.apache.commons.lang.StringUtils@isNotBlank(@fw.common.util.AppUtil@getSectionViewRegion())">
+                    AND T_ORDER.REQ_SECTION_CD IN (${@fw.common.util.AppUtil@getSectionViewRegion()})
+                </if>
+            </if>
+            <if test="@fw.common.cache.ConstDataCacheHolder@getConstDataCache().getSystemSetting('ARRIVAL_SECTION_SCOPE').getCondValue()==3">
+                AND T_ORDER.REQ_SECTION_PLACE_CD = '${@fw.security.SecurityUtil@getSectionPlaceCdByEscapeSql()}'
+            </if>
+        ) OR (
+            T_ORDER.RECIVE_COMPANY_CD = '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}'
+            <if test="@fw.common.cache.ConstDataCacheHolder@getConstDataCache().getSystemSetting('ARRIVAL_SECTION_SCOPE').getCondValue()==1">
+                <if test="@org.apache.commons.lang.StringUtils@isNotBlank(@fw.common.util.AppUtil@getSectionViewRegion())" >
+                    AND T_ORDER.RECIVE_SECTION_CD IN (${@fw.common.util.AppUtil@getSectionViewRegion()})
+                </if>
+            </if>
+            <if test="@fw.common.cache.ConstDataCacheHolder@getConstDataCache().getSystemSetting('ARRIVAL_SECTION_SCOPE').getCondValue()==3">
+                AND T_ORDER.RECIVE_SECTION_PLACE_CD = '${@fw.security.SecurityUtil@getSectionPlaceCdByEscapeSql()}'
+            </if>
+        ) )
+        AND T_ORDER.INFO_CD != '0504'
+        AND T_ORDER.REQ_TYPE_IND != '9'
+        AND T_ORDER.NEW_APP_FLG = '1'
+        AND T_ORDER.DELETE_FLG = '0'
+    </sql>    
+</mapper>

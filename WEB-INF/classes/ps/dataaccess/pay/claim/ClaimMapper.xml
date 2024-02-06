@@ -1,0 +1,2016 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="ps.dataaccess.pay.claim.ClaimMapper">
+
+<!-- ============================= 支払請求受付  PSPAY071  START ========================== -->
+    <sql id="listKeyIdentityWhereCondition">
+       ${@ps.common.util.ItemSettingUtil@getItemSettingWhereSQL('19')}
+       AND T_P_PAY.ACC_COMPANY_CD = '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}'
+       AND T_P_PAY.ACC_SECTION_CD = '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}'
+       AND T_P_PAY.NEW_FLG = '1'
+       AND T_P_PAY.DELETE_FLG = '0'
+       AND T_P_PAY.PAY_STATUS = '11'
+       <if test="@org.apache.commons.lang.StringUtils@isBlank(accStatus)">
+           AND T_P_PAY.ACC_STATUS IN ('11','13')
+       </if>
+       <if test="@org.apache.commons.lang.StringUtils@isNotBlank(accStatus)">
+           AND T_P_PAY.ACC_STATUS = #{accStatus}
+       </if>
+       AND EXISTS (
+           SELECT T_P_PAY.PAY_SEQ 
+           FROM T_P_PAY_DTL
+           WHERE T_P_PAY_DTL.PAY_SEQ = T_P_PAY.PAY_SEQ 
+               AND T_P_PAY_DTL.DELETE_FLG = '0'
+               ${@ps.common.util.ItemSettingUtil@getItemSettingWhereSQL('20')}
+       )
+    </sql>
+    <select id="listKeyIdentity" 
+        parameterType="fw.domain.slip.payreq.payslip.payreqrcv.PayReqRcvSearchCondition" 
+        resultType="fw.domain.slip.payreq.payslip.payslipregapp.PayReqIdentify">
+        SELECT T_P_PAY.PAY_SEQ  as "paySeq"
+        FROM T_P_PAY
+        <where>
+            <include refid="listKeyIdentityWhereCondition"/>
+        </where>
+        ORDER BY ${searchCondition.columnOrder.columnOrder()}
+    </select>
+
+    <resultMap type="fw.domain.slip.payreq.payslip.payreqrcv.PayReqRcvItem" id="Pay_Map">
+        <id column="ACC_BACK_USER_COMMENTS" property="receipt.remand.backReason.backReason.comment" />
+    </resultMap>
+
+    <select id="listPageItem" 
+       parameterType="fw.domain.mst.searchcondition.SearchCondition" resultMap="Pay_Map">
+       SELECT T_P_PAY.PAY_SEQ as "payReqIdentify.paySeq",
+           T_P_PAY.LAST_UPD_DATE as "payReqIdentify.lastUpdDate",
+           T_P_PAY.PAY_NO as "payNo",
+           T_P_PAY.ACC_STATUS as "accStatus",
+           T_P_PAY.REQ_DATE as "reqDate.dateOfymd",
+           T_P_PAY.TITLE_NAME as "titleName",
+           T_P_PAY.SUP_CD as "supCd",
+           T_P_PAY.SUP_ABBR_NAME as "supName",
+           T_P_PAY.CURRENCY_CD as "currencyCd",
+           T_P_PAY.TOTAL_AMOUNT_IN_TAX as "totalAmountInTax.amount",
+           T_P_PAY.PAY_CONDITION_NAME as "payConditionName",
+           T_P_PAY.REQ_SECTION_CD as "reqSectionCd",
+           T_P_PAY.REQ_SECTION_NAME as "reqSectionName",
+           T_P_PAY.REQ_USER_ID as "reqCd",
+           T_P_PAY.REQ_USER_NAME as "reqName",
+           T_P_PAY.REQ_COMPANY_CD as "user.section.company.companyCd",
+           T_P_PAY.REQ_SECTION_CD as "user.section.sectionCd",
+           T_P_PAY.REQ_USER_ID as "user.userID",
+           T_P_PAY.ACC_BACK_USER_COMMENTS ,
+           ${@ps.common.util.ItemSettingUtil@getItemSettingSelectSQLDomainAliasNonBinary("T_P_PAY", "payResExtItem")}
+       FROM T_P_PAY
+       <where>
+            <include refid="listKeyIdentityWhereCondition"/>
+            AND T_P_PAY.PAY_SEQ IN 
+            <foreach collection="searchCondition.page.keyDomainEntityList" item="keyList"  open="(" separator="," close=")">  
+               #{keyList.paySeq}
+            </foreach>
+        </where>
+        ORDER BY ${searchCondition.columnOrder.columnOrder()}
+    </select>
+
+     <update id="updateAcc" parameterType="fw.domain.slip.payreq.payslip.payreqrcv.PayReqRcvItem">
+        UPDATE T_P_PAY
+        SET ACC_STATUS = '12',
+            ACC_COMPANY_CD = '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}',
+            ACC_COMPANY_NAME = '${@fw.security.SecurityUtil@getCompanyNameByEscapeSql()}' ,
+            ACC_SECTION_PLACE_CD = '${@fw.security.SecurityUtil@getSectionPlaceCdByEscapeSql()}' ,
+            ACC_SECTION_PLACE_NAME = '${@fw.security.SecurityUtil@getSectionPlaceNameByEscapeSql()}' ,
+            ACC_SECTION_CD = #{user.section.sectionCd, jdbcType=VARCHAR}, 
+            ACC_SECTION_NAME = #{user.section.sectionName, jdbcType=VARCHAR},
+            ACC_USER_ID = #{user.userID, jdbcType=VARCHAR}, 
+            ACC_USER_NAME = #{user.userName, jdbcType=VARCHAR}, 
+            ACC_USER_EXTENSION_NO = #{user.extNo.extensionNo, jdbcType=VARCHAR},
+            ACC_USER_TEL_NO  = #{user.externalNo.externalNo, jdbcType=VARCHAR},
+            LAST_UPD_DATE = '${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}',
+            LAST_UPD_COMPANY_CD = '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}',
+            LAST_UPD_SECTION_CD = '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}',
+            LAST_UPD_USER_ID = '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}'
+        WHERE
+            PAY_SEQ = #{payReqIdentify.paySeq}
+    </update> 
+    
+    <update id="updatePay" parameterType="fw.domain.slip.payreq.payslip.payreqrcv.PayReqRcvItem">
+        UPDATE T_P_PAY
+        SET PAY_STATUS = '06' ,
+            ACC_BACK_COMPANY_CD = '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}' ,
+            ACC_BACK_COMPANY_NAME = '${@fw.security.SecurityUtil@getCompanyNameByEscapeSql()}' ,
+            ACC_BACK_SECTION_CD = '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}',
+            ACC_BACK_SECTION_NAME = '${@fw.security.SecurityUtil@getDefaultSectionNameByEscapeSql()}',
+            ACC_BACK_USER_ID = '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}' ,
+            ACC_BACK_USER_NAME = '${@fw.security.SecurityUtil@getUserNameByEscapeSql()}',
+            ACC_BACK_USER_COMMENTS = #{receipt.remand.backReason.backReason.comment, jdbcType=VARCHAR},
+            LAST_UPD_DATE = '${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}',
+            LAST_UPD_COMPANY_CD = '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}',
+            LAST_UPD_SECTION_CD = '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}',
+            LAST_UPD_USER_ID = '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}'
+        WHERE
+            PAY_SEQ = #{payReqIdentify.paySeq}
+    </update>
+<!-- ============================= 支払請求受付  PSPAY071  END ========================== -->
+
+<!-- ******************************* PSPAY061 支払請求履歴一覧 Start ****************************** --> 
+    <sql id="listKeyIdentityHistoryWhereCondition">
+       AND  T_P_PAY.REQ_COMPANY_CD = '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}'
+       AND  T_P_PAY.REQ_SECTION_CD IN (${@fw.common.util.AppUtil@getSectionViewRegion()})
+       AND  T_P_PAY.PAY_STATUS &lt;> '04' 
+       AND  T_P_PAY.NEW_FLG = '1'                               
+       AND  T_P_PAY.DELETE_FLG = '0'
+    </sql>
+     <select id="listKeyIdentityHistory" parameterType="fw.domain.slip.payreq.payreq.payreqinput.PayHistorySearchCondition" resultType="fw.domain.slip.payreq.payreq.payreqinput.PayReqIdentify">
+            SELECT  T_P_PAY.PAY_SEQ AS "payReqSeq",
+                    T_P_PAY.LAST_UPD_DATE AS "lastUpdDate"
+            FROM    T_P_PAY
+                    INNER JOIN 
+                 ( 
+                    SELECT DISTINCT T_P_PAY.PAY_SEQ AS "PAY_SEQ_A"
+                    FROM T_P_PAY
+                    LEFT JOIN T_P_PAY_DTL
+                    ON      T_P_PAY_DTL.PAY_SEQ = T_P_PAY.PAY_SEQ
+                    <where>
+                         ${@ps.common.util.ItemSettingUtil@getItemSettingWhereSQL()}
+                         AND     T_P_PAY_DTL.DELETE_FLG = '0'                                
+                    </where>
+                 )T_P_PAY_A
+                 ON T_P_PAY.PAY_SEQ = T_P_PAY_A.PAY_SEQ_A
+         <where>
+              <include refid="listKeyIdentityHistoryWhereCondition"/>
+        </where> 
+            ORDER BY ${searchCondition.columnOrder.columnOrder()}
+    </select>
+    
+    <resultMap type="fw.domain.slip.payreq.payreq.payreqinput.PayItem"
+        id="PayItem_Map">
+    </resultMap>
+    <select id="listPageItemHistory"  parameterType="fw.domain.mst.searchcondition.SearchCondition"  resultMap="PayItem_Map">
+         SELECT
+                 T_P_PAY.PAY_SEQ AS "payReqIdentify.payReqSeq",
+                 T_P_PAY.PAY_NO AS "payNo",
+                 T_P_PAY.INPUT_USER_NAME AS "inputUserName",
+                 T_P_PAY.PAY_STATUS AS "payStatus",
+                 T_P_PAY.ACC_STATUS AS "accStatus",
+                 T_P_PAY.REQ_DATE AS "reqDate.dateOfymd",
+                 T_P_PAY.TITLE_NAME AS "titleName",
+                 T_P_PAY.SUP_CD AS "supCd",
+                 T_P_PAY.SUP_ABBR_NAME AS "supName",
+                 T_P_PAY.CURRENCY_CD AS "currencyCd",
+                 T_P_PAY.TOTAL_AMOUNT_IN_TAX AS "totalAmountInTax.amount",
+                 T_P_PAY.PAY_CONDITION_NAME AS "paySearchConditionName",
+                 T_P_PAY.REQ_SECTION_CD AS "reqSectionCd",
+                 T_P_PAY.REQ_SECTION_NAME AS "reqSectionName",
+                 T_P_PAY.REQ_USER_ID AS "reqUserId",
+                 T_P_PAY.REQ_USER_NAME AS "reqUserName",
+                 T_P_PAY.LAST_UPD_DATE AS "payReqIdentify.lastUpdDate",
+                 ${@ps.common.util.ItemSettingUtil@getItemSettingSelectSQLDomainAliasNonBinary("T_P_PAY", "paySeqExtItem")}
+        FROM
+                 T_P_PAY
+        INNER JOIN
+                 (
+                    SELECT DISTINCT T_P_PAY.PAY_SEQ AS "PAY_SEQ_A"
+                    FROM T_P_PAY
+                    LEFT JOIN T_P_PAY_DTL
+                    ON      T_P_PAY_DTL.PAY_SEQ = T_P_PAY.PAY_SEQ
+                    <where>
+                    ${@ps.common.util.ItemSettingUtil@getItemSettingWhereSQL()}
+                    AND     T_P_PAY_DTL.DELETE_FLG = '0'
+                    </where>
+                 )T_P_PAY_A
+                 ON T_P_PAY.PAY_SEQ = T_P_PAY_A.PAY_SEQ_A
+        <where>
+                  T_P_PAY.PAY_SEQ IN
+	        <foreach collection="searchCondition.page.keyDomainEntityList" item="keyList"  open="(" separator="," close=")">
+	                #{keyList.payReqSeq}
+	        </foreach>
+             <include refid="listKeyIdentityHistoryWhereCondition"/>
+        </where>
+        ORDER BY ${searchCondition.columnOrder.columnOrder()}
+    </select>
+    
+   <!-- ******************************* PSPAY061 支払請求履歴一覧 End  ****************************** --> 
+
+<!-- PSPAY010 Begin-->
+  <resultMap type="fw.domain.slip.payreq.payreq.payreqinput.PayReqManagement" id="PayReqManagement_Map">
+        <id column="PAY_SEQ" property="payReqIdentify.payReqSeq" />
+        <id column="PAY_NO" property="payReqInput.payNo.payNo" />
+        <id column="PAY_VERSION_NO" property="payReqInput.historyNo.historyNo" />
+        <id column="REQ_FIRST_DATE" property="payReqInput.payReqDate.reqFirstDate.reqDate.dateOfymd" />
+        <id column="REQ_DATE" property="payReqInput.payReqDate.reqDate.reqDate.dateOfymd" />
+        <id column="TITLE_NAME" property="payReqInput.titleName.titleName" />
+        <id column="REQ_SECTION_CD" property="payReqInput.reqUser.reqUser.section.sectionCd" />
+        <id column="REQ_SECTION_NAME" property="payReqInput.reqUser.reqUser.section.sectionName" />
+        <id column="REQ_USER_EXTENSION_NO" property="payReqInput.reqUser.reqUser.extNo.extensionNo"/>
+        <id column="REQ_USER_TEL_NO" property="payReqInput.reqUser.reqUser.externalNo.externalNo"/>
+        <id column="REQ_USER_ID" property="payReqInput.reqUser.reqUser.userID"/>
+        <id column="REQ_USER_NAME" property="payReqInput.reqUser.reqUser.userName"/>
+        <id column="REQ_APP_ROUTE_NO" property="approute.appRouteNo"/>
+        <id column="REQ_APP_ROUTE_NAME" property="approute.appRouteName"/>
+        <id column="PAY_CONDITION_CD" property="payReqInput.payConditionManagement.payConditionIdentify.payConditionCd"/>        
+        <id column="PAY_CONDITION_NAME" property="payReqInput.payConditionManagement.payConditionName"/>
+        <id column="SUP_CD" property="payReqInput.supplierFrom.supCd"/>     
+        <id column="SUP_NAME" property="payReqInput.supplierFrom.supplierName.supplierName"/>
+        <id column="SUP_ABBR_NAME" property="payReqInput.supplierFrom.supplierName.supplierAbbrName"/>
+        <id column="BANK_CD" property="payReqInput.account.bankCd"/>
+        <id column="BANK_NAME" property="payReqInput.account.bankName"/>
+        <id column="BRANCH_CD" property="payReqInput.account.branchCd"/>   
+        <id column="BRANCH_NAME" property="payReqInput.account.branchName" />
+        <id column="ACCOUNT_TYPE" property="payReqInput.account.acType.acType" />
+        <id column="ACCOUNT_NO" property="payReqInput.account.accountNo" />
+        <id column="ACCOUNT_NAME" property="payReqInput.account.accountName" />
+        <id column="PS_BILL_NO" property="payReqInput.invoice.invoiceId" />
+        <id column="PS_BILL_DATE" property="payReqInput.invoice.invoiceDate.dateOfymd" />
+        <id column="CURRENCY_CD" property="payReqInput.supplierFrom.currency.currencyCd" />
+        <id column="TOTAL_AMOUNT_IN_TAX" property="payReqInput.totalAmount.totalAmount.amount" />
+        <id column="ATTACH_FILE_SEQ1" property="payReqInput.attachFile1.seqNo" />   
+        <id column="ATTACH_FILE_NAME1" property="payReqInput.attachFile1.fileName" />   
+        <id column="ATTACH_FILE_SEQ2" property="payReqInput.attachFile2.seqNo" />
+        <id column="ATTACH_FILE_NAME2" property="payReqInput.attachFile2.fileName" />
+        <id column="ATTACH_FILE_SEQ3" property="payReqInput.attachFile3.seqNo" />
+        <id column="ATTACH_FILE_NAME3" property="payReqInput.attachFile3.fileName" />
+        
+        <id column="ACC_COMPANY_CD" property="payReqInput.accUser.accUser.section.company.companyCd" />  
+        <id column="ACC_COMPANY_NAME" property="payReqInput.accUser.accUser.section.company.companyName" />  
+        <id column="ACC_SECTION_PLACE_CD" property="payReqInput.accUser.accUser.section.sectionPlace.sectionPlaceCd" />  
+        <id column="ACC_SECTION_PLACE_NAME" property="payReqInput.accUser.accUser.section.sectionPlace.sectionPlaceName" />  
+        <id column="ACC_SECTION_CD" property="payReqInput.accUser.accUser.section.sectionCd" />  
+        <id column="ACC_SECTION_NAME" property="payReqInput.accUser.accUser.section.sectionName" />
+        <id column="ACC_USER_ID" property="payReqInput.accUser.accUser.userID" />
+        <id column="ACC_USER_NAME" property="payReqInput.accUser.accUser.userName" />
+        <id column="ACC_USER_EXTENSION_NO" property="payReqInput.accUser.accUser.extNo.extensionNo" />
+        <id column="ACC_USER_TEL_NO" property="payReqInput.accUser.accUser.externalNo.externalNo" />    
+        
+        <id column="ACC_BACK_COMPANY_CD" property="payReqInput.backAccUser.accUser.section.company.companyCd" />  
+        <id column="ACC_BACK_COMPANY_NAME" property="payReqInput.backAccUser.accUser.section.company.companyName" />  
+        <id column="ACC_BACK_SECTION_PLACE_CD" property="payReqInput.backAccUser.accUser.section.sectionPlace.sectionPlaceCd" />  
+        <id column="ACC_BACK_SECTION_PLACE_NAME" property="payReqInput.backAccUser.accUser.section.sectionPlace.sectionPlaceName" />  
+        <id column="ACC_BACK_SECTION_CD" property="payReqInput.backAccUser.accUser.section.sectionCd" />  
+        <id column="ACC_BACK_SECTION_NAME" property="payReqInput.backAccUser.accUser.section.sectionName" />  
+
+        <id column="FOR_BOSS_COMMENT" property="payReqInput.forAppComment.forAppComment.comment" />  
+        <id column="FOR_ACC_COMMENT" property="payReqInput.forAccComment.forAccComment.comment" />  
+        <id column="LAST_UPD_DATE" property="payReqIdentify.lastUpdDate" />
+        
+        <id column="EXT_TXT_1" property="payReqInput.editExtItem.editTextExtItem.textExtItem1.value"/>
+        <id column="EXT_TXT_2" property="payReqInput.editExtItem.editTextExtItem.textExtItem2.value"/>
+        <id column="EXT_TXT_3" property="payReqInput.editExtItem.editTextExtItem.textExtItem3.value"/>
+        <id column="EXT_TXT_4" property="payReqInput.editExtItem.editTextExtItem.textExtItem4.value"/>
+        <id column="EXT_TXT_5" property="payReqInput.editExtItem.editTextExtItem.textExtItem5.value"/>
+        <id column="EXT_TXT_6" property="payReqInput.editExtItem.editTextExtItem.textExtItem6.value"/>
+        <id column="EXT_TXT_7" property="payReqInput.editExtItem.editTextExtItem.textExtItem7.value"/>
+        <id column="EXT_TXT_8" property="payReqInput.editExtItem.editTextExtItem.textExtItem8.value"/>
+        <id column="EXT_TXT_9" property="payReqInput.editExtItem.editTextExtItem.textExtItem9.value"/>
+        <id column="EXT_TXT_10" property="payReqInput.editExtItem.editTextExtItem.textExtItem10.value"/>
+        <id column="EXT_AREA_1" property="payReqInput.editExtItem.editAreaExtItem.arrayExtItem1.value"/>
+        <id column="EXT_AREA_2" property="payReqInput.editExtItem.editAreaExtItem.arrayExtItem2.value"/>
+        <id column="EXT_AREA_3" property="payReqInput.editExtItem.editAreaExtItem.arrayExtItem3.value"/>
+        <id column="EXT_AREA_4" property="payReqInput.editExtItem.editAreaExtItem.arrayExtItem4.value"/>
+        <id column="EXT_AREA_5" property="payReqInput.editExtItem.editAreaExtItem.arrayExtItem5.value"/>
+        <id column="EXT_DATE_1" property="payReqInput.editExtItem.editDateExtItem.dateExtItem1.dateType.dateOfymd"/>
+        <id column="EXT_DATE_2" property="payReqInput.editExtItem.editDateExtItem.dateExtItem2.dateType.dateOfymd"/>
+        <id column="EXT_DATE_3" property="payReqInput.editExtItem.editDateExtItem.dateExtItem3.dateType.dateOfymd"/>
+        <id column="EXT_DATE_4" property="payReqInput.editExtItem.editDateExtItem.dateExtItem4.dateType.dateOfymd"/>
+        <id column="EXT_DATE_5" property="payReqInput.editExtItem.editDateExtItem.dateExtItem5.dateType.dateOfymd"/>
+        <id column="EXT_INT_1" property="payReqInput.editExtItem.editIntExtItem.intExtItem1.value"/>
+        <id column="EXT_INT_2" property="payReqInput.editExtItem.editIntExtItem.intExtItem2.value"/>
+        <id column="EXT_INT_3" property="payReqInput.editExtItem.editIntExtItem.intExtItem3.value"/>
+        <id column="EXT_INT_4" property="payReqInput.editExtItem.editIntExtItem.intExtItem4.value"/>
+        <id column="EXT_INT_5" property="payReqInput.editExtItem.editIntExtItem.intExtItem5.value"/>
+        <id column="EXT_INT_6" property="payReqInput.editExtItem.editIntExtItem.intExtItem6.value"/>
+        <id column="EXT_INT_7" property="payReqInput.editExtItem.editIntExtItem.intExtItem7.value"/>
+        <id column="EXT_INT_8" property="payReqInput.editExtItem.editIntExtItem.intExtItem8.value"/>
+        <id column="EXT_INT_9" property="payReqInput.editExtItem.editIntExtItem.intExtItem9.value"/>
+        <id column="EXT_INT_10" property="payReqInput.editExtItem.editIntExtItem.intExtItem10.value"/>
+        <id column="EXT_DEC_1" property="payReqInput.editExtItem.editDecExtItem.decExtItem1.value"/>
+        <id column="EXT_DEC_2" property="payReqInput.editExtItem.editDecExtItem.decExtItem2.value"/>
+        <id column="EXT_DEC_3" property="payReqInput.editExtItem.editDecExtItem.decExtItem3.value"/>
+        <id column="EXT_DEC_4" property="payReqInput.editExtItem.editDecExtItem.decExtItem4.value"/>
+        <id column="EXT_DEC_5" property="payReqInput.editExtItem.editDecExtItem.decExtItem5.value"/>
+        <id column="EXT_SEL_1" property="payReqInput.editExtItem.editSelExtItem.selExtItem1.value"/>
+        <id column="EXT_SEL_2" property="payReqInput.editExtItem.editSelExtItem.selExtItem2.value"/>
+        <id column="EXT_SEL_3" property="payReqInput.editExtItem.editSelExtItem.selExtItem3.value"/>
+        <id column="EXT_SEL_4" property="payReqInput.editExtItem.editSelExtItem.selExtItem4.value"/>
+        <id column="EXT_SEL_5" property="payReqInput.editExtItem.editSelExtItem.selExtItem5.value"/>
+        <id column="EXT_SEL_6" property="payReqInput.editExtItem.editSelExtItem.selExtItem6.value"/>
+        <id column="EXT_SEL_7" property="payReqInput.editExtItem.editSelExtItem.selExtItem7.value"/>
+        <id column="EXT_SEL_8" property="payReqInput.editExtItem.editSelExtItem.selExtItem8.value"/>
+        <id column="EXT_SEL_9" property="payReqInput.editExtItem.editSelExtItem.selExtItem9.value"/>
+        <id column="EXT_SEL_10" property="payReqInput.editExtItem.editSelExtItem.selExtItem10.value"/>
+        <id column="EXT_CHK_1" property="payReqInput.editExtItem.editChkExtItem.chkExtItem1.value"/>
+        <id column="EXT_CHK_2" property="payReqInput.editExtItem.editChkExtItem.chkExtItem2.value"/>
+        <id column="EXT_CHK_3" property="payReqInput.editExtItem.editChkExtItem.chkExtItem3.value"/>
+        <id column="EXT_CHK_4" property="payReqInput.editExtItem.editChkExtItem.chkExtItem4.value"/>
+        <id column="EXT_CHK_5" property="payReqInput.editExtItem.editChkExtItem.chkExtItem5.value"/>
+        <id column="EXT_FILE_1" property="payReqInput.editExtItem.editFileExtItem.fileExtItem1.fileName"/>
+        <id column="EXT_FILE_2" property="payReqInput.editExtItem.editFileExtItem.fileExtItem2.fileName"/>
+        <id column="EXT_FILE_3" property="payReqInput.editExtItem.editFileExtItem.fileExtItem3.fileName"/>
+        <id column="EXT_FILE_BINARY_1" property="payReqInput.editExtItem.editFileExtItem.fileExtItem1.binary"/>
+        <id column="EXT_FILE_BINARY_2" property="payReqInput.editExtItem.editFileExtItem.fileExtItem2.binary"/>
+        <id column="EXT_FILE_BINARY_3" property="payReqInput.editExtItem.editFileExtItem.fileExtItem3.binary"/>
+        <id column="EXT_MST_1" property="payReqInput.editExtItem.editMstExtItem.mstExtItem1.mstKey"/>
+        <id column="EXT_MST_2" property="payReqInput.editExtItem.editMstExtItem.mstExtItem2.mstKey"/>
+        <id column="EXT_MST_3" property="payReqInput.editExtItem.editMstExtItem.mstExtItem3.mstKey"/>
+        <id column="EXT_MST_4" property="payReqInput.editExtItem.editMstExtItem.mstExtItem4.mstKey"/>
+        <id column="EXT_MST_5" property="payReqInput.editExtItem.editMstExtItem.mstExtItem5.mstKey"/>
+        <id column="EXT_MST_6" property="payReqInput.editExtItem.editMstExtItem.mstExtItem6.mstKey"/>
+        <id column="EXT_MST_7" property="payReqInput.editExtItem.editMstExtItem.mstExtItem7.mstKey"/>
+        <id column="EXT_MST_8" property="payReqInput.editExtItem.editMstExtItem.mstExtItem8.mstKey"/>
+        <id column="EXT_MST_NAME_1" property="payReqInput.editExtItem.editMstExtItem.mstExtItem1.mstName"/>
+        <id column="EXT_MST_NAME_2" property="payReqInput.editExtItem.editMstExtItem.mstExtItem2.mstName"/>
+        <id column="EXT_MST_NAME_3" property="payReqInput.editExtItem.editMstExtItem.mstExtItem3.mstName"/>
+        <id column="EXT_MST_NAME_4" property="payReqInput.editExtItem.editMstExtItem.mstExtItem4.mstName"/>
+        <id column="EXT_MST_NAME_5" property="payReqInput.editExtItem.editMstExtItem.mstExtItem5.mstName"/>
+        <id column="EXT_MST_NAME_6" property="payReqInput.editExtItem.editMstExtItem.mstExtItem6.mstName"/>
+        <id column="EXT_MST_NAME_7" property="payReqInput.editExtItem.editMstExtItem.mstExtItem7.mstName"/>
+        <id column="EXT_MST_NAME_8" property="payReqInput.editExtItem.editMstExtItem.mstExtItem8.mstName"/>
+
+    </resultMap>
+    
+    <select id="searchTpPayFromHis" parameterType="String" resultMap="PayReqManagement_Map">
+         SELECT 
+             '' as PAY_SEQ,                         
+             '' as PAY_NO,  
+             T_P_PAY.PAY_VERSION_NO,  
+             T_P_PAY.REQ_FIRST_DATE,                     
+             T_P_PAY.REQ_DATE,                       
+             T_P_PAY.TITLE_NAME,                         
+             T_P_PAY.REQ_SECTION_CD,                         
+             T_P_PAY.REQ_SECTION_NAME,                       
+             T_P_PAY.REQ_USER_EXTENSION_NO,                      
+             T_P_PAY.REQ_USER_TEL_NO,                        
+             T_P_PAY.REQ_USER_ID,                        
+             T_P_PAY.REQ_USER_NAME,                                         
+             T_P_PAY.REQ_APP_ROUTE_NO,                      
+             T_P_PAY.REQ_APP_ROUTE_NAME,  
+             T_P_PAY.ACC_COMPANY_CD, 
+             T_P_PAY.ACC_COMPANY_NAME,
+             T_P_PAY.ACC_SECTION_PLACE_CD,
+             T_P_PAY.ACC_SECTION_PLACE_NAME,
+             T_P_PAY.ACC_SECTION_CD,
+             T_P_PAY.ACC_SECTION_NAME,                                                 
+             T_P_PAY.PAY_CONDITION_CD,                      
+             T_P_PAY.PAY_CONDITION_NAME,                         
+             T_P_PAY.SUP_CD,                         
+             T_P_PAY.SUP_NAME, 
+             T_P_PAY.SUP_ABBR_NAME, 
+             T_P_PAY.BANK_CD,                      
+             T_P_PAY.BANK_NAME,                       
+             T_P_PAY.BRANCH_CD,                        
+             T_P_PAY.BRANCH_NAME,                        
+             T_P_PAY.ACCOUNT_TYPE,                    
+             T_P_PAY.ACCOUNT_NO,   
+             T_P_PAY.ACCOUNT_NAME,                     
+             T_P_PAY.PS_BILL_NO,                        
+             T_P_PAY.PS_BILL_DATE,                       
+             T_P_PAY.CURRENCY_CD,                                       
+             T_P_PAY.TOTAL_AMOUNT_IN_TAX,                        
+             '' as ATTACH_FILE_SEQ1,                       
+             '' as ATTACH_FILE_NAME1,                      
+             '' as ATTACH_FILE_SEQ2,                       
+             '' as ATTACH_FILE_NAME2,                      
+             '' as ATTACH_FILE_SEQ3,                      
+             '' as ATTACH_FILE_NAME3,   
+             T_P_PAY.ACC_BACK_COMPANY_CD, 
+             T_P_PAY.ACC_BACK_COMPANY_NAME,
+             T_P_PAY.ACC_BACK_SECTION_PLACE_CD,
+             T_P_PAY.ACC_BACK_SECTION_PLACE_NAME,
+             T_P_PAY.ACC_BACK_SECTION_CD,
+             T_P_PAY.ACC_BACK_SECTION_NAME,
+             T_P_PAY.FOR_BOSS_COMMENT,
+             T_P_PAY.FOR_ACC_COMMENT,
+             T_P_PAY.LAST_UPD_DATE,
+             T_P_PAY.ACC_USER_ID,
+             ${@ps.common.util.ItemSettingUtil@getItemSettingSelectSQL("T_P_PAY")}
+         FROM                        
+             T_P_PAY                     
+         WHERE                       
+             T_P_PAY.PAY_SEQ = #{payseq}       
+    </select> 
+    
+    <select id="searchTpPayFromSave" parameterType="String" resultMap="PayReqManagement_Map">
+         SELECT 
+             T_P_PAY.PAY_SEQ,                         
+             T_P_PAY.PAY_NO,  
+             T_P_PAY.PAY_VERSION_NO,  
+             T_P_PAY.REQ_FIRST_DATE,                         
+             T_P_PAY.REQ_DATE,                       
+             T_P_PAY.TITLE_NAME,                         
+             T_P_PAY.REQ_SECTION_CD,                         
+             T_P_PAY.REQ_SECTION_NAME,                       
+             T_P_PAY.REQ_USER_EXTENSION_NO,                      
+             T_P_PAY.REQ_USER_TEL_NO,                        
+             T_P_PAY.REQ_USER_ID,                        
+             T_P_PAY.REQ_USER_NAME,                                         
+             T_P_PAY.REQ_APP_ROUTE_NO,                      
+             T_P_PAY.REQ_APP_ROUTE_NAME,   
+             T_P_PAY.ACC_COMPANY_CD, 
+             T_P_PAY.ACC_COMPANY_NAME,
+             T_P_PAY.ACC_SECTION_PLACE_CD,
+             T_P_PAY.ACC_SECTION_PLACE_NAME,
+             T_P_PAY.ACC_SECTION_CD,
+             T_P_PAY.ACC_SECTION_NAME,
+             T_P_PAY.ACC_USER_ID,                                                          
+             T_P_PAY.PAY_CONDITION_CD,                      
+             T_P_PAY.PAY_CONDITION_NAME,                         
+             T_P_PAY.SUP_CD,                         
+             T_P_PAY.SUP_NAME, 
+             T_P_PAY.SUP_ABBR_NAME,
+             T_P_PAY.BANK_CD,                      
+             T_P_PAY.BANK_NAME,                       
+             T_P_PAY.BRANCH_CD,                        
+             T_P_PAY.BRANCH_NAME,                        
+             T_P_PAY.ACCOUNT_TYPE,    
+             T_P_PAY.ACCOUNT_NO,                                        
+             T_P_PAY.ACCOUNT_NAME,                        
+             T_P_PAY.PS_BILL_NO,                        
+             T_P_PAY.PS_BILL_DATE,                       
+             T_P_PAY.CURRENCY_CD,                                       
+             T_P_PAY.TOTAL_AMOUNT_IN_TAX,                        
+             T_P_PAY.ATTACH_FILE_SEQ1,                       
+             T_P_PAY_ATTACH_A.ATTACH_FILE_NAME as ATTACH_FILE_NAME1,                      
+             T_P_PAY.ATTACH_FILE_SEQ2,                       
+             T_P_PAY_ATTACH_B.ATTACH_FILE_NAME as ATTACH_FILE_NAME2,                    
+             T_P_PAY.ATTACH_FILE_SEQ3,                      
+             T_P_PAY_ATTACH_C.ATTACH_FILE_NAME as ATTACH_FILE_NAME3,   
+             T_P_PAY.ACC_BACK_COMPANY_CD, 
+             T_P_PAY.ACC_BACK_COMPANY_NAME,
+             T_P_PAY.ACC_BACK_SECTION_PLACE_CD,
+             T_P_PAY.ACC_BACK_SECTION_PLACE_NAME,
+             T_P_PAY.ACC_BACK_SECTION_CD,
+             T_P_PAY.ACC_BACK_SECTION_NAME,                
+             T_P_PAY.FOR_BOSS_COMMENT,                       
+             T_P_PAY.FOR_ACC_COMMENT,                        
+             T_P_PAY.LAST_UPD_DATE,
+             ${@ps.common.util.ItemSettingUtil@getItemSettingSelectSQL("T_P_PAY")}
+         FROM                        
+             T_P_PAY                     
+         LEFT JOIN T_P_PAY_ATTACH T_P_PAY_ATTACH_A ON                        
+             T_P_PAY_ATTACH_A.ATTACH_FILE_SEQ = T_P_PAY.ATTACH_FILE_SEQ1                     
+         AND T_P_PAY_ATTACH_A.DELETE_FLG = '0'                       
+         LEFT JOIN T_P_PAY_ATTACH T_P_PAY_ATTACH_B ON                        
+             T_P_PAY_ATTACH_B.ATTACH_FILE_SEQ = T_P_PAY.ATTACH_FILE_SEQ2                     
+         AND T_P_PAY_ATTACH_B.DELETE_FLG = '0'                       
+         LEFT JOIN T_P_PAY_ATTACH T_P_PAY_ATTACH_C ON                        
+             T_P_PAY_ATTACH_C.ATTACH_FILE_SEQ = T_P_PAY.ATTACH_FILE_SEQ3                     
+         AND T_P_PAY_ATTACH_C.DELETE_FLG = '0'                       
+         WHERE                       
+             T_P_PAY.PAY_SEQ = #{payseq}                    
+    </select> 
+    
+     <resultMap type="fw.domain.slip.payreq.payreq.payreqinput.Item" id="ItemDetail_Map">
+        <id column="DETAIL_SUBJECT" property="separateProjectName.separateProjectName" />
+        <id column="PS_APPLY" property="summaryComment.summaryComment.comment" />
+        <id column="LOAD_COMPANY_CD" property="loadSection.loadSection.company.companyCd" />
+        <id column="LOAD_COMPANY_NAME" property="loadSection.loadSection.company.companyName" />
+        <id column="LOAD_SECTION_PLACE_CD" property="loadSection.loadSection.sectionPlace.sectionPlaceCd" />
+        <id column="LOAD_SECTION_PLACE_NAME" property="loadSection.loadSection.sectionPlace.sectionPlaceName" />
+        <id column="LOAD_SECTION_CD" property="loadSection.loadSection.sectionCd" />
+        <id column="LOAD_SECTION_NAME" property="loadSection.loadSection.sectionName" />
+        <id column="SUBJECT_COMPANY_CD" property="subject.subjectCompanyCd" />
+        <id column="SUBJECT_CD" property="subject.subjectCd" />
+        <id column="SUBJECT_NAME" property="subject.subjectName" />
+        <id column="BUDGET_NO" property="budgetNumber.budgetNumber" />
+        <id column="TAX_IND" property="amountMng.taxCalculationInd.taxInd.taxInd" />
+        <id column="CONSUMPT_IND" property="amountMng.taxCalculationInd.consumptInd.consumptInd" />
+        <id column="TAX_RATE" property="amountMng.taxRate.taxRate" />
+        <id column="UNIT_PRICE" property="unitPrice.amount.amount" />
+        <id column="PAY_VOL" property="val.vol.vol" />
+        <id column="UNIT_CD" property="val.unit.unitCd" />
+        <id column="UNIT_NAME" property="val.unit.unitName" />
+        <id column="CLAIM_PRICE" property="claimAmount.amount.amount" />
+        <id column="CONSUMPT_AMOUNT" property="amountMng.consumptAmount.consumptAmount.amount" />
+        <id column="CLAIM_TOTAL_AMOUNT" property="amountMng.totalAmount.totalAmount.amount" />
+        
+        <id column="EXT_TXT_1" property="editExtItem.editTextExtItem.textExtItem1.value"/>
+        <id column="EXT_TXT_2" property="editExtItem.editTextExtItem.textExtItem2.value"/>
+        <id column="EXT_TXT_3" property="editExtItem.editTextExtItem.textExtItem3.value"/>
+        <id column="EXT_TXT_4" property="editExtItem.editTextExtItem.textExtItem4.value"/>
+        <id column="EXT_TXT_5" property="editExtItem.editTextExtItem.textExtItem5.value"/>
+        <id column="EXT_TXT_6" property="editExtItem.editTextExtItem.textExtItem6.value"/>
+        <id column="EXT_TXT_7" property="editExtItem.editTextExtItem.textExtItem7.value"/>
+        <id column="EXT_TXT_8" property="editExtItem.editTextExtItem.textExtItem8.value"/>
+        <id column="EXT_TXT_9" property="editExtItem.editTextExtItem.textExtItem9.value"/>
+        <id column="EXT_TXT_10" property="editExtItem.editTextExtItem.textExtItem10.value"/>
+        <id column="EXT_AREA_1" property="editExtItem.editAreaExtItem.arrayExtItem1.value"/>
+        <id column="EXT_AREA_2" property="editExtItem.editAreaExtItem.arrayExtItem2.value"/>
+        <id column="EXT_AREA_3" property="editExtItem.editAreaExtItem.arrayExtItem3.value"/>
+        <id column="EXT_AREA_4" property="editExtItem.editAreaExtItem.arrayExtItem4.value"/>
+        <id column="EXT_AREA_5" property="editExtItem.editAreaExtItem.arrayExtItem5.value"/>
+        <id column="EXT_DATE_1" property="editExtItem.editDateExtItem.dateExtItem1.dateType.dateOfymd"/>
+        <id column="EXT_DATE_2" property="editExtItem.editDateExtItem.dateExtItem2.dateType.dateOfymd"/>
+        <id column="EXT_DATE_3" property="editExtItem.editDateExtItem.dateExtItem3.dateType.dateOfymd"/>
+        <id column="EXT_DATE_4" property="editExtItem.editDateExtItem.dateExtItem4.dateType.dateOfymd"/>
+        <id column="EXT_DATE_5" property="editExtItem.editDateExtItem.dateExtItem5.dateType.dateOfymd"/>
+        <id column="EXT_INT_1" property="editExtItem.editIntExtItem.intExtItem1.value"/>
+        <id column="EXT_INT_2" property="editExtItem.editIntExtItem.intExtItem2.value"/>
+        <id column="EXT_INT_3" property="editExtItem.editIntExtItem.intExtItem3.value"/>
+        <id column="EXT_INT_4" property="editExtItem.editIntExtItem.intExtItem4.value"/>
+        <id column="EXT_INT_5" property="editExtItem.editIntExtItem.intExtItem5.value"/>
+        <id column="EXT_INT_6" property="editExtItem.editIntExtItem.intExtItem6.value"/>
+        <id column="EXT_INT_7" property="editExtItem.editIntExtItem.intExtItem7.value"/>
+        <id column="EXT_INT_8" property="editExtItem.editIntExtItem.intExtItem8.value"/>
+        <id column="EXT_INT_9" property="editExtItem.editIntExtItem.intExtItem9.value"/>
+        <id column="EXT_INT_10" property="editExtItem.editIntExtItem.intExtItem10.value"/>
+        <id column="EXT_DEC_1" property="editExtItem.editDecExtItem.decExtItem1.value"/>
+        <id column="EXT_DEC_2" property="editExtItem.editDecExtItem.decExtItem2.value"/>
+        <id column="EXT_DEC_3" property="editExtItem.editDecExtItem.decExtItem3.value"/>
+        <id column="EXT_DEC_4" property="editExtItem.editDecExtItem.decExtItem4.value"/>
+        <id column="EXT_DEC_5" property="editExtItem.editDecExtItem.decExtItem5.value"/>
+        <id column="EXT_SEL_1" property="editExtItem.editSelExtItem.selExtItem1.value"/>
+        <id column="EXT_SEL_2" property="editExtItem.editSelExtItem.selExtItem2.value"/>
+        <id column="EXT_SEL_3" property="editExtItem.editSelExtItem.selExtItem3.value"/>
+        <id column="EXT_SEL_4" property="editExtItem.editSelExtItem.selExtItem4.value"/>
+        <id column="EXT_SEL_5" property="editExtItem.editSelExtItem.selExtItem5.value"/>
+        <id column="EXT_SEL_6" property="editExtItem.editSelExtItem.selExtItem6.value"/>
+        <id column="EXT_SEL_7" property="editExtItem.editSelExtItem.selExtItem7.value"/>
+        <id column="EXT_SEL_8" property="editExtItem.editSelExtItem.selExtItem8.value"/>
+        <id column="EXT_SEL_9" property="editExtItem.editSelExtItem.selExtItem9.value"/>
+        <id column="EXT_SEL_10" property="editExtItem.editSelExtItem.selExtItem10.value"/>
+        <id column="EXT_CHK_1" property="editExtItem.editChkExtItem.chkExtItem1.value"/>
+        <id column="EXT_CHK_2" property="editExtItem.editChkExtItem.chkExtItem2.value"/>
+        <id column="EXT_CHK_3" property="editExtItem.editChkExtItem.chkExtItem3.value"/>
+        <id column="EXT_CHK_4" property="editExtItem.editChkExtItem.chkExtItem4.value"/>
+        <id column="EXT_CHK_5" property="editExtItem.editChkExtItem.chkExtItem5.value"/>
+        <id column="EXT_FILE_1" property="editExtItem.editFileExtItem.fileExtItem1.fileName"/>
+        <id column="EXT_FILE_2" property="editExtItem.editFileExtItem.fileExtItem2.fileName"/>
+        <id column="EXT_FILE_3" property="editExtItem.editFileExtItem.fileExtItem3.fileName"/>
+        <id column="EXT_FILE_BINARY_1" property="editExtItem.editFileExtItem.fileExtItem1.binary"/>
+        <id column="EXT_FILE_BINARY_2" property="editExtItem.editFileExtItem.fileExtItem2.binary"/>
+        <id column="EXT_FILE_BINARY_3" property="editExtItem.editFileExtItem.fileExtItem3.binary"/>
+        <id column="EXT_MST_1" property="editExtItem.editMstExtItem.mstExtItem1.mstKey"/>
+        <id column="EXT_MST_2" property="editExtItem.editMstExtItem.mstExtItem2.mstKey"/>
+        <id column="EXT_MST_3" property="editExtItem.editMstExtItem.mstExtItem3.mstKey"/>
+        <id column="EXT_MST_4" property="editExtItem.editMstExtItem.mstExtItem4.mstKey"/>
+        <id column="EXT_MST_5" property="editExtItem.editMstExtItem.mstExtItem5.mstKey"/>
+        <id column="EXT_MST_6" property="editExtItem.editMstExtItem.mstExtItem6.mstKey"/>
+        <id column="EXT_MST_7" property="editExtItem.editMstExtItem.mstExtItem7.mstKey"/>
+        <id column="EXT_MST_8" property="editExtItem.editMstExtItem.mstExtItem8.mstKey"/>
+        <id column="EXT_MST_NAME_1" property="editExtItem.editMstExtItem.mstExtItem1.mstName"/>
+        <id column="EXT_MST_NAME_2" property="editExtItem.editMstExtItem.mstExtItem2.mstName"/>
+        <id column="EXT_MST_NAME_3" property="editExtItem.editMstExtItem.mstExtItem3.mstName"/>
+        <id column="EXT_MST_NAME_4" property="editExtItem.editMstExtItem.mstExtItem4.mstName"/>
+        <id column="EXT_MST_NAME_5" property="editExtItem.editMstExtItem.mstExtItem5.mstName"/>
+        <id column="EXT_MST_NAME_6" property="editExtItem.editMstExtItem.mstExtItem6.mstName"/>
+        <id column="EXT_MST_NAME_7" property="editExtItem.editMstExtItem.mstExtItem7.mstName"/>
+        <id column="EXT_MST_NAME_8" property="editExtItem.editMstExtItem.mstExtItem8.mstName"/>
+          
+    </resultMap>
+    
+   <select id="searchTpPayDetailList" parameterType="String"  resultMap="ItemDetail_Map">
+        SELECT
+            T_P_PAY_DTL.PAY_SEQ,                              
+            T_P_PAY_DTL.DETAIL_SUBJECT,                                 
+            T_P_PAY_DTL.PS_APPLY,                              
+            T_P_PAY_DTL.LOAD_COMPANY_CD, 
+            T_P_PAY_DTL.LOAD_COMPANY_NAME,   
+            T_P_PAY_DTL.LOAD_SECTION_PLACE_CD,   
+            T_P_PAY_DTL.LOAD_SECTION_PLACE_NAME,
+            T_P_PAY_DTL.LOAD_SECTION_CD,                                
+            T_P_PAY_DTL.LOAD_SECTION_NAME,  
+            T_P_PAY_DTL.SUBJECT_COMPANY_CD,                         
+            T_P_PAY_DTL.SUBJECT_CD,                                 
+            T_P_PAY_DTL.SUBJECT_NAME,                               
+            T_P_PAY_DTL.BUDGET_NO,                              
+            T_P_PAY_DTL.TAX_IND,                                
+            T_P_PAY_DTL.CONSUMPT_IND,   
+            T_P_PAY_DTL.TAX_RATE,                            
+            T_P_PAY_DTL.UNIT_PRICE,                                 
+            T_P_PAY_DTL.PAY_VOL,                                
+            T_P_PAY_DTL.UNIT_CD,                                
+            T_P_PAY_DTL.UNIT_NAME,                              
+            T_P_PAY_DTL.CLAIM_PRICE,                               
+            T_P_PAY_DTL.CONSUMPT_AMOUNT,                                
+            ${@ps.common.util.ItemSettingUtil@getItemSettingSelectSQL("T_P_PAY_DTL")}
+        FROM                                
+            T_P_PAY_DTL                             
+        WHERE                               
+            T_P_PAY_DTL.PAY_SEQ = #{payseq}                             
+        AND T_P_PAY_DTL.DELETE_FLG = '0'                                
+        ORDER BY                                
+            T_P_PAY_DTL.DETAIL_NO                               
+   </select>
+   
+    <select id = "selectAccInfo" resultMap="PayReqManagement_Map">
+        SELECT 
+             T_P_PAY.ACC_COMPANY_CD, 
+             T_P_PAY.ACC_COMPANY_NAME,
+             T_P_PAY.ACC_SECTION_PLACE_CD,
+             T_P_PAY.ACC_SECTION_PLACE_NAME,
+             T_P_PAY.ACC_SECTION_CD,
+             T_P_PAY.ACC_SECTION_NAME,
+             T_P_PAY.ACC_USER_ID,
+             T_P_PAY.ACC_USER_NAME,
+             T_P_PAY.ACC_USER_EXTENSION_NO,
+             T_P_PAY.ACC_USER_TEL_NO
+         FROM                        
+             T_P_PAY                     
+         WHERE                       
+             T_P_PAY.PAY_SEQ = #{oldQoutAplSeq} 
+    
+    
+    </select>
+    
+    
+  <insert id="insertTpPayForApl" >
+     INSERT INTO T_P_PAY(       
+        PAY_SEQ,
+        PAY_NO,
+        PAY_VERSION_NO,
+        CORRECT_CD,
+        PRE_SEQ,
+        NEW_FLG,
+        PAY_STATUS,
+        ACC_STATUS,
+        REQ_FIRST_DATE,
+        REQ_DATE,
+        ACC_REQ_DATE,
+        REQ_COMPANY_CD,
+        REQ_COMPANY_NAME,
+        REQ_SECTION_PLACE_CD,
+        REQ_SECTION_PLACE_NAME,
+        REQ_SECTION_CD,
+        REQ_SECTION_NAME,
+        REQ_USER_ID,
+        REQ_USER_NAME,
+        REQ_USER_EXTENSION_NO,
+        REQ_USER_TEL_NO,
+        INPUT_COMPANY_CD,
+        INPUT_COMPANY_NAME,
+        INPUT_SECTION_PLACE_CD,
+        INPUT_SECTION_PLACE_NAME,
+        INPUT_SECTION_CD,
+        INPUT_SECTION_NAME,
+        INPUT_USER_ID ,
+        INPUT_USER_NAME,
+        ACC_COMPANY_CD,
+        ACC_COMPANY_NAME,
+        ACC_SECTION_PLACE_CD,
+        ACC_SECTION_PLACE_NAME,
+        ACC_SECTION_CD,
+        ACC_SECTION_NAME,
+        ACC_USER_ID,
+        ACC_USER_NAME,
+        ACC_USER_EXTENSION_NO,
+        ACC_USER_TEL_NO,
+        TITLE_NAME,
+        PS_BILL_NO,
+        PS_BILL_DATE,
+        FISCAL_MONTH,
+        CURRENCY_CD,
+        RATE,
+        TOTAL_AMOUNT_IN_TAX,
+        SUP_COMPANY_CD,
+        SUP_CD,
+        SUP_NAME,
+        SUP_ABBR_NAME,
+        PAY_CONDITION_CD,
+        PAY_CONDITION_NAME,
+        BANK_CD,
+        BANK_NAME,
+        BRANCH_CD,
+        BRANCH_NAME,
+        ACCOUNT_TYPE,
+        ACCOUNT_NO,
+        ACCOUNT_NAME,
+        FOR_ACC_COMMENT,
+        FOR_BOSS_COMMENT,
+        ACC_SEND_IND,
+        PRINT_IND,
+        BI_OUT_IND,
+        ATTACH_FILE_SEQ1,
+        ATTACH_FILE_SEQ2,
+        ATTACH_FILE_SEQ3,
+        REQ_APP_ROUTE_NO,
+        REQ_APP_ROUTE_NAME,
+        ACC_APP_ROUTE_NO,
+        ACC_APP_ROUTE_NAME,
+        ACC_BACK_COMPANY_CD,
+        ACC_BACK_COMPANY_NAME,
+        ACC_BACK_SECTION_PLACE_CD,
+        ACC_BACK_SECTION_PLACE_NAME,
+        ACC_BACK_SECTION_CD,
+        ACC_BACK_SECTION_NAME,
+        ACC_BACK_USER_ID,
+        ACC_BACK_USER_NAME,
+        ACC_BACK_USER_COMMENTS,
+        DELETE_FLG,
+        AUTO_DELETE_FLG ,
+        AUTO_DELETE_DATE,
+        LAST_UPD_DATE,
+        LAST_UPD_COMPANY_CD, 
+        LAST_UPD_SECTION_CD,
+        LAST_UPD_USER_ID, 
+        REG_DATE,
+        REG_COMPANY_CD,
+        REG_SECTION_CD,
+        REG_USER_ID,
+        ${@ps.common.util.ItemSettingUtil@getItemSettingInsertSQL()}
+       )       
+    VALUES (        
+       #{payseq},
+       #{payNo},
+       '1',
+       '1',
+       '',
+       '1',
+       #{payStatus},
+       #{accStatus},
+       '${@fw.common.util.AppUtil@getSysDate()}',
+       '${@fw.common.util.AppUtil@getSysDate()}',
+       '',
+       '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}',
+       '${@fw.security.SecurityUtil@getCompanyNameByEscapeSql()}',
+       '${@fw.security.SecurityUtil@getSectionPlaceCdByEscapeSql()}',
+       '${@fw.security.SecurityUtil@getSectionPlaceNameByEscapeSql()}', 
+        #{payReqManagement.payReqInput.reqUser.reqUser.section.sectionCd, jdbcType=VARCHAR},
+        #{payReqManagement.payReqInput.reqUser.reqUser.section.sectionName, jdbcType=VARCHAR},
+        #{payReqManagement.payReqInput.reqUser.reqUser.userID, jdbcType=VARCHAR},
+        #{payReqManagement.payReqInput.reqUser.reqUser.userName, jdbcType=VARCHAR},
+        #{payReqManagement.payReqInput.reqUser.reqUser.extNo.extensionNo, jdbcType=VARCHAR},
+        #{payReqManagement.payReqInput.reqUser.reqUser.externalNo.externalNo, jdbcType=VARCHAR},
+       '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}',
+       '${@fw.security.SecurityUtil@getCompanyNameByEscapeSql()}',
+       '${@fw.security.SecurityUtil@getSectionPlaceCdByEscapeSql()}',
+       '${@fw.security.SecurityUtil@getSectionPlaceNameByEscapeSql()}', 
+       '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}',
+       '${@fw.security.SecurityUtil@getDefaultSectionNameByEscapeSql()}',
+       '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}',
+       '${@fw.security.SecurityUtil@getUserNameByEscapeSql()}',
+       #{payReqManagement.payReqInput.accUser.accUser.section.company.companyCd, jdbcType=VARCHAR},
+       #{payReqManagement.payReqInput.accUser.accUser.section.company.companyName, jdbcType=VARCHAR},
+       #{payReqManagement.payReqInput.accUser.accUser.section.sectionPlace.sectionPlaceCd, jdbcType=VARCHAR},
+       #{payReqManagement.payReqInput.accUser.accUser.section.sectionPlace.sectionPlaceName, jdbcType=VARCHAR},
+       #{payReqManagement.payReqInput.accUser.accUser.section.sectionCd, jdbcType=VARCHAR},
+       #{payReqManagement.payReqInput.accUser.accUser.section.sectionName, jdbcType=VARCHAR},
+       '',
+       '',
+       '',
+       '',
+       #{payReqManagement.payReqInput.titleName.titleName},
+       #{payReqManagement.payReqInput.invoice.invoiceId},
+       #{payReqManagement.payReqInput.invoice.invoiceDate.dateOfymd},
+       #{accountMonth},
+       #{payReqManagement.payReqInput.supplierFrom.currency.currencyCd},
+       #{rate},
+       #{payReqManagement.payReqInput.totalAmount.totalAmount.amount},
+       #{payReqManagement.payReqInput.supplierFrom.supCompanyCd},
+       #{payReqManagement.payReqInput.supplierFrom.supCd},
+       #{payReqManagement.payReqInput.supplierFrom.supplierName.supplierName},
+       #{payReqManagement.payReqInput.supplierFrom.supplierName.supplierAbbrName},
+       #{payReqManagement.payReqInput.payConditionManagement.payConditionIdentify.payConditionCd},
+       #{payReqManagement.payReqInput.payConditionManagement.payConditionName},
+       #{payReqManagement.payReqInput.account.bankCd},
+       #{payReqManagement.payReqInput.account.bankName},
+       #{payReqManagement.payReqInput.account.branchCd},
+       #{payReqManagement.payReqInput.account.branchName},
+       #{payReqManagement.payReqInput.account.acType.acType},
+       #{payReqManagement.payReqInput.account.accountNo},
+       #{payReqManagement.payReqInput.account.accountName},
+       #{payReqManagement.payReqInput.forAccComment.forAccComment.comment},
+       #{payReqManagement.payReqInput.forAppComment.forAppComment.comment},
+       #{accountSendInd},
+       '0',       
+       '0',
+       #{attachMngSeq1},
+       #{attachMngSeq2},
+       #{attachMngSeq3},
+       #{payReqManagement.approute.appRouteNo},
+       #{payReqManagement.approute.appRouteName},
+       '',
+       '',
+       '',
+       '',
+       '',
+       '',
+       '',
+       '',
+       '',
+       '',
+       '',
+       '0',
+       '0',
+       '',
+      '${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}',
+      '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}',
+      '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}',
+      '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}',
+      '${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}',
+      '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}',
+      '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}',
+      '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}',
+      ${@ps.common.util.ItemSettingUtil@getItemSettingInsertValueSQL("payReqManagement.payReqInput.editExtItem.")}      
+        )           
+    </insert>
+    
+    <insert id="insertTpPayForTempSave" >
+     INSERT INTO T_P_PAY(       
+        PAY_SEQ,
+        PAY_NO,
+        PAY_VERSION_NO,
+        CORRECT_CD,
+        PRE_SEQ,
+        NEW_FLG,
+        PAY_STATUS,
+        ACC_STATUS,
+        REQ_FIRST_DATE,
+        REQ_DATE,
+        ACC_REQ_DATE,
+        REQ_COMPANY_CD,
+        REQ_COMPANY_NAME,
+        REQ_SECTION_PLACE_CD,
+        REQ_SECTION_PLACE_NAME,
+        REQ_SECTION_CD,
+        REQ_SECTION_NAME,
+        REQ_USER_ID,
+        REQ_USER_NAME,
+        REQ_USER_EXTENSION_NO,
+        REQ_USER_TEL_NO,
+        INPUT_COMPANY_CD,
+        INPUT_COMPANY_NAME,
+        INPUT_SECTION_PLACE_CD,
+        INPUT_SECTION_PLACE_NAME,
+        INPUT_SECTION_CD,
+        INPUT_SECTION_NAME,
+        INPUT_USER_ID ,
+        INPUT_USER_NAME,
+        ACC_COMPANY_CD,
+        ACC_COMPANY_NAME,
+        ACC_SECTION_PLACE_CD,
+        ACC_SECTION_PLACE_NAME,
+        ACC_SECTION_CD,
+        ACC_SECTION_NAME,
+        ACC_USER_ID,
+        ACC_USER_NAME,
+        ACC_USER_EXTENSION_NO,
+        ACC_USER_TEL_NO,
+        TITLE_NAME,
+        PS_BILL_NO,
+        PS_BILL_DATE,
+        FISCAL_MONTH,
+        CURRENCY_CD,
+        RATE,
+        TOTAL_AMOUNT_IN_TAX,
+        SUP_COMPANY_CD,
+        SUP_CD,
+        SUP_NAME,
+        SUP_ABBR_NAME,
+        PAY_CONDITION_CD,
+        PAY_CONDITION_NAME,
+        BANK_CD,
+        BANK_NAME,
+        BRANCH_CD,
+        BRANCH_NAME,
+        ACCOUNT_TYPE,
+        ACCOUNT_NO,
+        ACCOUNT_NAME,
+        FOR_ACC_COMMENT,
+        FOR_BOSS_COMMENT,
+        ACC_SEND_IND,
+        PRINT_IND,
+        BI_OUT_IND,
+        ATTACH_FILE_SEQ1,
+        ATTACH_FILE_SEQ2,
+        ATTACH_FILE_SEQ3,
+        REQ_APP_ROUTE_NO,
+        REQ_APP_ROUTE_NAME,
+        ACC_APP_ROUTE_NO,
+        ACC_APP_ROUTE_NAME,
+        ACC_BACK_COMPANY_CD,
+        ACC_BACK_COMPANY_NAME,
+        ACC_BACK_SECTION_PLACE_CD,
+        ACC_BACK_SECTION_PLACE_NAME,
+        ACC_BACK_SECTION_CD,
+        ACC_BACK_SECTION_NAME,
+        ACC_BACK_USER_ID,
+        ACC_BACK_USER_NAME,
+        ACC_BACK_USER_COMMENTS,
+        DELETE_FLG,
+        AUTO_DELETE_FLG ,
+        AUTO_DELETE_DATE,
+        LAST_UPD_DATE,
+        LAST_UPD_COMPANY_CD, 
+        LAST_UPD_SECTION_CD,
+        LAST_UPD_USER_ID, 
+        REG_DATE,
+        REG_COMPANY_CD,
+        REG_SECTION_CD,
+        REG_USER_ID,
+        ${@ps.common.util.ItemSettingUtil@getItemSettingInsertSQL()}
+       )       
+    VALUES (        
+       #{payseq},
+       #{payNo},
+       '1',
+       '1',
+       '',
+       '1',
+       '04',
+       '',
+       '${@fw.common.util.AppUtil@getSysDate()}',
+       '${@fw.common.util.AppUtil@getSysDate()}',
+       '',
+       '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}',
+       '${@fw.security.SecurityUtil@getCompanyNameByEscapeSql()}',
+       '${@fw.security.SecurityUtil@getSectionPlaceCdByEscapeSql()}',
+       '${@fw.security.SecurityUtil@getSectionPlaceNameByEscapeSql()}', 
+        #{payReqManagement.payReqInput.reqUser.reqUser.section.sectionCd, jdbcType=VARCHAR},
+        #{payReqManagement.payReqInput.reqUser.reqUser.section.sectionName, jdbcType=VARCHAR},
+        #{payReqManagement.payReqInput.reqUser.reqUser.userID, jdbcType=VARCHAR},
+        #{payReqManagement.payReqInput.reqUser.reqUser.userName, jdbcType=VARCHAR},
+        #{payReqManagement.payReqInput.reqUser.reqUser.extNo.extensionNo, jdbcType=VARCHAR},
+        #{payReqManagement.payReqInput.reqUser.reqUser.externalNo.externalNo, jdbcType=VARCHAR},
+       '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}',
+       '${@fw.security.SecurityUtil@getCompanyNameByEscapeSql()}',
+       '${@fw.security.SecurityUtil@getSectionPlaceCdByEscapeSql()}',
+       '${@fw.security.SecurityUtil@getSectionPlaceNameByEscapeSql()}', 
+       '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}',
+       '${@fw.security.SecurityUtil@getDefaultSectionNameByEscapeSql()}',
+       '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}',
+       '${@fw.security.SecurityUtil@getUserNameByEscapeSql()}',
+       #{payReqManagement.payReqInput.accUser.accUser.section.company.companyCd, jdbcType=VARCHAR},
+       #{payReqManagement.payReqInput.accUser.accUser.section.company.companyName, jdbcType=VARCHAR},
+       #{payReqManagement.payReqInput.accUser.accUser.section.sectionPlace.sectionPlaceCd, jdbcType=VARCHAR},
+       #{payReqManagement.payReqInput.accUser.accUser.section.sectionPlace.sectionPlaceName, jdbcType=VARCHAR},
+       #{payReqManagement.payReqInput.accUser.accUser.section.sectionCd, jdbcType=VARCHAR},
+       #{payReqManagement.payReqInput.accUser.accUser.section.sectionName, jdbcType=VARCHAR},
+       '',
+       '',
+       '',
+       '',
+       #{payReqManagement.payReqInput.titleName.titleName},
+       #{payReqManagement.payReqInput.invoice.invoiceId},
+       #{payReqManagement.payReqInput.invoice.invoiceDate.dateOfymd},
+       #{accountMonth},
+       #{payReqManagement.payReqInput.supplierFrom.currency.currencyCd},
+       #{rate},
+       #{payReqManagement.payReqInput.totalAmount.totalAmount.amount},
+       #{payReqManagement.payReqInput.supplierFrom.supCompanyCd},
+       #{payReqManagement.payReqInput.supplierFrom.supCd},
+       #{payReqManagement.payReqInput.supplierFrom.supplierName.supplierName},
+       #{payReqManagement.payReqInput.supplierFrom.supplierName.supplierAbbrName},
+       #{payReqManagement.payReqInput.payConditionManagement.payConditionIdentify.payConditionCd},
+       #{payReqManagement.payReqInput.payConditionManagement.payConditionName},
+       #{payReqManagement.payReqInput.account.bankCd},
+       #{payReqManagement.payReqInput.account.bankName},
+       #{payReqManagement.payReqInput.account.branchCd},
+       #{payReqManagement.payReqInput.account.branchName},
+       #{payReqManagement.payReqInput.account.acType.acType},
+       #{payReqManagement.payReqInput.account.accountNo},
+       #{payReqManagement.payReqInput.account.accountName},
+       #{payReqManagement.payReqInput.forAccComment.forAccComment.comment},
+       #{payReqManagement.payReqInput.forAppComment.forAppComment.comment},
+       #{accountSendInd},
+       '0',       
+       '0',
+       #{attachMngSeq1},
+       #{attachMngSeq2},
+       #{attachMngSeq3},
+       #{payReqManagement.approute.appRouteNo},
+       #{payReqManagement.approute.appRouteName},
+       '',
+       '',
+       '',
+       '',
+       '',
+       '',
+       '',
+       '',
+       '',
+       '',
+       '',
+       '0',
+       '0',
+       '',
+      '${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}',
+      '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}',
+      '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}',
+      '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}',
+      '${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}',
+      '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}',
+      '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}',
+      '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}',
+       ${@ps.common.util.ItemSettingUtil@getItemSettingInsertValueSQL("payReqManagement.payReqInput.editExtItem.")}      
+        )           
+    </insert>
+    
+    <insert id="insertTpPayForReturn" >
+     INSERT INTO T_P_PAY(       
+        PAY_SEQ,
+        PAY_NO,
+        PAY_VERSION_NO,
+        CORRECT_CD,
+        PRE_SEQ,
+        NEW_FLG,
+        PAY_STATUS,
+        ACC_STATUS,
+        REQ_FIRST_DATE,
+        REQ_DATE,
+        ACC_REQ_DATE,
+        REQ_COMPANY_CD,
+        REQ_COMPANY_NAME,
+        REQ_SECTION_PLACE_CD,
+        REQ_SECTION_PLACE_NAME,
+        REQ_SECTION_CD,
+        REQ_SECTION_NAME,
+        REQ_USER_ID,
+        REQ_USER_NAME,
+        REQ_USER_EXTENSION_NO,
+        REQ_USER_TEL_NO,
+        INPUT_COMPANY_CD,
+        INPUT_COMPANY_NAME,
+        INPUT_SECTION_PLACE_CD,
+        INPUT_SECTION_PLACE_NAME,
+        INPUT_SECTION_CD,
+        INPUT_SECTION_NAME,
+        INPUT_USER_ID ,
+        INPUT_USER_NAME,
+        ACC_COMPANY_CD,
+        ACC_COMPANY_NAME,
+        ACC_SECTION_PLACE_CD,
+        ACC_SECTION_PLACE_NAME,
+        ACC_SECTION_CD,
+        ACC_SECTION_NAME,
+        ACC_USER_ID,
+        ACC_USER_NAME,
+        ACC_USER_EXTENSION_NO,
+        ACC_USER_TEL_NO,
+        TITLE_NAME,
+        PS_BILL_NO,
+        PS_BILL_DATE,
+        FISCAL_MONTH,
+        CURRENCY_CD,
+        RATE,
+        TOTAL_AMOUNT_IN_TAX,
+        SUP_COMPANY_CD,
+        SUP_CD,
+        SUP_NAME,
+        SUP_ABBR_NAME,
+        PAY_CONDITION_CD,
+        PAY_CONDITION_NAME,
+        BANK_CD,
+        BANK_NAME,
+        BRANCH_CD,
+        BRANCH_NAME,
+        ACCOUNT_TYPE,
+        ACCOUNT_NO,
+        ACCOUNT_NAME,
+        FOR_ACC_COMMENT,
+        FOR_BOSS_COMMENT,
+        ACC_SEND_IND,
+        PRINT_IND,
+        BI_OUT_IND,
+        ATTACH_FILE_SEQ1,
+        ATTACH_FILE_SEQ2,
+        ATTACH_FILE_SEQ3,
+        REQ_APP_ROUTE_NO,
+        REQ_APP_ROUTE_NAME,
+        ACC_APP_ROUTE_NO,
+        ACC_APP_ROUTE_NAME,
+        ACC_BACK_COMPANY_CD,
+        ACC_BACK_COMPANY_NAME,
+        ACC_BACK_SECTION_PLACE_CD,
+        ACC_BACK_SECTION_PLACE_NAME,
+        ACC_BACK_SECTION_CD,
+        ACC_BACK_SECTION_NAME,
+        ACC_BACK_USER_ID,
+        ACC_BACK_USER_NAME,
+        ACC_BACK_USER_COMMENTS,
+        DELETE_FLG,
+        AUTO_DELETE_FLG ,
+        AUTO_DELETE_DATE,
+        LAST_UPD_DATE,
+        LAST_UPD_COMPANY_CD, 
+        LAST_UPD_SECTION_CD,
+        LAST_UPD_USER_ID, 
+        REG_DATE,
+        REG_COMPANY_CD,
+        REG_SECTION_CD,
+        REG_USER_ID,
+        ${@ps.common.util.ItemSettingUtil@getItemSettingInsertSQL()}
+       )       
+    VALUES (        
+       #{payseq},
+       #{payReqManagement.payReqInput.payNo.payNo},
+       #{version},
+       '1',
+       #{preseq},
+       '1',
+       #{payStatus},
+       #{accStatus},
+       '${@fw.common.util.AppUtil@getSysDate()}',
+       '${@fw.common.util.AppUtil@getSysDate()}',
+       '',
+       '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}',
+       '${@fw.security.SecurityUtil@getCompanyNameByEscapeSql()}',
+       '${@fw.security.SecurityUtil@getSectionPlaceCdByEscapeSql()}',
+       '${@fw.security.SecurityUtil@getSectionPlaceNameByEscapeSql()}', 
+        #{payReqManagement.payReqInput.reqUser.reqUser.section.sectionCd, jdbcType=VARCHAR},
+        #{payReqManagement.payReqInput.reqUser.reqUser.section.sectionName, jdbcType=VARCHAR},
+        #{payReqManagement.payReqInput.reqUser.reqUser.userID, jdbcType=VARCHAR},
+        #{payReqManagement.payReqInput.reqUser.reqUser.userName, jdbcType=VARCHAR},
+        #{payReqManagement.payReqInput.reqUser.reqUser.extNo.extensionNo, jdbcType=VARCHAR},
+        #{payReqManagement.payReqInput.reqUser.reqUser.externalNo.externalNo, jdbcType=VARCHAR},
+       '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}',
+       '${@fw.security.SecurityUtil@getCompanyNameByEscapeSql()}',
+       '${@fw.security.SecurityUtil@getSectionPlaceCdByEscapeSql()}',
+       '${@fw.security.SecurityUtil@getSectionPlaceNameByEscapeSql()}', 
+       '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}',
+       '${@fw.security.SecurityUtil@getDefaultSectionNameByEscapeSql()}',
+       '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}',
+       '${@fw.security.SecurityUtil@getUserNameByEscapeSql()}',
+       #{payReqManagementAccInfo.payReqInput.accUser.accUser.section.company.companyCd, jdbcType=VARCHAR},
+       #{payReqManagementAccInfo.payReqInput.accUser.accUser.section.company.companyName, jdbcType=VARCHAR},
+       #{payReqManagementAccInfo.payReqInput.accUser.accUser.section.sectionPlace.sectionPlaceCd, jdbcType=VARCHAR},
+       #{payReqManagementAccInfo.payReqInput.accUser.accUser.section.sectionPlace.sectionPlaceName, jdbcType=VARCHAR},
+       #{payReqManagementAccInfo.payReqInput.accUser.accUser.section.sectionCd, jdbcType=VARCHAR},
+       #{payReqManagementAccInfo.payReqInput.accUser.accUser.section.sectionName, jdbcType=VARCHAR},
+       #{payReqManagementAccInfo.payReqInput.accUser.accUser.userID, jdbcType=VARCHAR},
+       #{payReqManagementAccInfo.payReqInput.accUser.accUser.userName, jdbcType=VARCHAR},
+       #{payReqManagementAccInfo.payReqInput.accUser.accUser.extNo.extensionNo, jdbcType=VARCHAR},
+       #{payReqManagementAccInfo.payReqInput.accUser.accUser.externalNo.externalNo, jdbcType=VARCHAR},
+       #{payReqManagement.payReqInput.titleName.titleName},
+       #{payReqManagement.payReqInput.invoice.invoiceId},
+       #{payReqManagement.payReqInput.invoice.invoiceDate.dateOfymd},
+       #{accountMonth},
+       #{payReqManagement.payReqInput.supplierFrom.currency.currencyCd},
+       #{rate},
+       #{payReqManagement.payReqInput.totalAmount.totalAmount.amount},
+       #{payReqManagement.payReqInput.supplierFrom.supCompanyCd},
+       #{payReqManagement.payReqInput.supplierFrom.supCd},
+       #{payReqManagement.payReqInput.supplierFrom.supplierName.supplierName},
+       #{payReqManagement.payReqInput.supplierFrom.supplierName.supplierAbbrName},
+       #{payReqManagement.payReqInput.payConditionManagement.payConditionIdentify.payConditionCd},
+       #{payReqManagement.payReqInput.payConditionManagement.payConditionName},
+       #{payReqManagement.payReqInput.account.bankCd},
+       #{payReqManagement.payReqInput.account.bankName},
+       #{payReqManagement.payReqInput.account.branchCd},
+       #{payReqManagement.payReqInput.account.branchName},
+       #{payReqManagement.payReqInput.account.acType.acType},
+       #{payReqManagement.payReqInput.account.accountNo},
+       #{payReqManagement.payReqInput.account.accountName},
+       #{payReqManagement.payReqInput.forAccComment.forAccComment.comment},
+       #{payReqManagement.payReqInput.forAppComment.forAppComment.comment},
+       #{accountSendInd},
+       '0',       
+       '0',
+       #{attachMngSeq1},
+       #{attachMngSeq2},
+       #{attachMngSeq3},
+       #{payReqManagement.approute.appRouteNo},
+       #{payReqManagement.approute.appRouteName},
+       '',
+       '',
+       '',
+       '',
+       '',
+       '',
+       '',
+       '',
+       '',
+       '',
+       '',
+       '0',
+       '0',
+       '',
+      '${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}',
+      '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}',
+      '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}',
+      '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}',
+      '${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}',
+      '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}',
+      '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}',
+      '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}',
+       ${@ps.common.util.ItemSettingUtil@getItemSettingInsertValueSQL("payReqManagement.payReqInput.editExtItem.")}      
+        )           
+    </insert>
+    
+    <insert id="insertTpPayDetail" >
+     INSERT INTO T_P_PAY_DTL( 
+          PAY_SEQ,                          
+          DETAIL_NO,  
+          DETAIL_SUBJECT, 
+          PS_APPLY,   
+          LOAD_COMPANY_CD,    
+          LOAD_COMPANY_NAME,  
+          LOAD_SECTION_PLACE_CD,  
+          LOAD_SECTION_PLACE_NAME,    
+          LOAD_SECTION_CD,    
+          LOAD_SECTION_NAME,  
+          TAX_IND,    
+          CONSUMPT_IND,   
+          TAX_RATE,   
+          PAY_VOL,    
+          UNIT_CD,    
+          UNIT_NAME,  
+          UNIT_PRICE, 
+          CLAIM_PRICE,    
+          DETAIL_BODY,    
+          CONSUMPT_AMOUNT,    
+          CLAIM_TOTAL_AMOUNT, 
+          SUBJECT_COMPANY_CD, 
+          SUBJECT_CD, 
+          SUBJECT_NAME,   
+          BUDGET_NO,  
+          DELETE_FLG, 
+          LAST_UPD_DATE,
+          LAST_UPD_COMPANY_CD, 
+          LAST_UPD_SECTION_CD,
+          LAST_UPD_USER_ID, 
+          REG_DATE,
+          REG_COMPANY_CD,
+          REG_SECTION_CD,
+          REG_USER_ID,
+          ${@ps.common.util.ItemSettingUtil@getItemSettingInsertSQL()}
+       )       
+    VALUES (        
+       #{payseq},
+       #{detailedNumber},
+       #{item.separateProjectName.separateProjectName},
+       #{item.summaryComment.summaryComment.comment},
+       #{item.loadSection.loadSection.company.companyCd},
+       #{item.loadSection.loadSection.company.companyName},
+       #{item.loadSection.loadSection.sectionPlace.sectionPlaceCd},
+       #{item.loadSection.loadSection.sectionPlace.sectionPlaceName},
+       #{item.loadSection.loadSection.sectionCd},
+       #{item.loadSection.loadSection.sectionName},
+       #{item.amountMng.taxCalculationInd.taxInd.taxInd},
+       #{item.amountMng.taxCalculationInd.consumptInd.consumptInd},
+       #{taxRate},
+       #{item.val.vol.vol},
+       #{item.val.unit.unitCd},
+       #{item.val.unit.unitName},
+       #{item.unitPrice.amount.amount},
+       #{item.claimAmount.amount.amount},
+       #{item.detailBody.amount},
+       #{item.amountMng.consumptAmount.consumptAmount.amount},
+       #{item.totalAmount.amount},
+       #{item.subject.subjectCompanyCd},
+       #{item.subject.subjectCd},
+       #{item.subject.subjectName},
+       #{item.budgetNumber.budgetNumber},
+       '0',
+      '${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}',
+      '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}',
+      '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}',
+      '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}',
+      '${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}',
+      '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}',
+      '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}',
+      '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}',
+       ${@ps.common.util.ItemSettingUtil@getItemSettingInsertValueSQL("item.editExtItem.")}      
+        )           
+    </insert>
+    
+    <delete id="deleteTpPayDetail" >
+        DELETE T_P_PAY_DTL 
+        WHERE 
+          PAY_SEQ = #{payseq}
+          AND DELETE_FLG = '0'
+     </delete>
+     
+     <update id="updateOldTpPayDetail" >
+        UPDATE T_P_PAY_DTL 
+        SET 
+          DELETE_FLG = '1', 
+          LAST_UPD_DATE = '${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}',
+          LAST_UPD_COMPANY_CD = '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}',
+          LAST_UPD_SECTION_CD = '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}',
+          LAST_UPD_USER_ID =  '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}' 
+        WHERE 
+          PAY_SEQ = #{payseq}
+          AND DELETE_FLG = '0'
+     </update>
+     
+     <update id="updateOldTpPayApl" >
+        UPDATE T_P_PAY 
+        SET 
+          NEW_FLG = '0',     
+          DELETE_FLG = '1', 
+          LAST_UPD_DATE = '${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}',
+          LAST_UPD_COMPANY_CD = '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}',
+          LAST_UPD_SECTION_CD = '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}',
+          LAST_UPD_USER_ID =  '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}' 
+        WHERE 
+          PAY_SEQ = #{payseq}
+          AND DELETE_FLG = '0'
+     </update>
+     
+    <update id="updateTpPayForApl" >
+     UPDATE T_P_PAY 
+     SET      
+        CORRECT_CD = '1',  
+        PAY_STATUS =  #{payStatus},
+        ACC_STATUS = #{accStatus}, 
+        REQ_FIRST_DATE=#{payReqManagement.payReqInput.payReqDate.reqFirstDate.reqDate.dateOfymd},    
+        REQ_DATE='${@fw.common.util.AppUtil@getSysDate()}',           
+        REQ_COMPANY_CD = '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}',      
+        REQ_COMPANY_NAME =  '${@fw.security.SecurityUtil@getCompanyNameByEscapeSql()}',        
+        REQ_SECTION_PLACE_CD = '${@fw.security.SecurityUtil@getSectionPlaceCdByEscapeSql()}',        
+        REQ_SECTION_PLACE_NAME = '${@fw.security.SecurityUtil@getSectionPlaceNameByEscapeSql()}',     
+        REQ_SECTION_CD = #{payReqManagement.payReqInput.reqUser.reqUser.section.sectionCd, jdbcType=VARCHAR},     
+        REQ_SECTION_NAME = #{payReqManagement.payReqInput.reqUser.reqUser.section.sectionName, jdbcType=VARCHAR},       
+        REQ_USER_ID = #{payReqManagement.payReqInput.reqUser.reqUser.userID, jdbcType=VARCHAR},     
+        REQ_USER_NAME =  #{payReqManagement.payReqInput.reqUser.reqUser.userName, jdbcType=VARCHAR},      
+        REQ_USER_EXTENSION_NO = #{payReqManagement.payReqInput.reqUser.reqUser.extNo.extensionNo, jdbcType=VARCHAR},      
+        REQ_USER_TEL_NO = #{payReqManagement.payReqInput.reqUser.reqUser.externalNo.externalNo, jdbcType=VARCHAR},  
+        INPUT_COMPANY_CD = '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}',      
+        INPUT_COMPANY_NAME = '${@fw.security.SecurityUtil@getCompanyNameByEscapeSql()}',      
+        INPUT_SECTION_PLACE_CD = '${@fw.security.SecurityUtil@getSectionPlaceCdByEscapeSql()}',      
+        INPUT_SECTION_PLACE_NAME = '${@fw.security.SecurityUtil@getSectionPlaceNameByEscapeSql()}',      
+        INPUT_SECTION_CD =  '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}',       
+        INPUT_SECTION_NAME = '${@fw.security.SecurityUtil@getDefaultSectionNameByEscapeSql()}',      
+        INPUT_USER_ID = '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}',       
+        INPUT_USER_NAME = '${@fw.security.SecurityUtil@getUserNameByEscapeSql()}',  
+        <if test="isAccUpdate">
+        ACC_COMPANY_CD = #{payReqManagement.payReqInput.accUser.accUser.section.company.companyCd, jdbcType=VARCHAR},
+        ACC_COMPANY_NAME = #{payReqManagement.payReqInput.accUser.accUser.section.company.companyName, jdbcType=VARCHAR},
+        ACC_SECTION_PLACE_CD = #{payReqManagement.payReqInput.accUser.accUser.section.sectionPlace.sectionPlaceCd, jdbcType=VARCHAR},
+        ACC_SECTION_PLACE_NAME = #{payReqManagement.payReqInput.accUser.accUser.section.sectionPlace.sectionPlaceName, jdbcType=VARCHAR},
+        ACC_SECTION_CD = #{payReqManagement.payReqInput.accUser.accUser.section.sectionCd, jdbcType=VARCHAR},
+        ACC_SECTION_NAME = #{payReqManagement.payReqInput.accUser.accUser.section.sectionName, jdbcType=VARCHAR},
+        </if>
+        TITLE_NAME = #{payReqManagement.payReqInput.titleName.titleName},
+        PS_BILL_NO = #{payReqManagement.payReqInput.invoice.invoiceId},
+        PS_BILL_DATE = #{payReqManagement.payReqInput.invoice.invoiceDate.dateOfymd},
+        FISCAL_MONTH = #{accountMonth},     
+        CURRENCY_CD = #{payReqManagement.payReqInput.supplierFrom.currency.currencyCd},        
+        RATE = #{rate},     
+        TOTAL_AMOUNT_IN_TAX = #{payReqManagement.payReqInput.totalAmount.totalAmount.amount},      
+        SUP_COMPANY_CD =  #{payReqManagement.payReqInput.supplierFrom.supCompanyCd},       
+        SUP_CD = #{payReqManagement.payReqInput.supplierFrom.supCd},      
+        SUP_NAME = #{payReqManagement.payReqInput.supplierFrom.supplierName.supplierName},       
+        SUP_ABBR_NAME = #{payReqManagement.payReqInput.supplierFrom.supplierName.supplierAbbrName},       
+        PAY_CONDITION_CD =  #{payReqManagement.payReqInput.payConditionManagement.payConditionIdentify.payConditionCd},      
+        PAY_CONDITION_NAME = #{payReqManagement.payReqInput.payConditionManagement.payConditionName},     
+        BANK_CD =  #{payReqManagement.payReqInput.account.bankCd},      
+        BANK_NAME = #{payReqManagement.payReqInput.account.bankName},        
+        BRANCH_CD = #{payReqManagement.payReqInput.account.branchCd},        
+        BRANCH_NAME = #{payReqManagement.payReqInput.account.branchName},      
+        ACCOUNT_TYPE =  #{payReqManagement.payReqInput.account.acType.acType},       
+        ACCOUNT_NO = #{payReqManagement.payReqInput.account.accountNo},     
+        ACCOUNT_NAME =  #{payReqManagement.payReqInput.account.accountName},     
+        FOR_ACC_COMMENT = #{payReqManagement.payReqInput.forAccComment.forAccComment.comment},     
+        FOR_BOSS_COMMENT =  #{payReqManagement.payReqInput.forAppComment.forAppComment.comment},     
+        ACC_SEND_IND = #{accountSendInd},       
+        ATTACH_FILE_SEQ1 =  #{attachMngSeq1},                
+        ATTACH_FILE_SEQ2 =  #{attachMngSeq2},                
+        ATTACH_FILE_SEQ3 =  #{attachMngSeq3},                
+        REQ_APP_ROUTE_NO =  #{payReqManagement.approute.appRouteNo},             
+        REQ_APP_ROUTE_NAME =  #{payReqManagement.approute.appRouteName},               
+        LAST_UPD_DATE = '${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}',
+        LAST_UPD_COMPANY_CD = '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}',
+        LAST_UPD_SECTION_CD = '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}',
+        LAST_UPD_USER_ID =  '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}',
+        ${@ps.common.util.ItemSettingUtil@getItemSettingUpdateValueSQL("payReqManagement.payReqInput.editExtItem.")}
+      WHERE 
+          PAY_SEQ = #{payseq}
+          AND DELETE_FLG = '0'
+    </update>
+    
+    <update id="updateTpPayForTempSave" >
+    UPDATE T_P_PAY 
+     SET      
+        CORRECT_CD = '1',  
+        PAY_STATUS = '04',
+        REQ_DATE='${@fw.common.util.AppUtil@getSysDate()}',           
+        REQ_COMPANY_CD = '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}',      
+        REQ_COMPANY_NAME =  '${@fw.security.SecurityUtil@getCompanyNameByEscapeSql()}',        
+        REQ_SECTION_PLACE_CD = '${@fw.security.SecurityUtil@getSectionPlaceCdByEscapeSql()}',        
+        REQ_SECTION_PLACE_NAME = '${@fw.security.SecurityUtil@getSectionPlaceNameByEscapeSql()}',     
+        REQ_SECTION_CD = #{payReqManagement.payReqInput.reqUser.reqUser.section.sectionCd, jdbcType=VARCHAR},     
+        REQ_SECTION_NAME = #{payReqManagement.payReqInput.reqUser.reqUser.section.sectionName, jdbcType=VARCHAR},       
+        REQ_USER_ID = #{payReqManagement.payReqInput.reqUser.reqUser.userID, jdbcType=VARCHAR},     
+        REQ_USER_NAME =  #{payReqManagement.payReqInput.reqUser.reqUser.userName, jdbcType=VARCHAR},      
+        REQ_USER_EXTENSION_NO = #{payReqManagement.payReqInput.reqUser.reqUser.extNo.extensionNo, jdbcType=VARCHAR},      
+        REQ_USER_TEL_NO = #{payReqManagement.payReqInput.reqUser.reqUser.externalNo.externalNo, jdbcType=VARCHAR},  
+        INPUT_COMPANY_CD = '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}',      
+        INPUT_COMPANY_NAME = '${@fw.security.SecurityUtil@getCompanyNameByEscapeSql()}',      
+        INPUT_SECTION_PLACE_CD = '${@fw.security.SecurityUtil@getSectionPlaceCdByEscapeSql()}',      
+        INPUT_SECTION_PLACE_NAME = '${@fw.security.SecurityUtil@getSectionPlaceNameByEscapeSql()}',      
+        INPUT_SECTION_CD =  '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}',       
+        INPUT_SECTION_NAME = '${@fw.security.SecurityUtil@getDefaultSectionNameByEscapeSql()}',      
+        INPUT_USER_ID = '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}',       
+        INPUT_USER_NAME = '${@fw.security.SecurityUtil@getUserNameByEscapeSql()}',  
+        ACC_COMPANY_CD = #{payReqManagement.payReqInput.accUser.accUser.section.company.companyCd, jdbcType=VARCHAR},                
+        ACC_COMPANY_NAME = #{payReqManagement.payReqInput.accUser.accUser.section.company.companyName, jdbcType=VARCHAR},               
+        ACC_SECTION_PLACE_CD = #{payReqManagement.payReqInput.accUser.accUser.section.sectionPlace.sectionPlaceCd, jdbcType=VARCHAR},               
+        ACC_SECTION_PLACE_NAME =  #{payReqManagement.payReqInput.accUser.accUser.section.sectionPlace.sectionPlaceName, jdbcType=VARCHAR},             
+        ACC_SECTION_CD =  #{payReqManagement.payReqInput.accUser.accUser.section.sectionCd, jdbcType=VARCHAR},             
+        ACC_SECTION_NAME = #{payReqManagement.payReqInput.accUser.accUser.section.sectionName, jdbcType=VARCHAR},     
+        TITLE_NAME = #{payReqManagement.payReqInput.titleName.titleName},
+        PS_BILL_NO = #{payReqManagement.payReqInput.invoice.invoiceId},
+        PS_BILL_DATE = #{payReqManagement.payReqInput.invoice.invoiceDate.dateOfymd},
+        FISCAL_MONTH = #{accountMonth},     
+        CURRENCY_CD = #{payReqManagement.payReqInput.supplierFrom.currency.currencyCd},        
+        RATE = #{rate},     
+        TOTAL_AMOUNT_IN_TAX = #{payReqManagement.payReqInput.totalAmount.totalAmount.amount},      
+        SUP_COMPANY_CD =  #{payReqManagement.payReqInput.supplierFrom.supCompanyCd},       
+        SUP_CD = #{payReqManagement.payReqInput.supplierFrom.supCd},      
+        SUP_NAME = #{payReqManagement.payReqInput.supplierFrom.supplierName.supplierName},       
+        SUP_ABBR_NAME = #{payReqManagement.payReqInput.supplierFrom.supplierName.supplierAbbrName},       
+        PAY_CONDITION_CD =  #{payReqManagement.payReqInput.payConditionManagement.payConditionIdentify.payConditionCd},      
+        PAY_CONDITION_NAME = #{payReqManagement.payReqInput.payConditionManagement.payConditionName},     
+        BANK_CD =  #{payReqManagement.payReqInput.account.bankCd},      
+        BANK_NAME = #{payReqManagement.payReqInput.account.bankName},        
+        BRANCH_CD = #{payReqManagement.payReqInput.account.branchCd},        
+        BRANCH_NAME = #{payReqManagement.payReqInput.account.branchName},      
+        ACCOUNT_TYPE =  #{payReqManagement.payReqInput.account.acType.acType},       
+        ACCOUNT_NO = #{payReqManagement.payReqInput.account.accountNo},     
+        ACCOUNT_NAME =  #{payReqManagement.payReqInput.account.accountName},       
+        FOR_ACC_COMMENT = #{payReqManagement.payReqInput.forAccComment.forAccComment.comment},     
+        FOR_BOSS_COMMENT =  #{payReqManagement.payReqInput.forAppComment.forAppComment.comment},     
+        ACC_SEND_IND = #{accountSendInd},       
+        ATTACH_FILE_SEQ1 =  #{attachMngSeq1},                
+        ATTACH_FILE_SEQ2 =  #{attachMngSeq2},                
+        ATTACH_FILE_SEQ3 =  #{attachMngSeq3},                
+        REQ_APP_ROUTE_NO =  #{payReqManagement.approute.appRouteNo},             
+        REQ_APP_ROUTE_NAME =  #{payReqManagement.approute.appRouteName},               
+        LAST_UPD_DATE = '${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}',
+        LAST_UPD_COMPANY_CD = '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}',
+        LAST_UPD_SECTION_CD = '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}',
+        LAST_UPD_USER_ID =  '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}',
+        ${@ps.common.util.ItemSettingUtil@getItemSettingUpdateValueSQL("payReqManagement.payReqInput.editExtItem.")}
+      WHERE 
+          PAY_SEQ = #{payseq}
+          AND DELETE_FLG = '0'
+    </update>
+    
+    <insert id="insertTpPayAttach" >
+        INSERT INTO T_P_PAY_ATTACH( 
+          ATTACH_FILE_SEQ, 
+          ATTACH_FILE_NAME, 
+          ATTACH_FILE , 
+          ATTACH_FILE_SIZE, 
+          ATTACH_SCOPE, 
+          DELETE_FLG, 
+          LAST_UPD_DATE, 
+          LAST_UPD_COMPANY_CD, 
+          LAST_UPD_SECTION_CD, 
+          LAST_UPD_USER_ID,
+          REG_DATE, 
+          REG_COMPANY_CD, 
+          REG_SECTION_CD ,
+          REG_USER_ID
+        ) 
+        VALUES ( 
+          #{attachMngSeq}, 
+          #{attachFile.fileName, jdbcType=VARCHAR}, 
+          #{attachFile.data},
+          #{attachFile.size},
+          '0',
+          '0',
+          '${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}',
+          '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}',
+          '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}',
+          '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}',
+           '${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}',
+           '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}',
+           '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}',
+           '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}'
+        )    
+    </insert>
+    <!--会計部門を取得-->
+    <select id="searchAccSectCd" resultType="String">
+        SELECT
+            ACCOUNT_SECTION_CD
+        FROM 
+            M_ACC_DEPT
+         WHERE
+            REQ_COMPANY_CD = #{companyCd} 
+            AND ACCOUNT_COMPANY_CD = #{companyCd}
+            AND REQ_SECTION_CD = #{sectCd} 
+    </select>
+
+    <select id="searchCutDate"
+            parameterType="String"
+            resultType="String">
+            SELECT MIN(M_CUTOFF_DATE.CUTOFF_MONTH)
+              FROM M_CUTOFF_DATE
+             WHERE (M_CUTOFF_DATE.COMPANY_CD = '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}'
+                OR M_CUTOFF_DATE.COMPANY_CD = '${@fw.common.constant.ApplicationConstant@COMPANY_CD_ALL}')
+               AND M_CUTOFF_DATE.CUTOFF_DATE >= #{setDate}
+    </select>
+
+    <select id="searchPayConditionName"
+            parameterType="String"
+            resultType="String">
+        SELECT CASE WHEN PAY_CONDITION_LANG_COMPANY.PAY_CONDITION_NAME IS NOT NULL
+                    THEN PAY_CONDITION_LANG_COMPANY.PAY_CONDITION_NAME
+                    ELSE PAY_CONDITION_LANG_SYSTEM.PAY_CONDITION_NAME
+                     END
+          FROM M_PAY_CONDITION
+          LEFT JOIN M_PAY_CONDITION_LANG PAY_CONDITION_LANG_COMPANY
+                 ON M_PAY_CONDITION.COMPANY_CD = PAY_CONDITION_LANG_COMPANY.COMPANY_CD
+                AND M_PAY_CONDITION.PAY_CONDITION_CD = PAY_CONDITION_LANG_COMPANY.PAY_CONDITION_CD
+                AND PAY_CONDITION_LANG_COMPANY.LANGUAGE_IND = '${@fw.security.SecurityUtil@getCompanyUseLanguageIndByEscapeSql()}'
+          LEFT JOIN M_PAY_CONDITION_LANG PAY_CONDITION_LANG_SYSTEM
+                 ON M_PAY_CONDITION.COMPANY_CD = PAY_CONDITION_LANG_SYSTEM.COMPANY_CD
+                AND M_PAY_CONDITION.PAY_CONDITION_CD = PAY_CONDITION_LANG_SYSTEM.PAY_CONDITION_CD
+                AND PAY_CONDITION_LANG_SYSTEM.LANGUAGE_IND = '${@fw.common.util.AppUtil@getSysLanguageByEscapeSql()}'
+         WHERE M_PAY_CONDITION.PAY_CONDITION_CD = #{payConditionCd}
+           AND (M_PAY_CONDITION.COMPANY_CD = '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}'
+            OR M_PAY_CONDITION.COMPANY_CD = '${@fw.common.constant.ApplicationConstant@COMPANY_CD_ALL}')
+    </select>
+
+    <!--検索条件で支払請求依頼キーリストを取得-->
+    <select id="listKeyIdentityClaim" parameterType="fw.domain.slip.payreq.payreq.payclaimapp.ClaimAppSearchCondition"
+                                                resultType="fw.domain.slip.payreq.payreq.payreqinput.PayReqIdentify">
+         SELECT        
+                T_P_PAY.PAY_SEQ as "payReqSeq"
+         FROM   T_P_PAY
+         <where>
+                ${@ps.common.util.ItemSettingUtil@getItemSettingWhereSQL()}
+         AND    T_P_PAY.INPUT_COMPANY_CD = '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}'
+         AND    T_P_PAY.INPUT_SECTION_CD = '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}'
+         <if test="@org.apache.commons.lang.StringUtils@isNotBlank(issueVousher)">
+               AND    T_P_PAY.INPUT_USER_ID = #{issueVousher}<!--  -->
+              <if test="!@org.apache.commons.lang.StringUtils@equals(issueVousher,@fw.security.SecurityUtil@getUserId())">
+                  AND   T_P_PAY.PAY_STATUS &lt;> '04'
+              </if>
+         </if>
+         
+         <if test="@org.apache.commons.lang.StringUtils@isBlank(issueVousher)">
+	         <if test="status == 'ALL'" >
+                 AND (T_P_PAY.PAY_STATUS IN ('01','02','03','04','06')
+                 AND T_P_PAY.INPUT_USER_ID = '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}'
+                 OR T_P_PAY.PAY_STATUS IN ('01','02','03','06')) 
+	         </if>
+         </if>
+         <if test="status == 'ALL'" >
+         <!-- ※全n件の場合 -->
+         AND  (T_P_PAY.PAY_STATUS = '01'
+                OR   T_P_PAY.PAY_STATUS = '02'
+                OR   T_P_PAY.PAY_STATUS = '03'
+                OR   T_P_PAY.PAY_STATUS = '04'
+                OR   T_P_PAY.PAY_STATUS = '06') 
+         </if>
+         <if test="status == '03'" >
+         <!-- ※差戻しの場合 -->
+         AND  (T_P_PAY.PAY_STATUS = '03'
+                OR   T_P_PAY.PAY_STATUS = '06') 
+         </if>
+         <if test="status == '01'" >
+         <!-- ※承認待ちの場合 -->
+         AND  (T_P_PAY.PAY_STATUS = '01') 
+         </if>
+         <if test="status == '02'" >
+         <!-- ※承認中の場合 -->
+         AND  (T_P_PAY.PAY_STATUS = '02') 
+         </if>
+         <if test="status == '04'" >
+         <!-- ※一時保存の場合 -->
+         AND  (T_P_PAY.PAY_STATUS = '04') 
+         AND    T_P_PAY.INPUT_USER_ID = '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}'
+         </if>
+         AND    T_P_PAY.NEW_FLG = '1'
+         AND    T_P_PAY.DELETE_FLG = '0'
+         </where> 
+         ORDER BY ${searchCondition.columnOrder.columnOrder()}
+    </select>   
+
+   <!-- 支払請求依頼キーリストで、一ページ目の支払請求一覧を取得 -->
+   <resultMap type="fw.domain.slip.payreq.payreq.payclaimapp.PayClaimAppListItem"
+        id="PayClaimAppListItem_Map">
+        <id column="PAY_SEQ" property="payReqIdentify.payReqSeq"/>
+        <id column="T_P_PAY_PAY_NO" property="payNo"/>
+   </resultMap>
+   <select id="listPage" parameterType="fw.domain.slip.payreq.payreq.payclaimapp.ClaimAppSearchCondition"
+                                        resultMap="PayClaimAppListItem_Map">
+      SELECT T_P_PAY.PAY_SEQ AS "payReqIdentify.payReqSeq"
+              ,T_P_PAY.PAY_NO AS "payNo"
+              ,T_P_PAY.PAY_VERSION_NO AS "payVersionNo"
+              ,T_P_PAY.INPUT_USER_NAME AS "inputUserName"
+              ,T_P_PAY.PAY_STATUS AS "status"
+              ,T_P_PAY.REQ_DATE AS "reqDate.dateOfymd"
+              ,T_P_PAY.TITLE_NAME AS "titleName"
+              ,T_P_PAY.SUP_CD AS "supCd"
+              ,T_P_PAY.SUP_ABBR_NAME AS "supName"
+              ,T_P_PAY.CURRENCY_CD AS "currencyCd"
+              ,M_CURRENCY.CURRENCY_MARK AS "currencyMark"
+              ,T_P_PAY.TOTAL_AMOUNT_IN_TAX AS "totalAmountInTax.amount"
+              ,T_P_PAY.PAY_CONDITION_NAME AS "payConditionName"
+              ,T_P_PAY.REQ_SECTION_CD AS "reqSectionCd"
+              ,T_P_PAY.REQ_SECTION_NAME AS "reqSectionName"
+              ,T_P_PAY.REQ_USER_ID AS "reqUserCd"
+              ,T_P_PAY.REQ_USER_NAME AS "reqUserName"
+              ,T_P_PAY.LAST_UPD_DATE AS "payReqIdentify.lastUpdDate"
+              ,T_P_PAY.INPUT_COMPANY_CD AS "inputCompanyCd"
+              ,T_P_PAY.INPUT_SECTION_CD AS "inputSectionCd"
+              ,T_P_PAY.INPUT_USER_ID AS "inputUserId"
+              ,${@ps.common.util.ItemSettingUtil@getItemSettingSelectSQLDomainAliasNonBinary("T_P_PAY", "listExtItemPay")}
+       FROM   T_P_PAY
+       LEFT JOIN M_CURRENCY
+       ON     M_CURRENCY.CURRENCY_CD = T_P_PAY.CURRENCY_CD
+              AND M_CURRENCY.TERM_FLG = '0'
+       WHERE   T_P_PAY.PAY_SEQ IN    
+       <foreach collection="searchCondition.page.keyDomainEntityList" item="keyList"  open="(" separator="," close=")">  
+              (#{keyList.payReqSeq})
+       </foreach>
+                ${@ps.common.util.ItemSettingUtil@getItemSettingWhereSQL()}
+         AND    T_P_PAY.INPUT_COMPANY_CD = '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}'
+         AND    T_P_PAY.INPUT_SECTION_CD = '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}'
+         <if test="@org.apache.commons.lang.StringUtils@isNotBlank(issueVousher)">
+               AND    T_P_PAY.INPUT_USER_ID = #{issueVousher}<!--  -->
+         </if>
+         
+         <if test="@org.apache.commons.lang.StringUtils@isBlank(issueVousher)">
+             <if test="status == 'ALL'" >
+                 AND (T_P_PAY.PAY_STATUS IN ('01','02','03','04','06')
+                 AND T_P_PAY.INPUT_USER_ID = '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}'
+                 OR T_P_PAY.PAY_STATUS IN ('01','02','03','06')) 
+             </if>
+         </if>
+         <if test="status == 'ALL'" >
+         <!-- ※全n件の場合 -->
+         AND  (T_P_PAY.PAY_STATUS = '01'
+                OR   T_P_PAY.PAY_STATUS = '02'
+                OR   T_P_PAY.PAY_STATUS = '03'
+                OR   T_P_PAY.PAY_STATUS = '04'
+                OR   T_P_PAY.PAY_STATUS = '06') 
+         </if>
+         <if test="status == '03'" >
+         <!-- ※差戻しの場合 -->
+         AND  (T_P_PAY.PAY_STATUS = '03'
+                OR   T_P_PAY.PAY_STATUS = '06') 
+         </if>
+         <if test="status == '01'" >
+         <!-- ※承認待ちの場合 -->
+         AND  (T_P_PAY.PAY_STATUS = '01') 
+         </if>
+         <if test="status == '02'" >
+         <!-- ※承認中の場合 -->
+         AND  (T_P_PAY.PAY_STATUS = '02') 
+         </if>
+         <if test="status == '04'" >
+         <!-- ※一時保存の場合 -->
+         AND  (T_P_PAY.PAY_STATUS = '04') 
+         AND    T_P_PAY.INPUT_USER_ID = '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}'
+         </if>
+         AND    T_P_PAY.NEW_FLG = '1'
+         AND    T_P_PAY.DELETE_FLG = '0'
+       ORDER BY ${searchCondition.columnOrder.columnOrder()}
+   </select>
+
+   <!-- 申請中止を更新 -->
+   <update id="updatePayClaimForDelete" parameterType="fw.domain.slip.payreq.payreq.payreqinput.PayReqIdentify">
+        UPDATE
+            T_P_PAY
+        SET
+              T_P_PAY.DELETE_FLG = '1'
+            , T_P_PAY.LAST_UPD_DATE = '${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}'
+            , T_P_PAY.LAST_UPD_COMPANY_CD = '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}'
+            , T_P_PAY.LAST_UPD_SECTION_CD = '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}'
+            , T_P_PAY.LAST_UPD_USER_ID = '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}'
+        WHERE
+            T_P_PAY.PAY_SEQ = #{payReqSeq}
+   </update>
+
+     <select id = "searchCount" parameterType="fw.domain.slip.payreq.payreq.payreqinput.PayReqIdentify" resultType="String">
+        SELECT COUNT(1)
+        FROM T_P_PAY
+        WHERE T_P_PAY.PAY_SEQ = #{payReqSeq}
+                AND T_P_PAY.DELETE_FLG = '0'
+                AND T_P_PAY.NEW_FLG = '1'
+    </select>
+ 
+   <!-- PSPAY041 End-->
+
+<!-- ============================= 支払請求詳細  PSPAY050  START ========================== -->
+
+<!--  支払請求詳細:支払請求依頼取得-->
+    <select id="searchTpPayForDetail" resultMap="PAY_DETAIL_MAP">
+        SELECT
+            T_P_PAY.PAY_SEQ,
+            T_P_PAY.PAY_NO,
+            T_P_PAY.PAY_STATUS,
+            T_P_PAY.ACC_STATUS,
+            T_P_PAY.REQ_DATE,
+            T_P_PAY.TITLE_NAME,
+            T_P_PAY.INPUT_SECTION_CD,
+            T_P_PAY.INPUT_SECTION_NAME,
+            T_P_PAY.INPUT_USER_ID,
+            T_P_PAY.INPUT_USER_NAME,
+            T_P_PAY.REQ_SECTION_CD,
+            T_P_PAY.REQ_SECTION_NAME,
+            T_P_PAY.REQ_USER_ID,
+            T_P_PAY.REQ_USER_NAME,
+            <!-- 支払請求依頼.依頼元担当内線番号 -->
+            T_P_PAY.REQ_USER_EXTENSION_NO,
+            <!-- 支払請求依頼.依頼元担当外線番号 -->
+            T_P_PAY.REQ_USER_TEL_NO,
+            T_P_PAY.PAY_CONDITION_NAME,
+            T_P_PAY.SUP_CD,
+            T_P_PAY.SUP_ABBR_NAME,
+            T_P_PAY.BANK_NAME,
+            T_P_PAY.BRANCH_NAME,
+            T_P_PAY.ACCOUNT_TYPE,
+            T_P_PAY.ACCOUNT_NO,
+            T_P_PAY.ACCOUNT_NAME,
+            T_P_PAY.PS_BILL_NO,
+            T_P_PAY.PS_BILL_DATE,
+            T_P_PAY.CURRENCY_CD,
+            T_P_PAY.TOTAL_AMOUNT_IN_TAX,
+            T_P_PAY.ATTACH_FILE_SEQ1,
+            T_P_PAY_ATTACH_A.ATTACH_FILE_NAME as ATTACH_FILE_NAME1,
+            T_P_PAY.ATTACH_FILE_SEQ2,
+            T_P_PAY_ATTACH_B.ATTACH_FILE_NAME as ATTACH_FILE_NAME2,
+            T_P_PAY.ATTACH_FILE_SEQ3,
+            T_P_PAY_ATTACH_C.ATTACH_FILE_NAME as ATTACH_FILE_NAME3,
+            T_P_PAY.FOR_BOSS_COMMENT,
+            T_P_PAY.FOR_ACC_COMMENT,
+            T_P_PAY.ACC_SECTION_CD,
+            T_P_PAY.ACC_SECTION_NAME,
+            T_P_PAY.ACC_USER_ID,
+            T_P_PAY.ACC_USER_NAME,
+            T_P_PAY.REQ_APP_ROUTE_NO,
+            T_P_PAY.REQ_APP_ROUTE_NAME,
+            T_P_PAY.ACC_APP_ROUTE_NO,
+            T_P_PAY.ACC_APP_ROUTE_NAME,
+            T_P_PAY.ACC_BACK_USER_COMMENTS,
+            T_P_PAY.ACC_USER_EXTENSION_NO,
+            T_P_PAY.ACC_USER_TEL_NO,
+            ${@ps.common.util.ItemSettingUtil@getItemSettingSelectSQL("T_P_PAY")}
+        FROM
+            T_P_PAY
+        LEFT JOIN T_P_PAY_ATTACH T_P_PAY_ATTACH_A ON 
+            T_P_PAY_ATTACH_A.ATTACH_FILE_SEQ = T_P_PAY.ATTACH_FILE_SEQ1
+            AND T_P_PAY_ATTACH_A.DELETE_FLG = '0'
+        LEFT JOIN T_P_PAY_ATTACH T_P_PAY_ATTACH_B ON
+            T_P_PAY_ATTACH_B.ATTACH_FILE_SEQ = T_P_PAY.ATTACH_FILE_SEQ2
+            AND T_P_PAY_ATTACH_B.DELETE_FLG = '0'
+        LEFT JOIN T_P_PAY_ATTACH T_P_PAY_ATTACH_C ON
+            T_P_PAY_ATTACH_C.ATTACH_FILE_SEQ = T_P_PAY.ATTACH_FILE_SEQ3
+            AND T_P_PAY_ATTACH_C.DELETE_FLG = '0'
+        WHERE
+            T_P_PAY.PAY_SEQ = #{paySeq}
+            AND T_P_PAY.NEW_FLG = '1'
+            AND T_P_PAY.DELETE_FLG = '0'
+    </select>
+    <resultMap type="fw.domain.slip.payreq.payreq.payreqinput.PayReqManagement" id="PAY_DETAIL_MAP">
+        <id column="PAY_SEQ" property="payReqIdentify.payReqSeq"/>
+        <id column="PAY_NO" property="payReqDetail.payNo.payNo"/>
+        <id column="PAY_STATUS" property="payReqDetail.status.payStatus.payStatus"/>
+        <id column="ACC_STATUS" property="payReqDetail.status.accStatus.accStatus"/> <!-- 2013/02/04 ADD DAIKO_KANEKO -->
+        <id column="REQ_DATE" property="payReqDetail.reqDate.reqDate.dateOfymd"/>
+        <id column="TITLE_NAME" property="payReqDetail.titleName.titleName"/>
+        <id column="INPUT_SECTION_CD" property="payReqDetail.inputUser.inputUser.section.sectionCd"/>
+        <id column="INPUT_SECTION_NAME" property="payReqDetail.inputUser.inputUser.section.sectionName"/>
+        <id column="INPUT_USER_ID" property="payReqDetail.inputUser.inputUser.userID"/>
+        <id column="INPUT_USER_NAME" property="payReqDetail.inputUser.inputUser.userName"/>
+        <id column="REQ_SECTION_CD" property="payReqDetail.reqUser.reqUser.section.sectionCd"/>
+        <id column="REQ_SECTION_NAME" property="payReqDetail.reqUser.reqUser.section.sectionName"/>
+        <id column="REQ_USER_ID" property="payReqDetail.reqUser.reqUser.userID"/>
+        <id column="REQ_USER_NAME" property="payReqDetail.reqUser.reqUser.userName"/>
+        <id column="REQ_USER_EXTENSION_NO" property="payReqDetail.reqUser.reqUser.extNo.extensionNo"/><!-- 支払請求依頼.依頼元担当内線番号 -->
+        <id column="REQ_USER_TEL_NO" property="payReqDetail.reqUser.reqUser.externalNo.externalNo"/><!-- 支払請求依頼.依頼元担当外線番号 -->
+        <id column="PAY_CONDITION_NAME" property="payReqDetail.payConditionManagement.payConditionName"/>
+        <id column="SUP_CD" property="payReqDetail.supplierFrom.supCd"/>
+        <id column="SUP_ABBR_NAME" property="payReqDetail.supplierFrom.supplierName.supplierName"/>
+        <id column="BANK_NAME" property="payReqDetail.account.bankName"/>
+        <id column="BRANCH_NAME" property="payReqDetail.account.branchName"/>
+        <id column="ACCOUNT_TYPE" property="payReqDetail.account.acType.acType"/>
+        <id column="ACCOUNT_NO" property="payReqDetail.account.accountNo"/>
+        <id column="ACCOUNT_NAME" property="payReqDetail.account.accountName"/>
+        <id column="PS_BILL_NO" property="payReqDetail.invoice.invoiceId"/>
+        <id column="PS_BILL_DATE" property="payReqDetail.invoice.invoiceDate.dateOfymd"/>
+        <id column="CURRENCY_CD" property="payReqDetail.supplierFrom.currency.currencyCd"/>
+        <id column="TOTAL_AMOUNT_IN_TAX" property="payReqDetail.totalAmount.totalAmount.amount"/>
+        <id column="ATTACH_FILE_SEQ1" property="payReqDetail.attachFile1.seqNo"/>
+        <id column="ATTACH_FILE_NAME1" property="payReqDetail.attachFile1.fileName"/>
+        <id column="ATTACH_FILE_SEQ2" property="payReqDetail.attachFile2.seqNo"/>
+        <id column="ATTACH_FILE_NAME2" property="payReqDetail.attachFile2.fileName"/>
+        <id column="ATTACH_FILE_SEQ3" property="payReqDetail.attachFile3.seqNo"/>
+        <id column="ATTACH_FILE_NAME3" property="payReqDetail.attachFile3.fileName"/>
+        <id column="FOR_BOSS_COMMENT" property="payReqDetail.forAppComment.forAppComment.comment"/>
+        <id column="FOR_ACC_COMMENT" property="payReqDetail.forAccComment.forAccComment.comment"/>
+        <id column="ACC_SECTION_CD" property="payReqDetail.accUser.accUser.section.sectionCd"/>
+        <id column="ACC_SECTION_NAME" property="payReqDetail.accUser.accUser.section.sectionName"/>
+        <id column="ACC_USER_ID" property="payReqDetail.accUser.accUser.userID"/>
+        <id column="ACC_USER_NAME" property="payReqDetail.accUser.accUser.userName"/>
+        <id column="REQ_APP_ROUTE_NO" property="payReqDetail.payClaimApproute.appRouteNo"/>
+        <id column="REQ_APP_ROUTE_NAME" property="payReqDetail.payClaimApproute.appRouteName"/>
+        <id column="ACC_APP_ROUTE_NO" property="payReqDetail.payCheckApproute.appRouteNo"/>
+        <id column="ACC_APP_ROUTE_NAME" property="payReqDetail.payCheckApproute.appRouteName"/>
+        <id column="ACC_BACK_USER_COMMENTS" property="payReqInput.accBackReason.backReason.backReason.comment"/>
+        <id column="ACC_USER_EXTENSION_NO" property="payReqDetail.accUser.accUser.extNo.extensionNo"/>
+        <id column="ACC_USER_TEL_NO" property="payReqDetail.accUser.accUser.externalNo.externalNo"/>
+        <id column="EXT_TXT_1" property="payReqDetail.detailExtItem.extendTxt.extendTxt1"/>
+        <id column="EXT_TXT_2" property="payReqDetail.detailExtItem.extendTxt.extendTxt2"/>
+        <id column="EXT_TXT_3" property="payReqDetail.detailExtItem.extendTxt.extendTxt3"/>
+        <id column="EXT_TXT_4" property="payReqDetail.detailExtItem.extendTxt.extendTxt4"/>
+        <id column="EXT_TXT_5" property="payReqDetail.detailExtItem.extendTxt.extendTxt5"/>
+        <id column="EXT_TXT_6" property="payReqDetail.detailExtItem.extendTxt.extendTxt6"/>
+        <id column="EXT_TXT_7" property="payReqDetail.detailExtItem.extendTxt.extendTxt7"/>
+        <id column="EXT_TXT_8" property="payReqDetail.detailExtItem.extendTxt.extendTxt8"/>
+        <id column="EXT_TXT_9" property="payReqDetail.detailExtItem.extendTxt.extendTxt9"/>
+        <id column="EXT_TXT_10" property="payReqDetail.detailExtItem.extendTxt.extendTxt10"/>
+        <id column="EXT_AREA_1" property="payReqDetail.detailExtItem.extendArea.extendArea1"/>
+        <id column="EXT_AREA_2" property="payReqDetail.detailExtItem.extendArea.extendArea2"/>
+        <id column="EXT_AREA_3" property="payReqDetail.detailExtItem.extendArea.extendArea3"/>
+        <id column="EXT_AREA_4" property="payReqDetail.detailExtItem.extendArea.extendArea4"/>
+        <id column="EXT_AREA_5" property="payReqDetail.detailExtItem.extendArea.extendArea5"/>
+        <id column="EXT_DATE_1" property="payReqDetail.detailExtItem.extendDate.extendDate1.dateOfymd"/>
+        <id column="EXT_DATE_2" property="payReqDetail.detailExtItem.extendDate.extendDate2.dateOfymd"/>
+        <id column="EXT_DATE_3" property="payReqDetail.detailExtItem.extendDate.extendDate3.dateOfymd"/>
+        <id column="EXT_DATE_4" property="payReqDetail.detailExtItem.extendDate.extendDate4.dateOfymd"/>
+        <id column="EXT_DATE_5" property="payReqDetail.detailExtItem.extendDate.extendDate5.dateOfymd"/>
+        <id column="EXT_INT_1" property="payReqDetail.detailExtItem.extendInt.extendInt1.value"/>
+        <id column="EXT_INT_2" property="payReqDetail.detailExtItem.extendInt.extendInt2.value"/>
+        <id column="EXT_INT_3" property="payReqDetail.detailExtItem.extendInt.extendInt3.value"/>
+        <id column="EXT_INT_4" property="payReqDetail.detailExtItem.extendInt.extendInt4.value"/>
+        <id column="EXT_INT_5" property="payReqDetail.detailExtItem.extendInt.extendInt5.value"/>
+        <id column="EXT_INT_6" property="payReqDetail.detailExtItem.extendInt.extendInt6.value"/>
+        <id column="EXT_INT_7" property="payReqDetail.detailExtItem.extendInt.extendInt7.value"/>
+        <id column="EXT_INT_8" property="payReqDetail.detailExtItem.extendInt.extendInt8.value"/>
+        <id column="EXT_INT_9" property="payReqDetail.detailExtItem.extendInt.extendInt9.value"/>
+        <id column="EXT_INT_10" property="payReqDetail.detailExtItem.extendInt.extendInt10.value"/>
+        <id column="EXT_DEC_1" property="payReqDetail.detailExtItem.extendDec.extendDec1.value"/>
+        <id column="EXT_DEC_2" property="payReqDetail.detailExtItem.extendDec.extendDec2.value"/>
+        <id column="EXT_DEC_3" property="payReqDetail.detailExtItem.extendDec.extendDec3.value"/>
+        <id column="EXT_DEC_4" property="payReqDetail.detailExtItem.extendDec.extendDec4.value"/>
+        <id column="EXT_DEC_5" property="payReqDetail.detailExtItem.extendDec.extendDec5.value"/>
+        <id column="EXT_SEL_1" property="payReqDetail.detailExtItem.extendSel.extendSel1"/>
+        <id column="EXT_SEL_2" property="payReqDetail.detailExtItem.extendSel.extendSel2"/>
+        <id column="EXT_SEL_3" property="payReqDetail.detailExtItem.extendSel.extendSel3"/>
+        <id column="EXT_SEL_4" property="payReqDetail.detailExtItem.extendSel.extendSel4"/>
+        <id column="EXT_SEL_5" property="payReqDetail.detailExtItem.extendSel.extendSel5"/>
+        <id column="EXT_SEL_6" property="payReqDetail.detailExtItem.extendSel.extendSel6"/>
+        <id column="EXT_SEL_7" property="payReqDetail.detailExtItem.extendSel.extendSel7"/>
+        <id column="EXT_SEL_8" property="payReqDetail.detailExtItem.extendSel.extendSel8"/>
+        <id column="EXT_SEL_9" property="payReqDetail.detailExtItem.extendSel.extendSel9"/>
+        <id column="EXT_SEL_10" property="payReqDetail.detailExtItem.extendSel.extendSel10"/>
+        <id column="EXT_CHK_1" property="payReqDetail.detailExtItem.extendChk.extendChk1"/>
+        <id column="EXT_CHK_2" property="payReqDetail.detailExtItem.extendChk.extendChk2"/>
+        <id column="EXT_CHK_3" property="payReqDetail.detailExtItem.extendChk.extendChk3"/>
+        <id column="EXT_CHK_4" property="payReqDetail.detailExtItem.extendChk.extendChk4"/>
+        <id column="EXT_CHK_5" property="payReqDetail.detailExtItem.extendChk.extendChk5"/>
+        <id column="EXT_FILE_1" property="payReqDetail.detailExtItem.extendFile.extendFile1.fileName"/>
+        <id column="EXT_FILE_2" property="payReqDetail.detailExtItem.extendFile.extendFile2.fileName"/>
+        <id column="EXT_FILE_3" property="payReqDetail.detailExtItem.extendFile.extendFile3.fileName"/>
+        <id column="EXT_FILE_BINARY_1" property="payReqDetail.detailExtItem.extendFile.extendFile1.binary"/>
+        <id column="EXT_FILE_BINARY_2" property="payReqDetail.detailExtItem.extendFile.extendFile2.binary"/>
+        <id column="EXT_FILE_BINARY_3" property="payReqDetail.detailExtItem.extendFile.extendFile3.binary"/>
+        <id column="EXT_MST_1" property="payReqDetail.detailExtItem.extendMst.extendMst1.mstKey"/>
+        <id column="EXT_MST_2" property="payReqDetail.detailExtItem.extendMst.extendMst2.mstKey"/>
+        <id column="EXT_MST_3" property="payReqDetail.detailExtItem.extendMst.extendMst3.mstKey"/>
+        <id column="EXT_MST_4" property="payReqDetail.detailExtItem.extendMst.extendMst4.mstKey"/>
+        <id column="EXT_MST_5" property="payReqDetail.detailExtItem.extendMst.extendMst5.mstKey"/>
+        <id column="EXT_MST_6" property="payReqDetail.detailExtItem.extendMst.extendMst6.mstKey"/>
+        <id column="EXT_MST_7" property="payReqDetail.detailExtItem.extendMst.extendMst7.mstKey"/>
+        <id column="EXT_MST_8" property="payReqDetail.detailExtItem.extendMst.extendMst8.mstKey"/>
+        <id column="EXT_MST_NAME_1" property="payReqDetail.detailExtItem.extendMst.extendMst1.mstName"/>
+        <id column="EXT_MST_NAME_2" property="payReqDetail.detailExtItem.extendMst.extendMst2.mstName"/>
+        <id column="EXT_MST_NAME_3" property="payReqDetail.detailExtItem.extendMst.extendMst3.mstName"/>
+        <id column="EXT_MST_NAME_4" property="payReqDetail.detailExtItem.extendMst.extendMst4.mstName"/>
+        <id column="EXT_MST_NAME_5" property="payReqDetail.detailExtItem.extendMst.extendMst5.mstName"/>
+        <id column="EXT_MST_NAME_6" property="payReqDetail.detailExtItem.extendMst.extendMst6.mstName"/>
+        <id column="EXT_MST_NAME_7" property="payReqDetail.detailExtItem.extendMst.extendMst7.mstName"/>
+        <id column="EXT_MST_NAME_8" property="payReqDetail.detailExtItem.extendMst.extendMst8.mstName"/>
+        
+    </resultMap>
+<!--  支払請求詳細:支払請求依頼明細取得-->
+    <select id="searchTpPayDtlForDetail" resultMap="PAY_DTL_DETAIL_MAP">
+        SELECT
+            T_P_PAY_DTL.DETAIL_NO,
+            T_P_PAY_DTL.DETAIL_SUBJECT,
+            T_P_PAY_DTL.PS_APPLY,
+            T_P_PAY_DTL.LOAD_SECTION_CD,
+            T_P_PAY_DTL.LOAD_SECTION_NAME,
+            T_P_PAY_DTL.SUBJECT_CD,
+            T_P_PAY_DTL.SUBJECT_NAME,
+            T_P_PAY_DTL.BUDGET_NO,
+            T_P_PAY_DTL.TAX_IND,
+            T_P_PAY_DTL.CONSUMPT_IND,
+            T_P_PAY_DTL.UNIT_PRICE,
+            T_P_PAY_DTL.PAY_VOL,
+            T_P_PAY_DTL.UNIT_NAME,
+            T_P_PAY_DTL.CLAIM_PRICE,
+            T_P_PAY_DTL.CONSUMPT_AMOUNT,
+            T_P_PAY_DTL.CLAIM_TOTAL_AMOUNT,
+            T_P_PAY_DTL.DETAIL_BODY,
+            ${@ps.common.util.ItemSettingUtil@getItemSettingSelectSQL("T_P_PAY_DTL")}
+        FROM
+            T_P_PAY_DTL
+        WHERE
+            T_P_PAY_DTL.PAY_SEQ = #{paySeq}
+            AND T_P_PAY_DTL.DELETE_FLG = '0'
+        ORDER BY
+            T_P_PAY_DTL.DETAIL_NO ASC
+    </select>
+    <resultMap type="fw.domain.slip.payreq.payreq.payreqinput.Item" id="PAY_DTL_DETAIL_MAP">
+        <id column="DETAIL_NO" property="itemNo"/>
+        <id column="DETAIL_SUBJECT" property="separateProjectName.separateProjectName"/>
+        <id column="PS_APPLY" property="summaryComment.summaryComment.comment"/>
+        <id column="LOAD_SECTION_CD" property="loadSection.loadSection.sectionCd"/>
+        <id column="LOAD_SECTION_NAME" property="loadSection.loadSection.sectionName"/>
+        <id column="SUBJECT_CD" property="subject.subjectCd"/>
+        <id column="SUBJECT_NAME" property="subject.subjectName"/>
+        <id column="BUDGET_NO" property="budgetNumber.budgetNumber"/>
+        <id column="TAX_IND" property="amountMng.taxCalculationInd.taxInd.taxInd"/>
+        <id column="CONSUMPT_IND" property="amountMng.taxCalculationInd.consumptInd.consumptInd"/>
+        <id column="UNIT_PRICE" property="unitPrice.amount.amount"/>
+        <id column="PAY_VOL" property="val.vol.vol"/>
+        <id column="UNIT_NAME" property="val.unit.unitName"/>
+        <id column="CLAIM_PRICE" property="claimAmount.amount.amount"/>
+        <id column="CONSUMPT_AMOUNT" property="amountMng.consumptAmount.consumptAmount.amount"/>
+        <id column="CLAIM_TOTAL_AMOUNT" property="amountMng.totalAmount.totalAmount.amount"/>
+        <id column="DETAIL_BODY" property="amountMng.noTaxAmount.noTaxAmount.amount"/>
+        
+        <id column="EXT_TXT_1" property="detailExtItem.extendTxt.extendTxt1"/>
+        <id column="EXT_TXT_2" property="detailExtItem.extendTxt.extendTxt2"/>
+        <id column="EXT_TXT_3" property="detailExtItem.extendTxt.extendTxt3"/>
+        <id column="EXT_TXT_4" property="detailExtItem.extendTxt.extendTxt4"/>
+        <id column="EXT_TXT_5" property="detailExtItem.extendTxt.extendTxt5"/>
+        <id column="EXT_TXT_6" property="detailExtItem.extendTxt.extendTxt6"/>
+        <id column="EXT_TXT_7" property="detailExtItem.extendTxt.extendTxt7"/>
+        <id column="EXT_TXT_8" property="detailExtItem.extendTxt.extendTxt8"/>
+        <id column="EXT_TXT_9" property="detailExtItem.extendTxt.extendTxt9"/>
+        <id column="EXT_TXT_10" property="detailExtItem.extendTxt.extendTxt10"/>
+        <id column="EXT_AREA_1" property="detailExtItem.extendArea.extendArea1"/>
+        <id column="EXT_AREA_2" property="detailExtItem.extendArea.extendArea2"/>
+        <id column="EXT_AREA_3" property="detailExtItem.extendArea.extendArea3"/>
+        <id column="EXT_AREA_4" property="detailExtItem.extendArea.extendArea4"/>
+        <id column="EXT_AREA_5" property="detailExtItem.extendArea.extendArea5"/>
+        <id column="EXT_DATE_1" property="detailExtItem.extendDate.extendDate1.dateOfymd"/>
+        <id column="EXT_DATE_2" property="detailExtItem.extendDate.extendDate2.dateOfymd"/>
+        <id column="EXT_DATE_3" property="detailExtItem.extendDate.extendDate3.dateOfymd"/>
+        <id column="EXT_DATE_4" property="detailExtItem.extendDate.extendDate4.dateOfymd"/>
+        <id column="EXT_DATE_5" property="detailExtItem.extendDate.extendDate5.dateOfymd"/>
+        <id column="EXT_INT_1" property="detailExtItem.extendInt.extendInt1.value"/>
+        <id column="EXT_INT_2" property="detailExtItem.extendInt.extendInt2.value"/>
+        <id column="EXT_INT_3" property="detailExtItem.extendInt.extendInt3.value"/>
+        <id column="EXT_INT_4" property="detailExtItem.extendInt.extendInt4.value"/>
+        <id column="EXT_INT_5" property="detailExtItem.extendInt.extendInt5.value"/>
+        <id column="EXT_INT_6" property="detailExtItem.extendInt.extendInt6.value"/>
+        <id column="EXT_INT_7" property="detailExtItem.extendInt.extendInt7.value"/>
+        <id column="EXT_INT_8" property="detailExtItem.extendInt.extendInt8.value"/>
+        <id column="EXT_INT_9" property="detailExtItem.extendInt.extendInt9.value"/>
+        <id column="EXT_INT_10" property="detailExtItem.extendInt.extendInt10.value"/>
+        <id column="EXT_DEC_1" property="detailExtItem.extendDec.extendDec1.value"/>
+        <id column="EXT_DEC_2" property="detailExtItem.extendDec.extendDec2.value"/>
+        <id column="EXT_DEC_3" property="detailExtItem.extendDec.extendDec3.value"/>
+        <id column="EXT_DEC_4" property="detailExtItem.extendDec.extendDec4.value"/>
+        <id column="EXT_DEC_5" property="detailExtItem.extendDec.extendDec5.value"/>
+        <id column="EXT_SEL_1" property="detailExtItem.extendSel.extendSel1"/>
+        <id column="EXT_SEL_2" property="detailExtItem.extendSel.extendSel2"/>
+        <id column="EXT_SEL_3" property="detailExtItem.extendSel.extendSel3"/>
+        <id column="EXT_SEL_4" property="detailExtItem.extendSel.extendSel4"/>
+        <id column="EXT_SEL_5" property="detailExtItem.extendSel.extendSel5"/>
+        <id column="EXT_SEL_6" property="detailExtItem.extendSel.extendSel6"/>
+        <id column="EXT_SEL_7" property="detailExtItem.extendSel.extendSel7"/>
+        <id column="EXT_SEL_8" property="detailExtItem.extendSel.extendSel8"/>
+        <id column="EXT_SEL_9" property="detailExtItem.extendSel.extendSel9"/>
+        <id column="EXT_SEL_10" property="detailExtItem.extendSel.extendSel10"/>
+        <id column="EXT_CHK_1" property="detailExtItem.extendChk.extendChk1"/>
+        <id column="EXT_CHK_2" property="detailExtItem.extendChk.extendChk2"/>
+        <id column="EXT_CHK_3" property="detailExtItem.extendChk.extendChk3"/>
+        <id column="EXT_CHK_4" property="detailExtItem.extendChk.extendChk4"/>
+        <id column="EXT_CHK_5" property="detailExtItem.extendChk.extendChk5"/>
+        <id column="EXT_FILE_1" property="detailExtItem.extendFile.extendFile1.fileName"/>
+        <id column="EXT_FILE_2" property="detailExtItem.extendFile.extendFile2.fileName"/>
+        <id column="EXT_FILE_3" property="detailExtItem.extendFile.extendFile3.fileName"/>
+        <id column="EXT_FILE_BINARY_1" property="detailExtItem.extendFile.extendFile1.binary"/>
+        <id column="EXT_FILE_BINARY_2" property="detailExtItem.extendFile.extendFile2.binary"/>
+        <id column="EXT_FILE_BINARY_3" property="detailExtItem.extendFile.extendFile3.binary"/>
+        <id column="EXT_MST_1" property="detailExtItem.extendMst.extendMst1.mstKey"/>
+        <id column="EXT_MST_2" property="detailExtItem.extendMst.extendMst2.mstKey"/>
+        <id column="EXT_MST_3" property="detailExtItem.extendMst.extendMst3.mstKey"/>
+        <id column="EXT_MST_4" property="detailExtItem.extendMst.extendMst4.mstKey"/>
+        <id column="EXT_MST_5" property="detailExtItem.extendMst.extendMst5.mstKey"/>
+        <id column="EXT_MST_6" property="detailExtItem.extendMst.extendMst6.mstKey"/>
+        <id column="EXT_MST_7" property="detailExtItem.extendMst.extendMst7.mstKey"/>
+        <id column="EXT_MST_8" property="detailExtItem.extendMst.extendMst8.mstKey"/>
+        <id column="EXT_MST_NAME_1" property="detailExtItem.extendMst.extendMst1.mstName"/>
+        <id column="EXT_MST_NAME_2" property="detailExtItem.extendMst.extendMst2.mstName"/>
+        <id column="EXT_MST_NAME_3" property="detailExtItem.extendMst.extendMst3.mstName"/>
+        <id column="EXT_MST_NAME_4" property="detailExtItem.extendMst.extendMst4.mstName"/>
+        <id column="EXT_MST_NAME_5" property="detailExtItem.extendMst.extendMst5.mstName"/>
+        <id column="EXT_MST_NAME_6" property="detailExtItem.extendMst.extendMst6.mstName"/>
+        <id column="EXT_MST_NAME_7" property="detailExtItem.extendMst.extendMst7.mstName"/>
+        <id column="EXT_MST_NAME_8" property="detailExtItem.extendMst.extendMst8.mstName"/>
+    </resultMap>
+   <!-- PSPAY050 End-->
+
+    <!-- 暫定的にこのMapperに配置 -->
+    <!-- 取引先マスタから取引先基本言語を取得する -->
+    <select id="searchAccountBySupCd"
+            resultType="fw.domain.mst.supplier.supplier.Account">
+        SELECT BANK_CD AS "bankCd" ,
+               BANK_NAME "bankName" ,
+               BRANCH_CD "branchCd" ,
+               BRANCH_NAME "branchName" ,
+               ACCOUNT_TYPE "acType.acType" ,
+               ACCOUNT_NO "accountNo" ,
+               ACCOUNT_NAME "accountName" 
+          FROM M_SUPPLIER
+         WHERE (COMPANY_CD = '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}'
+            OR COMPANY_CD = '${@fw.common.constant.ApplicationConstant@COMPANY_CD_ALL}')
+           AND SUP_CD = #{supplierCd}
+           AND VALID_START_DATE &lt;= '${@fw.common.util.AppUtil@getSysDate()}'
+           AND VALID_END_DATE >= '${@fw.common.util.AppUtil@getSysDate()}'
+           AND TERM_FLG = '0'
+    </select>
+</mapper>

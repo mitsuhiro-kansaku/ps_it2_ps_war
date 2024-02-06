@@ -1,0 +1,445 @@
+<!doctype html>
+<html LANG="ja">
+<head>
+<title>#customSpringMessage('VOUCHER_REFE')</title><!--伝票照会-->
+<meta http-equiv="Content-type" content="text/html; charset=UTF-8">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Content-script-type" content="text/javascript">
+
+<link id="CSS_FONT" rel="stylesheet" href="../../include/FontS.css" type="text/css">
+<link rel="stylesheet" href="../../include/Layout.css" type="text/css">
+<link rel="stylesheet" href="../../include/Color.css" type="text/css">
+<link rel="stylesheet" href="../../include/searchbox.css" type="text/css">
+
+<script language="javascript" TYPE="text/javascript" src="../../include/common.js"></script>
+<script language="javascript" TYPE="text/javascript" src="../../include/check.js"></script>
+<script language="javascript" TYPE="text/javascript" src="../../include/date.js"></script>
+<script language="javascript" TYPE="text/javascript" src="../../include/tablesort.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/jquery-1.7.2.min.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/jquery.tablefix.noform.js"></script>
+<script language="javascript" TYPE="text/javascript">
+
+<!--
+#parse("./common/common_js.vm")
+
+//初期
+function onLoad() {
+    dataLoadHasPage();
+    var alertMessage = "$!alertMessage";
+    if (alertMessage != ""){
+        ## +++++ 強化-00852-000 2013/05/27 ADD SBO_CHENCHENG START +++++
+        buttonUsableForList(alertMessage);
+        ## +++++ 強化-00852-000 2013/05/27 ADD SBO_CHENCHENG -END- +++++
+        alert(alertMessage);
+    }
+    
+    var errorMsg = "$!errorMessage";
+    
+    if (errorMsg != ""){
+        return;
+    }
+    var isSuccess = '#jsEscape($!isSuccess)';
+    if(isSuccess == 'true'){
+            #set( $claim = "#customSpringMessage('PAY_CLAIM_REG')" )
+            alert('#customMessageArgs("I028",[$!claim])');
+            parent.iframeChange("${flowExecutionUrl}&_eventId=page");
+    }
+    var isShowApproval = "#jsEscape($isShowApproval)";
+    if (isShowApproval == 'true'){
+           top.iframeChange("${flowExecutionUrl}&_eventId=individualApproval");
+    }
+    var isShowDetail = "#jsEscape($isShowDetail)";
+    if (isShowDetail == 'true'){
+       parent.poppage('${flowExecutionUrl}&_eventId=detail','DETAIL','800','700');
+    }
+}
+
+
+//受入詳細
+/*
+quotReqNo             見積依頼番号
+reqInd                依頼区分
+slipStatus            伝票ステータス
+receiveStatusInd      受入状態区分
+inspectStatusInd      検査状態区分
+acceptanceStatusInd   検収状態区分
+
+quotAcqAplSeqNo    見積取得申請シーケンス番号
+purAplSeqNo        購入申請シーケンス番号
+orderSeq           注文シーケンス番号
+orderNo            注文番号
+quotReqSeqNo       見積依頼シーケンス番号
+lastUpdDate        見積依頼の最終更新日時
+purReqSeq          購入依頼シーケンス番号
+purAplNo           購入申請番号
+purReqNo           購入依頼番号
+*/
+function openDetail(reqInd, quotReqNo, slipStatus, receiveStatusInd, inspectStatusInd, acceptanceStatusInd, 
+    quotAcqAplSeqNo, purAplSeqNo, orderSeq, orderNo, quotReqSeqNo, lastUpdDate, purReqSeq, purAplNo, purReqNo) {
+    
+## 2013.01.07 DEL DAIKO_KANEKO START
+#*
+    // カタログの場合、伝票ステータスの前2位が”05”で、詳細が出ない
+    if(reqInd == "2") {
+        if(slipStatus == "" || slipStatus == "0504" || slipStatus == "0505") {
+            return false;
+        }
+    }
+    
+    // 都度の場合、見積依頼シーケンス番号がnullではない、伝票ステータスの前2位が"01","02","03","04","0504","0505",詳細が出ない
+    if(reqInd == "3" && (quotReqSeqNo != "" && quotReqSeqNo.length > 0)) {
+        if(slipStatus == "" || slipStatus.substr(0, 2) == "01" || slipStatus.substr(0, 2) == "02" 
+            || slipStatus.substr(0, 2) == "03" || slipStatus.substr(0, 2) == "04"
+            || slipStatus == "0504" || slipStatus == "0505") {
+            return false;
+        }
+    }
+    
+    // 都度の場合、見積依頼シーケンス番号がnullで、伝票ステータスの前2位が"05",詳細が出ない
+    if((reqInd == "3" && quotReqSeqNo == "") || reqInd == "9") {
+        if(slipStatus == "" || slipStatus == "0504" || slipStatus == "0505") {
+            return false;
+        }
+    }
+*#
+## 2013.01.07 DEL DAIKO_KANEKO -END-
+    
+    parent.iframeChange("${flowExecutionUrl}&_eventId=detailValidate","reqInd", reqInd,
+    "quotReqNo", quotReqNo,
+    "slipStatus", slipStatus,
+    "receiveStatusInd", receiveStatusInd,
+    "inspectStatusInd", inspectStatusInd,
+    "acceptanceStatusInd", acceptanceStatusInd,
+    "quotAcqAplSeqNo", quotAcqAplSeqNo,
+    "purAplSeqNo", purAplSeqNo,
+    "orderSeq", orderSeq,
+    "orderNo", orderNo,
+    "quotReqSeqNo", quotReqSeqNo,
+    "lastUpdDate", lastUpdDate,
+    "purReqSeq", purReqSeq,
+    "purAplNo", purAplNo, ## 2013.01.05 ADD DAIKO_KANEKO
+    "purReqNo", purReqNo,
+    "HIDDENAREA");
+}
+
+//-->
+</script>
+
+</head>
+<body id="BODY" topmargin="0" leftmargin="0" marginwidth="0" marginheight="0" align="left" onload="onLoad();setTablefix('#TABLE', 1, 2+$!PSVIW020PageCreaterForList.printLockColumn());">
+#if($!errorMessage && $!errorMessage!="")
+<div id="error" name="error" class="error">
+    $!errorMessage
+</div>
+#end
+<form id="BodyForm" name="BodyForm"  method="post">
+<table id="TABLE" class="ListArea" WIDTH="100%">
+    #if($!itemList.slipSearchItemList.size() > 0)
+    <thead>
+        <tr id="Header">
+            <th class="BoxHeaderCenter FontSmall">No.</th><!--No.-->
+            <th class="BoxHeaderCenter FontSmall">#customSpringMessage("DETAIL")<!--詳細--></th>
+            #foreach($!item in $!PSVIW020PageCreaterForList.getItemListForBody(0))
+                #set($currentOneColumnFlag = $!PSVIW020PageCreaterForList.getOneColumnFlag($!item))
+                #if($velocityCount == 0)
+                    $!PSVIW020PageCreaterForList.printTHtag($!item,'class="BoxHeaderCenter FontSmall"')
+                #elseif($currentOneColumnFlag)
+                    $!PSVIW020PageCreaterForList.printBRtag($!item)
+                #else
+                    $!PSVIW020PageCreaterForList.printTHtagClose()
+                    $!PSVIW020PageCreaterForList.printTHtag($!item,'class="BoxHeaderCenter FontSmall"')
+                #end
+                #if($!item.getColumnName()=="V_SLIP_REQ.PUR_REQ_NO") 
+                    $!PSVIW020PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName()=="V_SLIP_REQ.REQ_TYPE_IND") 
+                    $!PSVIW020PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName()=="V_SLIP_REQ.PUR_REQ_DATE") 
+                    $!PSVIW020PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName()=="V_SLIP_REQ.ORDER_NO") 
+                    $!PSVIW020PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName()=="V_SLIP_REQ.ORDER_DATE") 
+                    $!PSVIW020PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName()=="V_SLIP_REQ.ORD_QUOT_REQ_NO") 
+                    $!PSVIW020PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName()=="V_SLIP_REQ.PUR_APL_NO") 
+                    $!PSVIW020PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName()=="V_SLIP_REQ.TITLE_NAME") 
+                    $!PSVIW020PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName()=="V_SLIP_REQ.SUP_CD") 
+                    $!PSVIW020PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName()=="V_SLIP_REQ.SUP_ABBR_NAME") 
+                    $!PSVIW020PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName()=="V_SLIP_REQ.SUBCON_IND") 
+                    $!PSVIW020PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName()=="V_SLIP_REQ.EDI_IND") 
+                    $!PSVIW020PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName()=="V_SLIP_REQ.ITEM_CD") 
+                    $!PSVIW020PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName()=="V_SLIP_REQ.ITEM_NAME") 
+                    $!PSVIW020PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName()=="V_SLIP_REQ.KATASHIKI") 
+                    $!PSVIW020PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName()=="V_SLIP_REQ.MANUFACT_CD") 
+                    $!PSVIW020PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName()=="V_SLIP_REQ.MANUFACT_NAME") 
+                    $!PSVIW020PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName()=="V_SLIP_REQ.REQ_DELIV_DATE") 
+                    $!PSVIW020PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName()=="V_SLIP_REQ.ORDER_DELIV_DATE") 
+                    $!PSVIW020PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName()=="V_SLIP_REQ.CURRENCY_CD") 
+                    $!PSVIW020PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName()=="V_SLIP_REQ.REQ_VOL") 
+                    $!PSVIW020PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName()=="V_SLIP_REQ.ORDER_VOL") 
+                    $!PSVIW020PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName()=="V_SLIP_REQ.UNIT_NAME")
+                    $!PSVIW020PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName()=="DUMMY.RCV_REMAIN_AMOUNT")
+                    $!PSVIW020PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName()=="V_SLIP_REQ.RECEIVED_VOL")
+                    $!PSVIW020PageCreaterForList.printHead($!item)
+                ## +++++ 2013/03/22 ADD DAIKO_TAKEDA START
+                #elseif($!item.getColumnName()=="V_SLIP_REQ.ORDER_CANCEL_VOL") 
+                    $!PSVIW020PageCreaterForList.printHead($!item)
+                ## +++++ 2013/03/22 ADD DAIKO_TAKEDA -END-
+                ## +++++ 2013/03/25 ADD DAIKO_YAMAGUCHI START
+                #elseif($!item.getColumnName()=="V_SLIP_REQ.ACCEPT_VOL") 
+                    $!PSVIW020PageCreaterForList.printHead($!item)
+                ## +++++ 2013/03/25 ADD DAIKO_YAMAGUCHI -END-
+                #elseif($!item.getColumnName()=="V_SLIP_REQ.UNIT_PRICE_IND") 
+                    $!PSVIW020PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName()=="V_SLIP_REQ.REQ_UNIT_PRICE") 
+                    $!PSVIW020PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName()=="V_SLIP_REQ.REQ_AMOUNT") 
+                    $!PSVIW020PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName()=="V_SLIP_REQ.ORDER_UNIT_PRICE") 
+                    $!PSVIW020PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName()=="V_SLIP_REQ.ORDER_AMOUNT") 
+                    $!PSVIW020PageCreaterForList.printHead($!item)
+                ## +++++ 2013/03/22 ADD DAIKO_TAKEDA START
+                #elseif($!item.getColumnName()=="V_SLIP_REQ.ORDER_CANCEL_AMOUNT") 
+                    $!PSVIW020PageCreaterForList.printHead($!item)
+                ## +++++ 2013/03/22 ADD DAIKO_TAKEDA -END-
+                ## +++++ 2013/03/25 ADD DAIKO_YAMAGUCHI START
+                #elseif($!item.getColumnName()=="V_SLIP_REQ.ACCEPT_AMOUNT") 
+                    $!PSVIW020PageCreaterForList.printHead($!item)
+                ## +++++ 2013/03/25 ADD DAIKO_YAMAGUCHI -END-
+                #elseif($!item.getColumnName()=="V_SLIP_REQ.TAX_IND") 
+                    $!PSVIW020PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName()=="V_SLIP_REQ.BUDGET_NO") 
+                    $!PSVIW020PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName()=="V_SLIP_REQ.SUBJECT_CD") 
+                    $!PSVIW020PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName()=="V_SLIP_REQ.SUBJECT_NAME") 
+                    $!PSVIW020PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName()=="V_SLIP_REQ.DELIV_PLACE_CD") 
+                    $!PSVIW020PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName()=="V_SLIP_REQ.DELIV_PLACE_NAME") 
+                    $!PSVIW020PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName()=="V_SLIP_REQ.ITEM_CLASS_L_NAME") 
+                    $!PSVIW020PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName()=="V_SLIP_REQ.ITEM_CLASS_M_NAME") 
+                    $!PSVIW020PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName()=="V_SLIP_REQ.ITEM_CLASS_S_NAME") 
+                    $!PSVIW020PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName()=="V_SLIP_REQ.REQ_SECTION_CD") 
+                    $!PSVIW020PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName()=="V_SLIP_REQ.REQ_SECTION_NAME") 
+                    $!PSVIW020PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName()=="V_SLIP_REQ.REQ_USER_ID") 
+                    $!PSVIW020PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName()=="V_SLIP_REQ.REQ_USER_NAME") 
+                    $!PSVIW020PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName()=="V_SLIP_REQ.BUYER_SECTION_NAME") 
+                    $!PSVIW020PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName()=="V_SLIP_REQ.BUYER_SECTION_CD") 
+                    $!PSVIW020PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName()=="V_SLIP_REQ.BUYER_USER_NAME") 
+                    $!PSVIW020PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName()=="V_SLIP_REQ.BUYER_USER_ID") 
+                    $!PSVIW020PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName()=="V_SLIP_REQ.LOAD_SECTION_CD") 
+                    $!PSVIW020PageCreaterForList.printHead($!item)
+                #elseif($!item.getColumnName()=="V_SLIP_REQ.LOAD_SECTION_NAME") 
+                    $!PSVIW020PageCreaterForList.printHead($!item)
+                #else
+                    $!PSVIW020PageCreaterForList.printHead($!item)
+                #end
+            #end
+            $!PSVIW020PageCreaterForList.printTHtagClose()
+        </tr>
+    </thead>
+       #end
+    <tbody>
+    #foreach($!payClaimAppListItem in $!itemList.slipSearchItemList)
+        <tr id="Row_$velocityCount" #if($velocityCount % 2 == 0) bgcolor="#dce4ef" #else bgcolor="#ffffff" #end>
+            <td class="BoxDetailCenter FontList">#set( $index = $velocityCount + 1 )$index</td>
+            <td class="BoxDetailCenter">
+                  <img id="DetailButton_0" class="Icon" src="../../image/btnDetailDisp.gif"  onclick="openDetail('#jsEscapeInHTML($!payClaimAppListItem.reqInd)',
+                 '#jsEscapeInHTML($!payClaimAppListItem.quotReqNo)',
+                 '#jsEscapeInHTML($!payClaimAppListItem.slipStatus)', '#jsEscapeInHTML($!payClaimAppListItem.receiveStatusInd)',
+                 '#jsEscapeInHTML($!payClaimAppListItem.inspectStatusInd)', '#jsEscapeInHTML($!payClaimAppListItem.acceptanceStatusInd)',
+                 '#jsEscapeInHTML($!payClaimAppListItem.quotAcqAplSeqNo)', '#jsEscapeInHTML($!payClaimAppListItem.purAplSeqNo)',
+                 '#jsEscapeInHTML($!payClaimAppListItem.orderSeq)', '#jsEscapeInHTML($!payClaimAppListItem.orderNo)',
+                 '#jsEscapeInHTML($!payClaimAppListItem.quotReqSeqNo)', '#jsEscapeInHTML($!payClaimAppListItem.lastUpdDate)',
+                 '#jsEscapeInHTML($!payClaimAppListItem.purReqSeq)', '#jsEscapeInHTML($!payClaimAppListItem.purAplNo)',
+                 '#jsEscapeInHTML($!payClaimAppListItem.purReqNo)')">
+                </td>
+            #foreach($!item in $!PSVIW020PageCreaterForList.getItemListForBody($velocityCount))
+                #set($currentOneColumnFlag = $!PSVIW020PageCreaterForList.getOneColumnFlag($!item))
+                #if($velocityCount == 0)
+                    $!PSVIW020PageCreaterForList.printTDtag('class="BoxDetailLeft FontList"')
+                #elseif(!$currentOneColumnFlag)
+                    $!PSVIW020PageCreaterForList.printTDtagClose()
+                    $!PSVIW020PageCreaterForList.printTDtag('class="BoxDetailLeft FontList"')
+                #end
+                #if($!item.getColumnName()=="V_SLIP_REQ.PUR_REQ_NO") 
+                    $!PSVIW020PageCreaterForList.printDefault($!item,"_data_style",'class="FontSlipNo" align="center"')
+                #elseif($!item.getColumnName()=="V_SLIP_REQ.SLIP_STATUS") 
+                    #if($!payClaimAppListItem.isReturnBack())
+                    $!PSVIW020PageCreaterForList.printDefault($!item,"_data_style",'class="FontStatus Red" align="center"')
+                    #else
+                    $!PSVIW020PageCreaterForList.printDefault($!item,"_data_style",'class="FontStatus" align="center"')
+                    #end
+                #elseif($!item.getColumnName()=="V_SLIP_REQ.REQ_TYPE_IND") 
+                    $!PSVIW020PageCreaterForList.printSpecial("s25_codeName",$!item,'REQ_TYPE_IND','',"_data_style",'align="center"')
+                #elseif($!item.getColumnName()=="V_SLIP_REQ.PUR_REQ_DATE") 
+                    $!PSVIW020PageCreaterForList.printDefault($!item,"_data_style",'align="center"')
+                #elseif($!item.getColumnName()=="V_SLIP_REQ.ORDER_NO") 
+                    $!PSVIW020PageCreaterForList.printDefault($!item,"_data_style",'class="FontSlipNo" align="center"')
+                #elseif($!item.getColumnName()=="V_SLIP_REQ.ORDER_DATE") 
+                    $!PSVIW020PageCreaterForList.printDefault($!item,"_data_style",'align="center"')
+                #elseif($!item.getColumnName()=="V_SLIP_REQ.ORD_QUOT_REQ_NO") 
+                    $!PSVIW020PageCreaterForList.printDefault($!item,"_data_style",'class="FontSlipNo" align="center"')
+                #elseif($!item.getColumnName()=="V_SLIP_REQ.PUR_APL_NO") 
+                    $!PSVIW020PageCreaterForList.printDefault($!item,"_data_style",'class="FontSlipNo" align="center"')
+                #elseif($!item.getColumnName()=="V_SLIP_REQ.TITLE_NAME") 
+                    $!PSVIW020PageCreaterForList.printDefault($!item)
+                #elseif($!item.getColumnName()=="V_SLIP_REQ.SUP_CD") 
+                    $!PSVIW020PageCreaterForList.printDefault($!item,"_data_style",'align="center"')
+                #elseif($!item.getColumnName()=="V_SLIP_REQ.SUP_ABBR_NAME") 
+                    $!PSVIW020PageCreaterForList.printDefault($!item)
+                #elseif($!item.getColumnName()=="V_SLIP_REQ.SUBCON_IND") 
+                    #if("$payClaimAppListItem.subconInd"=="1")
+                     ## +++++ 強化-01689-000 2013/05/29 ADD SBO_wangzf START +++++
+                     <div>$!payClaimAppListItem.subconInd_PageValue</div>
+                     ## +++++ 強化-01689-000 2013/05/29 ADD SBO_wangzf END +++++
+                     ## ----- 強化-01689-000 2013/05/29 DEL SBO_wangzf START -----
+                     ##   <div>#customSpringMessage('SUBCONTRACTOR')</div>
+                     ## ----- 強化-01689-000 2013/05/29 DEL SBO_wangzf END -----
+                    #end
+                #elseif($!item.getColumnName()=="V_SLIP_REQ.EDI_IND") 
+                    $!PSVIW020PageCreaterForList.printSpecial("s25_codeName",$!item,'EDI_IND','',"_data_style",'align="center"')
+                #elseif($!item.getColumnName()=="V_SLIP_REQ.ITEM_CD") 
+                    $!PSVIW020PageCreaterForList.printDefault($!item)
+                #elseif($!item.getColumnName()=="V_SLIP_REQ.ITEM_NAME") 
+                    ## +++++ ＩＴ３-00191-000 2013/07/12 ADD SBO_lichao START +++++
+                    ##$!PSVIW020PageCreaterForList.printDefault($!item,"_data_style",'align="center"')
+                    $!PSVIW020PageCreaterForList.printDefault($!item)
+                    ## +++++ ＩＴ３-00191-000 2013/07/12 ADD SBO_lichao -END- +++++
+                #elseif($!item.getColumnName()=="V_SLIP_REQ.KATASHIKI") 
+                    $!PSVIW020PageCreaterForList.printDefault($!item)
+                #elseif($!item.getColumnName()=="V_SLIP_REQ.MANUFACT_CD") 
+                    $!PSVIW020PageCreaterForList.printDefault($!item,"_data_style",'align="center"')
+                #elseif($!item.getColumnName()=="V_SLIP_REQ.MANUFACT_NAME") 
+                    $!PSVIW020PageCreaterForList.printDefault($!item)
+                #elseif($!item.getColumnName()=="V_SLIP_REQ.REQ_DELIV_DATE") 
+                    $!PSVIW020PageCreaterForList.printDefault($!item,"_data_style",'align="center"')
+                #elseif($!item.getColumnName()=="V_SLIP_REQ.ORDER_DELIV_DATE") 
+                    $!PSVIW020PageCreaterForList.printDefault($!item,"_data_style",'align="center"')
+                #elseif($!item.getColumnName()=="V_SLIP_REQ.CURRENCY_CD") 
+                    $!PSVIW020PageCreaterForList.printDefault($!item,"_data_style",'align="center"')
+                #elseif($!item.getColumnName()=="V_SLIP_REQ.REQ_VOL") 
+                    $!PSVIW020PageCreaterForList.printDefault($!item,"_data_style",'align="right"')
+                #elseif($!item.getColumnName()=="V_SLIP_REQ.ORDER_VOL") 
+                    $!PSVIW020PageCreaterForList.printDefault($!item,"_data_style",'align="right"')
+                #elseif($!item.getColumnName()=="V_SLIP_REQ.UNIT_NAME")
+                    $!PSVIW020PageCreaterForList.printDefault($!item)
+                #elseif($!item.getColumnName()=="DUMMY.RCV_REMAIN_AMOUNT")
+                    $!PSVIW020PageCreaterForList.printDefault($!item,"_data_style",'align="right"')
+                #elseif($!item.getColumnName()=="V_SLIP_REQ.RECEIVED_VOL")
+                    $!PSVIW020PageCreaterForList.printDefault($!item,"_data_style",'align="right"')
+                ## +++++ 2013/03/22 ADD DAIKO_TAKEDA START
+                #elseif($!item.getColumnName()=="V_SLIP_REQ.ORDER_CANCEL_VOL") 
+                    $!PSVIW020PageCreaterForList.printDefault($!item,"_data_style",'align="right"')
+                ## +++++ 2013/03/22 ADD DAIKO_TAKEDA -END-
+                ## +++++ 2013/03/25 ADD DAIKO_YAMAGUCHI START
+                #elseif($!item.getColumnName()=="V_SLIP_REQ.ACCEPT_VOL") 
+                    $!PSVIW020PageCreaterForList.printDefault($!item,"_data_style",'align="right"')
+                ## +++++ 2013/03/25 ADD DAIKO_YAMAGUCHI -END-
+                #elseif($!item.getColumnName()=="V_SLIP_REQ.UNIT_PRICE_IND") 
+                    $!PSVIW020PageCreaterForList.printSpecial("s25_codeName",$!item,'UNIT_PRICE_IND','',"_data_style",'align="center"')
+                #elseif($!item.getColumnName()=="V_SLIP_REQ.CURRENCY_CD") 
+                    $!PSVIW020PageCreaterForList.printDefault($!item)
+                #elseif($!item.getColumnName()=="V_SLIP_REQ.REQ_UNIT_PRICE") 
+                    $!PSVIW020PageCreaterForList.printSpecial("s27_list_data_currency",$!item,"_data_style",'class="FontCurrSmall" align="right"')
+                #elseif($!item.getColumnName()=="V_SLIP_REQ.REQ_AMOUNT") 
+                    $!PSVIW020PageCreaterForList.printSpecial("s27_list_data_currency",$!item,"_data_style",'class="FontCurrSmall" align="right"')
+                #elseif($!item.getColumnName()=="V_SLIP_REQ.ORDER_UNIT_PRICE") 
+                    $!PSVIW020PageCreaterForList.printSpecial("s27_list_data_currency",$!item,"_data_style",'class="FontCurrSmall" align="right"')
+                #elseif($!item.getColumnName()=="V_SLIP_REQ.ORDER_AMOUNT") 
+                    $!PSVIW020PageCreaterForList.printSpecial("s27_list_data_currency",$!item,"_data_style",'class="FontCurrSmall" align="right"')
+                ## +++++ 2013/03/22 ADD DAIKO_TAKEDA START
+                #elseif($!item.getColumnName()=="V_SLIP_REQ.ORDER_CANCEL_AMOUNT") 
+                    $!PSVIW020PageCreaterForList.printSpecial("s27_list_data_currency",$!item,"_data_style",'class="FontCurrSmall" align="right"')
+                ## +++++ 2013/03/22 ADD DAIKO_TAKEDA -END-
+                ## +++++ 2013/03/25 ADD DAIKO_YAMAGUCHI START
+                #elseif($!item.getColumnName()=="V_SLIP_REQ.ACCEPT_AMOUNT") 
+                    $!PSVIW020PageCreaterForList.printSpecial("s27_list_data_currency",$!item,"_data_style",'class="FontCurrSmall" align="right"')
+                ## +++++ 2013/03/25 ADD DAIKO_YAMAGUCHI -END-
+                #elseif($!item.getColumnName()=="V_SLIP_REQ.TAX_IND") 
+                    $!PSVIW020PageCreaterForList.printSpecial("s25_codeName",$!item,'TAX_CD','',"_data_style",'align="center"')
+                #elseif($!item.getColumnName()=="V_SLIP_REQ.BUDGET_NO") 
+                    $!PSVIW020PageCreaterForList.printDefault($!item,"_data_style",'align="center"')
+                #elseif($!item.getColumnName()=="V_SLIP_REQ.SUBJECT_CD") 
+                    $!PSVIW020PageCreaterForList.printDefault($!item,"_data_style",'align="center"')
+                #elseif($!item.getColumnName()=="V_SLIP_REQ.SUBJECT_NAME") 
+                    $!PSVIW020PageCreaterForList.printDefault($!item)
+                #elseif($!item.getColumnName()=="V_SLIP_REQ.DELIV_PLACE_CD") 
+                    $!PSVIW020PageCreaterForList.printDefault($!item,"_data_style",'align="center"')
+                #elseif($!item.getColumnName()=="V_SLIP_REQ.DELIV_PLACE_NAME") 
+                    $!PSVIW020PageCreaterForList.printDefault($!item)
+                #elseif($!item.getColumnName()=="V_SLIP_REQ.ITEM_CLASS_L_NAME") 
+                    $!PSVIW020PageCreaterForList.printDefault($!item)
+                #elseif($!item.getColumnName()=="V_SLIP_REQ.ITEM_CLASS_M_NAME") 
+                    $!PSVIW020PageCreaterForList.printDefault($!item)
+                #elseif($!item.getColumnName()=="V_SLIP_REQ.ITEM_CLASS_S_NAME") 
+                    $!PSVIW020PageCreaterForList.printDefault($!item)
+                #elseif($!item.getColumnName()=="V_SLIP_REQ.REQ_SECTION_CD") 
+                    $!PSVIW020PageCreaterForList.printDefault($!item,"_data_style",'align="center"')
+                #elseif($!item.getColumnName()=="V_SLIP_REQ.REQ_SECTION_NAME") 
+                    $!PSVIW020PageCreaterForList.printDefault($!item)
+                #elseif($!item.getColumnName()=="V_SLIP_REQ.REQ_USER_ID") 
+                    $!PSVIW020PageCreaterForList.printDefault($!item,"_data_style",'align="center"')
+                #elseif($!item.getColumnName()=="V_SLIP_REQ.REQ_USER_NAME") 
+                    $!PSVIW020PageCreaterForList.printDefault($!item)
+                #elseif($!item.getColumnName()=="V_SLIP_REQ.BUYER_SECTION_CD") 
+                    $!PSVIW020PageCreaterForList.printDefault($!item,"_data_style",'align="center"')
+                #elseif($!item.getColumnName()=="V_SLIP_REQ.BUYER_SECTION_NAME") 
+                    $!PSVIW020PageCreaterForList.printDefault($!item)
+                #elseif($!item.getColumnName()=="V_SLIP_REQ.BUYER_USER_ID") 
+                    $!PSVIW020PageCreaterForList.printDefault($!item,"_data_style",'align="center"')
+                #elseif($!item.getColumnName()=="V_SLIP_REQ.BUYER_USER_NAME") 
+                    $!PSVIW020PageCreaterForList.printDefault($!item)
+                #elseif($!item.getColumnName()=="V_SLIP_REQ.LOAD_SECTION_CD") 
+                    $!PSVIW020PageCreaterForList.printDefault($!item,"_data_style",'align="center"')
+                #elseif($!item.getColumnName()=="V_SLIP_REQ.LOAD_SECTION_NAME") 
+                    $!PSVIW020PageCreaterForList.printDefault($!item)
+                #else
+                    $!PSVIW020PageCreaterForList.printDefault($!item)
+                #end
+            #end
+            $!PSVIW020PageCreaterForList.printTDtagClose()
+              </tr>
+         #end
+    </tbody>
+</table>
+<br>
+
+<table id="WAIT" class="NoBorder" style="display:none;width:100%;"><tr><td style="text-align:center;"><br><br>
+<img src="../../image/wait.gif"><br><span class="FontMini"><br>#customSpringMessage('SEARCH_MESSAGE')</span></td></tr></table><!--問い合わせ中...-->
+</form>
+<br>
+</body>
+</html>

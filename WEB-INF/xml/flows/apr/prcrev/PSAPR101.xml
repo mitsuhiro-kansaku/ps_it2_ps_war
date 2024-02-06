@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<flow xmlns="http://www.springframework.org/schema/webflow"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.springframework.org/schema/webflow
+        http://www.springframework.org/schema/webflow/spring-webflow-2.0.xsd"
+    parent="base">
+
+    <input name="searchCondition" />
+    <input name="isCurrentPageSearch" />
+    <input name="isQuickLinkSearch" />
+
+    <decision-state id="isCurrentPageSearch">
+       <if test="flowScope.isCurrentPageSearch" then="searchByKey" else="searchByCondition" />
+    </decision-state>
+    
+    <action-state id="searchByCondition">
+        <evaluate expression="PSAPR101Service.init(searchCondition)" result="flowScope.priceReqAppList" />
+        <transition to="PSAPR101" />
+    </action-state>
+
+    <action-state id="searchByKey">
+        <evaluate expression="PSAPR101Service.page(searchCondition)" 
+            result="flowScope.priceReqAppList" />
+        <transition to="PSAPR101" />
+    </action-state>
+
+    <view-state id="PSAPR101" model="priceReqAppList" view="apr/prcrev/PSAPR101">
+        <!-- クリックすると項目でソート -->
+        <transition on="order" validate="false">
+            <evaluate expression="PSAPR101Service.order(searchCondition)"
+                result="flowScope.priceReqAppList" />
+        </transition>
+        
+        <!-- ページ共通処理 -->
+        <transition on="page" validate="false">
+            <evaluate expression="PSAPR101Service.page(searchCondition)"
+                result="flowScope.priceReqAppList" />
+            <set name="flashScope.hasSaved" value="false"></set>
+        </transition>
+        
+        <!-- 登録ボタンを押下 -->
+        <transition on="save" validate="true" to="searchByKey"> 
+            <evaluate expression="PSAPR101Service.save(priceReqAppList)"
+                result="flowScope.priceReqAppList" />
+            <set name="flashScope.hasSaved" value="true"></set>
+        </transition>
+        
+        <!-- コメント編集 -->
+        <transition on="receipt" to="receipt" validate="false">
+        <!-- ＩＴ３-00116-000　2013/06/19 DEL SBO_KANGJW START -->
+        <!-- <evaluate expression="new fw.domain.slip.common.receipt.Remand(
+                requestParameters.aprDisplayModel, 
+                requestParameters.aprRemandComment, 
+                requestParameters.companyCd, 
+                requestParameters.sectionCd, 
+                requestParameters.userId, 
+                requestParameters.authNo )" result="flowScope.remand"></evaluate>  -->
+         <!-- ＩＴ３-00116-000　2013/06/19 DEL SBO_KANGJW END -->
+         <!-- ＩＴ３-00116-000　2013/06/19 ADD SBO_KANGJW START -->
+          <evaluate expression="new fw.domain.slip.common.receipt.Remand(
+                requestParameters.aprDisplayModel, 
+                requestParameters.aprRemandComment, 
+                requestParameters.companyCd, 
+                requestParameters.sectionCd, 
+                requestParameters.userId, 
+                requestParameters.authNo,
+                requestParameters.backUserShowFlg)" result="flowScope.remand"></evaluate>
+         <!-- ＩＴ３-00116-000　2013/06/19 ADD SBO_KANGJW END -->
+        </transition>
+        
+        <!-- ダウンロード -->
+        <transition on="download" validate="false">
+            <evaluate expression="PSAPR101Service.download()" />
+        </transition>
+        
+        <!-- 戻るボタンを押下 -->
+        <transition on="back" to="home" validate="false" />
+    </view-state>
+    
+    <subflow-state id="receipt" subflow="cmn/apr/PSCMN020">
+       <input name="remand" value="remand" />
+    </subflow-state>
+</flow>

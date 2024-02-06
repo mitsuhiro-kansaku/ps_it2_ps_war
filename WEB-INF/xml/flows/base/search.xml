@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<flow xmlns="http://www.springframework.org/schema/webflow"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.springframework.org/schema/webflow
+        http://www.springframework.org/schema/webflow/spring-webflow-2.0.xsd"
+    abstract="true"
+    parent="base">
+
+    <on-start>
+        <evaluate expression="searchInitService.searchInit()"
+            result="flowScope.searchCondition" />
+    </on-start>
+
+    <view-state id="search" model="searchCondition">
+        <transition on="validate" validate="true">
+            <set name="flowScope.isCurrentPageSearch" value="false" />
+            <set name="flowScope.isShowList" value="true"></set>
+            <evaluate expression="searchService.searchSave(searchCondition)"></evaluate>
+        </transition>
+        <transition on="search" to="list" validate="false"/>
+        <transition on="downloadValidate" validate="true">
+            <evaluate expression="downLoadService.downloadValidate(searchCondition)" 
+            result="flashScope.isDownLoadValidate"/>
+        </transition>
+        <transition on="download" validate="false">
+            <evaluate expression="downLoadService.download(searchCondition)"/>
+        </transition>
+        <transition on="upload" validate="false">
+            <evaluate
+                expression="uploadService.upload()" />
+            <set name="flowScope.isShowList" value="false"/>
+        </transition>
+        <transition on="showUploadResult" to="uploadResult" validate="false">
+                    <set name="flowScope.isShowList" value="false"/>
+        </transition>
+    </view-state>
+
+    <subflow-state id="list">
+        <input name="searchCondition" value="searchCondition" />
+        <input name="isCurrentPageSearch" value="isCurrentPageSearch" />
+    </subflow-state>
+    
+</flow>

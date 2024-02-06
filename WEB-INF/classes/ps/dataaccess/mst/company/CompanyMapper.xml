@@ -1,0 +1,301 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="ps.dataaccess.mst.company.CompanyMapper">
+
+    <!-- SRC-00115-00 include化共通-->
+    <!-- 会社マスタ検索条件 -->
+    <sql id="listKeyIdentityWhereCondition">
+        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(companyCd)">
+            AND M_COMPANY.COMPANY_CD ${@fw.common.util.SearchModeUtil@getSearchSQL("fw.domain.mst.organization.company.CompanySearchCondition","companyCd")}
+        </if>
+        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(companyName)">
+            AND (company_lang.COMPANY_NAME ${@fw.common.util.SearchModeUtil@getSearchSQL("fw.domain.mst.organization.company.CompanySearchCondition","companyName")}
+             OR system_lang.COMPANY_NAME ${@fw.common.util.SearchModeUtil@getSearchSQL("fw.domain.mst.organization.company.CompanySearchCondition","companyName")})
+        </if>
+        <if test="@fw.domain.mst.searchcondition.SearchCondition@termFlgIsNotEmpty(searchCondition.termFlg)">
+            AND M_COMPANY.TERM_FLG = #{searchCondition.termFlg, jdbcType=VARCHAR}
+        </if>
+    </sql>
+    <!-- 会社マスタキーリスト -->
+    <select id="listKeyIdentity"
+            parameterType="fw.domain.mst.organization.company.CompanySearchCondition"
+            resultType="fw.domain.mst.organization.company.CompanyIdentify">
+        SELECT M_COMPANY.COMPANY_CD AS "companyCd",
+        <!-- ＩＴ２-01494-000 20130731 ADD SBO_SOKOU START -->
+               CASE WHEN company_lang.COMPANY_NAME IS NOT NULL
+                    THEN company_lang.COMPANY_NAME
+                    ELSE system_lang.COMPANY_NAME
+                    END
+                 AS companyName,
+               CASE WHEN company_lang.COMPANY_ABBR_NAME IS NOT NULL
+                    THEN company_lang.COMPANY_ABBR_NAME
+                    ELSE system_lang.COMPANY_ABBR_NAME
+                    END
+                 AS companyAbbrName
+        <!-- ＩＴ２-01494-000 20130731 ADD SBO_SOKOU END -->
+        <!-- ＩＴ２-01494-000 20130731 DEL SBO_SOKOU START -->
+        <!-- 
+               M_COMPANY_LANG.COMPANY_NAME AS "companyName",
+               M_COMPANY_LANG.COMPANY_ABBR_NAME AS "companyAbbrName"
+         -->
+        <!-- ＩＴ２-01494-000 20130731 DEL SBO_SOKOU END -->
+          FROM M_COMPANY 
+        <!-- ＩＴ２-01494-000 20130731 ADD SBO_SOKOU START -->
+          LEFT JOIN M_COMPANY_LANG company_lang
+                 ON M_COMPANY.COMPANY_CD = company_lang.COMPANY_CD
+                AND company_lang.LANGUAGE_IND = '${@fw.security.SecurityUtil@getCompanyUseLanguageIndByEscapeSql()}'
+        <!-- ＩＴ２-01494-000 20130731 ADD SBO_SOKOU END -->
+          LEFT JOIN M_COMPANY_LANG system_lang
+                 ON M_COMPANY.COMPANY_CD = system_lang.COMPANY_CD
+                AND system_lang.LANGUAGE_IND = '${@fw.common.util.AppUtil@getSysLanguageByEscapeSql()}'
+        <where>
+            <include refid="listKeyIdentityWhereCondition"/>
+        </where> 
+         ORDER BY ${searchCondition.columnOrder.columnOrder()}
+    </select>
+    <!-- 会社マスタ項目リスト -->
+    <select id="listPageItem"
+            parameterType="fw.domain.mst.searchcondition.SearchCondition"
+            resultType="fw.domain.mst.organization.company.CompanyItem">
+        SELECT M_COMPANY.COMPANY_CD AS "companyIdentify.companyCd",
+               M_COMPANY.LAST_UPD_DATE AS "companyIdentify.lastUpdDate",
+        <!-- ＩＴ２-01494-000 20130731 ADD SBO_SOKOU START -->
+               CASE WHEN company_lang.COMPANY_NAME IS NOT NULL
+                    THEN company_lang.COMPANY_NAME
+                    ELSE system_lang.COMPANY_NAME
+                    END
+                 AS companyName,
+               CASE WHEN company_lang.COMPANY_ABBR_NAME IS NOT NULL
+                    THEN company_lang.COMPANY_ABBR_NAME
+                    ELSE system_lang.COMPANY_ABBR_NAME
+                    END
+                 AS companyAbbrName,
+        <!-- ＩＴ２-01494-000 20130731 ADD SBO_SOKOU END -->
+        <!-- ＩＴ２-01494-000 20130731 DEL SBO_SOKOU START -->
+        <!-- 
+               M_COMPANY_LANG.COMPANY_NAME AS "companyName",
+               M_COMPANY_LANG.COMPANY_ABBR_NAME AS "companyAbbrName"
+         -->
+        <!-- ＩＴ２-01494-000 20130731 DEL SBO_SOKOU END -->
+               M_COMPANY.TERM_FLG AS "termFlg"
+          FROM M_COMPANY
+        <!-- ＩＴ２-01494-000 20130731 ADD SBO_SOKOU START -->
+          LEFT JOIN M_COMPANY_LANG company_lang
+                 ON M_COMPANY.COMPANY_CD = company_lang.COMPANY_CD
+                AND company_lang.LANGUAGE_IND = '${@fw.security.SecurityUtil@getCompanyUseLanguageIndByEscapeSql()}'
+        <!-- ＩＴ２-01494-000 20130731 ADD SBO_SOKOU END -->
+          LEFT JOIN M_COMPANY_LANG system_lang
+                 ON M_COMPANY.COMPANY_CD = system_lang.COMPANY_CD
+                AND system_lang.LANGUAGE_IND = '${@fw.common.util.AppUtil@getSysLanguageByEscapeSql()}'
+        <where>
+            M_COMPANY.COMPANY_CD IN
+            <foreach collection="searchCondition.page.keyDomainEntityList" item="keyList"  open="(" separator="," close=")">  
+                #{keyList.companyCd}
+            </foreach>
+            <include refid="listKeyIdentityWhereCondition"/>
+        </where>
+         ORDER BY ${searchCondition.columnOrder.columnOrder()}
+    </select>
+
+    <!-- 会社名リスト -->
+    <select id="listCompanyItem"
+            parameterType="fw.domain.mst.organization.company.CompanySearchCondition"
+            resultType="fw.domain.mst.organization.company.CompanyItem">
+        SELECT M_COMPANY.COMPANY_CD AS "companyIdentify.companyCd",
+               M_COMPANY.LAST_UPD_DATE AS "companyIdentify.lastUpdDate",
+               COMPANY_NAME AS "companyName",
+               COMPANY_ABBR_NAME AS "companyAbbrName",
+               TERM_FLG AS "termFlg"
+          FROM M_COMPANY
+          LEFT JOIN M_COMPANY_LANG
+                 ON M_COMPANY.COMPANY_CD = M_COMPANY_LANG.COMPANY_CD
+                AND M_COMPANY_LANG.COMPANY_USE_LANGUAGE_IND = '${@fw.common.util.AppUtil@getSysLanguageByEscapeSql()}'
+        <where>
+            <include refid="listKeyIdentityWhereCondition"/>
+         </where> 
+         ORDER BY ${searchCondition.columnOrder.columnOrder()}
+    </select>
+
+    <!-- 会社マスタ編集検索 -->
+    <select id="search"
+            parameterType="fw.domain.mst.organization.company.CompanyIdentify"
+            resultType="fw.domain.mst.organization.company.CompanyManagement">
+        SELECT M_COMPANY.COMPANY_CD AS "companyIdentify.companyCd",
+               M_COMPANY.COMPANY_USE_LANGUAGE_IND AS "baseLanguageInd.languageInd",
+               M_COMPANY.BASE_CURRENCY_CD AS "currency.currencyCd",
+               M_COMPANY.COUNTRY_CD AS "contact.country.cyCd",
+               M_COMPANY.ZIP_CD AS "contact.zipCd.zipCd",
+               M_COMPANY.TEL_NO AS "contact.telNo.telNo",
+               M_COMPANY.FAX_NO AS "contact.faxNo.faxNo",
+               M_COMPANY.FRC_IND AS "frcInd.frcInd",
+               M_COMPANY.TAX_FRC_IND AS "taxFrcInd.frcInd",
+               M_COMPANY.RATE_FRC_IND AS "rateFrcInd.frcInd",
+               M_COMPANY.GROUP_COMPANY_CD AS "groupCompany.groupCompanyCd",
+               M_COMPANY.TERM_FLG AS "term.termFlg",
+               M_COMPANY.LAST_UPD_DATE AS "companyIdentify.lastUpdDate",
+               M_COMPANY_LANG.COMPANY_NAME AS "companyName",
+               M_COMPANY_LANG.COMPANY_ABBR_NAME AS "companyAbbrName",
+               M_COMPANY_LANG.ADDRESS1 AS "contact.address1.address",
+               M_COMPANY_LANG.ADDRESS2 AS "contact.address2.address"
+          FROM M_COMPANY 
+          LEFT JOIN M_COMPANY_LANG
+                 ON M_COMPANY.COMPANY_CD = M_COMPANY_LANG.COMPANY_CD
+                AND M_COMPANY.COMPANY_USE_LANGUAGE_IND = M_COMPANY_LANG.LANGUAGE_IND
+         WHERE M_COMPANY.COMPANY_CD = #{companyCd}
+    </select>
+
+    <select id="searchSection"
+            parameterType="fw.domain.mst.organization.company.CompanyIdentify"
+            resultType="int">
+        SELECT COUNT(SECTION_CD)
+          FROM M_SECTION
+         WHERE M_SECTION.COMPANY_CD = #{companyCd}
+    </select>
+
+    <select id="searchExclusive"
+            parameterType="fw.domain.mst.organization.company.CompanyIdentify"
+            resultType="fw.domain.mst.organization.company.CompanyIdentify">
+        SELECT M_COMPANY.COMPANY_CD as "companyCd"
+          FROM M_COMPANY 
+         WHERE M_COMPANY.COMPANY_CD = #{companyCd}
+           AND M_COMPANY.LAST_UPD_DATE = #{lastUpdDate}
+    </select>
+
+    <select id="listCompanyLanguage"
+            parameterType="fw.domain.mst.organization.company.CompanyIdentify"
+            resultType="fw.domain.mst.organization.company.CompanyLanguage">
+        SELECT M_COMPANY.COMPANY_CD AS "companyIdentify.companyCd",
+               M_COMPANY_LANG.LANGUAGE_IND as "languageInd.languageInd",
+               M_COMPANY_LANG.COMPANY_NAME as "companyName",
+               M_COMPANY_LANG.COMPANY_ABBR_NAME as "companyAbbrName",
+               M_COMPANY_LANG.ADDRESS1 as "address1.address",
+               M_COMPANY_LANG.ADDRESS2 as "address2.address"
+          FROM M_COMPANY_LANG 
+         INNER JOIN M_COMPANY
+                 ON M_COMPANY.COMPANY_CD = M_COMPANY_LANG.COMPANY_CD
+                AND M_COMPANY.COMPANY_USE_LANGUAGE_IND != M_COMPANY_LANG.LANGUAGE_IND
+                AND M_COMPANY.COMPANY_CD = #{companyCd}
+         ORDER BY M_COMPANY_LANG.LANGUAGE_IND
+    </select>
+
+    <insert id="insert"
+            parameterType="fw.domain.mst.organization.company.CompanyManagement">
+        INSERT INTO M_COMPANY
+        (
+            COMPANY_CD,
+            COMPANY_USE_LANGUAGE_IND,
+            BASE_CURRENCY_CD,
+            COUNTRY_CD,
+            ZIP_CD,
+            TEL_NO,
+            FAX_NO,
+            FRC_IND,
+            TAX_FRC_IND,
+            RATE_FRC_IND,
+            GROUP_COMPANY_CD,
+            TERM_FLG,
+            LAST_UPD_DATE,
+            LAST_UPD_COMPANY_CD,
+            LAST_UPD_SECTION_CD,
+            LAST_UPD_USER_ID,
+            REG_DATE,
+            REG_COMPANY_CD,
+            REG_SECTION_CD,
+            REG_USER_ID
+        ) VALUES (
+            #{companyIdentify.companyCd, jdbcType=VARCHAR},
+            #{baseLanguageInd.languageInd, jdbcType=VARCHAR},
+            #{currency.currencyCd, jdbcType=VARCHAR},
+            #{contact.country.cyCd, jdbcType=VARCHAR},
+            #{contact.zipCd.zipCd, jdbcType=VARCHAR},
+            #{contact.telNo.telNo, jdbcType=VARCHAR},
+            #{contact.faxNo.faxNo, jdbcType=VARCHAR},
+            #{frcInd.frcInd, jdbcType=VARCHAR},
+            #{taxFrcInd.frcInd, jdbcType=VARCHAR},
+            #{rateFrcInd.frcInd, jdbcType=VARCHAR},
+            #{groupCompany.groupCompanyCd, jdbcType=VARCHAR},
+            #{term.termFlg, jdbcType=VARCHAR},
+            #{registInfo.lastUpdDate, jdbcType=VARCHAR},
+            #{registInfo.lastUpdCompanyCd, jdbcType=VARCHAR},
+            #{registInfo.lastUpdSectionCd, jdbcType=VARCHAR},
+            #{registInfo.lastUpdUserId, jdbcType=VARCHAR},
+            #{registInfo.regDate, jdbcType=VARCHAR},
+            #{registInfo.regCompanyCd, jdbcType=VARCHAR},
+            #{registInfo.regSectionCd, jdbcType=VARCHAR},
+            #{registInfo.regUserId, jdbcType=VARCHAR}
+        )
+    </insert>
+
+    <insert id="insertCompanyLanguage"
+            parameterType="fw.domain.mst.organization.company.CompanyLanguage">
+        INSERT INTO M_COMPANY_LANG
+        (
+            COMPANY_CD,
+            LANGUAGE_IND,
+            COMPANY_NAME,
+            COMPANY_ABBR_NAME,
+            ADDRESS1,
+            ADDRESS2,
+            LAST_UPD_DATE,
+            LAST_UPD_COMPANY_CD,
+            LAST_UPD_SECTION_CD,
+            LAST_UPD_USER_ID,
+            REG_DATE,
+            REG_COMPANY_CD,
+            REG_SECTION_CD,
+            REG_USER_ID
+        ) VALUES (
+            #{companyIdentify.companyCd, jdbcType=VARCHAR},
+            #{languageInd.languageInd, jdbcType=VARCHAR},
+            #{companyName, jdbcType=VARCHAR},
+            #{companyAbbrName, jdbcType=VARCHAR},
+            #{address1.address, jdbcType=VARCHAR},
+            #{address2.address, jdbcType=VARCHAR},
+            #{registInfo.lastUpdDate, jdbcType=VARCHAR},
+            #{registInfo.lastUpdCompanyCd, jdbcType=VARCHAR},
+            #{registInfo.lastUpdSectionCd, jdbcType=VARCHAR},
+            #{registInfo.lastUpdUserId, jdbcType=VARCHAR},
+            #{registInfo.regDate, jdbcType=VARCHAR},
+            #{registInfo.regCompanyCd, jdbcType=VARCHAR},
+            #{registInfo.regSectionCd, jdbcType=VARCHAR},
+            #{registInfo.regUserId, jdbcType=VARCHAR}
+        )
+    </insert>
+
+    <update id="update"
+            parameterType="fw.domain.mst.organization.company.CompanyManagement">
+        UPDATE M_COMPANY
+           SET COMPANY_USE_LANGUAGE_IND = #{baseLanguageInd.languageInd},
+               BASE_CURRENCY_CD = #{currency.currencyCd},
+               COUNTRY_CD = #{contact.country.cyCd},
+               ZIP_CD = #{contact.zipCd.zipCd},
+               TEL_NO = #{contact.telNo.telNo},
+               FAX_NO = #{contact.faxNo.faxNo},
+               FRC_IND = #{frcInd.frcInd},
+               TAX_FRC_IND = #{taxFrcInd.frcInd},
+               RATE_FRC_IND = #{rateFrcInd.frcInd},
+               GROUP_COMPANY_CD = #{groupCompany.groupCompanyCd},
+               TERM_FLG = #{term.termFlg},
+               LAST_UPD_DATE = #{registInfo.lastUpdDate},
+               LAST_UPD_COMPANY_CD = #{registInfo.lastUpdCompanyCd},
+               LAST_UPD_SECTION_CD = #{registInfo.lastUpdSectionCd},
+               LAST_UPD_USER_ID = #{registInfo.lastUpdUserId}
+         WHERE COMPANY_CD = #{companyIdentify.companyCd}
+    </update>
+
+    <delete id="delete"
+            parameterType="fw.domain.mst.organization.company.CompanyIdentify">
+        DELETE
+          FROM M_COMPANY
+         WHERE COMPANY_CD = #{companyCd}
+    </delete>
+
+    <delete id="deleteCompanyLanguage"
+            parameterType="fw.domain.mst.organization.company.CompanyIdentify">
+        DELETE
+          FROM M_COMPANY_LANG
+         WHERE COMPANY_CD = #{companyCd}
+    </delete>
+</mapper>

@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="ps.check.impl.exist.AppRouteInfoExistMapper">
+    <select id="getAppRouteInfoCount" resultType="Integer">
+        SELECT      COUNT(M_TARGET.TARGET_KEY)
+        FROM        M_APP_ROUTE
+        INNER JOIN  M_APP_ROUTE_DTL
+        ON          M_APP_ROUTE.COMPANY_CD = M_APP_ROUTE_DTL.COMPANY_CD
+        AND         M_APP_ROUTE.SECTION_CD = M_APP_ROUTE_DTL.SECTION_CD
+        AND         M_APP_ROUTE.APP_VOUCHER_IND = M_APP_ROUTE_DTL.APP_VOUCHER_IND
+        AND         M_APP_ROUTE.APP_ROUTE_NO = M_APP_ROUTE_DTL.APP_ROUTE_NO
+        <if test="checkFlg==1">
+        LEFT JOIN  (
+                        SELECT      COMPANY_CD,
+                                    SECTION_CD,
+                                    USER_ID,
+                                    USER_ID AS TARGET_KEY
+                        FROM        M_USER
+                        WHERE       VALID_START_DATE &lt;= '${@fw.common.util.AppUtil@getSysDate()}'
+                        AND         VALID_END_DATE &gt;= '${@fw.common.util.AppUtil@getSysDate()}'
+                        AND         TERM_FLG = 0
+                    ) M_TARGET
+        ON          M_APP_ROUTE_DTL.COMPANY_CD = M_TARGET.COMPANY_CD
+        AND         M_APP_ROUTE_DTL.APP_SECTION_CD = M_TARGET.SECTION_CD
+        AND         M_APP_ROUTE_DTL.APP_USER_ID = M_TARGET.USER_ID
+        </if>
+        <if test="checkFlg==2">
+        LEFT JOIN  (
+                        SELECT      COMPANY_CD,
+                                    SECTION_CD,
+                                    SECTION_CD AS TARGET_KEY
+                        FROM        M_SECTION
+                        WHERE       VALID_START_DATE &lt;= '${@fw.common.util.AppUtil@getSysDate()}'
+                        AND         VALID_END_DATE &gt;= '${@fw.common.util.AppUtil@getSysDate()}'
+                        AND         TERM_FLG = 0
+                    ) M_TARGET
+        ON          M_APP_ROUTE_DTL.COMPANY_CD = M_TARGET.COMPANY_CD
+        AND         M_APP_ROUTE_DTL.APP_SECTION_CD = M_TARGET.SECTION_CD
+        </if>
+        WHERE       M_APP_ROUTE.APP_ROUTE_NO = #{appRouteNo}
+        AND         M_APP_ROUTE.COMPANY_CD = #{companyCd}
+        AND         M_APP_ROUTE.SECTION_CD = #{sectionCd}
+        AND         M_APP_ROUTE.APP_VOUCHER_IND = #{appVoucherInd}
+        GROUP BY    M_APP_ROUTE_DTL.APP_DTL_NO
+    </select>
+
+    <select id="getAppPersonFlg" resultType="String">
+        SELECT      APP_PERSON_FLG
+        FROM        M_APP_ROUTE
+        WHERE       M_APP_ROUTE.APP_ROUTE_NO = #{appRouteNo}
+        AND         M_APP_ROUTE.COMPANY_CD = #{companyCd}
+        AND         M_APP_ROUTE.SECTION_CD = #{sectionCd}
+        AND         M_APP_ROUTE.APP_VOUCHER_IND = #{appVoucherInd}
+    </select>
+</mapper>

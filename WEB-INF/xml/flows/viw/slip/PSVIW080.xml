@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<flow xmlns="http://www.springframework.org/schema/webflow"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.springframework.org/schema/webflow
+        http://www.springframework.org/schema/webflow/spring-webflow-2.0.xsd"
+    parent="base">
+
+    <var name="identify" class="fw.domain.slip.businesscommon.slipsearch.SlipSearchIdentify" />
+    <!-- 詳細情報 -->
+    <var name="slipSearchAllItem" class="fw.domain.slip.businesscommon.slipsearch.SlipSearchAllItem" />
+    
+    <input name="searchCondition" />
+    <input name="isCurrentPageSearch" />
+
+    <decision-state id="isSearchByKey">
+        <if test="flowScope.isCurrentPageSearch" then="searchByKey" else="searchByCondition" />
+    </decision-state>
+
+    <action-state id="searchByCondition">
+        <evaluate expression="PSVIW080Service.init(searchCondition)"
+            result="flowScope.itemList" />
+        <transition to="PSVIW080" />
+    </action-state>
+
+    <action-state id="searchByKey">
+        <evaluate expression="PSVIW080Service.page(searchCondition)"
+            result="flowScope.itemList" />
+        <transition to="PSVIW080" />
+    </action-state>
+
+    <view-state id="PSVIW080" model="slipSearchAllItem"
+        view="viw/slip/PSVIW080">
+        <transition on="order" validate="false">
+            <evaluate expression="PSVIW080Service.order(searchCondition)"
+                result="flowScope.itemList" />
+        </transition>
+        <transition on="page" validate="false">
+            <evaluate expression="PSVIW080Service.page(searchCondition)"
+                result="flowScope.itemList" />
+        </transition>
+        <transition on="back" to="home" validate="false" />
+      <!--詳細 -->
+        <transition on="detailValidate" validate="true">
+           <set name="flashScope.isShowDetail" value="true"/>
+           <set name="slipSearchAllItem.purReqNo" value="requestParameters.purReqNo" />
+        </transition>
+        <transition on="detail" to="PSVIW090" validate="false" />
+      </view-state>
+
+    <!--詳細 -->
+    <subflow-state id="PSVIW090" subflow="viw/slip/PSVIW090" >
+        <input name="slipSearchAllItem" value="slipSearchAllItem" />
+    </subflow-state>
+</flow>

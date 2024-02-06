@@ -1,0 +1,507 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="ps.dataaccess.mst.vchconf.VchconfMapper">
+
+    <resultMap type="fw.domain.mst.resource.customize.voucherconfig.mstmanagement.VoucherConfigItem" id="VoucherConfigItem_Map">
+        <id column="ELEMENT_SEQ" property="voucherConfigIdentify.elementSeq"/>
+        <id column="VOUCHER_TYPE" property="voucherConfigIdentify.voucherType"/>
+        <id column="LAST_UPD_DATE" property="voucherConfigIdentify.lastUpdDate"/>
+    </resultMap> 
+
+    <select id="search" parameterType="fw.domain.mst.resource.customize.voucherconfig.mstmanagement.VoucherConfigSearchCondition"
+        resultMap="VoucherConfigItem_Map">
+         SELECT 
+             S_VOUCHER_CONFIG.ELEMENT_SEQ,
+             S_VOUCHER_CONFIG.VOUCHER_TYPE,
+             <!-- ＩＴ２-01494-000 20130801 SBO_SOKOU START -->
+             S_ELEMENT_CONFIG.ELEMENT_NAME_CD as "itemNameCd",
+             CASE WHEN company_lang.ELEMENT_NAME IS NOT NULL
+                  THEN company_lang.ELEMENT_NAME
+                  ELSE system_lang.ELEMENT_NAME
+                  END
+                  AS "itemName",
+             <!-- ＩＴ２-01494-000 20130801 SBO_SOKOU END -->
+             S_ELEMENT_CONFIG.ITEM_TYPE as "itemType" ,
+             S_VOUCHER_CONFIG.USE_FLG as "useFlg",
+             S_VOUCHER_CONFIG.REG_FLG as "regFlg",
+             S_VOUCHER_CONFIG.UPD_FLG as "updFlg",
+             S_VOUCHER_CONFIG.MUST_INPUT_FLG as "mustEnterFlg",
+             S_VOUCHER_CONFIG.SEARCH_TYPE as "searchType",
+             S_VOUCHER_CONFIG.SEARCH_INPUT_TYPE as "searchInputType",
+             S_VOUCHER_CONFIG.DEFAULT_TXT_VALUE as "defaultTxtValue",
+             S_VOUCHER_CONFIG.DEFAULT_AREA_VALUE as "defaultAreaValue",
+             S_VOUCHER_CONFIG.DEFAULT_INT_MIN_VALUE as "minDefaultIntValue.value",
+             S_VOUCHER_CONFIG.DEFAULT_INT_MAX_VALUE as "maxDefaultIntValue.value",
+             S_VOUCHER_CONFIG.DEFAULT_DEC_MIN_VALUE as "minDefaultDecValue.value",
+             S_VOUCHER_CONFIG.DEFAULT_DEC_MAX_VALUE as "maxDefaultDecValue.value",
+             S_VOUCHER_CONFIG.DEFAULT_DATE_VALUE as "defaultDateValue",
+             S_VOUCHER_CONFIG.DEFAULT_SEL_CD as "defaultSelCd",
+             S_VOUCHER_CONFIG.DEFAULT_CHK_CD as "defaultChkCd",
+             S_VOUCHER_CONFIG.DSP_ORDER as "dspOrder",
+             S_VOUCHER_CONFIG.LAST_UPD_DATE 
+        FROM S_VOUCHER_CONFIG 
+        LEFT JOIN S_ELEMENT_CONFIG
+               ON S_VOUCHER_CONFIG.ELEMENT_SEQ = S_ELEMENT_CONFIG.ELEMENT_SEQ
+        <!-- ＩＴ２-01494-000 20130801 SBO_SOKOU START -->
+        LEFT JOIN S_ELEMENT_NAME company_lang
+               ON company_lang.ELEMENT_NAME_CD = S_ELEMENT_CONFIG.ELEMENT_NAME_CD
+             AND company_lang.LANGUAGE_IND = '${@fw.security.SecurityUtil@getCompanyUseLanguageIndByEscapeSql()}'
+        LEFT JOIN S_ELEMENT_NAME system_lang
+               ON system_lang.ELEMENT_NAME_CD = S_ELEMENT_CONFIG.ELEMENT_NAME_CD
+             AND system_lang.LANGUAGE_IND = '${@fw.common.util.AppUtil@getSysLanguageByEscapeSql()}'
+        <!-- ＩＴ２-01494-000 20130801 SBO_SOKOU END -->
+         <where>
+              <if test="@org.apache.commons.lang.StringUtils@isNotBlank(voucherType)">
+                  AND S_VOUCHER_CONFIG.VOUCHER_TYPE ${@fw.common.util.SearchModeUtil@getSearchSQL("fw.domain.mst.resource.customize.voucherconfig.mstmanagement.VoucherConfigSearchCondition","voucherType")}
+              </if>
+              <if test="@org.apache.commons.lang.StringUtils@isNotBlank(itemType)">
+                  AND S_ELEMENT_CONFIG.ITEM_TYPE ${@fw.common.util.SearchModeUtil@getSearchSQL("fw.domain.mst.resource.customize.voucherconfig.mstmanagement.VoucherConfigSearchCondition","itemType")}
+              </if>
+        </where> 
+         ORDER BY S_VOUCHER_CONFIG.DSP_ORDER
+    </select>
+    
+    <resultMap type="fw.domain.mst.resource.customize.voucherconfig.mstmanagement.VoucherConfigManagement" id="VoucherConfigManagement_Map">
+        <id column="ELEMENT_SEQ" property="voucherConfigIdentify.elementSeq"/>
+        <id column="VOUCHER_TYPE" property="voucherConfigIdentify.voucherType"/>
+        <id column="ELEMENT_NAME_CD" property="elementNameCd"/>
+        <id column="ELEMENT_NAME" property="elementName"/>
+        <id column="ITEM_TYPE" property="itemType"/>
+        <id column="USE_FLG" property="referMethod.useFlag.userFlg"/> 
+        <id column="REG_FLG" property="inputMethod.regFlg.regFlg"/>
+        <id column="UPD_FLG" property="inputMethod.updFlg.updFlg"/>
+        <id column="MUST_INPUT_FLG" property="inputMethod.mustEnterFlg.mustEnterFlg"/>
+        <id column="SEARCH_TYPE" property="searchMethod.searchType.searchType"/>
+        <id column="SEARCH_INPUT_TYPE" property="searchMethod.searchInputType.searchInputType"/>
+        <id column="DEFAULT_TXT_VALUE" property="searchMethod.searchDefaultValue.defaultTxtValue.defaultTxtValue"/>
+        <id column="DEFAULT_AREA_VALUE" property="searchMethod.searchDefaultValue.defaultAreaValue.defaultAreaValue"/>
+        <id column="DEFAULT_INT_MIN_VALUE" property="searchMethod.searchDefaultValue.defaultIntValue.minValue.minValue.value"/>
+        <id column="DEFAULT_INT_MAX_VALUE" property="searchMethod.searchDefaultValue.defaultIntValue.maxValue.maxValue.value"/>
+        <id column="DEFAULT_DEC_MIN_VALUE" property="searchMethod.searchDefaultValue.defaultDecValue.minValue.minValue.value"/>
+        <id column="DEFAULT_DEC_MAX_VALUE" property="searchMethod.searchDefaultValue.defaultDecValue.maxValue.maxValue.value"/>
+        <id column="DEFAULT_DATE_VALUE" property="searchMethod.searchDefaultValue.defaultDateValue.defaultDateValue"/>
+        <id column="DEFAULT_SEL_CD" property="searchMethod.searchDefaultValue.defaultSelCd.defaultSelCd"/>
+        <id column="DEFAULT_CHK_CD" property="searchMethod.searchDefaultValue.defaultChkCd.defaultChkCd"/>
+        <id column="COLUMN_NAME" property="inputMethod.columnName.columnName"/>
+        <id column="INPUT_SETTING_FLG" property="inputMethod.inputSettingFlag.inputSettingFlag"/>
+        <id column="LAST_UPD_DATE" property="voucherConfigIdentify.lastUpdDate"/>
+    </resultMap> 
+
+    <select id="searchDetail" parameterType="fw.domain.mst.resource.customize.voucherconfig.mstmanagement.VoucherConfigIdentify" resultMap="VoucherConfigManagement_Map">
+        SELECT 
+             S_VOUCHER_CONFIG.ELEMENT_SEQ,
+             S_VOUCHER_CONFIG.VOUCHER_TYPE,
+             S_ELEMENT_CONFIG.ELEMENT_NAME_CD,
+             CASE WHEN user_lang.ELEMENT_NAME IS NOT NULL
+                  THEN user_lang.ELEMENT_NAME
+                  WHEN company_lang.ELEMENT_NAME IS NOT NULL
+                  THEN company_lang.ELEMENT_NAME
+                  ELSE system_lang.ELEMENT_NAME
+                  END
+                  AS ELEMENT_NAME,
+             S_ELEMENT_CONFIG.ITEM_TYPE,
+             S_VOUCHER_CONFIG.USE_FLG,
+             S_VOUCHER_CONFIG.REG_FLG,
+             S_VOUCHER_CONFIG.UPD_FLG,
+             S_VOUCHER_CONFIG.MUST_INPUT_FLG,
+             S_VOUCHER_CONFIG.SEARCH_TYPE,
+             S_VOUCHER_CONFIG.SEARCH_INPUT_TYPE,
+             S_VOUCHER_CONFIG.DEFAULT_TXT_VALUE,
+             S_VOUCHER_CONFIG.DEFAULT_AREA_VALUE,
+             S_VOUCHER_CONFIG.DEFAULT_INT_MIN_VALUE,
+             S_VOUCHER_CONFIG.DEFAULT_INT_MAX_VALUE,
+             S_VOUCHER_CONFIG.DEFAULT_DEC_MIN_VALUE,
+             S_VOUCHER_CONFIG.DEFAULT_DEC_MAX_VALUE,
+             S_VOUCHER_CONFIG.DEFAULT_DATE_VALUE,
+             S_VOUCHER_CONFIG.DEFAULT_SEL_CD,
+             S_VOUCHER_CONFIG.DEFAULT_CHK_CD,
+             S_VOUCHER_CONFIG.COLUMN_NAME,
+             S_VOUCHER_CONFIG.INPUT_SETTING_FLG,
+             S_VOUCHER_CONFIG.LAST_UPD_DATE 
+        FROM S_VOUCHER_CONFIG
+        INNER JOIN S_ELEMENT_CONFIG
+        ON S_ELEMENT_CONFIG.ELEMENT_SEQ =  S_VOUCHER_CONFIG.ELEMENT_SEQ
+        LEFT JOIN S_ELEMENT_NAME user_lang
+        ON user_lang.ELEMENT_NAME_CD = S_ELEMENT_CONFIG.ELEMENT_NAME_CD
+        <!-- 強化-01774-000 2013/06/10 DEL SBO_SOKOU START -->
+            <!--  強化-01740-000　2013/06/07 ADD SBO_KANGJW START +++++ -->
+            <!-- AND S_ELEMENT_NAME.LANGUAGE_IND = '${@fw.security.SecurityUtil@getCompanyUseLanguageIndByEscapeSql()}'-->
+            <!--  強化-01740-000　2013/06/07 ADD SBO_KANGJW END -->
+            <!--  強化-01740-000　2013/06/07 DEL SBO_KANGJW START -->
+            <!-- AND S_ELEMENT_NAME.LANGUAGE_IND = '${@fw.common.util.AppUtil@getSysLanguageByEscapeSql()}'-->
+            <!--  強化-01740-000　2013/06/07 DEL SBO_KANGJW END -->
+        <!-- 強化-01774-000 2013/06/10 DEL SBO_SOKOU -END- -->
+        <!-- 強化-01774-000 2013/06/10 ADD SBO_SOKOU START -->
+            AND user_lang.LANGUAGE_IND = '${@fw.security.SecurityUtil@getUseLanguageIndByEscapeSql()}'
+        <!-- 強化-01774-000 2013/06/10 ADD SBO_SOKOU -END- -->
+        LEFT JOIN S_ELEMENT_NAME company_lang
+               ON company_lang.ELEMENT_NAME_CD = S_ELEMENT_CONFIG.ELEMENT_NAME_CD
+              AND company_lang.LANGUAGE_IND = '${@fw.security.SecurityUtil@getCompanyUseLanguageIndByEscapeSql()}'
+        LEFT JOIN S_ELEMENT_NAME system_lang
+               ON system_lang.ELEMENT_NAME_CD = S_ELEMENT_CONFIG.ELEMENT_NAME_CD
+              AND system_lang.LANGUAGE_IND = '${@fw.common.util.AppUtil@getSysLanguageByEscapeSql()}'
+        WHERE
+            S_VOUCHER_CONFIG.ELEMENT_SEQ = #{elementSeq}
+            AND S_VOUCHER_CONFIG.VOUCHER_TYPE = #{voucherType}
+    </select> 
+
+    <!-- 拡張項目の数をチェックするため、登録済みの項目件数を取得し、ロックをかける。 -->
+    <select id="lockVoucherConfig" parameterType="fw.domain.mst.resource.customize.voucherconfig.mstmanagement.VoucherConfigManagement"
+        resultType="int">
+        SELECT
+            VOUCHER_CONFIG_SEQ
+        FROM
+            S_VOUCHER_CONFIG
+        WHERE
+            VOUCHER_TYPE = #{voucherConfigIdentify.voucherType}
+            AND EXISTS (SELECT 1 FROM S_ELEMENT_CONFIG WHERE
+            S_VOUCHER_CONFIG.ELEMENT_SEQ = S_ELEMENT_CONFIG.ELEMENT_SEQ
+            AND S_ELEMENT_CONFIG.ITEM_TYPE = #{itemType}
+            )
+    </select>
+    
+    <!-- 拡張項目の数をチェックするため、登録済みの項目件数を取得する -->
+    <select id="countCustomizeItem" parameterType="fw.domain.mst.resource.customize.voucherconfig.mstmanagement.VoucherConfigManagement"
+        resultType="int">
+        SELECT
+            COUNT(1)
+        FROM
+            S_VOUCHER_CONFIG
+            INNER JOIN S_ELEMENT_CONFIG ON
+            S_VOUCHER_CONFIG.ELEMENT_SEQ = S_ELEMENT_CONFIG.ELEMENT_SEQ
+        WHERE
+            VOUCHER_TYPE = #{voucherConfigIdentify.voucherType}
+            AND S_ELEMENT_CONFIG.ITEM_TYPE = #{itemType}
+            AND S_ELEMENT_CONFIG.EXTEND_FLG = '1'
+    </select>
+    
+    <insert id="insert" parameterType="fw.domain.mst.resource.customize.voucherconfig.mstmanagement.VoucherConfigManagement">
+        INSERT INTO S_VOUCHER_CONFIG
+        (
+            S_VOUCHER_CONFIG.ELEMENT_SEQ,
+            S_VOUCHER_CONFIG.VOUCHER_TYPE,
+            S_VOUCHER_CONFIG.VOUCHER_CONFIG_SEQ,
+            S_VOUCHER_CONFIG.USE_FLG,
+            S_VOUCHER_CONFIG.INPUT_SETTING_FLG,
+            S_VOUCHER_CONFIG.REG_FLG,
+            S_VOUCHER_CONFIG.UPD_FLG,
+            S_VOUCHER_CONFIG.MUST_INPUT_FLG,
+            S_VOUCHER_CONFIG.SEARCH_TYPE,
+            S_VOUCHER_CONFIG.SEARCH_INPUT_TYPE,
+            S_VOUCHER_CONFIG.DSP_ORDER,
+            S_VOUCHER_CONFIG.DEFAULT_TXT_VALUE,
+            S_VOUCHER_CONFIG.DEFAULT_AREA_VALUE,
+            S_VOUCHER_CONFIG.DEFAULT_INT_MIN_VALUE,
+            S_VOUCHER_CONFIG.DEFAULT_INT_MAX_VALUE,
+            S_VOUCHER_CONFIG.DEFAULT_DEC_MIN_VALUE,
+            S_VOUCHER_CONFIG.DEFAULT_DEC_MAX_VALUE,
+            S_VOUCHER_CONFIG.DEFAULT_DATE_VALUE,
+            S_VOUCHER_CONFIG.DEFAULT_SEL_CD,
+            S_VOUCHER_CONFIG.DEFAULT_CHK_CD ,
+            S_VOUCHER_CONFIG.COLUMN_NAME ,
+            LAST_UPD_DATE,
+            LAST_UPD_COMPANY_CD,
+            LAST_UPD_SECTION_CD,
+            LAST_UPD_USER_ID,
+            REG_DATE,
+            REG_COMPANY_CD,
+            REG_SECTION_CD,
+            REG_USER_ID,
+            PUR_DISP_IND,
+            RCV_DISP_POS,
+            INS_DISP_POS,
+            ACP_DISP_POS
+        ) VALUES (
+            #{voucherConfigIdentify.elementSeq, jdbcType=VARCHAR},
+            #{voucherConfigIdentify.voucherType, jdbcType=VARCHAR},
+            #{voucherConfigSeq, jdbcType=VARCHAR},
+            #{referMethod.useFlag.userFlg, jdbcType=VARCHAR},
+            #{inputMethod.inputSettingFlag.inputSettingFlag, jdbcType=VARCHAR},
+            '2',
+            '2',
+            #{inputMethod.mustEnterFlg.mustEnterFlg, jdbcType=VARCHAR},
+            #{searchMethod.searchType.searchType, jdbcType=VARCHAR},
+            #{searchMethod.searchInputType.searchInputType, jdbcType=VARCHAR},
+            #{inputMethod.displayOrder.displayOrder, jdbcType=VARCHAR},
+            #{searchMethod.searchDefaultValue.defaultTxtValue.defaultTxtValue, jdbcType=VARCHAR}, 
+            #{searchMethod.searchDefaultValue.defaultAreaValue.defaultAreaValue, jdbcType=VARCHAR}, 
+            #{searchMethod.searchDefaultValue.defaultIntValue.minValue.minValue.value, jdbcType=VARCHAR}, 
+            #{searchMethod.searchDefaultValue.defaultIntValue.maxValue.maxValue.value, jdbcType=VARCHAR}, 
+            #{searchMethod.searchDefaultValue.defaultDecValue.minValue.minValue.value, jdbcType=VARCHAR}, 
+            #{searchMethod.searchDefaultValue.defaultDecValue.maxValue.maxValue.value, jdbcType=VARCHAR}, 
+            #{searchMethod.searchDefaultValue.defaultDateValue.defaultDateValue, jdbcType=VARCHAR}, 
+            #{searchMethod.searchDefaultValue.defaultSelCd.defaultSelCd, jdbcType=VARCHAR}, 
+            #{searchMethod.searchDefaultValue.defaultChkCd.defaultChkCd, jdbcType=VARCHAR}, 
+            #{inputMethod.columnName.columnName, jdbcType=VARCHAR}, 
+            '${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}',
+            '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}',
+            '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}',
+            '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}',
+            '${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}',
+            '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}',
+            '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}',
+            '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}',
+            '0',
+            <choose>
+                <when test="voucherConfigIdentify.voucherType=='16'">
+            '2',
+            '0',
+            '0'
+                </when>
+                <when test="voucherConfigIdentify.voucherType=='17'">
+            '0',
+            '3',
+            '0'
+                </when>
+                <when test="voucherConfigIdentify.voucherType=='18'">
+            '0',
+            '0',
+            '4'
+                </when>
+                <otherwise>
+            '0',
+            '0',
+            '0'
+                </otherwise>
+            </choose>
+        )
+    </insert>
+    
+    <update id="update" parameterType="fw.domain.mst.resource.customize.voucherconfig.mstmanagement.VoucherConfigManagement">
+        UPDATE S_VOUCHER_CONFIG 
+        SET
+            S_VOUCHER_CONFIG.USE_FLG = #{referMethod.useFlag.userFlg},
+            <!-- 強化-01664-000 2013/05/30 ADD SBO_lichao START -->
+            <!--S_VOUCHER_CONFIG.REG_FLG = #{inputMethod.regFlg.regFlg},
+            S_VOUCHER_CONFIG.UPD_FLG = #{inputMethod.updFlg.updFlg},-->
+            <!-- 強化-01664-000 2013/05/30 ADD SBO_lichao -END- -->
+            S_VOUCHER_CONFIG.MUST_INPUT_FLG = #{inputMethod.mustEnterFlg.mustEnterFlg},
+            S_VOUCHER_CONFIG.SEARCH_TYPE = #{searchMethod.searchType.searchType},
+            S_VOUCHER_CONFIG.SEARCH_INPUT_TYPE = #{searchMethod.searchInputType.searchInputType},
+            S_VOUCHER_CONFIG.DEFAULT_TXT_VALUE = #{searchMethod.searchDefaultValue.defaultTxtValue.defaultTxtValue},
+            S_VOUCHER_CONFIG.DEFAULT_AREA_VALUE = #{searchMethod.searchDefaultValue.defaultAreaValue.defaultAreaValue},
+            S_VOUCHER_CONFIG.DEFAULT_INT_MIN_VALUE = #{searchMethod.searchDefaultValue.defaultIntValue.minValue.minValue.value},
+            S_VOUCHER_CONFIG.DEFAULT_INT_MAX_VALUE = #{searchMethod.searchDefaultValue.defaultIntValue.maxValue.maxValue.value},
+            S_VOUCHER_CONFIG.DEFAULT_DEC_MIN_VALUE = #{searchMethod.searchDefaultValue.defaultDecValue.minValue.minValue.value},
+            S_VOUCHER_CONFIG.DEFAULT_DEC_MAX_VALUE = #{searchMethod.searchDefaultValue.defaultDecValue.maxValue.maxValue.value},
+            S_VOUCHER_CONFIG.DEFAULT_DATE_VALUE = #{searchMethod.searchDefaultValue.defaultDateValue.defaultDateValue},
+            S_VOUCHER_CONFIG.DEFAULT_SEL_CD = #{searchMethod.searchDefaultValue.defaultSelCd.defaultSelCd},
+            S_VOUCHER_CONFIG.DEFAULT_CHK_CD = #{searchMethod.searchDefaultValue.defaultChkCd.defaultChkCd},
+            LAST_UPD_DATE = '${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}',
+            LAST_UPD_COMPANY_CD = '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}',
+            LAST_UPD_SECTION_CD = '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}',
+            LAST_UPD_USER_ID = '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}'
+        WHERE
+        S_VOUCHER_CONFIG.ELEMENT_SEQ = #{voucherConfigIdentify.elementSeq}
+        AND S_VOUCHER_CONFIG.VOUCHER_TYPE = #{voucherConfigIdentify.voucherType}
+    </update>
+    
+    <select id="searchSelectOptionList"
+            resultType="fw.common.cache.ListItem">
+        SELECT S_SELECT_OPTION.SELECT_CD as "value",
+               CASE WHEN OPTION_NAME_USERLANG.OPTION_NAME IS NOT NULL
+                    THEN OPTION_NAME_USERLANG.OPTION_NAME
+                    WHEN OPTION_NAME_COMPANYLANG.OPTION_NAME IS NOT NULL
+                    THEN OPTION_NAME_COMPANYLANG.OPTION_NAME
+                    ELSE OPTION_NAME_SYSTEMLANG.OPTION_NAME
+                     END
+                      AS "text",
+               CASE WHEN OPTION_NAME_USERLANG.LANGUAGE_IND IS NOT NULL
+                    THEN OPTION_NAME_USERLANG.LANGUAGE_IND
+                    WHEN OPTION_NAME_COMPANYLANG.LANGUAGE_IND IS NOT NULL
+                    THEN OPTION_NAME_COMPANYLANG.LANGUAGE_IND
+                    ELSE OPTION_NAME_SYSTEMLANG.LANGUAGE_IND
+                     END
+                      AS "language"
+          FROM S_OPTION_MNG
+    INNER JOIN S_SELECT_OPTION
+            ON S_OPTION_MNG.OPTION_MNG_SEQ = S_SELECT_OPTION.OPTION_MNG_SEQ
+     LEFT JOIN S_OPTION_NAME OPTION_NAME_USERLANG
+            ON OPTION_NAME_USERLANG.OPTION_NAME_CD = S_SELECT_OPTION.OPTION_NAME_CD
+           AND OPTION_NAME_USERLANG.LANGUAGE_IND = '${@fw.security.SecurityUtil@getUseLanguageIndByEscapeSql()}'
+     LEFT JOIN S_OPTION_NAME OPTION_NAME_COMPANYLANG
+            ON OPTION_NAME_COMPANYLANG.OPTION_NAME_CD = S_SELECT_OPTION.OPTION_NAME_CD
+           AND OPTION_NAME_COMPANYLANG.LANGUAGE_IND = '${@fw.security.SecurityUtil@getCompanyUseLanguageIndByEscapeSql()}'
+     LEFT JOIN S_OPTION_NAME OPTION_NAME_SYSTEMLANG
+            ON OPTION_NAME_SYSTEMLANG.OPTION_NAME_CD = S_SELECT_OPTION.OPTION_NAME_CD
+           AND OPTION_NAME_SYSTEMLANG.LANGUAGE_IND = '${@fw.common.util.AppUtil@getSysLanguageByEscapeSql()}'
+         WHERE S_OPTION_MNG.ELEMENT_SEQ = #{elementSeq}
+           AND S_SELECT_OPTION.USE_FLG = '1'
+      ORDER BY DSP_ORDER
+    </select>
+
+    <select id="searchCheckboxOptionList"
+            resultType="fw.common.cache.ListItem">
+        SELECT S_CHECK_OPTION.CHECK_CD as "value",
+               CASE WHEN OPTION_NAME_USERLANG.OPTION_NAME IS NOT NULL
+                    THEN OPTION_NAME_USERLANG.OPTION_NAME
+                    WHEN OPTION_NAME_COMPANYLANG.OPTION_NAME IS NOT NULL
+                    THEN OPTION_NAME_COMPANYLANG.OPTION_NAME
+                    ELSE OPTION_NAME_SYSTEMLANG.OPTION_NAME
+                     END
+                      AS "text",
+               CASE WHEN OPTION_NAME_USERLANG.LANGUAGE_IND IS NOT NULL
+                    THEN OPTION_NAME_USERLANG.LANGUAGE_IND
+                    WHEN OPTION_NAME_COMPANYLANG.LANGUAGE_IND IS NOT NULL
+                    THEN OPTION_NAME_COMPANYLANG.LANGUAGE_IND
+                    ELSE OPTION_NAME_SYSTEMLANG.LANGUAGE_IND
+                     END
+                      AS "language"
+          FROM S_OPTION_MNG
+    INNER JOIN S_CHECK_OPTION
+            ON S_OPTION_MNG.OPTION_MNG_SEQ = S_CHECK_OPTION.OPTION_MNG_SEQ
+     LEFT JOIN S_OPTION_NAME OPTION_NAME_USERLANG
+            ON OPTION_NAME_USERLANG.OPTION_NAME_CD = S_CHECK_OPTION.OPTION_NAME_CD
+           AND OPTION_NAME_USERLANG.LANGUAGE_IND = '${@fw.security.SecurityUtil@getUseLanguageIndByEscapeSql()}'
+     LEFT JOIN S_OPTION_NAME OPTION_NAME_COMPANYLANG
+            ON OPTION_NAME_COMPANYLANG.OPTION_NAME_CD = S_CHECK_OPTION.OPTION_NAME_CD
+           AND OPTION_NAME_COMPANYLANG.LANGUAGE_IND = '${@fw.security.SecurityUtil@getCompanyUseLanguageIndByEscapeSql()}'
+     LEFT JOIN S_OPTION_NAME OPTION_NAME_SYSTEMLANG
+            ON OPTION_NAME_SYSTEMLANG.OPTION_NAME_CD = S_CHECK_OPTION.OPTION_NAME_CD
+           AND OPTION_NAME_SYSTEMLANG.LANGUAGE_IND = '${@fw.common.util.AppUtil@getSysLanguageByEscapeSql()}'
+         WHERE S_OPTION_MNG.ELEMENT_SEQ = #{elementSeq}
+           AND S_CHECK_OPTION.USE_FLG = '1'
+      ORDER BY DSP_ORDER
+    </select>
+
+    <update id="saveOrder" parameterType="fw.domain.mst.resource.customize.voucherconfig.mstmanagement.VoucherConfigItem">
+        UPDATE S_VOUCHER_CONFIG SET 
+            DSP_ORDER = #{dspOrder},
+            LAST_UPD_DATE = '${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}',
+            LAST_UPD_COMPANY_CD = '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}',
+            LAST_UPD_SECTION_CD = '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}',
+            LAST_UPD_USER_ID = '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}'
+        WHERE
+            ELEMENT_SEQ = #{voucherConfigIdentify.elementSeq}
+            AND VOUCHER_TYPE = #{voucherConfigIdentify.voucherType}
+    </update>
+    
+    <select id="getMaxDspOrder" parameterType="fw.domain.mst.resource.customize.personalsetting.PersonalSettingManagement" resultType="string">
+        SELECT
+            MAX(S_PERSONAL_SETTING.DSP_ORDER)
+        FROM
+            S_PERSONAL_SETTING
+        WHERE
+            S_PERSONAL_SETTING.USER_ID = #{personalSettingIdentify.userId}
+            AND S_PERSONAL_SETTING.FUNC_ID = #{personalSettingIdentify.funcId}
+            AND S_PERSONAL_SETTING.COMPANY_CD = #{personalSettingIdentify.companyCd}
+    </select>
+    
+    <insert id="insertPersonalSetting" parameterType="fw.domain.mst.resource.customize.personalsetting.PersonalSettingManagement">
+        INSERT INTO S_PERSONAL_SETTING
+        (
+            COMPANY_CD
+            ,USER_ID
+            ,FUNC_ID
+            ,ELEMENT_SEQ
+            ,VOUCHER_TYPE
+            ,PERSONAL_SET_SEQ
+            ,DSP_FLG
+            ,DSP_ORDER
+            ,COMBINE_FLG
+            ,LOCK_FLG
+            ,ONE_COLUMN_DSP_FLG
+            ,USE_FLG
+            ,LAST_UPD_DATE
+            ,LAST_UPD_COMPANY_CD
+            ,LAST_UPD_SECTION_CD
+            ,LAST_UPD_USER_ID
+            ,REG_DATE
+            ,REG_COMPANY_CD
+            ,REG_SECTION_CD
+            ,REG_USER_ID
+        )
+        VALUES
+        (
+            #{personalSettingIdentify.companyCd}
+            ,#{personalSettingIdentify.userId}
+            ,#{personalSettingIdentify.funcId}
+            ,#{personalSettingIdentify.elementSeq}
+            ,#{personalSettingIdentify.voucherType}
+            ,#{personalSetSeq}
+            ,#{displayMethod.displayFlag.displayFlag}
+            ,#{displayMethod.displayOrder.displayOrder}
+            ,#{displayMethod.combineFlag.combineFlag}
+            ,#{displayMethod.lockFlag.lockFlag}
+            ,#{displayMethod.oneColumnDisplayFlag.oneColumnDisplayFlag}
+            ,#{useFlg}
+            ,'${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}'
+            ,'${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}'
+            ,'${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}'
+            ,'${@fw.security.SecurityUtil@getUserIdByEscapeSql()}'
+            ,'${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}'
+            ,'${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}'
+            ,'${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}'
+            ,'${@fw.security.SecurityUtil@getUserIdByEscapeSql()}'
+        )
+    </insert>
+    
+    <insert id="copyPersonalSetting" parameterType="fw.domain.mst.resource.customize.personalsetting.PersonalSettingManagement">
+        INSERT INTO S_PERSONAL_SETTING
+        (
+            COMPANY_CD
+            ,USER_ID
+            ,FUNC_ID
+            ,ELEMENT_SEQ
+            ,VOUCHER_TYPE
+            ,PERSONAL_SET_SEQ
+            ,DSP_FLG
+            ,DSP_ORDER
+            ,COMBINE_FLG
+            ,LOCK_FLG
+            ,ONE_COLUMN_DSP_FLG
+            ,USE_FLG
+            ,LAST_UPD_DATE
+            ,LAST_UPD_COMPANY_CD
+            ,LAST_UPD_SECTION_CD
+            ,LAST_UPD_USER_ID
+            ,REG_DATE
+            ,REG_COMPANY_CD
+            ,REG_SECTION_CD
+            ,REG_USER_ID
+        )
+        SELECT
+             M_B_USER.COMPANY_CD
+            ,M_B_USER.USER_ID
+            ,FUNC_ID
+            ,ELEMENT_SEQ
+            ,VOUCHER_TYPE
+            ,S_PERSONAL_SETTING_SEQ.nextval
+            ,DSP_FLG
+            ,DSP_ORDER
+            ,COMBINE_FLG
+            ,LOCK_FLG
+            ,ONE_COLUMN_DSP_FLG
+            ,USE_FLG
+            ,'${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}'
+            ,'${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}'
+            ,'${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}'
+            ,'${@fw.security.SecurityUtil@getUserIdByEscapeSql()}'
+            ,'${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}'
+            ,'${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}'
+            ,'${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}'
+            ,'${@fw.security.SecurityUtil@getUserIdByEscapeSql()}'
+        FROM 
+            (
+            SELECT
+                M_B_USER.USER_ID
+               ,M_B_USER.COMPANY_CD
+            FROM
+                M_B_USER
+            WHERE
+                M_B_USER.USER_ID &lt;&gt; #{personalSettingIdentify.userId}
+            GROUP BY
+                USER_ID
+               ,COMPANY_CD
+            ) M_B_USER,
+            S_PERSONAL_SETTING
+        WHERE
+            S_PERSONAL_SETTING.USER_ID = #{personalSettingIdentify.userId}
+            AND S_PERSONAL_SETTING.FUNC_ID = #{personalSettingIdentify.funcId}
+            AND S_PERSONAL_SETTING.ELEMENT_SEQ = #{personalSettingIdentify.elementSeq}
+            AND S_PERSONAL_SETTING.VOUCHER_TYPE = #{personalSettingIdentify.voucherType}
+            AND S_PERSONAL_SETTING.COMPANY_CD = #{personalSettingIdentify.companyCd}
+    </insert>
+</mapper> 

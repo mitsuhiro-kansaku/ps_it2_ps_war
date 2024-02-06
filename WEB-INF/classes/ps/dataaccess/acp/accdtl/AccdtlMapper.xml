@@ -1,0 +1,535 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="ps.dataaccess.acp.accdtl.AccdtlMapper">
+
+    <sql id="listKeyIdentityWhereCondition">
+        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(fiscalYearMonth.dateOfym)">
+         AND T_ACCEPTANCE.FISCAL_MONTH = #{fiscalYearMonth.dateOfym, jdbcType=VARCHAR}
+        </if>
+         AND T_ACCEPTANCE.DELETE_FLG = '0'
+         AND T_ACCEPTANCE.ACCEPT_STATUS = '04'
+         AND T_ACCEPTANCE.ACCEPT_COMPANY_CD = '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}'
+        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(supplierFrom.supCd)">
+         AND T_ACCEPTANCE.SUP_CD = #{supplierFrom.supCd, jdbcType=VARCHAR}
+        </if>
+        <if test="!@org.apache.commons.lang.StringUtils@isNotBlank(acceptItemReadAllGrantFlg)">
+         AND T_ACCEPTANCE.ACCEPT_SECTION_CD = '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}'
+        </if>
+        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(acceptItemReadAllGrantFlg)">
+            <if test="@org.apache.commons.lang.StringUtils@isNotBlank(acceptSectionCd)">
+         AND T_ACCEPTANCE.ACCEPT_SECTION_CD = #{acceptSectionCd, jdbcType=VARCHAR}
+            </if> 
+        </if>
+         AND T_ACCEPTANCE.FISCAL_MONTH IS NOT NULL
+         AND T_ACCEPTANCE.SUP_CD IS NOT NULL
+    </sql>
+
+    <resultMap id="identity_Map" type="fw.domain.slip.receive.acceptance.acceptanceitem.AcceptItemIdentify">
+        <id column="FISCAL_MONTH"   property="fiscalYearMonth.dateOfym" />
+        <id column="SUP_COMPANY_CD" property="supCompanyCd" />
+        <id column="SUP_CD"         property="supCd" />
+        <id column="ACCEPT_SECTION_CD"   property="acceptSectionCd" />
+    </resultMap>
+
+    <select id="listKeyIdentity"  parameterType="fw.domain.slip.receive.acceptance.acceptanceitem.AcceptItemSearchCondition" resultMap="identity_Map">
+      SELECT T_ACCEPTANCE.FISCAL_MONTH
+           , T_ACCEPTANCE.SUP_COMPANY_CD
+           , T_ACCEPTANCE.SUP_CD
+           , T_ACCEPTANCE.ACCEPT_SECTION_CD
+           , T_ACCEPTANCE.CURRENCY_CD
+        FROM(SELECT T_ACCEPTANCE.FISCAL_MONTH
+                  , T_ACCEPTANCE.SUP_CD
+                  , T_ACCEPTANCE.SUP_COMPANY_CD
+                  , T_ACCEPTANCE.ACCEPT_SECTION_CD
+                  , T_ACCEPTANCE.CURRENCY_CD
+                  , MAX(T_ACCEPTANCE.ACCEPT_SEQ) AS ACCEPT_SEQ
+               FROM T_ACCEPTANCE
+            <where>
+                <include refid="listKeyIdentityWhereCondition"/>
+            </where>
+           GROUP BY T_ACCEPTANCE.FISCAL_MONTH
+                  , T_ACCEPTANCE.SUP_CD
+                  , T_ACCEPTANCE.SUP_COMPANY_CD
+                  , T_ACCEPTANCE.ACCEPT_SECTION_CD
+                  , T_ACCEPTANCE.CURRENCY_CD
+            ) T_ACCEPTANCE
+       INNER JOIN T_ACCEPTANCE T_ACCEPTANCE_LATEST 
+          ON T_ACCEPTANCE_LATEST.ACCEPT_SEQ = T_ACCEPTANCE.ACCEPT_SEQ
+    ORDER BY ${searchCondition.columnOrder.columnOrder()}
+    </select>
+
+    <resultMap id="item_Map" type="fw.domain.slip.receive.acceptance.acceptanceitem.AcceptItem">
+        <id column="FISCAL_MONTH"   property="acceptItemIdentify.fiscalYearMonth.dateOfym" />
+        <id column="SUP_COMPANY_CD" property="acceptItemIdentify.supCompanyCd" />
+        <id column="SUP_CD"         property="acceptItemIdentify.supCd" />
+        <id column="ACCEPT_SECTION_CD"   property="acceptItemIdentify.acceptSectionCd" />
+        <id column="ACCEPT_SECTION_NAME" property="acceptSectionName" />
+        <id column="ACCEPT_COMPANY_CD"   property="acceptCompanyCd" />
+        <id column="ACCEPT_COMPANY_NAME" property="acceptCompanyName" />
+        <id column="ACCEPT_SECTION_PLACE_CD"   property="acceptSectionPlaceCd" />
+        <id column="ACCEPT_SECTION_PLACE_NAME" property="acceptSectionPlaceName" />
+        <id column="CURRENCY_CD"    property="currencyCd" />
+        <id column="TAX_IND"        property="taxInd.taxInd" />
+        <id column="TAX_RATE"       property="taxRate.taxRate" />
+        <id column="ACCEPTAMOUNT"   property="acceptAmount.amount" />
+        <id column="CONSUMPTAMOUNT" property="consumptAmount.amount" />
+        <id column="AMOUNTSUM"      property="amountSum.amount" />
+    </resultMap>
+
+    <select id="listPageItem"  parameterType="fw.domain.slip.receive.acceptance.acceptanceitem.AcceptItemSearchCondition" resultMap="item_Map">
+      SELECT T_ACCEPTANCE.FISCAL_MONTH
+           , T_ACCEPTANCE.SUP_COMPANY_CD
+           , T_ACCEPTANCE.SUP_CD
+           , T_ACCEPTANCE.ACCEPT_SECTION_CD
+           , T_ACCEPTANCE.CURRENCY_CD
+           , T_ACCEPTANCE.TAX_IND
+           , T_ACCEPTANCE.TAX_RATE
+           , T_ACCEPTANCE.ACCEPTAMOUNT
+           , T_ACCEPTANCE_LATEST.ACCEPT_SECTION_NAME
+        FROM(SELECT T_ACCEPTANCE.FISCAL_MONTH
+                  , T_ACCEPTANCE.SUP_COMPANY_CD
+                  , T_ACCEPTANCE.SUP_CD
+                  , T_ACCEPTANCE.ACCEPT_SECTION_CD
+                  , T_ACCEPTANCE.CURRENCY_CD
+                  , T_ACCEPTANCE.TAX_IND
+                  , T_ACCEPTANCE.TAX_RATE
+                  , MAX(T_ACCEPTANCE.ACCEPT_SEQ)      AS ACCEPT_SEQ
+                  , SUM(T_ACCEPTANCE.ACCEPT_AMOUNT)   AS ACCEPTAMOUNT
+               FROM T_ACCEPTANCE
+              WHERE(T_ACCEPTANCE.FISCAL_MONTH
+                  , T_ACCEPTANCE.SUP_COMPANY_CD
+                  , T_ACCEPTANCE.SUP_CD
+                  , T_ACCEPTANCE.ACCEPT_SECTION_CD) IN 
+            <foreach collection="searchCondition.page.keyDomainEntityList" item="keyList"  open="(" separator="," close=")">
+                   (#{keyList.fiscalYearMonth.dateOfym, jdbcType=VARCHAR}
+                  , #{keyList.supCompanyCd, jdbcType=VARCHAR}
+                  , #{keyList.supCd, jdbcType=VARCHAR}
+                  , #{keyList.acceptSectionCd, jdbcType=VARCHAR}
+                   )
+            </foreach>
+            <include refid="listKeyIdentityWhereCondition"/>
+           GROUP BY T_ACCEPTANCE.FISCAL_MONTH
+                  , T_ACCEPTANCE.SUP_CD
+                  , T_ACCEPTANCE.SUP_COMPANY_CD
+                  , T_ACCEPTANCE.ACCEPT_SECTION_CD
+                  , T_ACCEPTANCE.CURRENCY_CD
+                  , T_ACCEPTANCE.TAX_IND
+                  , T_ACCEPTANCE.TAX_RATE
+            ) T_ACCEPTANCE
+       INNER JOIN T_ACCEPTANCE T_ACCEPTANCE_LATEST
+          ON T_ACCEPTANCE_LATEST.ACCEPT_SEQ = T_ACCEPTANCE.ACCEPT_SEQ
+       INNER JOIN (
+                SELECT  CODE_VALUE
+                ,       DSP_ORDER
+                FROM    M_CODE_NAME
+                WHERE   CODE_KEY = 'TAX_CD'
+       ) M_CODE_NAME_TAX_CD
+       ON      T_ACCEPTANCE.TAX_IND = M_CODE_NAME_TAX_CD.CODE_VALUE
+    ORDER BY ${searchCondition.columnOrder.columnOrder()}
+    ,        M_CODE_NAME_TAX_CD.DSP_ORDER
+    ,        T_ACCEPTANCE.TAX_RATE DESC
+    </select>
+
+    <select id="accdtlSumDownloadCount" parameterType="fw.domain.slip.receive.acceptance.acceptanceitem.AcceptItemSearchCondition" resultType="java.lang.Long">
+      SELECT COUNT(*)
+        FROM(SELECT T_ACCEPTANCE.FISCAL_MONTH
+                  , T_ACCEPTANCE.SUP_CD
+                  , T_ACCEPTANCE.SUP_COMPANY_CD
+                  , T_ACCEPTANCE.ACCEPT_SECTION_CD
+                  , T_ACCEPTANCE.CURRENCY_CD
+                  , T_ACCEPTANCE.TAX_IND
+                  , T_ACCEPTANCE.TAX_RATE
+                  , MAX(T_ACCEPTANCE.ACCEPT_SEQ) AS ACCEPT_SEQ
+               FROM T_ACCEPTANCE
+            <where>
+                <include refid="listKeyIdentityWhereCondition"/>
+            </where>
+           GROUP BY T_ACCEPTANCE.FISCAL_MONTH
+                  , T_ACCEPTANCE.SUP_CD
+                  , T_ACCEPTANCE.SUP_COMPANY_CD
+                  , T_ACCEPTANCE.ACCEPT_SECTION_CD
+                  , T_ACCEPTANCE.CURRENCY_CD
+                  , T_ACCEPTANCE.TAX_IND
+                  , T_ACCEPTANCE.TAX_RATE
+            ) T_ACCEPTANCE
+       INNER JOIN T_ACCEPTANCE T_ACCEPTANCE_LATEST 
+          ON T_ACCEPTANCE_LATEST.ACCEPT_SEQ = T_ACCEPTANCE.ACCEPT_SEQ
+    </select>
+
+    <select id="accdtlSumDownload"  parameterType="fw.domain.slip.receive.acceptance.acceptanceitem.AcceptItemSearchCondition" resultMap="item_Map">
+        <include refid="downloadHeader"/>
+      SELECT T_ACCEPTANCE.FISCAL_MONTH
+           , T_ACCEPTANCE.SUP_COMPANY_CD
+           , T_ACCEPTANCE.SUP_CD
+           , T_ACCEPTANCE.ACCEPT_SECTION_CD
+           , T_ACCEPTANCE.CURRENCY_CD
+           , T_ACCEPTANCE.TAX_IND
+           , T_ACCEPTANCE.TAX_RATE
+           , T_ACCEPTANCE.ACCEPTAMOUNT
+           , T_ACCEPTANCE_LATEST.ACCEPT_SECTION_NAME
+           , T_ACCEPTANCE_LATEST.ACCEPT_COMPANY_CD
+           , T_ACCEPTANCE_LATEST.ACCEPT_COMPANY_NAME
+           , T_ACCEPTANCE_LATEST.ACCEPT_SECTION_PLACE_CD
+           , T_ACCEPTANCE_LATEST.ACCEPT_SECTION_PLACE_NAME
+        FROM(SELECT T_ACCEPTANCE.FISCAL_MONTH
+                  , T_ACCEPTANCE.SUP_COMPANY_CD
+                  , T_ACCEPTANCE.SUP_CD
+                  , T_ACCEPTANCE.ACCEPT_SECTION_CD
+                  , T_ACCEPTANCE.CURRENCY_CD
+                  , T_ACCEPTANCE.TAX_IND
+                  , T_ACCEPTANCE.TAX_RATE
+                  , MAX(T_ACCEPTANCE.ACCEPT_SEQ)      AS ACCEPT_SEQ
+                  , SUM(T_ACCEPTANCE.ACCEPT_AMOUNT)   AS ACCEPTAMOUNT
+               FROM T_ACCEPTANCE
+            <where>
+                <include refid="listKeyIdentityWhereCondition"/>
+            </where>
+           GROUP BY T_ACCEPTANCE.FISCAL_MONTH
+                  , T_ACCEPTANCE.SUP_CD
+                  , T_ACCEPTANCE.SUP_COMPANY_CD
+                  , T_ACCEPTANCE.ACCEPT_SECTION_CD
+                  , T_ACCEPTANCE.CURRENCY_CD
+                  , T_ACCEPTANCE.TAX_IND
+                  , T_ACCEPTANCE.TAX_RATE
+            ) T_ACCEPTANCE
+       INNER JOIN T_ACCEPTANCE T_ACCEPTANCE_LATEST
+          ON T_ACCEPTANCE_LATEST.ACCEPT_SEQ = T_ACCEPTANCE.ACCEPT_SEQ
+       INNER JOIN (
+                SELECT  CODE_VALUE
+                ,       DSP_ORDER
+                FROM    M_CODE_NAME
+                WHERE   CODE_KEY = 'TAX_CD'
+       ) M_CODE_NAME_TAX_CD
+       ON      T_ACCEPTANCE.TAX_IND = M_CODE_NAME_TAX_CD.CODE_VALUE
+    ORDER BY ${searchCondition.columnOrder.columnOrder()}
+    ,        M_CODE_NAME_TAX_CD.DSP_ORDER
+    ,        T_ACCEPTANCE.TAX_RATE DESC
+        <include refid="downloadFooter"/>
+    </select>
+
+    <select id="accdtlDownloadCount" parameterType="fw.domain.slip.receive.acceptance.acceptanceitem.AcceptItemSearchCondition" resultType="java.lang.Long">
+      SELECT COUNT(*)
+        <include refid="accdtlDownloadFrom"/>
+        <where>
+            <include refid="listKeyIdentityWhereCondition"/>
+        </where>
+    </select>
+
+    <resultMap type="fw.domain.slip.receive.acceptance.acceptanceitem.AcceptItemDownLoadItem" id="AccdtDownloadItem_Map">
+        <id column="FISCAL_MONTH" property="fiscalMonth.dateOfym" />
+        <id column="SUP_CD" property="supCd" />
+        <id column="SUP_NAME" property="supName" />
+        <id column="SUP_ABBR_NAME" property="supAbbrName" />
+        <id column="SUP_COMPANY_CD" property="supCompanyCd" />
+        <id column="DELIV_KEY_NO" property="delivKeyNo" />
+        <id column="ACCEPT_VERSION" property="acceptVersion" />
+        <id column="CORRECT_CD" property="divisionCd" />
+        <id column="ORDER_NO" property="orderNo" />
+        <id column="RB_IND" property="rbInd" />
+        <id column="RB_SEQ" property="rbSeq" />
+        <id column="REQ_COMPANY_CD" property="reqCompanyCd" />
+        <id column="REQ_COMPANY_NAME" property="reqCompanyName" />
+        <id column="REQ_SECTION_PLACE_CD" property="reqSectionPlaceCd" />
+        <id column="REQ_SECTION_PLACE_NAME" property="reqSectionPlaceName" />
+        <id column="REQ_SECTION_CD" property="reqSectionCd" />
+        <id column="REQ_SECTION_NAME" property="reqSectionName" />
+        <id column="REQ_USER_ID" property="reqUserId" />
+        <id column="REQ_USER_NAME" property="reqUserName" />
+        <id column="LOAD_COMPANY_CD" property="loadCompanyCd" />
+        <id column="LOAD_COMPANY_NAME" property="loadCompanyName" />
+        <id column="LOAD_SECTION_PLACE_CD" property="loadSectionPlaceCd" />
+        <id column="LOAD_SECTION_PLACE_NAME" property="loadSectionPlaceName" />
+        <id column="LOAD_SECTION_CD" property="loadSectionCd" />
+        <id column="LOAD_SECTION_NAME" property="loadSectionName" />
+        <id column="BUYER_COMPANY_CD" property="buyerCompanyCd" />
+        <id column="BUYER_COMPANY_NAME" property="buyerCompanyName" />
+        <id column="BUYER_SECTION_PLACE_CD" property="buyerSectionPlaceCd" />
+        <id column="BUYER_SECTION_PLACE_NAME" property="buyerSectionPlaceName" />
+        <id column="BUYER_SECTION_CD" property="buyerSectionCd" />
+        <id column="BUYER_SECTION_NAME" property="buyerSectionName" />
+        <id column="BUYER_USER_ID" property="buyerUserId" />
+        <id column="BUYER_USER_NAME" property="buyerUserName" />
+        <id column="ARRIV_COMPANY_CD" property="arrivCompanyCd" />
+        <id column="ARRIV_COMPANY_NAME" property="arrivCompanyName" />
+        <id column="ARRIV_SECTION_PLACE_CD" property="arrivSectionPlaceCd" />
+        <id column="ARRIV_SECTION_PLACE_NAME" property="arrivSectionPlaceName" />
+        <id column="ARRIV_SECTION_CD" property="arrivSectionCd" />
+        <id column="ARRIV_SECTION_NAME" property="arrivSectionName" />
+        <id column="ARRIV_USER_ID" property="arrivUserId" />
+        <id column="ARRIV_USER_NAME" property="arrivUserName" />
+        <id column="INSPECT_COMPANY_CD" property="inspectCompanyCd" />
+        <id column="INSPECT_COMPANY_NAME" property="inspectCompanyName" />
+        <id column="INSPECT_SECTION_PLACE_CD" property="inspectSectionPlaceCd" />
+        <id column="INSPECT_SECTION_PLACE_NAME" property="inspectSectionPlaceName" />
+        <id column="INSPECT_SECTION_CD" property="inspectSectionCd" />
+        <id column="INSPECT_SECTION_NAME" property="inspectSectionName" />
+        <id column="INSPECT_USER_ID" property="inspectUserId" />
+        <id column="INSPECT_USER_NAME" property="inspectUserName" />
+        <id column="ACCEPT_COMPANY_CD" property="acceptCompanyCd" />
+        <id column="ACCEPT_COMPANY_NAME" property="acceptCompanyName" />
+        <id column="ACCEPT_SECTION_PLACE_CD" property="acceptSectionPlaceCd" />
+        <id column="ACCEPT_SECTION_PLACE_NAME" property="acceptSectionPlaceName" />
+        <id column="ACCEPT_SECTION_CD" property="acceptSectionCd" />
+        <id column="ACCEPT_SECTION_NAME" property="acceptSectionName" />
+        <id column="ACCEPT_USER_ID" property="acceptUserId" />
+        <id column="ACCEPT_USER_NAME" property="acceptUserName" />
+        <id column="PUR_REQ_DATE" property="purReqDate.dateOfymd" />
+        <id column="ORDER_FIRST_DATE" property="orderFirstDate.dateOfymd" />
+        <id column="ARRIV_EXP_DATE" property="arrivExpDate.dateOfymd" />
+        <id column="INSPECT_DATE" property="inspectDate.dateOfymd" />
+        <id column="ACCEPT_DATE" property="acceptDate.dateOfymd" />
+        <id column="ITEM_CLASS_COMPANY_CD" property="itemClassCompanyCd" />
+        <id column="ITEM_CLASS_L" property="itemClassL" />
+        <id column="ITEM_CLASS_L_NAME" property="itemClassLName" />
+        <id column="ITEM_CLASS_M" property="itemClassM" />
+        <id column="ITEM_CLASS_M_NAME" property="itemClassMName" />
+        <id column="ITEM_CLASS_S" property="itemClassS" />
+        <id column="ITEM_CLASS_S_NAME" property="itemClassSName" />
+        <id column="ITEM_COMPANY_CD" property="itemCompanyCd" />
+        <id column="ITEM_CD" property="itemCd" />
+        <id column="ITEM_NAME" property="itemName" />
+        <id column="KATASHIKI" property="katashiki" />
+        <id column="MANUFACT_CD" property="manufactCd" />
+        <id column="MANUFACT_NAME" property="manufactName" />
+        <id column="SUBJECT_COMPANY_CD" property="subjectCompanyCd" />
+        <id column="SUBJECT_CD" property="subjectCd" />
+        <id column="SUBJECT_NAME" property="subjectName" />
+        <id column="BUDGET_NO" property="budgetNo" />
+        <id column="ORDER_DELIV_DATE" property="orderDelivDate.dateOfymd" />
+        <id column="DELIV_PLACE_COMPANY_CD" property="delivPlaceCompanyCd" />
+        <id column="DELIV_PLACE_CD" property="delivPlaceCd" />
+        <id column="DELIV_PLACE_NAME" property="delivPlaceName" />
+        <id column="CURRENCY_CD" property="currencyCd" />
+        <id column="UNIT_CD" property="unitCd" />
+        <id column="UNIT_NAME" property="unitName" />
+        <id column="ORDER_TAX_IND" property="taxInd" />
+        <id column="ORDER_CONSUMPT_IND" property="consumptInd" />
+        <id column="ORDER_VOL" property="orderVol.vol" />
+        <id column="ORDER_UNIT_PRICE" property="unitPrice.amount" />
+        <id column="ORDER_AMOUNT" property="orderAmount.amount" />
+        <id column="DELIV_VOL" property="delivVol.vol" />
+        <id column="INSPECT_PASS_QUANT" property="inspectPassQuant.vol" />
+        <id column="ACCEPT_CONSUMPT_IND" property="acceptConsumptInd" />
+        <id column="ACCEPT_TAX_IND" property="acceptTaxInd" />
+        <id column="TAX_RATE" property="taxRate.rate.amount" />
+        <id column="ACCEPT_VOL" property="acceptVol.vol" />
+        <id column="ACCEPT_UNIT_PRICE" property="acceptUnitPrice.amount" />
+        <id column="ACCEPT_AMOUNT" property="acceptAmount.amount" />
+        <id column="CONSUMPT_AMOUNT" property="consumptAmount.amount" />
+        <id column="TOTAL_AMOUNT" property="totalAmount.amount" />
+        <id column="ACCEPT_CNV_CURRENCY_CD" property="acceptCnvCurrencyCd" />
+        <id column="ACCEPT_CNV_RATE" property="acceptCnvRate.rate.amount" />
+        <id column="TITLE_NAME" property="titleName" />
+        <id column="PAY_CONDITION_CD" property="payConditionCd" />
+        <id column="PAY_CONDITION_NAME" property="payConditionName" />
+        <id column="ACCEPT_SEQ" property="AcceptSeq" />
+        <id column="ACCEPT_CNV_AMOUNT" property="acceptCnvAmount.amount" />
+        <id column="ELIGIBLE_INVOICE_ISSUE_IND" property="eligibleInvoiceIssueInd" />
+        <id column="BUSINESS_REGIST_NO" property="businessRegistNo" />
+    </resultMap>
+
+    <select id="accdtlDownload" parameterType="fw.domain.slip.receive.acceptance.acceptanceitem.AcceptItemSearchCondition" resultMap="AccdtDownloadItem_Map">
+        <include refid="downloadHeader"/>
+      SELECT T_ACCEPTANCE.FISCAL_MONTH
+           , T_ACCEPTANCE.SUP_CD
+           , T_ACCEPTANCE.SUP_NAME
+           , T_ACCEPTANCE.SUP_ABBR_NAME
+           , T_ACCEPTANCE.SUP_COMPANY_CD
+           , T_ACCEPTANCE.DELIV_KEY_NO
+           , T_ACCEPTANCE.ACCEPT_VERSION
+           , T_ACCEPTANCE.CORRECT_CD
+           , T_ACCEPTANCE.ORDER_NO
+           , T_ACCEPTANCE.RB_IND
+           , T_ACCEPTANCE.RB_SEQ
+           , T_ORDER.REQ_COMPANY_CD
+           , T_ORDER.REQ_COMPANY_NAME
+           , T_ORDER.REQ_SECTION_PLACE_CD
+           , T_ORDER.REQ_SECTION_PLACE_NAME
+           , T_ORDER.REQ_SECTION_CD
+           , T_ORDER.REQ_SECTION_NAME
+           , T_ORDER.REQ_USER_ID
+           , T_ORDER.REQ_USER_NAME
+           , T_ACCEPTANCE.LOAD_COMPANY_CD
+           , T_ACCEPTANCE.LOAD_COMPANY_NAME
+           , T_ACCEPTANCE.LOAD_SECTION_PLACE_CD
+           , T_ACCEPTANCE.LOAD_SECTION_PLACE_NAME
+           , T_ACCEPTANCE.LOAD_SECTION_CD
+           , T_ACCEPTANCE.LOAD_SECTION_NAME
+           , T_ORDER.BUYER_COMPANY_CD
+           , T_ORDER.BUYER_COMPANY_NAME
+           , T_ORDER.BUYER_SECTION_PLACE_CD
+           , T_ORDER.BUYER_SECTION_PLACE_NAME
+           , T_ORDER.BUYER_SECTION_CD
+           , T_ORDER.BUYER_SECTION_NAME
+           , T_ORDER.BUYER_USER_ID
+           , T_ORDER.BUYER_USER_NAME
+           , T_ARRIVAL.ARRIV_COMPANY_CD
+           , T_ARRIVAL.ARRIV_COMPANY_NAME
+           , T_ARRIVAL.ARRIV_SECTION_PLACE_CD
+           , T_ARRIVAL.ARRIV_SECTION_PLACE_NAME
+           , T_ARRIVAL.ARRIV_SECTION_CD
+           , T_ARRIVAL.ARRIV_SECTION_NAME
+           , T_ARRIVAL.ARRIV_USER_ID
+           , T_ARRIVAL.ARRIV_USER_NAME
+           , T_INSPECT.INSPECT_COMPANY_CD
+           , T_INSPECT.INSPECT_COMPANY_NAME
+           , T_INSPECT.INSPECT_SECTION_PLACE_CD
+           , T_INSPECT.INSPECT_SECTION_PLACE_NAME
+           , T_INSPECT.INSPECT_SECTION_CD
+           , T_INSPECT.INSPECT_SECTION_NAME
+           , T_INSPECT.INSPECT_USER_ID
+           , T_INSPECT.INSPECT_USER_NAME
+           , T_ACCEPTANCE.ACCEPT_COMPANY_CD
+           , T_ACCEPTANCE.ACCEPT_COMPANY_NAME
+           , T_ACCEPTANCE.ACCEPT_SECTION_PLACE_CD
+           , T_ACCEPTANCE.ACCEPT_SECTION_PLACE_NAME
+           , T_ACCEPTANCE.ACCEPT_SECTION_CD
+           , T_ACCEPTANCE.ACCEPT_SECTION_NAME
+           , T_ACCEPTANCE.ACCEPT_USER_ID
+           , T_ACCEPTANCE.ACCEPT_USER_NAME
+           , T_PUR_APL.PUR_REQ_DATE
+           , T_ORDER.ORDER_FIRST_DATE
+           , T_ACCEPTANCE.ARRIV_EXP_DATE
+           , T_INSPECT.INSPECT_DATE
+           , T_ACCEPTANCE.ACCEPT_DATE
+           , T_ORDER.ITEM_CLASS_COMPANY_CD
+           , T_ORDER.ITEM_CLASS_L
+           , T_ORDER.ITEM_CLASS_L_NAME
+           , T_ORDER.ITEM_CLASS_M
+           , T_ORDER.ITEM_CLASS_M_NAME
+           , T_ORDER.ITEM_CLASS_S
+           , T_ORDER.ITEM_CLASS_S_NAME
+           , T_ORDER.ITEM_COMPANY_CD
+           , T_ORDER.ITEM_CD
+           , T_ORDER.ITEM_NAME
+           , T_ORDER.KATASHIKI
+           , T_ORDER.MANUFACT_CD
+           , T_ORDER.MANUFACT_NAME
+           , T_ACCEPTANCE.SUBJECT_COMPANY_CD
+           , T_ACCEPTANCE.SUBJECT_CD
+           , T_ACCEPTANCE.SUBJECT_NAME
+           , T_ACCEPTANCE.BUDGET_NO
+           , T_ORDER.ORDER_DELIV_DATE
+           , T_ORDER.DELIV_PLACE_COMPANY_CD
+           , T_ORDER.DELIV_PLACE_CD
+           , T_ORDER.DELIV_PLACE_NAME
+           , T_ACCEPTANCE.CURRENCY_CD
+           , T_ACCEPTANCE.UNIT_CD
+           , T_ACCEPTANCE.UNIT_NAME
+           , T_ORDER.TAX_IND AS ORDER_TAX_IND
+           , T_ORDER.CONSUMPT_IND AS ORDER_CONSUMPT_IND
+           , T_ORDER.ORDER_VOL
+           , T_ORDER.UNIT_PRICE AS ORDER_UNIT_PRICE
+           , T_ORDER.ORDER_AMOUNT
+           , T_ACCEPTANCE.DELIV_VOL
+           , T_INSPECT.INSPECT_PASS_QUANT
+           , T_ACCEPTANCE.CONSUMPT_IND AS ACCEPT_CONSUMPT_IND
+           , T_ACCEPTANCE.TAX_IND AS ACCEPT_TAX_IND
+           , T_ACCEPTANCE.TAX_RATE
+           , T_ACCEPTANCE.ACCEPT_VOL
+           , T_ACCEPTANCE.UNIT_PRICE AS ACCEPT_UNIT_PRICE
+           , T_ACCEPTANCE.ACCEPT_AMOUNT
+           , T_ACCEPTANCE.CONSUMPT_AMOUNT
+           , T_ACCEPTANCE.TOTAL_AMOUNT
+           , T_ACCEPTANCE.ACCEPT_CNV_CURRENCY_CD
+           , T_ACCEPTANCE.ACCEPT_CNV_RATE
+           , T_ACCEPTANCE.ACCEPT_CNV_AMOUNT
+           , T_ORDER.TITLE_NAME
+           , T_ORDER.PAY_CONDITION_CD
+           , T_ORDER.PAY_CONDITION_NAME
+           , T_ACCEPTANCE.ACCEPT_SEQ
+           , M_SUPPLIER.ELIGIBLE_INVOICE_ISSUE_IND
+           , M_SUPPLIER.BUSINESS_REGIST_NO
+           , <include refid="extItem"/>
+        <include refid="accdtlDownloadFrom"/>
+        <where>
+            <include refid="listKeyIdentityWhereCondition"/>
+        </where>
+    ORDER BY T_ACCEPTANCE.FISCAL_MONTH DESC
+           , T_ACCEPTANCE.SUP_CD
+           , T_ACCEPTANCE.DELIV_KEY_NO
+           , T_ACCEPTANCE.ACCEPT_VERSION
+           , T_ACCEPTANCE.CORRECT_CD
+        <include refid="downloadFooter"/>
+    </select>
+
+    <sql id="accdtlDownloadFrom">
+        FROM T_ACCEPTANCE
+       INNER JOIN T_RECEIVE_MNG 
+          ON T_RECEIVE_MNG.DELIV_KEY_NO = T_ACCEPTANCE.DELIV_KEY_NO
+         AND T_RECEIVE_MNG.DELETE_FLG = '0'
+       INNER JOIN T_ORDER
+          ON T_ORDER.ORDER_NO = T_ACCEPTANCE.ORDER_NO
+         AND T_ORDER.NEW_APP_FLG = '1'
+         AND T_ORDER.DELETE_FLG = '0'
+       INNER JOIN T_ARRIVAL
+          ON T_ARRIVAL.ARRIVAL_SEQ = T_RECEIVE_MNG.APP_ARRIVAL_SEQ
+         AND T_ARRIVAL.DELETE_FLG = '0'
+        LEFT JOIN T_INSPECT
+          ON T_RECEIVE_MNG.APP_INSPECT_SEQ = T_INSPECT.INSPECT_SEQ
+         AND T_INSPECT.DELETE_FLG = '0'
+       INNER JOIN T_PUR_REQUEST
+          ON T_PUR_REQUEST.PUR_REQ_NO = T_ORDER.PUR_REQ_NO
+         AND T_PUR_REQUEST.NEW_APP_FLG = '1'
+         AND T_PUR_REQUEST.DELETE_FLG = '0'
+       INNER JOIN T_PUR_APL
+          ON T_PUR_APL.PUR_APL_SEQ = T_PUR_REQUEST.PUR_APL_SEQ
+       LEFT JOIN M_SUPPLIER
+         ON  (M_SUPPLIER.COMPANY_CD = T_ACCEPTANCE.ACCEPT_COMPANY_CD
+         OR  M_SUPPLIER.COMPANY_CD = '${@fw.common.constant.ApplicationConstant@COMPANY_CD_ALL}')
+        AND  M_SUPPLIER.SUP_CD = T_ACCEPTANCE.SUP_CD
+    </sql>
+
+    <sql id="downloadHeader">
+       SELECT * FROM (
+    </sql>
+
+    <sql id="downloadFooter">
+        ) WHERE  ROWNUM &lt;=${@fw.common.util.PropertiesUtil@getLong("DOWNLOAD_MAXCNT")}
+    </sql>
+
+    <sql id="extItem">
+        ${@ps.common.util.ItemSettingUtil@getItemSettingSelectSQLDomainAliasNonBinary("T_ORDER", "orderExtItem")},
+        ${@ps.common.util.ItemSettingUtil@getItemSettingSelectSQLDomainAliasNonBinary("T_ACCEPTANCE", "acceptExtItem")}
+    </sql>
+
+    <select id="detail" parameterType="fw.domain.slip.receive.acceptance.acceptanceitem.AcceptItemIdentify"
+        resultType="fw.domain.slip.receive.acceptance.acceptanceitem.AcceptItemDetail">
+      SELECT T_ACCEPTANCE.DELIV_KEY_NO AS "delivKeyNo"
+           , T_ACCEPTANCE.ACCEPT_VERSION AS "acceptVersion"
+           , T_ACCEPTANCE.CORRECT_CD AS "correctInd.correctInd"
+           , T_ORDER.REQ_TYPE_IND AS "reqTypeInd"
+           , T_ORDER.ITEM_CD AS "itemCd"
+           , T_ORDER.ITEM_NAME AS "itemName"
+           , T_ACCEPTANCE.ACCEPT_VOL AS "accpetVol.vol"
+           , T_ACCEPTANCE.UNIT_NAME AS "unit"
+           , T_ACCEPTANCE.ACCEPT_DATE AS "acceptDate.dateOfymd"
+           , T_ACCEPTANCE.CURRENCY_CD AS "currencyCd"
+           , T_ACCEPTANCE.TAX_IND AS "taxInd"
+           , T_ACCEPTANCE.ACCEPT_AMOUNT AS "acceptAmount.amount"
+           , T_ACCEPTANCE.TAX_RATE AS "taxRate"
+           , T_ACCEPTANCE.CONSUMPT_AMOUNT AS "acceptConsumpt.amount"
+           , T_ACCEPTANCE.TOTAL_AMOUNT AS "totalAmount.amount"
+           , T_ACCEPTANCE.ACCEPT_SECTION_CD AS "acceptSectionCd"
+           , T_ACCEPTANCE.ACCEPT_SECTION_NAME AS "acceptSectionName"
+           , T_ACCEPTANCE.ACCEPT_USER_ID AS "acceptUserId"
+           , T_ACCEPTANCE.ACCEPT_USER_NAME AS "acceptUserName"
+        FROM T_ACCEPTANCE
+       INNER JOIN T_ORDER
+          ON T_ORDER.ORDER_NO = T_ACCEPTANCE.ORDER_NO
+       WHERE T_ACCEPTANCE.ACCEPT_STATUS = '04'
+         AND T_ACCEPTANCE.FISCAL_MONTH = #{fiscalYearMonth.dateOfym, jdbcType=VARCHAR}
+         AND T_ACCEPTANCE.SUP_COMPANY_CD = #{supCompanyCd, jdbcType=VARCHAR}
+         AND T_ACCEPTANCE.SUP_CD = #{supCd, jdbcType=VARCHAR}
+         AND T_ACCEPTANCE.ACCEPT_COMPANY_CD = '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}'
+         AND T_ACCEPTANCE.ACCEPT_SECTION_CD = #{acceptSectionCd, jdbcType=VARCHAR}
+         AND T_ACCEPTANCE.DELETE_FLG = '0'
+         AND T_ORDER.NEW_APP_FLG = '1'
+         AND T_ORDER.DELETE_FLG = '0'
+    ORDER BY T_ACCEPTANCE.DELIV_KEY_NO
+           , T_ACCEPTANCE.ACCEPT_VERSION
+           , T_ACCEPTANCE.CORRECT_CD
+    </select>
+
+</mapper>

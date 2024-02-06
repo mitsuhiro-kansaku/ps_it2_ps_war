@@ -1,0 +1,1500 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<title>#customSpringMessage('QUOT_REQ_INPUT')</title><!--見積依頼入力-->
+<meta http-equiv="Content-type" content="text/html; charset=UTF-8">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Content-script-type" content="text/javascript">
+
+<link rel="stylesheet" href="../../include/Layout.css" type="text/css">
+<link id="CSS_FONT" rel="stylesheet" href="../../include/FontS.css" type="text/css">
+<link rel="stylesheet" href="../../include/searchbox.css" type="text/css">
+<link rel="stylesheet" href="../../include/Color.css" type="text/css">
+<link rel="stylesheet" href="../../include/ime.css" type="text/css">
+
+<script language="javascript" type="text/javascript" src="../../include/common.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/check.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/date.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/searchbox.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/jquery-1.7.2.min.js"></script>
+<script language="javascript" type="text/javascript">
+<!--
+#parse("./common/common_js.vm")
+
+##注文済（仮単価）フラグ
+#set($orderUndecidedFlg = ($!orderPriceInd == '0'))
+
+var patternName = '#jsEscape($!patternName)';
+if (patternName == '0') {
+    top.backUrl="${flowExecutionUrl}&_eventId=home";
+}
+
+var fromNewFlag = '#jsEscape($!fromNewFlag)';
+
+//変更前の納入先コード
+var delivPlaceCd_x = "";
+var chgUserId = "";
+var preItemCode = "";
+var manufacCd_x = "";
+
+var isClickable = false;
+
+function onLoad(){
+    setFocusForInput();
+
+    ##  再申請フラグを取得する。
+    var PROCESSFLG_AGAIN_flg = '#jsEscape($!PROCESSFLG_AGAIN_flg)';
+
+    if (patternName != "6") {
+        setItemDisplay();
+        setManufactDisplay();
+    }
+
+    setAppRouteByAmount('B', '$!domain.totalAmount.amountFormat', getObj('quotReqItemList[0].currency.currencyCd').value);
+    setChgUserIdValue();
+    top.document.title = "#customSpringMessage('QUOT_REQ_INPUT')";
+    
+    #if($!patternName == "1" )
+    for (let i = 0; i < $!domain.quotReqSupplierList.size(); i++) {
+       var quotAdo =  '';
+       if (isAdoSupplierCode(getObj("quotReqSupplierList["+i+"].supplierFrom.supCd").value) == 'true' ||
+           isAdoSupplierName(getObj("quotReqSupplierList["+i+"].supplierFrom.supplierName.supplierAbbrName").value) == 'true' ) {
+           quotAdo = "$!quotAdo";
+           getObj('quotAdo_' + i).innerText = quotAdo; 
+       }
+    }
+    #end
+
+    var errorMsg = "$!errorMessage";
+    var alertMessage = "$!alertMessage";
+    var isSuccess = '#jsEscape($!isSuccess)';
+    var isApply = '#jsEscape($!isApply)';
+    #set( $quotreq = "#customSpringMessage('REQ_DELIV_DATE')" )
+    if (alertMessage != ""){
+        var isWaring = "#jsEscape($!isWaring)";
+          if (isWaring != "") {
+            if (errorMsg == "") {
+                if( !confirm('#customMessageArgs("W035",[$quotreq])') ) {
+                    buttonDisable();
+                    top.iframeChange("${flowExecutionUrl}&_eventId=showdetail");
+                    return;
+                } else {
+                    isApply = 'true';
+                }
+            }
+          } else {
+                alert(alertMessage);
+                if($!patternName == "1" || patternName == '2'){
+                    if(alertMessage.indexOf("#customSpringMessage('E035')") != -1){
+                        buttonDisable();
+                        top.iframeChange("${flowExecutionUrl}&_eventId=back");
+                        return;
+                    }
+                }
+          }
+    }
+    if (patternName == '1') {
+        inputPaging();
+    }
+    if (errorMsg != ""){
+        if (fromNewFlag == '1') {
+             top.backUrl="${flowExecutionUrl}&_eventId=home";
+        }
+        document.getElementById("TR_ERROR").style.display = "";
+        isClickable = true;
+        return;
+    }
+    if(isApply == 'true'){
+        buttonDisable();
+        parent.iframeChange("${flowExecutionUrl}&_eventId=apply","pageid","PSQOT040");
+        return;
+    }
+    #set( $quotreq = "#customSpringMessage('QUOT_REQ')" )
+    #set( $para = "#customSpringMessage('QUOT_REQ')"+"("+"#customSpringMessage('QUOT_REQ_NO'):$!domain.quotReqIdentify.quotReqNo.quotReqNo"+")")
+    var endIdentify = '#jsEscape($!endIdentify)';
+    var tempFlg = '#jsEscape($!tempFlg)';
+    if(isSuccess == 'true'){
+        var isSendBack = '#jsEscape($!isSendBack)';
+        var isTempSave = '#jsEscape($!isTempSave)';
+
+        if(isTempSave == 'true'){
+            //一時保存
+            alert('#customMessageArgs("I030",[$!para])');
+            if (fromNewFlag == '1') {
+                 top.backUrl="${flowExecutionUrl}&_eventId=home";
+                 isClickable = true;
+                 return;
+            }
+        }else if(isSendBack == 'true'){
+            //差戻し処理
+            alert('#customMessageArgs("I005",[$!quotreq])');
+        }else{
+            //登録処理
+            alert('#customMessageArgs("I005",[$!para])');
+        }
+        buttonDisable();
+        if (patternName == '0') {
+            // 新規の場合
+            top.iframeChange('../qot/est/PSQOT040','pageid','PSQOT040','patternName','0','isInitIndividualApr','true');
+            return;
+        } else if (patternName == '1') {
+            // 未処理見積依頼から遷移
+            if (endIdentify == '1') {
+                 top.iframeChange("${flowExecutionUrl}&_eventId=back");
+                 return;
+            } else {
+                 top.iframeChange("${flowExecutionUrl}&_eventId=next");
+                 return;
+            }
+        } else if (patternName == '2') {
+            // 購買依頼から遷移
+            top.iframeChange("${flowExecutionUrl}&_eventId=back");
+            return;
+        } else if (patternName == '3') {
+            // 編集から遷移
+            top.iframeChange("${flowExecutionUrl}&_eventId=back");
+            return;
+        } else if (patternName == '4') {
+            // 再申請(差戻し)
+            top.iframeChange("${flowExecutionUrl}&_eventId=back");
+            return;
+        }else if (patternName == '5') {
+            // 再見積
+            top.iframeChange("${flowExecutionUrl}&_eventId=backlist");
+            return;
+        }else if (patternName == '6') {
+            // 取引先追加
+            top.iframeChange("${flowExecutionUrl}&_eventId=backlist");
+            return;
+        }
+    }
+
+    isClickable = true;
+}
+
+function setFileDeleteFlg() {
+    #if($!patternName != "6")
+        var del1 = getObj("rangeByAttachFile1.attachFile.screenDelFlg").value;
+        var file1 = getObj("rangeByAttachFile1.attachFile.screenFile").value;
+        if("1" == del1 && file1.length > 0) {
+            getObj("rangeByAttachFile1.attachFile.screenDelFlg").value = "0";
+        }
+
+        var del2 = getObj("rangeByAttachFile2.attachFile.screenDelFlg").value;
+        var file2 = getObj("rangeByAttachFile2.attachFile.screenFile").value;
+        if("1" == del2 && file2.length > 0) {
+            getObj("rangeByAttachFile2.attachFile.screenDelFlg").value = "0";
+        }
+
+         #foreach($!quotReqItem in $!domain.quotReqItemList)
+            var del = getObj("quotReqItemList[$velocityCount].rangeByAttachFile.attachFile.screenDelFlg").value;
+            var file = getObj("quotReqItemList[$velocityCount].rangeByAttachFile.attachFile.screenFile").value;
+            if("1" == del && file.length > 0) {
+                getObj("quotReqItemList[$velocityCount].rangeByAttachFile.attachFile.screenDelFlg").value = "0";
+            }
+          #end
+     #end
+}
+
+function downloadFile(seqNo,index, detailindex) {
+    parent.iframeChange("${flowExecutionUrl}&_eventId=download",'seqNo',seqNo, 'index',index, 'detailindex',detailindex);
+}
+
+function apply() {
+    if(!isClickable) {
+        return;
+    }
+    #set( $quotreq = "#customSpringMessage('QUOT_REQ')" )
+    #set( $register = "#customSpringMessage('ACTION_REGISTER')" )
+    if( !confirm('#customMessageArgs("W001",[$quotreq,$register])') ) {
+        return;
+    }
+    buttonDisable();
+    unitChange();
+    setFileDeleteFlg();
+    getObj("Body").action = "${flowExecutionUrl}&_eventId=validate";
+    getObj("Body").submit();
+}
+
+function tempSave() {
+    if(!isClickable) {
+        return;
+    }
+    buttonDisable();
+    unitChange();
+    setFileDeleteFlg();
+    getObj("Body").action = "${flowExecutionUrl}&_eventId=tempSave";
+    getObj("Body").submit();
+}
+
+function sendBack() {
+    if(!isClickable) {
+        return;
+    }
+    #set( $quotreq = "#customSpringMessage('QUOT_REQ')" )
+    #set( $return = "#customSpringMessage('RETURN')" )
+    if( !confirm('#customMessageArgs("W001",[$quotreq,$return])') ) {
+        return;
+    }
+    buttonDisable();
+    setFileDeleteFlg();
+    getObj("Body").action = "${flowExecutionUrl}&_eventId=sendBack";
+    getObj("Body").submit();
+}
+
+function pasteItem(name) {
+    objs = document.getElementsByName(name);
+    #foreach($!quotReqItem in $!domain.quotReqItemList)
+        getObj('quotReqItemList[$velocityCount].quotHopeCondition.hopeDlvEst.dateOfymdFormat').value = objs[0].value;
+    #end
+}
+
+function addSupDetail(){
+    if(!isClickable) {
+        return;
+    }
+    unitChange();
+    setFileDeleteFlg();
+    buttonDisable();
+    getObj("Body").action="${flowExecutionUrl}&_eventId=addSupDetail";
+    getObj("Body").submit();
+}
+
+function delSupDetail(index){
+    if(!isClickable) {
+        return;
+    }
+    unitChange();
+    setFileDeleteFlg();
+    getObj("Body").action="${flowExecutionUrl}&_eventId=delSupDetail&supplierIndex="+index;
+    getObj("Body").submit();
+}
+
+function addItemDetail(){
+    if(!isClickable) {
+        return;
+    }
+    unitChange();
+    setFileDeleteFlg();
+    buttonDisable();
+    getObj("Body").action="${flowExecutionUrl}&_eventId=addItemDetail";
+    getObj("Body").submit();
+}
+
+function deleteDetail(index){
+    if(!isClickable) {
+        return;
+    }
+    unitChange();
+    setFileDeleteFlg();
+    getObj("Body").action="${flowExecutionUrl}&_eventId=delItemDetail&itemIndex="+index;
+    getObj("Body").submit();
+}
+
+function unitChange() {
+    var patternName = '#jsEscape($!patternName)';
+
+    if (patternName != "6") {
+        #foreach($!quotReqItem in $!domain.quotReqItemList)
+            getObj('quotReqItemList[$velocityCount].quotHopeCondition.hopeUnit.unitCd').disabled = "";
+        #end
+    }
+}
+
+function amountByAjax(index) {
+    if(getObj('quotReqItemList['+index+'].quotHopeCondition.hopePrice.amountFormat').value == "") {
+        getObj('currencyMark['+index+']').innerHTML = "";
+        getObj('hopeAmount['+index+']').innerHTML = "";
+        getObj('quotReqItemList['+index+'].quotHopeCondition.hopeAmount.amountFormat').value = '';
+    }
+
+    if (getObj('quotReqItemList['+index+'].quotHopeCondition.hopeVol.volFormat').value == "") {
+        getObj('currencyMark['+index+']').innerHTML = "";
+        getObj('hopeAmount['+index+']').innerHTML = "";
+        getObj('quotReqItemList['+index+'].quotHopeCondition.hopeAmount.amountFormat').value = '';
+    }
+
+    //金額設定
+    if (getObj('quotReqItemList['+index+'].quotHopeCondition.hopePrice.amountFormat').value != "" &&
+        getObj('quotReqItemList['+index+'].quotHopeCondition.hopeVol.volFormat').value != "") {
+
+        getObj('currencyMark['+index+']').innerHTML = "#out($!domain.currency.currencyMark)";
+
+        $.ajax({
+            type: "POST",
+            async:false,
+            url:"../../buyPriceController/calculateAmount",
+            data: {
+                "price.amountFormat":getObj('quotReqItemList['+index+'].quotHopeCondition.hopePrice.amountFormat').value,
+                "vol.volFormat":getObj('quotReqItemList['+index+'].quotHopeCondition.hopeVol.volFormat').value,
+                currencyCd:getObj('quotReqItemList['+index+'].currency.currencyCd').value
+            },
+            success:function(data){
+                getObj('quotReqItemList['+index+'].quotHopeCondition.hopeAmount.amountFormat').value = data.amount.amountFormat;
+
+                if (data.amount.amountFormat != "") {
+                    getObj('hopeAmount['+index+']').innerHTML = data.amount.amountFormat;
+                }
+
+                getObj('quotReqItemList['+index+'].quotHopeCondition.hopePrice.amountFormat').value = data.price.amountFormat;
+            }
+         });
+     }
+
+     var totalAmount = getObj('totalAmount').value;
+
+    $.ajax({
+        type: "POST",
+        async:false,
+        url:"../../buyPriceController/itemAmount",
+        data: {
+            #foreach($!quotReqItem in $!domain.quotReqItemList)
+                "amountArray[$velocityCount].amountFormat":getObj('quotReqItemList[$velocityCount].quotHopeCondition.hopeAmount.amountFormat').value,
+            #end
+            currencyCd:getObj('quotReqItemList[0].currency.currencyCd').value
+        },
+        success:function(data){
+            getObj('orderAmount').innerHTML = data.amount.amountFormat;
+            getObj('totalAmount').value = data.amount.amountFormat;
+            totalAmount = data.amount.amountFormat;
+            setAppRouteByAmount('B',
+                        totalAmount,
+                        getObj('quotReqItemList[0].currency.currencyCd').value);
+        }
+    });
+}
+
+function deliveryPlaceOnBlur() {
+    var delivPlaceCd = getObj("delivPlace.delivPlaceCd").value;
+    if(delivPlaceCd == delivPlaceCd_x) {
+        return;
+    } else {
+        delivPlaceCd_x = delivPlaceCd;
+    }
+    if(delivPlaceCd == "") {
+        getObj("delivPlace.delivPlaceName").value = "";
+    } else {
+         $.ajax({
+            type: "POST",
+            async:false,
+            url:"../../getDeliveryPlaceOnBlur",
+            data: {
+                termFlag:'0',
+                companyCd:'#jsEscape($!domain.buyUser.buyUser.section.company.companyCd)',
+                delivPlaceCd:delivPlaceCd
+            },
+            success:function(data){
+                //設定
+                getObj("delivPlace.delivPlaceName").value = data.delivPlaceName;
+            }
+         });
+    }
+}
+
+function deliveryPlaceCodeGetfocus(obj){
+    delivPlaceCd_x  = obj.value;
+}
+
+function manufactOnBlur(index) {
+    var manufacCd = getObj("quotReqItemList["+index+"].itemName.manufact.manufactCd").value;
+    if(manufacCd == manufacCd_x) {
+        return;
+    } else {
+        manufacCd_x = manufacCd;
+    }
+
+    var focusId = document.activeElement.id;
+    if(manufacCd == "") {
+        if(focusId != null && focusId != "") {
+            getObj(focusId).disabled = true;
+            getObj(focusId).disabled = false;
+        }
+        getObj("quotReqItemList["+index+"].itemName.manufact.manufactName").value = "";
+        getObj("quotReqItemList["+index+"].itemName.manufact.manufactName").readOnly = false;
+        getObj("quotReqItemList["+index+"].itemName.manufact.manufactName").style.backgroundColor = 'white';
+        if(focusId != null && focusId != "") {
+            getObj(focusId).focus();
+        }
+    } else {
+         $.ajax({
+            type: "POST",
+            async:false,
+            url:"../../getManufactInfoOnBlur",
+            data: {
+                termFlag:'0',
+                manufactCd:manufacCd
+            },
+            success:function(data){
+                if(focusId != null && focusId != "") {
+                    getObj(focusId).disabled = true;
+                    getObj(focusId).disabled = false;
+                }
+                //設定
+                getObj("quotReqItemList["+index+"].itemName.manufact.manufactName").value = data.manufactName;
+                getObj("quotReqItemList["+index+"].itemName.manufact.manufactName").readOnly = true;
+                getObj("quotReqItemList["+index+"].itemName.manufact.manufactName").style.backgroundColor = '#ECECEC';
+                if(focusId != null && focusId != "") {
+                    getObj(focusId).focus();
+                }
+
+            }
+         });
+    }
+}
+
+function setManufactDisplay() {
+    #foreach($!quotReqItem in $!domain.quotReqItemList)
+        var manufacCd = getObj("quotReqItemList[$velocityCount].itemName.manufact.manufactCd");
+        var itemCd = getObj("quotReqItemList[$velocityCount].itemName.itemCd");
+        if(manufacCd != undefined && itemCd != undefined) {
+            if(manufacCd.value == "" && itemCd.value == '') {
+                getObj("quotReqItemList[$velocityCount].itemName.manufact.manufactName").readOnly = false;
+                getObj("quotReqItemList[$velocityCount].itemName.manufact.manufactName").style.backgroundColor = 'white';
+            } else {
+                getObj("quotReqItemList[$velocityCount].itemName.manufact.manufactName").readOnly = true;
+                getObj("quotReqItemList[$velocityCount].itemName.manufact.manufactName").style.backgroundColor = '#ECECEC';
+            }
+        }
+
+    #end
+}
+
+function manufactSelectAfterProc() {
+    setManufactDisplay();
+}
+
+function itemOnblur(index) {
+    var itemCd = getObj("quotReqItemList["+index+"].itemName.itemCd").value;
+    if(itemCd == preItemCode) {
+        return;
+    } else {
+        preItemCode = itemCd;
+    }
+    if(itemCd == "") {
+        getObj("quotReqItemList["+index+"].itemName.itemName").value = "";
+        getObj("quotReqItemList["+index+"].itemName.katashiki").value = "";
+        getObj("quotReqItemList["+index+"].itemName.manufact.manufactCd").value = "";
+        getObj("quotReqItemList["+index+"].itemName.manufact.manufactName").value = "";
+
+    } else {
+         $.ajax({
+            type: "POST",
+            async:false,
+            url:"../../getItemInfoOnBlur",
+            data: {
+                termFlag:'0',
+                companyCd:'#jsEscape($!domain.buyUser.buyUser.section.company.companyCd)',
+                sectionPlaceCd:'#jsEscape($!domain.buyUser.buyUser.section.sectionPlace.sectionPlaceCd)',
+                itemCd:itemCd
+            },
+            success:function(data){
+                //設定
+                getObj("quotReqItemList["+index+"].itemName.itemName").value = data.itemName;
+                getObj("quotReqItemList["+index+"].itemName.katashiki").value = data.katashiki;
+                getObj("quotReqItemList["+index+"].itemName.manufact.manufactCd").value = data.manufactCd;
+                getObj("quotReqItemList["+index+"].itemName.manufact.manufactName").value = data.manufactName;
+                getObj("quotReqItemList["+index+"].quotHopeCondition.hopeUnit.unitCd").value = data.unitCd;
+            }
+        });
+    }
+    setItemDisplay();
+}
+
+ function itemSelectAfterProc() {
+   setItemDisplay();
+ }
+
+function setItemDisplay(){
+
+    var focusId = document.activeElement.id;
+
+    if (focusId != null && focusId != ""){
+        getObj(focusId).blur();
+    }
+
+#foreach($!quotReqItem in $!domain.quotReqItemList)
+    if(getObj("quotReqItemList[$velocityCount].itemName.itemCd").value == ''){
+        getObj("quotReqItemList[$velocityCount].itemName.itemName").readOnly = false;
+        getObj("quotReqItemList[$velocityCount].itemName.itemName").style.backgroundColor = 'white';
+        getObj("quotReqItemList[$velocityCount].itemName.katashiki").readOnly = false;
+        getObj("quotReqItemList[$velocityCount].itemName.katashiki").style.backgroundColor = 'white';
+        getObj("quotReqItemList[$velocityCount].itemName.manufact.manufactCd").readOnly = false;
+        getObj("quotReqItemList[$velocityCount].itemName.manufact.manufactCd").style.backgroundColor = 'white';
+
+        if(getObj("quotReqItemList[$velocityCount].itemName.manufact.manufactCd").value == "") {
+            getObj("quotReqItemList[$velocityCount].itemName.manufact.manufactName").readOnly = false;
+            getObj("quotReqItemList[$velocityCount].itemName.manufact.manufactName").style.backgroundColor = 'white';
+        }
+
+        getObj("quotReqItemList[$velocityCount].quotHopeCondition.hopeUnit.unitCd").disabled = "";
+        getObj("img.quotReqItemList[$velocityCount].itemName.manufact.manufactCd").disabled= "";
+    } else {
+        getObj("quotReqItemList[$velocityCount].itemName.itemName").readOnly = true;
+        getObj("quotReqItemList[$velocityCount].itemName.itemName").style.backgroundColor = '#ECECEC';;
+        getObj("quotReqItemList[$velocityCount].itemName.katashiki").readOnly = true;
+        getObj("quotReqItemList[$velocityCount].itemName.katashiki").style.backgroundColor = '#ECECEC';
+        getObj("quotReqItemList[$velocityCount].itemName.manufact.manufactCd").readOnly = true;
+        getObj("quotReqItemList[$velocityCount].itemName.manufact.manufactCd").style.backgroundColor = '#ECECEC';
+        getObj("quotReqItemList[$velocityCount].itemName.manufact.manufactName").readOnly = true;
+        getObj("quotReqItemList[$velocityCount].itemName.manufact.manufactName").style.backgroundColor = '#ECECEC';
+        getObj("quotReqItemList[$velocityCount].quotHopeCondition.hopeUnit.unitCd").disabled = true;
+        getObj("img.quotReqItemList[$velocityCount].itemName.manufact.manufactCd").disabled= true;
+    }
+#end
+
+    if (focusId != null && focusId != ""){
+        getObj(focusId).focus();
+    }
+}
+
+function supplierOnblur(supindex) {
+    var supCd = getObj("quotReqSupplierList["+supindex+"].supplierFrom.supCd").value;
+    #if($!patternName == "1" ) 
+    var quotAdo =  "";
+    #end
+
+    if(supCd == "") {
+        var regObj = document.getElementsByName("quotReqSupplierList["+supindex+"].supplierRegistrationFlg.supplierRegistrationFlg");
+
+        if(regObj[0].checked) {
+            return;
+        }
+
+        getObj("quotReqSupplierList["+supindex+"].supplierFrom.supplierName.supplierAbbrName").value = "";
+        getObj("quotReqSupplierList["+supindex+"].supplierFrom.supplierContact.ctc.address1.address").value = "";
+        getObj("quotReqSupplierList["+supindex+"].supplierFrom.supplierContact.ctc.address2.address").value = "";
+        getObj("quotReqSupplierList["+supindex+"].supplierFrom.supplierContact.supPersonName.supPersonName").value = "";
+        getObj("quotReqSupplierList["+supindex+"].supplierFrom.supplierContact.ctc.telNo.telNo").value = "";
+        getObj("quotReqSupplierList["+supindex+"].supplierFrom.supplierContact.ctc.faxNo.faxNo").value = "";
+        getObj("quotReqSupplierList["+supindex+"].supplierFrom.ediInd.ediInd").value = 0;
+        getObj('edi_' + supindex).innerText = "";
+    #if($!patternName == "1" )  
+        getObj('quotAdo_' + supindex).innerText = quotAdo;
+    #end
+    } else {
+         $.ajax({
+            type: "POST",
+            async:false,
+            url:"../../getSupplierInfoOnBlur",
+            data: {
+                termFlag:'0',
+                companyCd:'#jsEscape($!domain.buyUser.buyUser.section.company.companyCd)',
+                supCd:supCd
+            },
+            success:function(data){
+                //設定
+                getObj("quotReqSupplierList["+supindex+"].supplierFrom.supplierName.supplierAbbrName").value = data.supAbbrName;
+                getObj("quotReqSupplierList["+supindex+"].supplierFrom.supplierContact.ctc.address1.address").value = data.address1;
+                getObj("quotReqSupplierList["+supindex+"].supplierFrom.supplierContact.ctc.address2.address").value = data.address2;
+                getObj("quotReqSupplierList["+supindex+"].supplierFrom.supplierContact.supPersonName.supPersonName").value = data.supPersonName;
+                getObj("quotReqSupplierList["+supindex+"].supplierFrom.supplierContact.ctc.telNo.telNo").value = data.telNo;
+                getObj("quotReqSupplierList["+supindex+"].supplierFrom.supplierContact.ctc.faxNo.faxNo").value = data.faxNo;
+                getObj("quotReqSupplierList["+supindex+"].supplierFrom.ediInd.ediInd").value = data.ediInd;
+                var edi =  '';
+            	if(data.ediInd == '0'){
+            		edi = "$!nonEdi"
+            	}
+            	if(data.ediInd == '1'){
+            		edi = "$!edi"
+            	}
+                getObj('edi_' + supindex).innerText = edi;
+            }
+        });
+    #if($!patternName == "1" )  
+        quotAdo =  '';
+        if (isAdoSupplierCode(supCd) == 'true') {
+            quotAdo = "$!quotAdo";
+        }
+        getObj('quotAdo_' + supindex).innerText = quotAdo; 
+    #end
+    }
+}
+
+function supplierNameOnblur(supindex) {
+#if($!patternName == "1" )
+    var supName = getObj("quotReqSupplierList["+supindex+"].supplierFrom.supplierName.supplierAbbrName").value;
+    var quotAdo =  '';
+    var regObj = document.getElementsByName("quotReqSupplierList["+supindex+"].supplierRegistrationFlg.supplierRegistrationFlg");
+
+    if(regObj[1].checked) {
+        return;
+    }
+    if(supName == "" ) {
+        getObj('quotAdo_' + supindex).innerText = quotAdo;
+    } else {
+        if (isAdoSupplierName(supName) == 'true') {
+            quotAdo = "$!quotAdo";
+        }
+        getObj('quotAdo_' + supindex).innerText = quotAdo;
+    }
+#else
+    return;
+#end
+}
+
+function isAdoSupplierCode(supCd) {
+#if($!patternName == "1" )  
+    var AdoSuppFlug = 'false';
+    var quotReqAdoSupCd = "";
+    #foreach($!quotReqAdoSupplierList in $!domain.quotReqAdoSupplierList)
+        #if($!quotReqAdoSupplierList.supplierRegistrationFlg.supplierRegistrationFlg == "1") 
+    quotReqAdoSupCd = "$!quotReqAdoSupplierList.supplierFrom.supCd";
+    if (supCd == quotReqAdoSupCd) {
+        AdoSuppFlug = 'true';
+    }
+        #end          
+    #end
+    return AdoSuppFlug;
+#else
+    return;
+#end
+}
+
+function isAdoSupplierName(supName) {
+#if($!patternName == "1" )
+    var quotReqAdoSupName = "";
+    var AdoSuppFlug = 'false';
+    #foreach($!quotReqAdoSupplierList in $!domain.quotReqAdoSupplierList)
+        #if($!quotReqAdoSupplierList.supplierRegistrationFlg.supplierRegistrationFlg == "0") 
+        quotReqAdoSupName = "$!quotReqAdoSupplierList.supplierFrom.supplierName.supplierAbbrName";
+        if (supName == quotReqAdoSupName) {
+            AdoSuppFlug = 'true';
+        }
+        #end
+    #end
+    return AdoSuppFlug;
+#else
+    return;
+#end
+}
+
+function supRegChange(supindex) {
+    var regObj = document.getElementsByName("quotReqSupplierList["+supindex+"].supplierRegistrationFlg.supplierRegistrationFlg");
+    if (regObj[0].checked) {
+        getObj("quotReqSupplierList["+supindex+"].supplierFrom.supCd").value = "";
+        getObj("quotReqSupplierList["+supindex+"].supplierFrom.supCd").readOnly = true;
+        getObj("quotReqSupplierList["+supindex+"].supplierFrom.supCd").tabIndex = "-1";
+        getObj("quotReqSupplierList["+supindex+"].supplierFrom.supCd").className = "SmallDsp";
+        getObj("quotReqSupplierList["+supindex+"].supplierFrom.supplierName.supplierAbbrName").readOnly = false;
+        getObj("quotReqSupplierList["+supindex+"].supplierFrom.supplierName.supplierAbbrName").tabIndex = "";
+        getObj("quotReqSupplierList["+supindex+"].supplierFrom.supplierName.supplierAbbrName").className = "Small";
+        getObj("quotReqSupplierList["+supindex+"].supplierFrom.supplierContact.ctc.address1.address").readOnly = false;
+        getObj("quotReqSupplierList["+supindex+"].supplierFrom.supplierContact.ctc.address1.address").tabIndex = "";
+        getObj("quotReqSupplierList["+supindex+"].supplierFrom.supplierContact.ctc.address1.address").className = "Small";
+        getObj("quotReqSupplierList["+supindex+"].supplierFrom.supplierContact.ctc.address2.address").readOnly = false;
+        getObj("quotReqSupplierList["+supindex+"].supplierFrom.supplierContact.ctc.address2.address").tabIndex = "";
+        getObj("quotReqSupplierList["+supindex+"].supplierFrom.supplierContact.ctc.address2.address").className = "Small";
+        getObj("quotReqSupplierList["+supindex+"].supplierFrom.supplierContact.supPersonName.supPersonName").readOnly = false;
+        getObj("quotReqSupplierList["+supindex+"].supplierFrom.supplierContact.supPersonName.supPersonName").tabIndex = "";
+        getObj("quotReqSupplierList["+supindex+"].supplierFrom.supplierContact.supPersonName.supPersonName").className = "Small";
+        getObj("quotReqSupplierList["+supindex+"].supplierFrom.supplierContact.ctc.telNo.telNo").readOnly = false;
+        getObj("quotReqSupplierList["+supindex+"].supplierFrom.supplierContact.ctc.telNo.telNo").tabIndex = "";
+        getObj("quotReqSupplierList["+supindex+"].supplierFrom.supplierContact.ctc.telNo.telNo").className = "Small noIME";
+        getObj("quotReqSupplierList["+supindex+"].supplierFrom.supplierContact.ctc.faxNo.faxNo").readOnly = false;
+        getObj("quotReqSupplierList["+supindex+"].supplierFrom.supplierContact.ctc.faxNo.faxNo").tabIndex = "";
+        getObj("quotReqSupplierList["+supindex+"].supplierFrom.supplierContact.ctc.faxNo.faxNo").className = "Small noIME";
+        getObj('edi_' + supindex).innerText = "$!nonEdi";
+    #if ($!patternName == "1" )
+        var supName = getObj("quotReqSupplierList["+supindex+"].supplierFrom.supplierName.supplierAbbrName").value;
+        var quotAdo =  '';
+        if (supName == "" ) {
+            getObj('quotAdo_' + supindex).innerText = quotAdo;
+        } else {
+            if (isAdoSupplierName(supName) == 'true') {
+                quotAdo = "$!quotAdo";
+            }
+            getObj('quotAdo_' + supindex).innerText = quotAdo;
+        }
+    #end
+    } else {
+        getObj("quotReqSupplierList["+supindex+"].supplierFrom.supCd").readOnly = false;
+        getObj("quotReqSupplierList["+supindex+"].supplierFrom.supCd").tabIndex = "";
+        getObj("quotReqSupplierList["+supindex+"].supplierFrom.supCd").className = "Small noIME";
+        getObj("quotReqSupplierList["+supindex+"].supplierFrom.supplierName.supplierAbbrName").readOnly = true;
+        getObj("quotReqSupplierList["+supindex+"].supplierFrom.supplierName.supplierAbbrName").tabIndex = "-1";
+        getObj("quotReqSupplierList["+supindex+"].supplierFrom.supplierName.supplierAbbrName").className = "SmallDsp";
+        getObj("quotReqSupplierList["+supindex+"].supplierFrom.supplierContact.ctc.address1.address").readOnly = true;
+        getObj("quotReqSupplierList["+supindex+"].supplierFrom.supplierContact.ctc.address1.address").tabIndex = "-1";
+        getObj("quotReqSupplierList["+supindex+"].supplierFrom.supplierContact.ctc.address1.address").className = "SmallDsp";
+        getObj("quotReqSupplierList["+supindex+"].supplierFrom.supplierContact.ctc.address2.address").readOnly = true;
+        getObj("quotReqSupplierList["+supindex+"].supplierFrom.supplierContact.ctc.address2.address").tabIndex = "-1";
+        getObj("quotReqSupplierList["+supindex+"].supplierFrom.supplierContact.ctc.address2.address").className = "SmallDsp";
+        getObj("quotReqSupplierList["+supindex+"].supplierFrom.supplierContact.supPersonName.supPersonName").readOnly = true;
+        getObj("quotReqSupplierList["+supindex+"].supplierFrom.supplierContact.supPersonName.supPersonName").tabIndex = "-1";
+        getObj("quotReqSupplierList["+supindex+"].supplierFrom.supplierContact.supPersonName.supPersonName").className = "SmallDsp";
+        getObj("quotReqSupplierList["+supindex+"].supplierFrom.supplierContact.ctc.telNo.telNo").readOnly = true;
+        getObj("quotReqSupplierList["+supindex+"].supplierFrom.supplierContact.ctc.telNo.telNo").tabIndex = "-1";
+        getObj("quotReqSupplierList["+supindex+"].supplierFrom.supplierContact.ctc.telNo.telNo").className = "SmallDsp";
+        getObj("quotReqSupplierList["+supindex+"].supplierFrom.supplierContact.ctc.faxNo.faxNo").readOnly = true;
+        getObj("quotReqSupplierList["+supindex+"].supplierFrom.supplierContact.ctc.faxNo.faxNo").tabIndex = "-1";
+        getObj("quotReqSupplierList["+supindex+"].supplierFrom.supplierContact.ctc.faxNo.faxNo").className = "SmallDsp";
+        getObj('edi_' + supindex).innerText = "";
+        #if($!patternName == "1" )
+        getObj('quotAdo_' + supindex).innerText = "";
+        #end
+    }
+}
+
+ function userOnblur() {
+    var userId = getObj("reqUser.reqUser.userID").value;
+    if(userId == "") {
+        getObj("reqUser.reqUser.section.sectionCd").value = "";
+        getObj("reqUser.reqUser.section.sectionName").value = "";
+        getObj("reqUser.reqUser.section.sectionPlace.sectionPlaceCd").value = "";
+        getObj("reqUser.reqUser.section.sectionPlace.sectionPlaceName").value = "";
+        getObj("reqUser.reqUser.userName").value = "";
+        getObj("reqUser.reqUser.externalNo.externalNo").value = "";
+        getObj("reqUser.reqUser.extNo.extensionNo").value = "";
+        getObj("reqUser.reqUser.mailAddr.mail").value = "";
+        getObj('link.reqUser.reqUser.mailAddr.mail').innerHTML="";
+        chgUserId = userId;
+    } else if (userId != chgUserId) {
+         chgUserId = userId;
+         $.ajax({
+            type: "POST",
+            async:false,
+            url:"../../getUserInfoOnBlur",
+            data: {
+                termFlag:'0',
+                companyCd:'#jsEscape($!domain.buyUser.buyUser.section.company.companyCd)',
+                referenceRangeFlg:'#jsEscape($!domain.buyUser.buyUser.section.company.referenceRangeFlg)',
+                userPermissionFlg:'110',
+                userId:userId
+            },
+            success:function(data){
+                //設定
+                getObj("reqUser.reqUser.section.sectionCd").value = data.userIdentify.sectionCd;
+                getObj("reqUser.reqUser.section.sectionName").value = data.sectionName;
+                getObj("reqUser.reqUser.section.sectionPlace.sectionPlaceCd").value = data.sectionPlaceCd;
+                getObj("reqUser.reqUser.section.sectionPlace.sectionPlaceName").value = data.sectionPlaceName;
+                getObj("reqUser.reqUser.userName").value = data.userName;
+                getObj("reqUser.reqUser.externalNo.externalNo").value = data.externalNo;
+                getObj("reqUser.reqUser.extNo.extensionNo").value = data.extensionNo;
+                getObj("reqUser.reqUser.mailAddr.mail").value = data.mailAddr;
+                getObj('link.reqUser.reqUser.mailAddr.mail').innerHTML=data.mailAddr;
+            }
+         });
+
+   }
+ }
+
+
+function downloadExt(filename, file) {
+    iframeChange("${flowExecutionUrl}&_eventId=downloadext", 'filename', filename, 'file', file);
+}
+
+function setChgUserIdValue() {
+    if (getObj("reqUser.reqUser.userID") != null) {
+        chgUserId = getObj("reqUser.reqUser.userID").value;
+    }
+}
+
+function itemCodeGetfocus(obj) {
+    preItemCode = obj.value;
+}
+
+function manufactCodeGetfocus(obj) {
+    manufacCd_x = obj.value;
+}
+
+
+//-->
+</script>
+
+</head>
+#if($!patternName == "1")
+    <body onload="onLoad();" style="overflow:visible" topmargin="0" leftmargin="0" marginwidth="0" marginheight="0" align="center" >
+#else
+    <body class="CreateArea" onload="onLoad();" >
+#end
+<form id="Body" name="Body" action="${flowExecutionUrl}&_eventId=apply" method="post" enctype="multipart/form-data">
+  #customFormHiddenInput("exclusiveSlipId.slipNo", "$!domain.exclusiveSlipId.slipNo")
+  #customFormHiddenInput("exclusiveSlipId.lastUpdDate", "$!domain.exclusiveSlipId.lastUpdDate")
+  #customFormHiddenInput("isClassify" "false")
+    #if($!patternName == "1")
+        <table class="SearchBody">
+        <tr>
+            <td id="SEARCH_AREA" class="SearchArea">
+                <span class="CornerTopGray">
+                <span class="Corner1"></span> <span class="Corner2"></span><span class="Corner3"></span><span class="Corner4"></span>
+                </span>
+                <table class="CornerMidGray" width="100%"><tr>
+                    <td class="ScreenName" width="30%" align="left">
+                       &nbsp;<script LANGUAGE="javascript" type="text/javascript">document.write(document.title);</script>
+                    </td>
+                    <td width="5%" align="left"><img class="Icon" id="PageFirst" src="../../image/btnPageFirst.gif"><img class="Icon" id="PageFirstOn" src="../../image/btnPageFirstOn.gif" style="display:none;"></td>
+                    <td width="5%" align="left"><img class="Icon" id="PagePrev" src="../../image/btnPagePrev.gif"><img class="Icon" id="PagePrevOn" src="../../image/btnPagePrevOn.gif" style="display:none;"></td>
+                    <td width="20%"  align="center" class="FontSmallBold" nowrap>
+                        <span id="PageNo" class="FontMiddleAnkBold">#out($!pageNow)</span>/<span id="PageCount" class="FontMiddleAnkBold">#out($!pageCount)</span>&nbsp;#customSpringMessage('PAGING_COUNT')<!-- 件 -->
+                    </td>
+                    <td width="5%" align="right"><img class="Icon" id="PageNext" src="../../image/btnPageNext.gif" ><img class="Icon" id="PageNextOn" src="../../image/btnPageNextOn.gif" style="display:none;"></td>
+                    <td width="5%" align="right"><img class="Icon" id="PageLast" src="../../image/btnPageLast.gif" ><img class="Icon" id="PageLastOn" src="../../image/btnPageLastOn.gif" style="display:none;"></td>
+                    <td width="30%" align="right" class="FontSmall">
+                    </td>
+                </tr></table>
+                <span class="CornerBtmGray">
+                <span class="Corner4"></span> <span class="Corner3"></span> <span class="Corner2"></span><span class="Corner1"></span>
+                </span>
+            </td>
+        </tr>
+        <tr>
+            <td class="NoBorder" style="height:auto; background-color:#CCC;">
+                <div id="Area" style="overflow:auto;HEIGHT: 100%;display:none;">
+    #end
+ <!-- カレンダーボックス  -->
+   <iframe id="CALENDARBOX" class="CALENDARBOX" framespacing="0" scrolling="no" frameborder="0" src="../../sbxCalendar/body.vm"></iframe>
+    #if($!patternName == "1")
+        <table class="HomeBox" align="center" style="position:relative;top:20px;">
+    #else
+        <table class="HomeBox" align="center" >
+    #end
+        <tr>
+            #if($!patternName == "1")
+                <td style="padding:60px,16px,0px,16px">
+            #else
+                <td style="padding:0px,16px,0px,16px">
+            #end
+                <!-- エラーエリア -->
+                <table>
+                    <tr>
+                        <td align="left">
+                            <table class="NoBorder" width="98%">
+                                <tr>
+                                    <td>
+                                        <u><img src="../../image/mrkCircle.gif"><span id="StepTitle" class="FontStepTitle">#customSpringMessage('QUOT_REQ_INPUT')</span></u><br><br>
+                                        <span id="STEPMSG" class="FontSmallBold DarkBlue">#customSpringMessage('PSQOT040_HEADER_COMMENT')<br><br></span>
+                                    </td>
+                                    <td align="right" valign="middle" id="Submit1" nowrap>
+                                        #if ($!patternName == "1")
+                                        <input name="Button1" type="button" class="LargeButton Red" value="#customSpringMessage('REQ_RETURN')" onclick="sendBack();">&nbsp;&nbsp;<!-- 差戻し -->
+                                        #end
+                                        #if ($!patternName != "4" && $!patternName != "5" && $!patternName != "6")
+                                            #if ($!domain.quotReqStatus.status !='01')
+                                        <input name="Button2" type="button" class="LargeButton" value="#customSpringMessage('TEMPORARY_PRESERVATION')" onclick="tempSave();">&nbsp;&nbsp;<!-- 一時保存-->
+                                            #end
+                                        #end
+                                        <input name="Button3" type="button" class="LargeButton" value="#customSpringMessage('REQ')" onclick="apply();"><!-- 申請 -->
+                                    </td>
+                                </tr>
+                                <tr id="status" style="display:none;">
+                                    <td>
+                                        <input id="sts" type="text">
+                                    </td>
+                                </tr>
+                                <tr id ="TR_ERROR" style="display:none;"><td class="error" style="height:0px;" colspan="2">
+                                    $!errorMessage
+                                </td></tr>
+                            </table>
+                            <!--ヘッダ部-->
+                            <table class="Box1G ListBorderWidth" width="100%" >
+                                <tbody class="Box1G ListBorderWidth">
+                                    $!PSQOT040PageCreater.build('reg', '_tr_style', '', '_td_style_left', 'class="Box1H FontBoxHeader"','_td_style_right', 'class="Box1D FontSmallAnk"', '_label_style', 'FontSmallAnk')
+                                    #foreach($!item in $!PSQOT040PageCreater.getItemListForBody())
+                                        #if($!item.getColumnName()=="T_QUOT_REQUEST.QUOT_REQ_NO")
+                                            #if ($!patternName != "0" || $!isSuccess == "true")
+                                                $!PSQOT040PageCreater.printSpecial("s00_label",$!item,'_item_style','class="FontSlipNo"')
+                                            #end
+                                        #elseif($!item.getColumnName()=="T_QUOT_REQUEST.QUOT_REQ_VERSION")
+                                            $!PSQOT040PageCreater.printSpecial("s00_label",$!item)
+                                        #elseif($!item.getColumnName()=="T_QUOT_REQUEST.ITEM_CLASS_S")
+                                            #if($!patternName == "6" || $!itemEditFlg == "0")
+                                                $!PSQOT040PageCreater.printSpecial("m10_showItemKind",$!item,'_termFlag','0')
+                                            #else
+                                                $!PSQOT040PageCreater.printSpecial("m06_inputItemKind",$!item,'popupPageid','PSQOT040','_sectionTypeCode','0')
+                                            #end
+                                        #elseif($!item.getColumnName()=="T_QUOT_REQUEST.REQ_USER_ID")
+                                            #if($!patternName == "1" || $!patternName == "2" || $!patternName == "6" || $!itemEditFlg == "0" || $!isFromRequest)
+                                                $!PSQOT040PageCreater.printSpecial("CLIENT", "m15_showUser",$!item)
+                                            #else
+                                                $!PSQOT040PageCreater.printSpecial("CLIENT","m01_inputUser",$!item,'popupPageid','PSQOT040','_userCdEvent', 'onblur="userOnblur()";', '_extensionNoEvent', 'onfocus="this.select();"')
+                                            #end
+                                        #elseif($!item.getColumnName()=="T_QUOT_REQUEST.FOR_BUYER_COMMENT")
+                                            $!PSQOT040PageCreater.printSpecial("s00_label",$!item)
+                                        #elseif($!item.getColumnName()=="T_QUOT_REQUEST.APP_ROUTE_NO")
+                                            $!PSQOT040PageCreater.printSpecial("m02_inputAppRoute",$!item,'_voucherType', 'B', '_item_style','class="Small" onchange="setAppRouteName();setShowButton();"','_companyCd',$!domain.buyUser.buyUser.section.company.companyCd,'_sectionCd',$!domain.buyUser.buyUser.section.sectionCd,'_currentAppRoute',"$!domain.approute.appRouteNo")
+                                        #elseif($!item.getColumnName()=="T_QUOT_REQUEST.TITLE_NAME")
+                                            #if($!patternName == "6" || $!itemEditFlg == "0")
+                                                $!PSQOT040PageCreater.printSpecial("s00_label",$!item)
+                                            #else
+                                               $!PSQOT040PageCreater.printDefault($!item)
+                                            #end
+                                        #elseif($!item.getColumnName()=="T_QUOT_REQUEST.QUOT_RESP_LIMIT_DATE")
+                                            #if($!patternName == "6" || $!itemEditFlg == "0")
+                                                $!PSQOT040PageCreater.printSpecial("s00_label",$!item)
+                                            #elseif($!patternName == "1")
+                                                $!PSQOT040PageCreater.printDefault($!item, '_scrollobj', 'Area')
+                                            #else
+                                                $!PSQOT040PageCreater.printDefault($!item)
+                                            #end
+                                        #elseif($!item.getColumnName()=="T_QUOT_REQUEST.DELIV_PLACE_CD")
+                                            #if($!patternName == "6" || $!itemEditFlg == "0")
+                                                $!PSQOT040PageCreater.printSpecial("DELIVERY_PLACE","m17_showDelivery",$!item)
+                                            #else
+                                                $!PSQOT040PageCreater.printSpecial("DELIVERY_PLACE","m04_inputDelivery",$!item,'popupPageid','PSQOT040','_event', 'onblur="deliveryPlaceOnBlur()"; onfocus="deliveryPlaceCodeGetfocus(this);"')
+                                            #end
+                                        #elseif($!item.getColumnName()=="T_QUOT_REQUEST.ATTACH_FILE_SEQ1")
+                                            #if($!patternName == "6" || $!itemEditFlg == "0")
+                                                $!PSQOT040PageCreater.printSpecial("s13_showFile2",$!item)
+                                            #else
+                                                $!PSQOT040PageCreater.printSpecial("s01_file2",$!item,'_td_style_right', 'class="Box1Dd FontMini"')
+                                            #end
+                                        #elseif($!item.getColumnName()=="T_QUOT_REQUEST.FOR_SUPPRIER_COMMENT")
+                                            #if($!patternName == "6" || $!itemEditFlg == "0")
+                                                $!PSQOT040PageCreater.printSpecial("s00_label",$!item)
+                                            #else
+                                                $!PSQOT040PageCreater.printDefault($!item)
+                                            #end
+                                        #else
+                                            #if($!patternName == "1")
+                                                $!PSQOT040PageCreater.printDefault($!item, '_scrollobj', 'Area')
+                                            #else
+                                                $!PSQOT040PageCreater.printDefault($!item)
+                                            #end
+                                        #end
+                                    #end
+                                        <tr id = "edit_mark1">
+                                            <td nowrap class="Box1H FontBoxHeader" >#customSpringMessage('HOPE_PRICE_TOTAL')</td>
+                                            <td nowrap class="Box1D FontCurrMiddle">#out($!domain.currency.currencyMark)<span id="orderAmount" class="FontCurrMiddle">#out($!domain.totalAmount.amountFormat)</span><!-- 希望金額合計 -->
+                                            <input type="hidden" id="totalAmount" name="totalAmount.amountFormat" value="#out($!domain.totalAmount.amountFormat)">
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                           <!--   <script>
+                            document.getElementById("appManagement.routeNo").onchange=function(){
+                            if(!this.options[0].selected){
+                            document.getElementById("ViewRoot").disabled = false;}
+                            else{
+                             document.getElementById("ViewRoot").disabled = true;}
+                            };
+                            </script>-->
+
+                            ## 仮単価注文の見積の場合取引先追加不可
+                            #if(!$orderUndecidedFlg)
+                            <br>
+                            <table class="NoBorder" width="100%">
+                                <tr>
+                                    <td>
+                                        <span class="CornerTopBrown"><span class="Corner1"></span> <span class="Corner2"></span> <span class="Corner3"></span><span class="Corner4"></span></span>
+                                        <div class="CornerMidBrown" width="100%">
+                                            <table>
+                                                <tbody>
+                                                    <tr>
+                                                        <td>
+                                                            &nbsp;<img src="../../image/mrkInfo.gif">&nbsp;
+                                                        </td>
+                                                        <td width="500px;" class="FontSmallBold DarkBlue" align="left">#customSpringMessage("SUP_ADD_COMMENT")<!-- 最大N社まで入力することができます。 -->
+                                                        </td>
+                                                        <td>
+                                                            <input type="button" class="SmallButton" value="#customSpringMessage('SUPPLIER_ADD')" onclick="addSupDetail();"><!-- 取引先追加   -->
+                                                        </td>
+                                                    </tr>
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                        <span class="CornerBtmBrown"><span class="Corner4"></span> <span class="Corner3"></span> <span class="Corner1"></span><span class="Corner1"></span></span>
+                                    </td>
+                                </tr>
+                            </table>
+                            #end
+
+                            <br>
+                            <table id="SupDetailTable" class="Box1G" width="100%">
+                                    <!--取引先明細リスト-->
+                                    #set( $index = 0 )
+                                    #set( $supindex = 0 )
+
+                                    #foreach($!quotReqSupplier in $!domain.quotReqSupplierList)
+                                        ## 取引先追加のフラグ    0:編集可能、1:編集不可
+                                        #set( $sup_add_flg = "1")
+                                        #if($!patternName != "6" || $!domain.quotReqSupplierList[$velocityCount].quotReqSupplierIdentify.quotSupplierLineNo == "")
+                                            #set( $sup_add_flg = "0")
+                                        #end
+                                        ##取引先追加でも再申請、かつ見積依頼取引先の承認区分が0:未承認だったら編集OK
+                                        #if($!patternName == "6" && $!PROCESSFLG_AGAIN_flg == "1" && $!domain.quotReqSupplierList[$velocityCount].approvalIndValue == "0")
+                                            #set( $sup_add_flg = "0")
+                                        #end
+                                        ##ただし、取消された取引先の場合や仮単価見積の場合は編集NG
+                                        #if($!patternName == "6" && $!PROCESSFLG_AGAIN_flg == "1" && $!domain.quotReqSupplierList[$velocityCount].correctInd.correctInd == "3" || $orderUndecidedFlg)
+                                            #set( $sup_add_flg = "1")
+                                        #end
+
+                                        <tbody id="SupDetail$velocityCount" class="Box1H ListBorderWidth">
+                                            <tr>
+                                                <td nowrap class="Box1H FontSmallAnkBold" rowspan="6" width="5%">
+                                                    <p>#set( $index = $index + 1 )$index</p>
+                                                    #if($sup_add_flg == "0")
+                                                        <span><a class="FontMini" href="#" onclick="delSupDetail($velocityCount)">#customSpringMessage('ACTION_CANCEL')</a></span><!-- 取消   -->
+                                                    #end
+                                                </td>
+                                                <td class="Box1Hd FontBoxHeader" width="20%">#customSpringMessage('SUP_IUNPUT')</td><!-- 取引先登録  -->
+                                                <td class="Box1Dd FontSmallAnk"  colspan="3">
+                                                    #if($sup_add_flg == "0")
+
+                                                        #customFormRadioButtons("domain.quotReqSupplierList[$velocityCount].supplierRegistrationFlg.supplierRegistrationFlg" $subMstIndList "" "onclick='supRegChange($!supindex)'")
+
+                                                        <script language="javascript" type="text/javascript">
+                                                        function supSelect_$supindex() {
+                                                            var regObj = document.getElementsByName("quotReqSupplierList[$velocityCount].supplierRegistrationFlg.supplierRegistrationFlg");
+                                                            if (regObj[0].checked) {
+                                                                return;
+                                                            } else {supplierPopup.setObject(getObj('quotReqSupplierList[$velocityCount].supplierFrom.supCd'),
+                                                                                        getObj('quotReqSupplierList[$velocityCount].supplierFrom.supplierName.supplierName'),
+                                                                                        getObj('quotReqSupplierList[$velocityCount].supplierFrom.supplierName.supplierAbbrName'),
+                                                                                        null,
+                                                                                        null,
+                                                                                        getObj('quotReqSupplierList[$velocityCount].supplierFrom.ediInd.ediInd'),
+                                                                                        null,
+                                                                                        null,
+                                                                                        null,
+                                                                                        null,
+                                                                                        null,
+                                                                                        null,
+                                                                                        null,
+                                                                                        null,
+                                                                                        getObj('quotReqSupplierList[$velocityCount].supplierFrom.supplierContact.ctc.address1.address'),
+                                                                                        getObj('quotReqSupplierList[$velocityCount].supplierFrom.supplierContact.ctc.address2.address'),
+                                                                                        getObj('quotReqSupplierList[$velocityCount].supplierFrom.supplierContact.ctc.telNo.telNo'),
+                                                                                        getObj('quotReqSupplierList[$velocityCount].supplierFrom.supplierContact.ctc.faxNo.faxNo'),
+                                                                                        null,
+                                                                                        null,
+                                                                                        null,
+                                                                                        null,
+                                                                                        null,
+                                                                                        null,
+                                                                                        null,
+                                                                                        null,
+                                                                                        getObj('vendorCdObject'),
+                                                                                        getObj('quotReqSupplierList[$velocityCount].supplierFrom.supplierContact.supPersonName.supPersonName'),
+                                                                                        null,
+                                                                                        null,
+                                                                                        null,
+                                                                                        null,
+                                                                                        function(arguments){
+							                                                              	var edi =  '';
+							                                                            	if(arguments[5] == '0'){
+							                                                            		edi = '$!nonEdi'
+							                                                            	}
+							                                                            	if(arguments[5] == '1'){
+							                                                            		edi = '$!edi'
+							                                                            	}
+							                                                            	getObj('edi_$supindex').innerText = edi;
+							                                                            	
+							                                                           #if($!patternName == "1")
+                                                                                            var quotAdo =  '';
+                                                                                            if (isAdoSupplierCode(arguments[0]) == 'true') {
+                                                                                               quotAdo = "$!quotAdo";
+                                                                                            }
+                                                                                            getObj('quotAdo_$supindex').innerText = quotAdo;
+                                                                                       #end
+							                                                              }
+                                                                                        );
+                                                                masterSearch('../../src/supplierPopup/search?pageid=supplierPopupSearch&popupPageid=PSQOT040',
+                                                                       'supplierPopup',
+                                                                       '700',
+                                                                       '500');
+                                                            }
+                                                        }
+                                                        </script>
+                                                    #else
+                                                        <span class="FontSmallAnk">#out($!domain.quotReqSupplierList[$velocityCount].supplierRegistrationFlg.supplierRegistrationFlg_PageValue)</span>
+                                                    #end
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td nowrap class="Box1Hd FontBoxHeader">#customSpringMessage('SUPPLIER')</td><!-- 取引先 -->
+                                                <td nowrap  class="Box1Dd FontSmallAnk" colspan="3">
+                                                    #customFormHiddenInput("quotReqSupplierList[$velocityCount].supplierFrom.ediInd.ediInd", "$!domain.quotReqSupplierList[$velocityCount].supplierFrom.ediInd.ediInd")
+                                                    #if($sup_add_flg == "0")
+                                                        #if($!domain.quotReqSupplierList[$velocityCount].supplierRegistrationFlg.supplierRegistrationFlg == "0")
+                                                            #springFormInput("domain.quotReqSupplierList[$velocityCount].supplierFrom.supCd" "class='SmallDsp' readonly tabIndex='-1' maxLength='12' size='20' onblur='supplierOnblur($!supindex)'" )
+                                                            #springFormInput("domain.quotReqSupplierList[$velocityCount].supplierFrom.supplierName.supplierAbbrName" "class='Small onIME' type='text' size='71' onblur='supplierNameOnblur($!supindex)'")
+                                                        #else
+                                                            #springFormInput("domain.quotReqSupplierList[$velocityCount].supplierFrom.supCd" "class='Small noIME' maxLength='12' size='20' onblur='supplierOnblur($!supindex)'")
+                                                            #springFormInput("domain.quotReqSupplierList[$velocityCount].supplierFrom.supplierName.supplierAbbrName" "class='SmallDsp onIME' type='text' readonly tabIndex='-1'  maxLength='30' size='71' onblur='supplierNameOnblur($!supindex)'")
+                                                        #end
+                                                        #customFormHiddenInput("quotReqSupplierList[$velocityCount].supplierFrom.supplierName.supplierName", "$!domain.quotReqSupplierList[$velocityCount].supplierFrom.supplierName.supplierName")
+                                                        <img id="SupSearch" class="Icon" src="../../image/btnLupe.gif" onclick="supSelect_$supindex()">
+                                                    #else
+                                                        <span class="FontSmallAnk">#out($!domain.quotReqSupplierList[$velocityCount].supplierFrom.supCd)
+                                                        &nbsp;&nbsp;#out($!domain.quotReqSupplierList[$velocityCount].supplierFrom.supplierName.supplierAbbrName)</span>
+                                                    #end
+                                                    <span id="edi_$supindex">
+													  #if(($!domain.quotReqSupplierList[$velocityCount].supplierFrom.ediInd.ediInd == '0' && $!domain.quotReqSupplierList[$velocityCount].supplierFrom.supplierName.supplierAbbrName != '') || $!domain.quotReqSupplierList[$velocityCount].supplierRegistrationFlg.supplierRegistrationFlg == '0')
+								                      	$!nonEdi
+								                      #end
+													  #if($!domain.quotReqSupplierList[$velocityCount].supplierFrom.ediInd.ediInd == '1')
+								                      	$!edi
+								                      #end
+                                                    </span>
+                                                    #if($!patternName == "1")
+                                                        &nbsp;
+                                                        <span id="quotAdo_$supindex" nowrap class="FontWarn Subcon"></span>
+                                                    #end
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td class="Box1Hd FontBoxHeader">#customSpringMessage('ADDRESS1')</td><!-- 住所１ -->
+                                                <td class="Box1Dd FontSmallAnk" colspan="3">
+                                                    #if($sup_add_flg == "0")
+                                                        #if($!domain.quotReqSupplierList[$velocityCount].supplierRegistrationFlg.supplierRegistrationFlg == "0")
+                                                            #springFormInput("domain.quotReqSupplierList[$velocityCount].supplierFrom.supplierContact.ctc.address1.address" "class='Small onIME' maxlength='80' size='120'")
+                                                        #else
+                                                            #springFormInput("domain.quotReqSupplierList[$velocityCount].supplierFrom.supplierContact.ctc.address1.address" "class='SmallDsp onIME' readonly tabIndex='-1' maxlength='80' size='120'")
+                                                        #end
+                                                    #else
+                                                        <span class="FontSmallAnk">#out($!domain.quotReqSupplierList[$velocityCount].supplierFrom.supplierContact.ctc.address1.address)</span>
+                                                    #end
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td class="Box1Hd FontBoxHeader">#customSpringMessage('ADDRESS2')</td><!-- 住所２ -->
+                                                <td class="Box1Dd FontSmallAnk" colspan="3">
+                                                    #if($sup_add_flg == "0")
+                                                        #if($!domain.quotReqSupplierList[$velocityCount].supplierRegistrationFlg.supplierRegistrationFlg == "0")
+                                                            #springFormInput("domain.quotReqSupplierList[$velocityCount].supplierFrom.supplierContact.ctc.address2.address" "class='Small onIME' maxlength='80' size='120'")
+                                                        #else
+                                                            #springFormInput("domain.quotReqSupplierList[$velocityCount].supplierFrom.supplierContact.ctc.address2.address" "class='SmallDsp onIME' readonly tabIndex='-1' maxlength='80' size='120'")
+                                                        #end
+                                                    #else
+                                                        <span class="FontSmallAnk">#out($!domain.quotReqSupplierList[$velocityCount].supplierFrom.supplierContact.ctc.address2.address)</span>
+                                                    #end
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td class="Box1Hd FontBoxHeader">#customSpringMessage('CHARGE')</td><!-- 担当 -->
+                                                <td class="Box1Dd FontSmallAnk" colspan="3">
+                                                    #if($sup_add_flg == "0")
+                                                        #if($!domain.quotReqSupplierList[$velocityCount].supplierRegistrationFlg.supplierRegistrationFlg == "0")
+                                                            #springFormInput("domain.quotReqSupplierList[$velocityCount].supplierFrom.supplierContact.supPersonName.supPersonName" "class='Small onIME' maxlength='30' size='71'")
+                                                        #else
+                                                            #springFormInput("domain.quotReqSupplierList[$velocityCount].supplierFrom.supplierContact.supPersonName.supPersonName" "class='SmallDsp onIME' readonly tabIndex='-1' maxlength='30' size='71'")
+                                                        #end
+                                                    #else
+                                                        <span class="FontSmallAnk">#out($!domain.quotReqSupplierList[$velocityCount].supplierFrom.supplierContact.supPersonName.supPersonName)</span>
+                                                    #end
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td class="Box1Hdt FontBoxHeader">#customSpringMessage('TEL_NO')</td><!-- 電話番号 -->
+                                                <td class="Box1Ddt FontSmallAnk">
+                                                    #if($sup_add_flg == "0")
+                                                        #if($!domain.quotReqSupplierList[$velocityCount].supplierRegistrationFlg.supplierRegistrationFlg == "0")
+                                                            #springFormInput("domain.quotReqSupplierList[$velocityCount].supplierFrom.supplierContact.ctc.telNo.telNo" "class='Small noIME' maxlength='20' size='30'")
+                                                        #else
+                                                            #springFormInput("domain.quotReqSupplierList[$velocityCount].supplierFrom.supplierContact.ctc.telNo.telNo" "class='SmallDsp noIME' readonly tabIndex='-1' maxlength='20' size='30'")
+                                                        #end
+                                                    #else
+                                                        <span class="FontSmallAnk">#out($!domain.quotReqSupplierList[$velocityCount].supplierFrom.supplierContact.ctc.telNo.telNo)</span>
+                                                    #end
+                                                 </td>
+                                                 <td class="Box1Hdt FontBoxHeader">#customSpringMessage('FAX_NO')</td><!-- FAX番号 -->
+                                                 <td class="Box1Ddt FontSmallAnk">
+                                                    #if($sup_add_flg == "0")
+                                                        #if($!domain.quotReqSupplierList[$velocityCount].supplierRegistrationFlg.supplierRegistrationFlg == "0")
+                                                            #springFormInput("domain.quotReqSupplierList[$velocityCount].supplierFrom.supplierContact.ctc.faxNo.faxNo" "class='Small noIME' maxlength='20' size='30'")
+                                                        #else
+                                                            #springFormInput("domain.quotReqSupplierList[$velocityCount].supplierFrom.supplierContact.ctc.faxNo.faxNo" "class='SmallDsp noIME' readonly tabIndex='-1' maxlength='20' size='30'")
+                                                        #end
+                                                    #else
+                                                        <span class="FontSmallAnk">#out($!domain.quotReqSupplierList[$velocityCount].supplierFrom.supplierContact.ctc.faxNo.faxNo)</span>
+                                                    #end
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                        #set( $supindex = $supindex + 1 )
+                                    #end
+                            </table>
+
+                            ## 仮単価注文の見積の場合取引先追加不可
+                            #if(!$orderUndecidedFlg)
+                            <br>
+                            <table class="NoBorder" width="100%">
+                                <tr>
+                                    <td>
+                                        <span class="CornerTopBrown"><span class="Corner1"></span> <span class="Corner2"></span> <span class="Corner3"></span><span class="Corner4"></span></span>
+                                        <div class="CornerMidBrown" width="100%">
+                                            <table>
+                                                <tbody>
+                                                    <tr>
+                                                        <td>
+                                                            &nbsp;<img src="../../image/mrkInfo.gif">&nbsp;
+                                                        </td>
+                                                        <td width="500px;" class="FontSmallBold DarkBlue" align="left">#customSpringMessage("SUP_ADD_COMMENT")<!-- 最大N社まで入力することができます。 -->
+                                                        </td>
+                                                        <td>
+                                                            <input type="button" class="SmallButton" value="#customSpringMessage('SUPPLIER_ADD')" onclick="addSupDetail();"><!-- 取引先追加 -->
+                                                        </td>
+                                                    </tr>
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                        <span class="CornerBtmBrown"><span class="Corner4"></span> <span class="Corner3"></span> <span class="Corner1"></span><span class="Corner1"></span></span>
+                                    </td>
+                                </tr>
+                            </table>
+                            #end
+
+                            #if($!patternName != "2" && $!patternName != "6" && $!addItemFlg != "0")
+                            <br>
+                            <table class="NoBorder" width="100%">
+                                <tr>
+                                    <td>
+                                        <span class="CornerTopBrown"><span class="Corner1"></span> <span class="Corner2"></span> <span class="Corner3"></span><span class="Corner4"></span></span>
+                                        <div class="CornerMidBrown" width="100%">
+                                            <table>
+                                                <tbody>
+                                                    <tr>
+                                                        <td>
+                                                            &nbsp;<img src="../../image/mrkInfo.gif">&nbsp;
+                                                        </td>
+                                                        <td width="500px;" class="FontSmallBold DarkBlue" align="left">#customSpringMessage("DTL_ADD_COMMENT")
+                                                        </td>
+                                                        <td>
+                                                            <input type="button" class="SmallButton" value="#customSpringMessage('DETAIL_ADD')" onclick="addItemDetail();"><!-- 明細追加 -->
+                                                        </td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td>
+                                                            &nbsp;<img src="../../image/mrkInfo.gif">&nbsp;
+                                                        </td>
+                                                        <td width="500px;" class="FontSmallBold DarkBlue" align="left">#customSpringMessage("COMMENT_PASTE_INPUT_VALUE")<!--入力した値を明細に一括で貼り付けることができます。-->
+                                                            <input class="MiddleAnk  noIME" id="aptDate" name="aptDate" type="text" maxlength="8" size="12" value=""
+                                                                onblur="dateOnBlur(this);"
+                                                                onfocus="dateOnFocus(this);">
+                                                             #if($!patternName == "1")
+                                                                 <img class="Icon"
+                                                                     src="../../image/btnCalendar.gif"
+                                                                     onclick="initSearchBox(1,getElementById('aptDate'), '', getElementById('Area'));">
+                                                             #else
+                                                                <img class="Icon"
+                                                                     src="../../image/btnCalendar.gif"
+                                                                     onclick="initSearchBox(1,getElementById('aptDate'));">
+                                                             #end
+                                                        </td>
+                                                        <td>
+                                                           <input type="button" class="SmallButton" value="#customSpringMessage('DELIV_ATTACH')" onclick="pasteItem('aptDate');">
+                                                        </td>
+                                                    </tr>
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                        <span class="CornerBtmBrown"><span class="Corner4"></span> <span class="Corner3"></span> <span class="Corner1"></span><span class="Corner1"></span></span>
+                                    </td>
+                                </tr>
+                            </table>
+                            #end
+                            <br>
+                            <table id="DetailTable" class="Box1G" width="100%">
+                                #if($!patternName == "2" || $!patternName == "6" || $!addItemFlg == "0")
+                                    $!PSQOT040PageCreater.buildDetail("index")
+                                #else
+                                    $!PSQOT040PageCreater.buildDetail("index&cancel")
+                                #end
+                                <!--品名明細リスト-->
+                                #foreach($!quotReqItem in $!domain.quotReqItemList)
+                                    #set($countindex=$velocityCount)
+                                    <tbody id="Detail$velocityCount" class="Box1H">
+                                        $!pageCreater.printDetail('4', 'detail', '0', $velocityCount, 0, '_tr_style', '', '_td_style_left', 'class="Box1H FontBoxHeader"','_td_style_right', 'class="Box1D FontSmallAnk"')
+                                        #set($listCount=$!PSQOT040PageCreater.getItemListForDetail($velocityCount).size())
+                                        #foreach($!item in $!PSQOT040PageCreater.getItemListForDetail($velocityCount))
+                                             #if(($velocityCount+1) == $listCount)<!-- 最後の一個データ-->
+                                                #set($td_style_left="class='Box1Hdt FontBoxHeader'")
+                                                #set($td_style_right="class='Box1Ddt'")
+                                                #set($special_td_style_right="class='Box1Ddt FontSmallAnk'")
+                                             #else
+                                                #set($td_style_left="class='Box1Hd FontBoxHeader'")
+                                                #set($td_style_right="class='Box1Dd FontSmallAnk'")
+                                                #set($special_td_style_right="class='Box1Dd FontSmallAnk'")
+                                             #end
+                                            #if($!item.getColumnName()=="T_QUOT_REQ_DTL.ITEM_CD")
+                                                #if($!patternName == "6" || $!itemEditFlg == "0")
+                                                    $!PSQOT040PageCreater.printSpecial("m08_inputItem",$!item,'popupPageid','PSQOT040','patternName', '6', '_td_style_left', $td_style_left,'_td_style_right', $special_td_style_right)
+                                                #else
+                                                    $!PSQOT040PageCreater.printSpecial("m08_inputItem",$!item,'popupPageid','PSQOT040','_index',"$countindex",
+                                                    '_itemNameObj',"quotReqItemList[$countindex].itemName.itemName",
+                                                    '_katashikiObj',"quotReqItemList[$countindex].itemName.katashiki",
+                                                    '_manufactCdObj',"quotReqItemList[$countindex].itemName.manufact.manufactCd",
+                                                    '_manufactNameObject',"quotReqItemList[$countindex].itemName.manufact.manufactName",
+                                                    '_unitCdObject',"quotReqItemList[$countindex].quotHopeCondition.hopeUnit.unitCd",
+                                                    '_unitNameObject',"quotReqItemList[$countindex].quotHopeCondition.hopeUnit.unitName",
+                                                    '_setItemName', "itemOnblur($!countindex)",
+                                                    '_event', 'onfocus = "itemCodeGetfocus(this);"',
+                                                    '_td_style_left', $td_style_left,'_td_style_right', $special_td_style_right)
+                                                #end
+                                            #elseif($!item.getColumnName()=="T_QUOT_REQ_DTL.ITEM_NAME")
+                                                #if($!patternName == "6" || $!itemEditFlg == "0")
+                                                    $!PSQOT040PageCreater.printSpecial("s00_label",$!item,'_td_style_left', $td_style_left,'_td_style_right', $special_td_style_right)
+                                                #else
+                                                    $!PSQOT040PageCreater.printDefault($!item,'_td_style_left', $td_style_left,'_td_style_right', $special_td_style_right)
+                                                #end
+                                            #elseif($!item.getColumnName()=="T_QUOT_REQ_DTL.KATASHIKI")
+                                                #if($!patternName == "6" || $!itemEditFlg == "0")
+                                                    $!PSQOT040PageCreater.printSpecial("s00_label",$!item,'_td_style_left', $td_style_left,'_td_style_right', $special_td_style_right)
+                                                #else
+                                                    $!PSQOT040PageCreater.printDefault($!item,'_td_style_left', $td_style_left,'_td_style_right', $special_td_style_right)
+                                                #end
+                                            #elseif($!item.getColumnName()=="T_QUOT_REQ_DTL.MANUFACT_CD")
+                                                #if($!patternName == "6" || $!itemEditFlg == "0")
+                                                    $!PSQOT040PageCreater.printSpecial("m20_showManufact",$!item,'_td_style_left', $td_style_left,'_td_style_right', $special_td_style_right)
+                                                #else
+                                                    $!PSQOT040PageCreater.printSpecial("m09_inputManufact",$!item,'popupPageid','PSQOT040', '_event', "onblur='manufactOnBlur($!countindex)' onfocus='manufactCodeGetfocus(this)'",'_td_style_left', $td_style_left,'_td_style_right', $special_td_style_right)
+                                                #end
+                                            #elseif($!item.getColumnName()=="T_QUOT_REQ_DTL.CURRENCY_CD")
+                                                $!PSQOT040PageCreater.printSpecial("s00_label",$!item,'_td_style_left', $td_style_left,'_td_style_right', 'class="Box1Dd FontSmall"')
+                                            #elseif($!item.getColumnName()=="T_QUOT_REQ_DTL.UNIT_PRICE")
+                                                #if($!patternName == "6")
+                                                    $!PSQOT040PageCreater.printSpecial("s24_currency",$!item,'_td_style_left', $td_style_left,'_td_style_right', $special_td_style_right, '_item_style', 'class="FontCurrSmall"')
+                                                #else
+                                                    #set($eventOnblur1='onblur="editVal(this); amountByAjax(')
+                                                    #set($eventOnblur2='); "')
+                                                    #set($eventOnblur3=' onfocus="deleteComma(this);"')
+                                                    #set($eventOnblur="$eventOnblur1$countindex$eventOnblur2$eventOnblur3")
+                                                    $!PSQOT040PageCreater.printSpecial("s02_currency",$!item,'_event', $eventOnblur, '_td_style_left', $td_style_left,'_td_style_right', $special_td_style_right)
+                                                #end
+                                            #elseif($!item.getColumnName()=="T_QUOT_REQ_DTL.QUOT_REQ_VOL")
+                                                #if($!patternName == "6" || $!itemEditFlg == "0")
+                                                    $!PSQOT040PageCreater.printSpecial("HOPE_VOL_UNIT", "s16_showVol",$!item,'_td_style_left', $td_style_left,'_td_style_right', 'class="Box1Dd  FontSmallAnk"')
+                                                #else
+                                                    #set($eventOnblur1='onblur="editVal(this); amountByAjax(')
+                                                    #set($eventOnblur2='); "')
+                                                    #set($eventOnblur3=' onfocus="deleteComma(this);"')
+                                                    #set($eventOnblur="$eventOnblur1$countindex$eventOnblur2$eventOnblur3")
+                                                    $!PSQOT040PageCreater.printSpecial("HOPE_VOL_UNIT", "s03_volUnit",$!item,'_event', $eventOnblur, '_td_style_left', $td_style_left,'_td_style_right', $special_td_style_right)
+                                                #end
+                                            #elseif($!item.getColumnName()=="T_QUOT_REQ_DTL.QUOT_REQ_AMOUNT")
+                                                #if($!patternName == "6" || $!itemEditFlg == "0")
+                                                    $!PSQOT040PageCreater.printSpecial("s24_currency",$!item,'_td_style_left', $td_style_left,'_td_style_right', $special_td_style_right, '_item_style', 'class="FontCurrSmall"')
+                                                #else
+                                                    #set($currencyMarkId1='currencyMark[')
+                                                    #set($currencyMarkId2=']')
+                                                    #set($currencyMarkId="$currencyMarkId1$countindex$currencyMarkId2")
+                                                    #set($hopeAmountId1='id="hopeAmount[')
+                                                    #set($hopeAmountId2=']" class="FontCurrSmall"')
+                                                    #set($hopeAmountId="$hopeAmountId1$countindex$hopeAmountId2")
+                                                    $!PSQOT040PageCreater.printSpecial("s24_currency",$!item,'_td_style_left', $td_style_left,'_td_style_right', $special_td_style_right, '_item_style', $hopeAmountId, 'currencyMarkId', $currencyMarkId )
+                                                #end
+                                            #elseif($!item.getColumnName()=="T_QUOT_REQ_DTL.REQ_DELIV_DATE")
+                                                #if($!patternName == "6" || $!itemEditFlg == "0")
+                                                    $!PSQOT040PageCreater.printSpecial("s00_label",$!item,'_td_style_left', $td_style_left,'_td_style_right', $special_td_style_right)
+                                                #elseif($!patternName == "1")
+                                                    $!PSQOT040PageCreater.printDefault($!item,'_td_style_left', $td_style_left,'_td_style_right', $special_td_style_right, '_scrollobj', 'Area')
+                                                #else
+                                                $!PSQOT040PageCreater.printDefault($!item,'_td_style_left', $td_style_left,'_td_style_right', $special_td_style_right)
+                                                #end
+                                            #elseif($!item.getColumnName()=="T_QUOT_REQ_DTL.ATTACH_FILE_SEQ")
+                                                #if($!patternName == "6" || $!itemEditFlg == "0")
+                                                    $!PSQOT040PageCreater.printSpecial("s12_showFile1",$!item,'_td_style_left', $td_style_left,'_td_style_right', $special_td_style_right)
+                                                #else
+                                                    $!PSQOT040PageCreater.printSpecial("s04_file1",$!item, '_index',$countindex,'_td_style_left', $td_style_left,'_td_style_right', $special_td_style_right)
+                                                #end
+                                            #else
+                                                #if($!patternName == "1")
+                                                    $!PSQOT040PageCreater.printDefault($!item,'_td_style_left', $td_style_left,'_td_style_right', $special_td_style_right, '_scrollobj', 'Area')
+                                                #else
+                                                    $!PSQOT040PageCreater.printDefault($!item,'_td_style_left', $td_style_left,'_td_style_right', $special_td_style_right)
+                                                #end
+                                            #end
+                                        #end
+                                    </tbody>
+                                #end
+                            </table>
+                            #if($!patternName != "2" && $!patternName != "6" && $!addItemFlg != "0")
+                            <br>
+                            <table class="NoBorder" width="100%">
+                                <tr>
+                                    <td>
+                                        <span class="CornerTopBrown"><span class="Corner1"></span> <span class="Corner2"></span> <span class="Corner3"></span><span class="Corner4"></span></span>
+                                        <div class="CornerMidBrown" width="100%">
+                                            <table>
+                                                <tbody>
+                                                    <tr>
+                                                        <td>
+                                                            &nbsp;<img src="../../image/mrkInfo.gif">&nbsp;
+                                                        </td>
+                                                        <td width="500px;" class="FontSmallBold DarkBlue" align="left">#customSpringMessage("DTL_ADD_COMMENT")
+                                                        </td>
+                                                        <td>
+                                                            <input type="button" class="SmallButton" value="#customSpringMessage('DETAIL_ADD')" onclick="addItemDetail();"><!-- 明細追加 -->
+                                                        </td>
+                                                    </tr>
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                        <span class="CornerBtmBrown"><span class="Corner4"></span> <span class="Corner3"></span> <span class="Corner1"></span><span class="Corner1"></span></span>
+                                    </td>
+                                </tr>
+                            </table>
+                            #end
+                            #if ($!patternName == "1")
+                            <br>
+                              <table class="Box1G ListBorderWidth" width="100%">
+                            <tbody >
+                                <tr>
+                                    <td class="Box1H FontBoxHeader">
+                                        #customSpringMessage("RETURN_REASON")
+                                    </td>
+                                    <td class="Box1D"  colspan="2">
+                                        #springFormTextarea("domain.receipt.remand.backReason.backReason.comment" "class='Small' rows='4' maxLength='200' style='width:98%;word-break:break-all;'")
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td class="Box1H FontBoxHeader"  width="82px;">
+                                             #customSpringMessage('RETURN_DESTINATION')<!--差戻し先-->
+                                    </td>
+
+                                    #if($!existsBackAppUser)
+                                        <td class="Box1D FontSmall"  colspan="2">
+                                            #out($!domain.receipt.remand.remandUser.remandUser.userName)
+                                            #customFormHiddenInput("receipt.remand.remandUser.remandUser.userID" "$!domain.receipt.remand.remandUser.remandUser.userID")
+                                        </td>
+                                        #else
+                                      <td class="Box1D"  colspan="2">
+                                        #customFormSingleSelect("domain.receipt.remand.remandUser.remandUser.userID" $backCompanyUsersList "class='Small'")
+                                        <span class="FontWarn">#customSpringMessage("APL_USER_COMMENT")</span>
+                                      </td>
+                                    #end
+                                </tr>
+                            </tbody>
+                            </table>
+                            #end
+                            <br>
+                            <table class="NoBorder" width="100%">
+                                <tr>
+                                    <td>
+                                        #customSpringMessage('PSQOT040_FOOTER_COMMENT')  ## ※印の項目は、必須入力です。
+                                    </td>
+                                    <td align="right" valign="middle" id="Submit1" nowrap>
+                                        #if ($!patternName == "1")
+                                        <input name="Button1" type="button" class="LargeButton Red" value="#customSpringMessage('REQ_RETURN')" onclick="sendBack();">&nbsp;&nbsp;<!-- 差戻し -->
+                                        #end
+                                        #if ($!patternName != "4" && $!patternName != "5" && $!patternName != "6")
+                                            #if ($!domain.quotReqStatus.status !='01')
+                                                <input name="Button2" type="button" class="LargeButton" value="#customSpringMessage('TEMPORARY_PRESERVATION')" onclick="tempSave();">&nbsp;&nbsp;<!-- 一時保存-->
+                                            #end
+                                        #end
+                                        <input name="Button3" type="button" class="LargeButton" value="#customSpringMessage('REQ')" onclick="apply();"><!-- 申請 -->
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+    #if($!patternName == "1")
+
+                </div>
+            </td>
+        </tr>
+</table>
+    #end
+</form>
+</body>
+</html>
+#if($!patternName == "1")
+<script>
+    getObj("Area").style.display = "block";
+</script>
+#end

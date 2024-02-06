@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<flow xmlns="http://www.springframework.org/schema/webflow"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.springframework.org/schema/webflow
+        http://www.springframework.org/schema/webflow/spring-webflow-2.0.xsd"
+    parent="base">
+
+    <var name="domain" class="fw.domain.slip.receive.receive.receivedlist.RcvSettledListItem" />
+    <var name="identify" class="fw.domain.slip.receive.receive.Identify" />
+    <var name="identify050" class="fw.domain.slip.common.identify.OrderNo" />
+    <var name="identify090" class="fw.domain.slip.order.order.OrderIdentify" />
+    <var name="identify030" class="fw.domain.slip.receive.receive.unreceivelist.UnReceiveIdentify" />
+    
+    <input name="processFlg" />
+    <input name="searchCondition" />
+    <input name="isCurrentPageSearch" />
+    <decision-state id="isSearchByKey">
+       <if test="flowScope.isCurrentPageSearch" then="searchByKey" else="searchByCondition" />
+    </decision-state>
+    <action-state id="searchByCondition">
+    <evaluate expression="PSRCV041Service.init(searchCondition)" result="flowScope.itemList" />
+        <transition to="PSRCV041"/> 
+    </action-state>
+
+    <action-state  id="searchByKey" >
+        <evaluate expression="PSRCV041Service.page(searchCondition)" result="flowScope.itemList" />
+        <transition to="PSRCV041"/>
+    </action-state>
+
+    <view-state id="PSRCV041" view="rcv/rcv/PSRCV041" model="domain">
+       <transition on="order" validate="false">
+            <evaluate expression="PSRCV041Service.order(searchCondition)" 
+                 result="flowScope.itemList" />
+        </transition>
+        <transition on="page" validate="false">
+             <evaluate expression="PSRCV041Service.page(searchCondition)" 
+                result="flowScope.itemList" /> 
+        </transition>
+        <transition on="back" to="home" validate="false" />
+        <!-- 受入変更画面 -->
+        <transition on="editValidate" validate="true">
+            <set name="identify030.unReceiveIdentify.orderSeq" value="requestParameters.orderSeq"/>
+            <set name="identify030.unReceiveIdentify.delivKeyNo.delivKeyNo" value="requestParameters.delivKeyNo"/>
+            <set name="identify030.unReceiveIdentify.lastUpdDate" value="requestParameters.lastUpdDate"/>
+            <set name="flashScope.isShowEdit" value="true"/>
+        </transition>
+        <transition on="edit" to="PSRCV030Edit" validate="false"/>
+        <!-- 受入取消画面 -->
+        <transition on="deleteValidate" validate="true">
+            <set name="identify030.unReceiveIdentify.orderSeq" value="requestParameters.orderSeq"/>
+            <set name="identify030.unReceiveIdentify.delivKeyNo.delivKeyNo" value="requestParameters.delivKeyNo"/>
+            <set name="identify030.unReceiveIdentify.lastUpdDate" value="requestParameters.lastUpdDate"/>
+            <set name="flashScope.isShowCancel" value="true"/>
+        </transition>
+        <transition on="delete" to="PSRCV030Cancel" validate="false"/>
+        <!-- 詳細 -->
+        <transition on="detailValidate" validate="true">
+            <set name="identify050.orderNo" value="requestParameters.orderNo"/>
+            <set name="identify090.orderSeq" value="requestParameters.orderSeq"/>
+            <set name="identify.delivKeyNo.delivKeyNo" value="requestParameters.delivKeyNo"/>
+            <set name="identify.lastUpdDate" value="requestParameters.lastUpdDate"/>
+            <set name="flashScope.isShowDetail" value="true"/>
+        </transition>
+        <transition on="detail" to="PSRCV050TOP" validate="false" />
+    </view-state>
+    
+    <subflow-state id="PSRCV030Edit" subflow="rcv/rcv/PSRCV030" >
+        <input name="identify" value="identify030" />
+        <input name="processFlg" value="3" />
+    </subflow-state>
+    <subflow-state id="PSRCV030Cancel" subflow="rcv/rcv/PSRCV030" >
+        <input name="identify" value="identify030" />
+        <input name="processFlg" value="4" />
+    </subflow-state>
+    <subflow-state id="PSRCV050TOP" subflow="rcv/rcv/PSRCV050TOP">
+        <input name="identify050" value="identify050" />
+        <input name="identify090" value="identify090" />
+        <!--  2013.01.09 DEL DAIKO_KANEKO
+        <input name="range" value="0"/>
+        <input name="approveFlg" value="1"/>
+        -->
+        <input name="identify" value="identify" />
+    </subflow-state>
+</flow>

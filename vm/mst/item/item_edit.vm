@@ -1,0 +1,433 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<title>#customSpringMessage('M_ITEM')</title><!--品名マスタ-->
+<meta http-equiv="Content-type" content="text/html; charset=UTF-8">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Content-script-type" content="text/javascript">
+<link id="CSS_FONT" rel="stylesheet" href="../../include/FontS.css" type="text/css">
+<link rel="stylesheet" href="../../include/ime.css" type="text/css">
+<link rel="stylesheet" href="../../include/searchbox.css" type="text/css">
+<link rel="stylesheet" href="../../include/Layout.css" type="text/css">
+<link rel="stylesheet" href="../../include/Color.css" type="text/css">
+<script language="javascript" type="text/javascript" src="../../include/common.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/check.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/date.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/searchbox.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/jquery-1.7.2.min.js"></script>
+<script language="javascript" type="text/javascript">
+<!--
+#parse("./common/common_js.vm")
+
+function onLoad() {
+    setFocus();
+    var alertMessage = "$!alertMessage";
+    if (alertMessage != ""){
+        alert(alertMessage);
+    }
+    var errorMsg = "$!errorMessage";
+    if (errorMsg != ""){
+        document.getElementById("TR_ERROR").style.display = "";
+        return;
+    }
+        var isSuccess = '#jsEscape($!isSuccess)';
+        if(isSuccess == 'true'){
+            #set( $mItem = "#customSpringMessage('M_ITEM')" )
+            #if($!type == "Update")
+                alert('#customMessageArgs("I002",[$mItem])');
+            #else
+                alert('#customMessageArgs("I005",[$mItem])');
+            #end
+            buttonDisable();
+            top.iframeChange("${flowExecutionUrl}&_eventId=back");
+        }
+
+}
+
+function exec() {
+    document.getElementById('itemClass.itemClassNameL').value = document.getElementById('itemClass.itemClassL').text;
+    document.getElementById('itemClass.itemClassNameM').value = document.getElementById('itemClass.itemClassM').text;
+    document.getElementById('itemClass.itemClassNameS').value = document.getElementById('itemClass.itemClassS').text;
+
+    setItemDisabled("itemClass.itemClassM","itemClass.itemClassS");
+
+    #set( $mmItem = "#customSpringMessage('M_ITEM')" )
+    #if($!type == "Update")
+        #set( $register = "#customSpringMessage('UPDATE')" )
+        if( !confirm('#customMessageArgs("W001",[$mmItem,$register])') ) {
+            return;
+        }
+    #else
+        #set( $register = "#customSpringMessage('ACTION_REGISTER')" )
+        if( !confirm('#customMessageArgs("W001",[$mmItem,$register])') ) {
+            return;
+        }
+    #end
+
+    buttonDisable();
+    getObj("Body").submit();
+}
+
+function manufaceLostFocus(){
+
+    // 廃止フラグ
+    var termFlag = "0";
+
+    // メーカーコード
+    var manufactCd = getObj("manufact.manufactCd").value;
+
+    $.post(
+        "../../getManufactInfoOnBlur",
+        {
+            termFlag:termFlag,
+            manufactCd:manufactCd
+        },
+        function(data){
+            getObj("manufact.manufactName").value = data.manufactName;
+        }
+    );
+}
+
+// 科目検索POPUPを表示
+function openSubjectSearchPopup() {
+    // 会社コード
+    var companyCd = "#jsEscape($!{domain.itemIdentify.companyCd})";
+    // 廃止フラグ(0:有効)
+    var termFlag = "0";
+
+    subjectPopup.setParam( termFlag, companyCd );
+    subjectPopup.setObject( getObj('subject.subjectCd'), getObj('subject.subjectName') );
+    masterSearch( '../../src/subjectPopup/search?pageid=subjectPopupSearch', 'subjectPopup', '700', '500' );
+}
+
+// 科目コードからフォーカスアウト時の処理
+function subjectCdLostFocus() {
+
+    // 入力した科目コード
+    var subjectCd = getObj("subject.subjectCd").value;
+    // 会社コード
+    var companyCd = "#jsEscape($!{domain.itemIdentify.companyCd})";
+    // 廃止フラグ(0:有効)
+    var termFlag = "0";
+
+    if(subjectCd == "") {
+        getObj("subject.subjectName").value = "";
+        return;
+    }
+
+     $.ajax({
+        type: "POST",
+        async:false,
+        url:"../../getSubjectOnBlur",
+        data: {
+            subjectCd:subjectCd,
+            companyCd:companyCd,
+            termFlag:termFlag
+        },
+        success:function(data){
+            getObj("subject.subjectName").value = data.subjectName;
+        }
+     });
+ }
+
+function setUnitName() {
+    var selObj = getObj('unit.unitCd');
+    var index = selObj.selectedIndex;
+    getObj('unit.unitName').value = selObj.options[index].text;
+}
+
+//-->
+</script>
+</head>
+<body class="Body" style="text-align:center;" topmargin="10" leftmargin="10" marginwidth="10" marginheight="10" align="left" onload="onLoad();">
+<form id="Body" name="Body" action="${flowExecutionUrl}&_eventId=submit" method="post">
+    #customFormHiddenInput("pageid" "item$!type")
+    #customFormHiddenInput("itemClass.itemClassInd" "$!domain.itemClass.itemClassInd")
+    #customFormHiddenInput("itemClass.itemClassNameL" "$!domain.itemClass.itemClassNameL")
+    #customFormHiddenInput("itemClass.itemClassNameM" "$!domain.itemClass.itemClassNameM")
+    #customFormHiddenInput("itemClass.itemClassNameS" "$!domain.itemClass.itemClassNameS")
+    <table width="70%" style="height:20px; margin-right:auto; margin-left:auto;">
+       <tr id ="TR_ERROR" style="display:none;">
+           <td class="error">
+               $!errorMessage
+           </td>
+       </tr>
+       <tr>
+            <td class="FontSmallBold DarkBlue">
+                #if($!{type} == "Insert")
+                    #customSpringMessage("PSMST122_ADD_HEADER_COMMENT")
+                #else
+                    #customSpringMessage("PSMST122_EDIT_HEADER_COMMENT")
+                #end
+            </td>
+       </tr>
+    </table>
+            <table class="DTL_BOX" width="70%">
+                <tr>
+                    <td class="DTL_TITLE_BOX">
+                        <table class="NoBorder" width="100%">
+                            <tr>
+                                #if("Update" == "$!type")
+                                <td style="text-align:left;"><span class="DarkBlue ScreenName">#customSpringMessage("SCREEN_M_ITEM_EDIT")</span></td><!--品名マスタ編集-->
+                                #else
+                                <td style="text-align:left;"><span class="DarkBlue ScreenName">#customSpringMessage("SCREEN_M_ITEM_CREATE")</span></td><!--品名マスタ登録-->
+                                #end
+                                <td class="FontSmall" align="right">
+                                    <input type="button" onclick="exec();" class="MiddleButton" value="#customSpringMessage("ACTION_REGISTER")"><!--登　録-->
+                                </td>
+                            </tr>
+                        </table>
+                    </td>
+                </tr>
+                <tr>
+                    <td class="DTL_INTER_BOX">
+                        <table class="NoBorder" width="100%">
+                            #if("$!isUseAll"=="false")
+                            <tr>
+                                <td class="DTL_OUTHEAD" width="30%">
+                                    <div class="DTL_INHEAD">
+                                        <span class="FontDetailHeader">#customSpringMessage("COMPANY_CD")</span><!--会社コード-->
+                                    </div>
+                                </td>
+                                <td class="DTL_OUTBODY">
+                                    <div class="DTL_INBODY">
+                                        <table class="NoBorder" width="100%">
+                                            <tr>
+                                                <td class="FontDetailData">#out($!domain.itemIdentify.companyCd)</td>
+                                                <td align="right">
+                                                    #customFormSingCheckboxByType("TERMINATION" "domain.term.termFlg" "" $termFlagList "class='FontSmall'")<!--廃止-->&nbsp;
+                                                </td>
+                                            </tr>
+                                        </table>
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="DTL_OUTHEAD" width="30%">
+                                    <div class="DTL_INHEAD">
+                                        <span class="FontDetailHeader">#customSpringMessage("COMPANY_NAME")</span><!--会社名-->
+                                    </div>
+                                </td>
+                                <td class="DTL_OUTBODY">
+                                    <div class="DTL_INBODY">
+                                        <span class="FontDetailData">#out($!domain.companySummary.companyName)</span>
+                                    </div>
+                                </td>
+                            </tr>
+                            #end
+                            <tr>
+                                <td class="DTL_OUTHEAD" width="30%">
+                                    <div class="DTL_INHEAD">
+                                        <span class="FontDetailHeader">#customSpringMessage("COMPANY_USE_LANGUAGE")</span><!--会社使用言語-->
+
+                                    </div>
+                                </td>
+                                <td class="DTL_OUTBODY">
+                                    <div class="DTL_INBODY">
+                                        <table class="NoBorder" width="100%">
+                                            <tr>
+                                                <td class="FontDetailData">
+                                                <span class="FontDetailData">#out($!domain.companySummary.languageInd_PageValue)</span>
+                                                </td>
+                                                #if("$!isUseAll"=="true")
+                                                <td align="right">
+                                                    #customFormSingCheckboxByType("TERMINATION" "domain.term.termFlg" "" $termFlagList "class='FontSmall'")<!--廃止-->&nbsp;
+                                                </td>
+                                                #end
+                                            </tr>
+                                        </table>
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="DTL_OUTHEAD" width="30%">
+                                    <div class="DTL_INHEAD">
+                                        <span class="FontDetailHeader">#customSpringMessage("ITEM_CD")</span><!--品名コード-->#customFormRedMessageByType("class='FontWarn'" "false" "※")
+                                    </div>
+                                </td>
+                                <td class="DTL_OUTBODY">
+                                    <div class="DTL_INBODY">
+                                        #customFormInputByType("domain.itemIdentify.itemCd" "class='Middle noIME' maxLength='25' size='35'" "false" "class='FontMiniAnkBold'" "class='Brown'")
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="DTL_OUTHEAD" width="30%">
+                                    <div class="DTL_INHEAD">
+                                        <span class="FontDetailHeader">#customSpringMessage("ITEM_NAME")</span><span class="FontWarn">&nbsp;※</span><!--品名-->
+                                        <img src="../../image/mrkBook.gif" align="center">
+                                    </div>
+                                </td>
+                                <td class="DTL_OUTBODY">
+                                    <div class="DTL_INBODY">
+                                        #customFormInputByType("domain.itemName" "class='Middle onIME' maxLength='60' size='110'" "true" "class='FontMiniAnkBold'" "class='Brown'")
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="DTL_OUTHEAD" width="30%">
+                                    <div class="DTL_INHEAD">
+                                        <span class="FontDetailHeader">#customSpringMessage("PRODUCT_CLASS")</span><span class="FontWarn">&nbsp;※</span><!--品名分類-->
+                                    </div>
+                                </td>
+                                <td class="DTL_OUTBODY">
+                                    #customProductClassSelect("domain.itemClass.itemClassL","domain.itemClass.itemClassM","domain.itemClass.itemClassS")
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="DTL_OUTHEAD" width="30%">
+                                    <div class="DTL_INHEAD">
+                                        <span class="FontDetailHeader">#customSpringMessage("KATASHIKI")</span><!--型式-->
+                                    </div>
+                                </td>
+                                <td class="DTL_OUTBODY">
+                                    <div class="DTL_INBODY">
+                                        #customFormInputByType("domain.katashiki.katashiki" "class='Middle inIME' maxLength='60' size='110'" "true" "class='FontMiniAnkBold'" "class='Brown'")
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="DTL_OUTHEAD" width="30%">
+                                    <div class="DTL_INHEAD">
+                                        <span class="FontDetailHeader">#customSpringMessage("MANUFACT")</span><!--メーカー-->
+                                    </div>
+                                </td>
+                                <td class="DTL_OUTBODY">
+                                    <div class="DTL_INBODY">
+                                        ## ＩＴ３-00202-000 2013.07.11 DEL SBO_WANGXM START
+                                        ###customFormInputByType("domain.manufact.manufactCd" "class='Small noIME' maxLength='12' size='28' onblur='javascript:manufaceLostFocus();'  #customSpringMessage('mst_item_007')'' " "true" "'" "")<!--メーカーコード--><!--（ここをダブルクリックすると、メーカーを検索できます。）-->
+                                        ##<input readonly tabIndex="-1" id="manufact.manufactName" name="manufact.manufactName" value="$domain.manufact.manufactName" class="SmallDsp" type="text" size="32"  #customSpringMessage('mst_item_007')"><!--メーカー名（ここをダブルクリックすると、メーカーを検索できます。）-->
+                                        ## ＩＴ３-00202-000 2013.07.11 DEL SBO_WANGXM -END-
+                                        ## ＩＴ３-00202-000 2013.07.11 ADD SBO_WANGXM START
+                                        #customFormInputByType("domain.manufact.manufactCd" "class='Small noIME' maxLength='12' size='28' onblur='javascript:manufaceLostFocus();'  '' " "true" "'" "")<!--メーカーコード--><!--（ここをダブルクリックすると、メーカーを検索できます。）-->
+                                        <input readonly tabIndex="-1" id="manufact.manufactName" name="manufact.manufactName" value="#out($domain.manufact.manufactName)" class="SmallDsp" type="text" size="32""><!--メーカー名（ここをダブルクリックすると、メーカーを検索できます。）-->
+                                        ## ＩＴ３-00202-000 2013.07.11 ADD SBO_WANGXM -END-
+                                        <img class="Icon" name="MakerSearch" src="../../image/btnLupe.gif" onclick="manufactPopup.setParam('0');manufactPopup.setObject(getObj('manufact.manufactCd'),getObj('manufact.manufactName'));masterSearch('../../src/manufactPopup/search?pageid=manufactPopupSearch&popupPageid=PSMST122','ManufactSearch','700','500');">                                  </div>
+                                       </td>
+                            </tr>
+                            <tr>
+                                <td class="DTL_OUTHEAD" width="30%">
+                                    <div class="DTL_INHEAD">
+                                        <span class="FontDetailHeader">#customSpringMessage("UNIT")</span><span class="FontWarn">&nbsp;※</span><!--単位-->
+                                    </div>
+                                </td>
+                                <td class="DTL_OUTBODY">
+                                    <div class="DTL_INBODY">
+                                        #customFormSingSelectByType("domain.unit.unitCd" $unitList "class='Small' onchange='setUnitName()'" "true" "class='FontMiniAnkBold'" "class='Brown'")
+                                        #customFormHiddenInput("unit.unitName" "$!domain.unit.unitName")
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="DTL_OUTHEAD" width="30%">
+                                    <div class="DTL_INHEAD">
+                                        <span class="FontDetailHeader">#customSpringMessage("SUBJECT")</span><!-- 科目 -->
+                                    </div>
+                                </td>
+                                <td class="DTL_OUTBODY">
+                                    <div class="DTL_INBODY">
+                                        #customFormInputByType("domain.subject.subjectCd" "class='Small noIME' maxLength='12' size='28' onblur='subjectCdLostFocus()' '' " "true" "'" "")
+                                        <input readonly tabIndex="-1" id="subject.subjectName" name="subject.subjectName" value="#out($domain.subject.subjectName)" class="SmallDsp" type="text" size="32">
+                                        <img class="Icon" name="SubjectSearch" src="../../image/btnLupe.gif" onclick="openSubjectSearchPopup()">
+                                    </div>
+                               </td>
+                            </tr>
+                            <tr>
+                                <td class="DTL_OUTHEAD" width="30%">
+                                    <div class="DTL_INHEAD">
+                                        <span class="FontDetailHeader">#customSpringMessage("ITEM_REMARKS")</span><!--品名備考-->
+                                        <img src="../../image/mrkBook.gif" align="center">
+                                    </div>
+                                </td>
+                                <td class="DTL_OUTBODY">
+                                    <div class="DTL_INBODY">
+                                        <span class="FontMini">
+                                            #springFormTextarea("domain.itemRemarks.itemRemarks" "cols='70' maxlength='30' class = 'onIME'")
+                                            <br>
+                                        </span>
+                                    </div>
+                                </td>
+                            </tr>
+                        </table>
+                        <hr>
+                        <table width="100%">
+                            <tr>
+                                <td class="DTL_OUTHEAD" width="30%">
+                                    <div class="DTL_INHEAD">
+                                        <input class="SmallButton" type="button" value="#customSpringMessage('ACTION_LANGUAGE_ADD')" onclick="addLanguage();"><!--言語追加-->
+                                    </div>
+                                </td>
+                            </tr>
+                        </table>
+                        <div id="languageArea">
+                            #foreach($!itemLanguage in $!domain.itemLanguageList.itemLanguageList)
+                            <div id="LAUNGAGE_FIELD_$velocityCount">
+                            <table class="NoBorder" width="100%">
+                                <tr>
+                                    <td class="DTL_OUTHEAD" width="10%">
+                                        <div class="DTL_INHEAD">
+                                            <span class="FontDetailHeader">#customSpringMessage('LANGUAGE')</span>#customFormRedMessageByType("class='FontWarn'" "true" "※")<!--言語-->
+                                        </div>
+                                    </td>
+                                    <td class="DTL_OUTBODY">
+                                        <div class="DTL_INBODY">
+                                            #customFormSingSelectByType("domain.itemLanguageList.itemLanguageList[$velocityCount].languageInd.languageInd" $languageList "" "true" "class='FontMiniAnkBold '" "class='Brown'")
+                                        </div>
+                                    </td>
+                                    <td class="DTL_OUTBODY">
+                                        <div class="DTL_INBODY" align="right" rightmargin="10">
+                                            <input class="SmallButton" type="button" value="#customSpringMessage('ACTION_LANGUAGE_DELETE')" onclick="removeLanguage($velocityCount);">
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td class="DTL_OUTHEAD" width="10%">
+                                        <div class="DTL_INHEAD">
+                                            <span class="FontDetailHeader">#customSpringMessage('ITEM_NAME')</span>#customFormRedMessageByType("class='FontWarn'" "true" "※")<!--品名-->
+                                        </div>
+                                    </td>
+                                    <td class="DTL_OUTBODY" colspan="2">
+                                        <div class="DTL_INBODY">
+                                            #customFormInputByType("domain.itemLanguageList.itemLanguageList[$velocityCount].itemName" "class='Small onIME' maxLength='60' size='77'" "true" "class='FontMiniAnkBold'" "class='Brown'")
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td class="DTL_OUTHEAD" width="10%">
+                                        <div class="DTL_INHEAD">
+                                            <span class="FontDetailHeader">#customSpringMessage('ITEM_REMARKS')</span><!--品名備考-->
+                                        </div>
+                                    </td>
+                                    <td class="DTL_OUTBODY" colspan="2">
+                                        <div class="DTL_INBODY">
+                                           #springFormTextarea("domain.itemLanguageList.itemLanguageList[$velocityCount].itemRemarks.itemRemarks" "cols='80' maxlength='30' class = 'onIME'")
+                                        </div>
+                                    </td>
+                                </tr>
+                            </table>
+                            </div>
+                            #end
+                        </div>
+                        <hr>
+                        <table class="NoBorder" width="100%">
+                            <tr>
+                                <td class="DTL_MSGBOX" nowrap>
+                                    #if($!{type} == "Insert")
+                                        #customSpringMessage("PSMST122_ADD_FOOTER_COMMENT")
+                                    #else
+                                        #customSpringMessage("PSMST122_EDIT_FOOTER_COMMENT")
+                                    #end
+                                </td>
+                                <td class="DTL_MSGBOX" align="right">
+                                    <input type="button" onclick="exec();" class="MiddleButton" value="#customSpringMessage("ACTION_REGISTER")"><!--登　録-->
+                                </td>
+                            </tr>
+                        </table>
+                    </td>
+                </tr>
+            </table>
+</form>
+
+</body>
+
+</html>

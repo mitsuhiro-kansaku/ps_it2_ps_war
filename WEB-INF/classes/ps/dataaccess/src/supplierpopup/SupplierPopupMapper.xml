@@ -1,0 +1,111 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="ps.dataaccess.src.supplierpopup.SupplierPopupMapper">
+
+    <!-- SRC-00115-00 include化共通-->
+    <sql id="listKeyIdentityWhereCondition">
+        AND '${@fw.common.util.AppUtil@getSysDate()}' BETWEEN M_SUPPLIER.VALID_START_DATE AND M_SUPPLIER.VALID_END_DATE
+        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(companyCd)">
+            AND (M_SUPPLIER.COMPANY_CD = #{companyCd, jdbcType=VARCHAR} OR M_SUPPLIER.COMPANY_CD = '${@fw.common.constant.ApplicationConstant@COMPANY_CD_ALL}')
+        </if> 
+        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(supCd)">
+            AND M_SUPPLIER.SUP_CD
+            ${@fw.common.util.SearchModeUtil@getSearchSQL("fw.domain.mst.supplier.supplier.SupplierPopupSearchCondition","supCd")}
+        </if>
+        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(supName)">
+            AND M_SUPPLIER_LANG.SUP_ABBR_NAME
+            ${@fw.common.util.SearchModeUtil@getSearchSQL("fw.domain.mst.supplier.supplier.SupplierPopupSearchCondition","supName")}
+        </if>
+        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(telNo)">
+            AND M_SUPPLIER.TEL_NO
+            ${@fw.common.util.SearchModeUtil@getSearchSQL("fw.domain.mst.supplier.supplier.SupplierPopupSearchCondition","telNo")}
+        </if>
+        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(faxNo)">
+            AND M_SUPPLIER.FAX_NO
+            ${@fw.common.util.SearchModeUtil@getSearchSQL("fw.domain.mst.supplier.supplier.SupplierPopupSearchCondition","faxNo")}
+        </if>
+        <if test="@fw.domain.mst.searchcondition.SearchCondition@termFlgIsNotEmpty(searchCondition.termFlg) and searchCondition.termFlg==0">
+            AND M_SUPPLIER.TERM_FLG = #{searchCondition.termFlg, jdbcType=VARCHAR}
+        </if>
+    </sql>
+
+    <select id="listKeyIdentity"
+            parameterType ="fw.domain.mst.supplier.supplier.SupplierPopupSearchCondition"
+            resultType="fw.domain.mst.supplier.supplier.SupplierIdentify">
+        SELECT M_SUPPLIER.COMPANY_CD as "companyCd",
+               M_SUPPLIER.SUP_CD as "supCd",
+               M_SUPPLIER.BASE_CURRENCY_CD as currencyCd
+          FROM M_SUPPLIER
+     LEFT JOIN M_SUPPLIER_LANG
+            ON M_SUPPLIER.COMPANY_CD = M_SUPPLIER_LANG.COMPANY_CD
+           AND M_SUPPLIER.SUP_CD = M_SUPPLIER_LANG.SUP_CD
+           AND M_SUPPLIER_LANG.LANGUAGE_IND = '${@fw.security.SecurityUtil@getCompanyUseLanguageIndByEscapeSql()}'
+    INNER JOIN M_CURRENCY
+            ON M_SUPPLIER.BASE_CURRENCY_CD = M_CURRENCY.CURRENCY_CD
+           AND M_CURRENCY.TERM_FLG = '0'
+        <where>
+            <include refid="listKeyIdentityWhereCondition"/>
+        </where>
+        ORDER BY ${searchCondition.columnOrder.columnOrder()}
+    </select>
+    
+    <select id="listPageItem"
+            parameterType ="fw.domain.mst.supplier.supplier.SupplierPopupSearchCondition" 
+            resultType="fw.domain.mst.supplier.supplier.SupplierPopupItem">
+        SELECT M_SUPPLIER.COMPANY_CD as "supplierIdentify.companyCd",
+               M_SUPPLIER.SUP_CD as "supplierIdentify.supCd",
+               M_SUPPLIER.VENDOR_CD as "vendorCd",
+               M_SUPPLIER.LAST_UPD_DATE as "supplierIdentify.lastUpdDate",
+               M_SUPPLIER_LANG.SUP_NAME as "supName",
+               M_SUPPLIER_LANG.SUP_ABBR_NAME as "supAbbrName",
+               M_SUPPLIER_LANG.ADDRESS1 as "address1",
+               M_SUPPLIER_LANG.ADDRESS2 as "address2",
+               M_SUPPLIER_LANG.SUP_PERSON_NAME as "supPersonName",
+               M_SUPPLIER.EDI_IND as "ediInd",
+               M_SUPPLIER.FAX_NO as "faxNo",
+               M_SUPPLIER.TEL_NO as "telNo",
+               M_SUPPLIER.ZIP_CD as "postalCode",
+               M_SUPPLIER.SUBCON_IND as "subconInd",
+               M_SUPPLIER.BANK_CD as "bankCd",
+               M_SUPPLIER.BANK_NAME as "bankName",
+               M_SUPPLIER.ACCOUNT_TYPE as "accountType",
+               M_SUPPLIER.ACCOUNT_NO as "accountNo",
+               M_SUPPLIER.ACCOUNT_NAME as "accountName",
+               M_SUPPLIER.BRANCH_CD as "branchCd",
+               M_SUPPLIER.BRANCH_NAME as "branchName",
+               M_SUPPLIER.BASE_CURRENCY_CD as currencyCd,
+               M_CURRENCY.CURRENCY_MARK as "currencyMark",
+               M_SUPPLIER.PAY_CONDITION_CD as "payConditonCd"
+          FROM M_SUPPLIER
+     LEFT JOIN M_SUPPLIER_LANG
+            ON M_SUPPLIER.COMPANY_CD = M_SUPPLIER_LANG.COMPANY_CD
+           AND M_SUPPLIER.SUP_CD = M_SUPPLIER_LANG.SUP_CD
+           AND M_SUPPLIER_LANG.LANGUAGE_IND = '${@fw.security.SecurityUtil@getCompanyUseLanguageIndByEscapeSql()}'
+    INNER JOIN M_CURRENCY
+            ON M_SUPPLIER.BASE_CURRENCY_CD = M_CURRENCY.CURRENCY_CD
+           AND M_CURRENCY.TERM_FLG = '0'
+       <where>
+              (M_SUPPLIER.COMPANY_CD,M_SUPPLIER.SUP_CD) in
+                <foreach collection="searchCondition.page.keyDomainEntityList" item="keyList" open="(" separator="," close=")">
+                    (#{keyList.companyCd},#{keyList.supCd})
+                </foreach>
+            <include refid="listKeyIdentityWhereCondition"/>
+       </where>
+       ORDER BY ${searchCondition.columnOrder.columnOrder()}
+    </select>
+
+    <select id="lostFocusSearch"
+            parameterType ="fw.domain.mst.searchcondition.SearchCondition" 
+            resultType="String">
+        SELECT M_SUPPLIER_LANG.SUP_NAME
+          FROM M_SUPPLIER
+          LEFT JOIN M_SUPPLIER_LANG
+                 ON M_SUPPLIER.COMPANY_CD = M_SUPPLIER_LANG.COMPANY_CD
+                AND M_SUPPLIER.SUP_CD = M_SUPPLIER_LANG.SUP_CD
+                AND M_SUPPLIER_LANG.LANGUAGE_IND = '${@fw.security.SecurityUtil@getCompanyUseLanguageIndByEscapeSql()}'
+         WHERE M_SUPPLIER.SUP_CD = #{supCd, jdbcType=VARCHAR}
+    </select>
+
+</mapper>

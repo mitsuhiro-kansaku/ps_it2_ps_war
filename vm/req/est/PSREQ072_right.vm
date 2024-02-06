@@ -1,0 +1,408 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<title>#customSpringMessage('QUOT_STATUS_ALL')</title><!--見積状況（全検索）-->
+<meta http-equiv="Content-type" content="text/html; charset=UTF-8">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Content-script-type" content="text/javascript">
+
+<link id="CSS_FONT" rel="stylesheet" href="../../include/FontS.css" type="text/css">
+<link rel="stylesheet" href="../../include/ime.css" type="text/css">
+<link rel="stylesheet" href="../../include/searchbox.css" type="text/css">
+<link rel="stylesheet" href="../../include/Layout.css" type="text/css">
+<link rel="stylesheet" href="../../include/Color.css" type="text/css">
+<script language="javascript" type="text/javascript" src="../../include/common.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/check.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/date.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/searchbox.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/jquery-1.7.2.min.js"></script>
+<script language="javascript" type="text/javascript">
+<!--
+#parse("./common/common_js.vm")
+
+var isClickable = false;
+
+function onLoad() {
+    if (parent.isSuccess == 'true') {
+        #set( $quotCancel = "#customSpringMessage('ACTION_CANCEL')" )
+        alert('#customMessageArgs("I005", [$quotCancel])');
+        top.iframeChange("${flowExecutionUrl}&_eventId=PSREQ072Reflash",'quotAcqAplSeqNo',#jsEscape($quotAcqAplSeq));
+        return;
+    }
+
+    var alertMessage = "$!alertMessage";
+    if (alertMessage != ""){
+        ## 見積依頼期限＜システム日付 or 回答納期＜システム日付
+        #if(($!alertMessage.indexOf("W039") != -1 || $!alertMessage.indexOf("W050") != -1) && $!isShowPurReqInput != "true" && $!isShowPurReqInput != 1)
+            if (confirm("$!alertMessage")) {
+                buttonDisable();
+                iframeChange("${flowExecutionUrl}&_eventId=purReqInputValidate&checkPass=1",'quotReqSeqNo',"#jsEscape($!domain.quotAcqReqSummary.quotReqSeqNo.seqNumber)",'quotSupplierLineNo',"#jsEscape($!quotSupplierLineNo)",'lastUpdDate','#jsEscape($!domain.lastUpdDate)' ,'pageid','PSPUR010Input','pattern','create2','quotRespSeqNo',"#jsEscape($!quotRespSeqNo)");
+                return;
+            } else {
+                parent.parent.window.buttonUsable();
+                parent.parent.frames["DATAAREA2"].window.buttonUsable();
+            }
+        #else
+             if(alertMessage.indexOf("E035")!=-1){
+                 parent.parent.window.buttonUsable();
+             }
+            alert(alertMessage);
+            parent.parent.frames["DATAAREA2"].window.buttonUsable();
+        #end
+    }
+
+    var isShowAnswerDetail = "#jsEscape($isShowAnswerDetail)";
+    if (isShowAnswerDetail == 'true'){
+        poppage('${flowExecutionUrl}&_eventId=answerDetail&quotReqNo=#jsEscape($!domain.quotAcqReqSummary.quotReqNo)&lastUpdDate=#jsEscape($!domain.lastUpdDate)','DETAIL','800','600');
+        isClickable = true;
+        return;
+    }
+    var isShowPurReqInput = "#jsEscape($isShowPurReqInput)";
+    if (isShowPurReqInput == 'true'){
+        top.iframeChange("${flowExecutionUrl}&_eventId=purReqInput",'quotReqSeqNo','#jsEscape($!domain.quotAcqReqSummary.quotReqSeqNo.seqNumber)','quotSupplierLineNo','#jsEscape($respItem.quotSupplierLineNo)','lastUpdDate','#jsEscape($!domain.lastUpdDate)','quotRespSeqNo','#jsEscape($!respItem.quotRespSeqNo)','pageid','PSPUR010Input','pattern','create2');
+        return;
+    }
+
+    isClickable = true;
+}
+
+function toggleQotArea() {
+    var img = document.getElementById("toggleQotImg");
+    if( img.src.indexOf("btnPrev.gif")>=0 ) {
+        parent.closeQotArea();
+        img.src="../../image/btnNext.gif";
+    } else {
+        parent.openQotArea();
+        img.src="../../image/btnPrev.gif";
+    }
+}
+
+function downloadFile(seqNo) {
+    iframeChange("${flowExecutionUrl}&_eventId=download&seqNo="+seqNo,"HIDDENAREA");
+}
+
+//回答詳細
+function openQotAns(quotReqNo) {
+    parent.iframeChange("${flowExecutionUrl}&_eventId=answerDetailValidate","quotReqNo",quotReqNo,"lastUpdDate",#jsEscape($!domain.lastUpdDate),"HIDDENAREA");
+}
+
+//購入依頼入力
+function openReqInput(quotReqSeqNo,quotSupplierLineNo,quotRespSeqNo) {
+    if(!isClickable) {
+        return;
+    }
+    buttonDisable();
+    parentButtonDisable();
+    iframeChange("${flowExecutionUrl}&_eventId=purReqInputValidate","quotReqSeqNo",quotReqSeqNo,"quotSupplierLineNo",quotSupplierLineNo,"quotRespSeqNo",quotRespSeqNo,"lastUpdDate","#jsEscape($!domain.lastUpdDate)","HIDDENAREA");
+}
+//-->
+</script>
+</head>
+<body topmargin="0" leftmargin="0" marginwidth="0" marginheight="0" onload="onLoad();" style="overflow-x:auto;overflow-y:auto;">
+<form id="Body" name="Body" action="${flowExecutionUrl}&_eventId=submit" method="post">
+<table class="NoBorder" width="100%">
+<tr>
+<td>
+    <table class="NoBorder" width="100%">
+        <tr>
+            <td class="Box3H" style="height:40px;">
+                <table class="NoBorder" width="100%">
+                    <tr>
+                        <td class=" FontLargeBold DarkBlue" nowrap align="left">
+                            <button type="button" class="Button" onclick="toggleQotArea();">
+                                <img  id="toggleQotImg" src="../../image/btnNext.gif">
+                            </button>
+                            #customSpringMessage('QUOT_ANS_INFO')<!--見積回答情報-->
+                            #if($!domain.quotAcqReqSummary.quotReqSeqNo.seqNumber != '')
+                            <input id="Disp1" name="Button1" type="button" class="SmallButton" value="#customSpringMessage('QUOT_JNL')" onclick="openQotAns('#jsEscapeInHTML($!domain.quotAcqReqSummary.quotReqNo)');">
+                            #end
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+            </td>
+        </tr>
+        <tr>
+            <td>
+    #if($!domain.quotReqRespInfo.quotSupplierRespList.size() > 0)
+    <table class="NoBorder" width="100%">
+        <tr>
+            <td class="Box1H FontBoxHeader" colspan="2" >#customSpringMessage('STATUS')</td><!--状態-->
+                #foreach($!respItem in $!domain.quotReqRespInfo.quotSupplierRespList)
+                    <td nowrap class="Box1D FontBigBold Brown">
+                        #if($!respItem.status == '1')
+                            <!--辞退-->#customSpringMessage('REFUSE')
+                        #else
+                            #out($!respItem.quotReqSupplierStatus_PageValue)
+                        #end
+                    </td>
+                #end
+        </tr>
+        <tr id="ProcRow">
+            <td nowrap class="Box1H FontBoxHeader" colspan="2">#customSpringMessage('ACTION')</td><!--処理-->
+                #foreach($!respItem in $!domain.quotReqRespInfo.quotSupplierRespList)
+                    <td nowrap class="Box1D FontBigBold Brown"></td>
+                #end
+        </tr>
+        <tr id="Disp5">
+            <td nowrap class="Box1H FontBoxHeader" colspan="2">#customSpringMessage('ADO')</td><!--採用-->
+                #foreach($!respItem in $!domain.quotReqRespInfo.quotSupplierRespList)
+                    <td nowrap class="Box1D FontSmall">
+                        #if ($!respItem.ado == '1')
+                        #out($!respItem.ado_PageValue)
+                        #end
+                    </td>
+                #end
+        </tr>
+        <tr>
+            <td nowrap class="Box1H FontBoxHeader" colspan="2">#customSpringMessage('QUOT_RESP_END_DATE')</td><!--見積有効期限-->
+                #foreach($!respItem in $!domain.quotReqRespInfo.quotSupplierRespList)
+                    <td nowrap class="Box1D FontSmallAnk">
+                        #out($!respItem.quotEndDate.dateOfymdFormat)
+                    </td>
+                #end
+        </tr>
+        <tr>
+            <td nowrap class="Box1H FontBoxHeader" colspan="2">#customSpringMessage('QUOT_ANS_DATE')</td><!--回答日-->
+                #foreach($!respItem in $!domain.quotReqRespInfo.quotSupplierRespList)
+                    <td nowrap class="Box1D FontSmallAnk">
+                        #out($!respItem.respDate.dateOfymdFormat)
+                    </td>
+                #end
+        </tr>
+        <tr>
+            <td nowrap class="Box1H FontBoxHeader" colspan="2">#customSpringMessage('QUOT_TOTAL_AMOUNT')</td><!--回答金額計-->
+                #foreach($!respItem in $!domain.quotReqRespInfo.quotSupplierRespList)
+                        #if($!respItem.amountMinFlg == '1')
+                            <td nowrap class="Box1D FontCurrMiddle Blue">
+                                #out($!respItem.currency.currencyMark)#out($!respItem.respAmount.amountFormat)
+                            </td>
+                        #else
+                            <td nowrap class="Box1D FontCurrMiddle">
+                                #out($!respItem.currency.currencyMark)#out($!respItem.respAmount.amountFormat)
+                            </td>
+                        #end
+                #end
+        </tr>
+        <tr>
+            <td class="Box1H FontBoxHeader" colspan="2">#customSpringMessage('SUPPLIER')</td><!--取引先-->
+                #foreach($!respItem in $!domain.quotReqRespInfo.quotSupplierRespList)
+                    <td class="Box1D FontSmall">
+                        <table class="NoBorder">
+                            <tr>
+                                <td nowrap>
+                                    <span class="FontSmall">#out($!respItem.supplier.supCd)</span>&nbsp;<span class="FontUserName">#out($!respItem.supplier.supplierName.supplierAbbrName)</span>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>
+                                    #if ($!respItem.supplier.subcon.subconInd == '1')
+                                    <span class="FontSubcon Subcon">#out($!respItem.supplier.subcon.subconInd_PageValue)</span>
+                                    #end
+                                </td>
+                            </tr>
+                        </table>
+                    </td>
+                #end
+        </tr>
+        <tr>
+            <td nowrap class="Box1H FontBoxHeader" colspan="2">#customSpringMessage('QUOT_RESP_COMMENT')</td><!--回答コメント-->
+                #foreach($!respItem in $!domain.quotReqRespInfo.quotSupplierRespList)
+                    <td class="Box1D FontSmall">
+                        #out($!respItem.respComments)
+                    </td>
+                #end
+        </tr>
+    <!--見積依頼明細件数分ループ-->
+        #set ($index=0)
+        #foreach($!itemItem in $!domain.quotReqRespInfo.quotSupplierRespList[$index].quotSupplierRespItemList)
+        <tr>
+            <td nowrap class="Box1H FontSmallAnkBold" rowspan="13" width="5%">
+                <p>#set( $velocityCount = $velocityCount + 1 )$velocityCount</p>
+            </td>
+            <td class="Box1Hd FontBoxHeader" width="20%">#customSpringMessage('ITEM_CD')</td><!--品名コード-->
+            #if($!domain.quotReqRespInfo.quotSupplierRespList.size()> 0)
+                #foreach($!respSupItem in $!domain.quotReqRespInfo.quotSupplierRespList)
+                    <td class="Box1Dd FontSmall">
+                        #if($!respSupItem.quotSupplierRespItemList.size() > $index)
+                            #out($!respSupItem.quotSupplierRespItemList[$index].itemcd)
+                        #end
+                    </td>
+                #end
+            #end
+        </tr>
+        <tr>
+            <td class="Box1Hd FontBoxHeader">#customSpringMessage('QUOT_RESP_ITEM_NAME')</td><!--回答品名-->
+            #if($!domain.quotReqRespInfo.quotSupplierRespList.size()> 0)
+                #foreach($!respSupItem in $!domain.quotReqRespInfo.quotSupplierRespList)
+                    <td class="Box1Dd FontSmall">
+                        #if($!respSupItem.quotSupplierRespItemList.size() > $index)
+                            #out($!respSupItem.quotSupplierRespItemList[$index].respItemName)
+                        #end
+                    </td>
+                #end
+            #end
+        </tr>
+        <tr>
+            <td class="Box1Hd FontBoxHeader">#customSpringMessage('REQ_MAKER')</td><!--回答メーカー-->
+            #if($!domain.quotReqRespInfo.quotSupplierRespList.size()> 0)
+                #foreach($!respSupItem in $!domain.quotReqRespInfo.quotSupplierRespList)
+                    <td class="Box1Dd FontSmall">
+                        #if($!respSupItem.quotSupplierRespItemList.size() > $index)
+                            #out($!respSupItem.quotSupplierRespItemList[$index].manufact.manufactCd)&nbsp;#out($!respSupItem.quotSupplierRespItemList[$index].manufact.manufactName)
+                        #end
+                    </td>
+                #end
+            #end
+        </tr>
+        <tr>
+            <td class="Box1Hd FontBoxHeader">#customSpringMessage('QUOT_RESP_KATASHIKI')</td><!--回答型式-->
+            #if($!domain.quotReqRespInfo.quotSupplierRespList.size()> 0)
+                #foreach($!respSupItem in $!domain.quotReqRespInfo.quotSupplierRespList)
+                    <td class="Box1Dd FontSmall">
+                        #if($!respSupItem.quotSupplierRespItemList.size() > $index)
+                            #out($!respSupItem.quotSupplierRespItemList[$index].respKatashiki)
+                        #end
+                    </td>
+                #end
+            #end
+        </tr>
+        <tr>
+            <td nowrap class="Box1Hd FontBoxHeader">#customSpringMessage('QUOT_RESP_VOL')</td><!--回答数量-->
+            #if($!domain.quotReqRespInfo.quotSupplierRespList.size()> 0)
+                #foreach($!respSupItem in $!domain.quotReqRespInfo.quotSupplierRespList)
+                    <td nowrap class="Box1Dd FontSmall">
+                        #if($!respSupItem.quotSupplierRespItemList.size() > $index)
+                        #out($!respSupItem.quotSupplierRespItemList[$index].vol.volFormat) #out($!respSupItem.quotSupplierRespItemList[$index].unitName)
+                        #end
+                    </td>
+                #end
+            #end
+        </tr>
+        <tr>
+            <td class="Box1Hd FontBoxHeader">#customSpringMessage('CURRENCY_CD')</td><!--通貨コード-->
+            #if($!domain.quotReqRespInfo.quotSupplierRespList.size()> 0)
+                #foreach($!respSupItem in $!domain.quotReqRespInfo.quotSupplierRespList)
+                    <td class="Box1Dd FontSmall">
+                        #if($!respSupItem.quotSupplierRespItemList.size() > $index)
+                            #out($!respSupItem.quotSupplierRespItemList[$index].currency.currencyCd)
+                        #end
+                    </td>
+                #end
+            #end
+        </tr>
+        <tr>
+            <td nowrap class="Box1Hd FontBoxHeader">#customSpringMessage('ANS_UNIT_PRICE')</td><!--回答単価-->
+            #if($!domain.quotReqRespInfo.quotSupplierRespList.size()> 0)
+                #foreach($!respSupItem in $!domain.quotReqRespInfo.quotSupplierRespList)
+                    <td nowrap class="Box1Dd FontCurrSmall">
+                        #if($!respSupItem.quotSupplierRespItemList.size() > $index)
+                            #out($!respSupItem.quotSupplierRespItemList[$index].currency.currencyMark)#out($!respSupItem.quotSupplierRespItemList[$index].unitPrice.amount.amountFormat)
+                        #end
+                    </td>
+                #end
+            #end
+        </tr>
+        <tr>
+            <td nowrap class="Box1Hd FontBoxHeader">#customSpringMessage('QUOT_RESP_AMOUNT')</td><!--回答金額-->
+            #if($!domain.quotReqRespInfo.quotSupplierRespList.size()> 0)
+                #foreach($!respSupItem in $!domain.quotReqRespInfo.quotSupplierRespList)
+                    <td nowrap class="Box1Dd FontCurrSmall">
+                        #if($!respSupItem.quotSupplierRespItemList.size() > $index)
+                            #out($!respSupItem.quotSupplierRespItemList[$index].currency.currencyMark)#out($!respSupItem.quotSupplierRespItemList[$index].amount.amountFormat)
+                        #end
+                    </td>
+                #end
+            #end
+        </tr>
+        <tr>
+            <td nowrap class="Box1Hd FontBoxHeader">#customSpringMessage('RCV_TAX_IND')</td>## 回答課税区分
+            #if($!domain.quotReqRespInfo.quotSupplierRespList.size()> 0)
+                #foreach($!respSupItem in $!domain.quotReqRespInfo.quotSupplierRespList)
+                    #if ($!respSupItem.respOpen == "1")
+                    <td nowrap class="Box1Dd FontSmall">
+                        #if($!respSupItem.quotSupplierRespItemList.size() > $index)
+                            #out($!respSupItem.quotSupplierRespItemList[$index].amountMng.taxCalculationInd.taxInd.taxInd_PageValue)
+                        #end
+                    </td>
+                    #end
+                #end
+            #end
+        </tr>
+        <tr>
+            <td nowrap class="Box1Hd FontBoxHeader">#customSpringMessage('QUOT_RESP_DELIV_DATE')</td><!--回答納期-->
+            #if($!domain.quotReqRespInfo.quotSupplierRespList.size()> 0)
+                #foreach($!respSupItem in $!domain.quotReqRespInfo.quotSupplierRespList)
+                    <td nowrap class="Box1Dd FontSmallAnk">
+                        #if($!respSupItem.quotSupplierRespItemList.size() > $index)
+                            #if($!respSupItem.quotSupplierRespItemList[$index].dateLateFlg == '1')
+                                <span class="Red">#out($!respSupItem.quotSupplierRespItemList[$index].delivDate.dateOfymdFormat)</span>
+                            #else
+                                #out($!respSupItem.quotSupplierRespItemList[$index].delivDate.dateOfymdFormat)
+                            #end
+                        #end
+                    </td>
+                #end
+            #end
+        </tr>
+        <tr>
+            <td nowrap class="Box1Hd FontBoxHeader">#customSpringMessage('STD_ORDER_LT')</td><!--標準納入日数-->
+            #if($!domain.quotReqRespInfo.quotSupplierRespList.size()> 0)
+                #foreach($!respSupItem in $!domain.quotReqRespInfo.quotSupplierRespList)
+                    <td nowrap class="Box1Dd FontSmall">
+                        #if($!respSupItem.quotSupplierRespItemList.size() > $index)
+                            #if($!respSupItem.quotSupplierRespItemList[$index].orderDeliv.standardDelivDayCount.standardDelivDayCount.dayCount != "")
+                                #out($!respSupItem.quotSupplierRespItemList[$index].orderDeliv.standardDelivDayCount.standardDelivDayCount.dayCount) 日
+                            #end
+                        #end
+                    </td>
+                #end
+            #end
+        </tr>
+        <tr>
+            <td nowrap class="Box1Hd FontBoxHeader">#customSpringMessage('ATTACH_QUOT_FILE')</td><!--回答添付-->
+            #if($!domain.quotReqRespInfo.quotSupplierRespList.size()> 0)
+                #foreach($!respSupItem in $!domain.quotReqRespInfo.quotSupplierRespList)
+                    <td nowrap class="Box1Dd FontSmall" >
+                        #if($!respSupItem.quotSupplierRespItemList.size() > $index)
+                            #if("$!respSupItem.quotSupplierRespItemList[$index].attachFile.seqNo" != "")
+                            <A href="#" onclick="downloadFile('#jsEscapeInHTML($!respSupItem.quotSupplierRespItemList[$index].attachFile.seqNo)');">#out($!respSupItem.quotSupplierRespItemList[$index].attachFile.fileName)</A>
+                            #end
+                        #end
+                    </td>
+                #end
+            #end
+        </tr>
+        ## 2015/06/17 ADD RIKI_SUGIYAMA START
+        <tr>
+            <td nowrap class="Box1Hdt FontBoxHeader">#customSpringMessage('ATTACH_QUOT_FILE2')</td><!--回答添付2-->
+            #if($!domain.quotReqRespInfo.quotSupplierRespList.size()> 0)
+                #foreach($!respSupItem in $!domain.quotReqRespInfo.quotSupplierRespList)
+                    <td nowrap class="Box1Ddt FontSmall" >
+                        #if($!respSupItem.quotSupplierRespItemList.size() > $index)
+                            #if("$!respSupItem.quotSupplierRespItemList[$index].attachFile2.seqNo" != "")
+                            <A href="#" onclick="downloadFile('#jsEscapeInHTML($!respSupItem.quotSupplierRespItemList[$index].attachFile2.seqNo)');">#out($!respSupItem.quotSupplierRespItemList[$index].attachFile2.fileName)</A>
+                            #end
+                        #end
+                    </td>
+                #end
+            #end
+        </tr>
+        ## 2015/06/17 ADD RIKI_SUGIYAMA END
+        #set( $index = $index + 1 )
+        #end
+    #else
+    <div id="error" name="error" class="error">
+        I004 #customSpringMessage('I004')
+    </div>
+    #end
+    </table>
+</td>
+</tr>
+</table>
+<iframe id="HIDDENAREA" name="HIDDENAREA" framespacing="0" frameborder="0" src="" scrolling="no" frameborder="no" style="display:none"></iframe>
+</form>
+</body>
+</html>

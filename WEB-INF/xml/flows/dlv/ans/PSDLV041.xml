@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<flow xmlns="http://www.springframework.org/schema/webflow"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.springframework.org/schema/webflow
+        http://www.springframework.org/schema/webflow/spring-webflow-2.0.xsd"
+    parent="base">
+
+    <var name="domain" class="fw.domain.slip.dlvestmng.DelivRespItem" />
+    <!-- 注文識別情報 -->
+    <var name="orderIdentify" class="fw.domain.slip.order.order.OrderIdentify" />
+    <var name="orderNo" class="java.lang.String"/>
+    <var name="preDelivRespDate" class="java.lang.String"/>
+    <input name="searchCondition" />
+    <input name="isCurrentPageSearch" />
+    
+    <decision-state id="isSearchByKey">
+       <if test="flowScope.isCurrentPageSearch" then="searchByKey" else="searchByCondition" />
+    </decision-state>
+    
+    <action-state id="searchByCondition">
+    <evaluate expression="PSDLV041Service.init(searchCondition)" result="flowScope.itemList" />
+        <transition to="PSDLV041"/> 
+    </action-state>
+
+    <action-state  id="searchByKey" >
+        <evaluate expression="PSDLV041Service.page(searchCondition)" result="flowScope.itemList" />
+        <transition to="PSDLV041"/>
+    </action-state>
+
+    <view-state id="PSDLV041" view="dlv/ans/PSDLV041" model="domain">
+       <transition on="order" validate="false">
+            <evaluate expression="PSDLV041Service.order(searchCondition)" 
+                 result="flowScope.itemList" />
+        </transition>
+        <transition on="page" validate="false">
+             <evaluate expression="PSDLV041Service.page(searchCondition)" 
+                result="flowScope.itemList" /> 
+        </transition>
+        
+        <!-- 詳細 -->
+        <transition on="detailValidate" validate="false">
+            <set name="orderIdentify.orderSeq" value="requestParameters.orderSeq"/><!-- 注文シーケンス番号 -->
+            <set name="orderIdentify.lastUpdDate" value="requestParameters.lastUpdDate"/><!-- 最終更新日時 -->
+            <set name="flashScope.isShowDetail" value="true"/>
+        </transition>
+        <transition on="detail" to="PSORD090TOP" validate="false"/>
+        
+        <!-- 納期回答入力 -->
+        <!-- 強化-00852-000 2013/05/29 DEL SBO_CHENCHENG START -->
+        <!--<transition on="answerInputEach" to="PSDLV050" validate="true">-->
+            <!--<set name="orderIdentify.orderSeq" value="requestParameters.orderSeq"/>--><!-- 注文シーケンス番号 -->
+            <!--<set name="orderIdentify.lastUpdDate" value="requestParameters.lastUpdDate"/>--><!-- 最終更新日時 -->
+        <!--</transition>-->    
+        <!-- 強化-00852-000 2013/05/29 DEL SBO_CHENCHENG -END- -->
+        <!-- 強化-01690-000 2013/05/29 ADD SBO_CHENCHENG START -->
+        <transition on="answerInputEachValidate" validate="true">
+            <set name="orderIdentify.orderSeq" value="requestParameters.orderSeq"/><!-- 注文シーケンス番号 -->
+            <set name="orderIdentify.lastUpdDate" value="requestParameters.lastUpdDate"/><!-- 最終更新日時 -->
+            <set name="flashScope.isShowAnswerInputEach" value="true"/>
+        </transition>
+        <transition on="answerInputEach" to="PSDLV050" validate="false"/>
+        <!-- 強化-01690-000 2013/05/29 ADD SBO_CHENCHENG -END- -->
+        <transition on="back" to="home" validate="false" />
+        <!-- 納期回答詳細 -->
+        <transition on="answerDetailValidate" validate="false">
+             <set name="orderNo" value="requestParameters.orderNo"/>
+             <set name="orderIdentify.orderSeq" value="requestParameters.orderSeq"/>
+             <set name="orderIdentify.lastUpdDate" value="requestParameters.lastUpdDate"/>
+             <set name="flashScope.isShowAnswerDetail" value="true"/>
+             <set name="preDelivRespDate" value="requestParameters.preDelivRespDate"/>
+        </transition>
+        <transition on="answerDetail" to="PSDLV021TOP" validate="false"/>
+    </view-state>
+    
+    <subflow-state id="PSORD090TOP" subflow="ord/order/PSORD090TOP">
+        <input name="orderIdentify" value="orderIdentify" />
+    </subflow-state>
+    
+    <subflow-state id="PSDLV050" subflow="dlv/ans/PSDLV050">
+        <input name="orderIdentify" value="orderIdentify" />
+    </subflow-state>
+    
+    <subflow-state id="PSDLV021TOP" subflow="dlv/ans/PSDLV021TOP">
+        <input name="orderNo" value="orderNo" />
+        <input name="orderIdentify" value="orderIdentify"/>
+        <input name="isResp" value="true" />
+        <input name="preDelivRespDate" value="preDelivRespDate" />
+    </subflow-state>
+</flow>

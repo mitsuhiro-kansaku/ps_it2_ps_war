@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<flow xmlns="http://www.springframework.org/schema/webflow"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.springframework.org/schema/webflow
+        http://www.springframework.org/schema/webflow/spring-webflow-2.0.xsd"
+    parent="base">
+    
+    <var name="sectionBudgetListItem" class="fw.domain.options.budget.sectionbudgetlist.SectionBudgetListItem" />
+    <var name="sectionBudgetIdentify" class="fw.domain.options.budget.sectionbudget.SectionBudgetIdentify" />
+
+    <input name="searchCondition" />
+    <input name="isCurrentPageSearch" />
+
+    <decision-state id="isSearchByKey">
+       <if test="flowScope.isCurrentPageSearch" then="searchByKey" else="searchByCondition" />
+    </decision-state>
+    
+    <action-state id="searchByCondition">
+        <evaluate expression="PSBDT021Service.init(searchCondition)" result="flowScope.itemList" />
+        <transition to="PSBDT021"/> 
+    </action-state>
+
+    <action-state  id="searchByKey" >
+        <evaluate expression="PSBDT021Service.page(searchCondition)" result="flowScope.itemList" />
+        <transition to="PSBDT021"/>
+    </action-state>
+
+    <view-state id="PSBDT021" model="sectionBudgetListItem" view="options/budget/PSBDT021">
+        <transition on="order" validate="false">
+            <evaluate expression="PSBDT021Service.order(searchCondition)" result="flowScope.itemList" />
+        </transition>
+        <transition on="page" validate="false">
+             <evaluate expression="PSBDT021Service.page(searchCondition)" result="flowScope.itemList" /> 
+        </transition>
+        <transition on="back" to="home" validate="false" />
+
+        <!--選択 -->
+        <transition on="selectValidate" validate="false">
+            <set name="flashScope.isShowSelect" value="true"/>
+        </transition>
+        <transition on="select" to="PSBDT030Search" validate="false"/>
+        <!--編集 -->
+        <transition on="editValidate" validate="false" >
+            <set name="flashScope.isShowEdit" value="true"></set>
+        </transition>
+        <transition on="edit" to="PSBDT010" validate="false" />
+    </view-state>
+
+    <subflow-state id="PSBDT010" subflow="options/budget/PSBDT010">
+        <input name="sectionBudgetListItem" value="sectionBudgetListItem" />
+        <input name="isInitIndividualApr" value="true" />
+        <input name="SessionKey" value="SessionKey" />
+        <input name="pattern" value="'edit'" />
+        <input name="from" value="'PSBDT021'" />
+    </subflow-state>
+
+    <subflow-state id="PSBDT030Search" subflow="options/budget/PSBDT030Search">
+        <input name="sectionBudgetListItem" value="sectionBudgetListItem" />
+    </subflow-state>
+
+</flow>

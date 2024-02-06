@@ -1,0 +1,505 @@
+<!doctype html>
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="ja" lang="ja">
+<html LANG="ja">
+<head>
+<title>#customSpringMessage('SECTION_BUDGET_INPUT')</title><!--部門予算入力-->
+<meta http-equiv="Content-type" content="text/html; charset=UTF-8">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Content-script-type" content="text/javascript">
+<link id="CSS_FONT" rel="stylesheet" href="../../include/FontS.css" type="text/css">
+<link rel="stylesheet" href="../../include/ime.css" type="text/css">
+<link rel="stylesheet" href="../../include/searchbox.css" type="text/css">
+<link rel="stylesheet" href="../../include/Layout.css" type="text/css">
+<link rel="stylesheet" href="../../include/Color.css" type="text/css">
+<script language="javascript" type="text/javascript" src="../../include/common.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/check.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/date.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/searchbox.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/jquery-1.7.2.min.js"></script>
+<script language="javascript" type="text/javascript">
+<!--
+#set($editViewStateID='PSBDT010')
+#parse("./common/common_js.vm")
+display();
+
+var isClickable = false;
+
+function onLoad() {
+    setFocusForInput();
+    #if($!initValidate)
+        budgetYearOnBlur();
+        budgetAmountFByAjax();
+        #foreach($!item in $!sectionBudget.budgetAmountItems)
+            budgetAmountMonthByAjax($velocityCount);
+        #end
+    #end
+
+    #if("$!alertMessage" != "" && "$!isSuccess" == "" && "$!errorMessage" == "")
+        #if($!alertMessage.indexOf("E035") != -1)
+            alert("$!alertMessage");
+        #else
+            if (confirm("$!alertMessage")) {
+                getObj("Body").action="${flowExecutionUrl}&_eventId=edit&checkPass=1";
+                buttonDisable();
+                getObj("Body").submit();
+                return;
+            }
+        #end
+    #end
+
+    var errorMsg = "$!errorMessage";
+    if (errorMsg != ""){
+        document.getElementById("TR_ERROR").style.display = "";
+        isClickable = true;
+        return;
+    }
+
+    var isSuccess = '#jsEscape($!isSuccess)';
+    var from = '#jsEscape($!pageFrom)';
+    if (isSuccess == 'true') {
+        #set( $param = "#customSpringMessage('SECTION_BUDGET')" )
+        #if ($!pattern == "new" || $!pattern == "")
+            alert('#customMessageArgs("I005",[$param])');
+        #elseif ($!pattern ==  "edit")
+            alert('#customMessageArgs("I002",[$param])');
+        #end
+        buttonDisable();
+
+        if('PSBDT021' == from) {
+            top.iframeChange('${flowExecutionUrl}&_eventId=back');
+            return;
+        } else {
+            top.iframeChange('${flowExecutionUrl}&_eventId=showdetail','pageid',"$editViewStateID",'pattern','new', 'from','#jsEscape($!pageFrom)','isInitIndividualApr','true' );
+            return;
+        }
+    }
+    
+    isClickable = true;
+}
+
+function display(){
+    var pattern = '#jsEscape($!pattern)';
+    if (pattern == "new" || pattern == "") {
+        top.backUrl="${flowExecutionUrl}&_eventId=home";
+    }
+}
+
+function exec() {
+    if(!isClickable) {
+        return;
+    }
+    #set( $param1 = "#customSpringMessage('SECTION_BUDGET')" )
+    #set( $param2 = "#customSpringMessage('ACTION_REGISTER')" )
+    if( !confirm('#customMessageArgs("W001",[$param1,$param2])') ) {
+        return;
+    }
+    buttonDisable();
+    getObj("Body").action="${flowExecutionUrl}&_eventId=apply";
+    getObj("Body").submit();
+}
+
+function update() {
+    if(!isClickable) {
+        return;
+    }
+    #set( $param1 = "#customSpringMessage('SECTION_BUDGET')" )
+    #set( $param2 = "#customSpringMessage('UPDATE')" )
+    if( !confirm('#customMessageArgs("W001",[$param1,$param2])') ) {
+        return;
+    }
+    buttonDisable();
+    getObj("Body").action="${flowExecutionUrl}&_eventId=edit";
+    getObj("Body").submit();
+}
+
+function openSectionPop() {
+    // 部門POPUP
+    var termFlag = '0';
+    var companyCd = "#jsEscape($!loginUserCompanyCd)";
+    var companyChangeFlag = '0';
+    var loadSectionFlag = '';
+
+    sectionPopup.setParam(termFlag,companyCd,companyChangeFlag,loadSectionFlag);
+
+    sectionPopup.setObject(
+        getObj('sectionBudgetIdentify.section.sectionCd')
+        ,getObj('sectionBudgetIdentify.section.sectionName')
+    );
+    masterSearch('../../src/sectionPopup/search?pageid=sectionPopupSearch&popupPageid='+"$editViewStateID",'sectionSearch', '750', '500');
+}
+function sectionOnBlur() {
+    var sectionCd = getObj("sectionBudgetIdentify.section.sectionCd").value;
+    if(!sectionCd) {
+        getObj("sectionBudgetIdentify.section.sectionName").value = "";
+    } else {
+         $.ajax({
+            type: "POST",
+            async:false,
+            url:"../../getSectionInfoOnBlur",
+            data: {
+                termFlag:'0',
+                companyCd:cleanXss('#jsEscape($!loginUserCompanyCd)'),
+                sectionCd:cleanXss(sectionCd)
+            },
+            success:function(data){
+                //設定
+                getObj("sectionBudgetIdentify.section.sectionName").value = data.sectionName;
+            }
+        });
+    }
+}
+
+function openSubjectPop() {
+    // 科目POPUP
+    var termFlag = '0';
+    var companyCd = "#jsEscape($!loginUserCompanyCd)";
+    var onLoadFlag = '';
+
+    subjectPopup.setParam(termFlag,companyCd,onLoadFlag);
+
+    subjectPopup.setObject(
+        getObj('sectionBudgetIdentify.subject.subjectCd')
+        ,getObj('sectionBudgetIdentify.subject.subjectName')
+    );
+    masterSearch('../../src/subjectPopup/search?pageid=subjectPopupSearch&popupPageid='+"$editViewStateID",'subjectSearch', '750', '500');
+}
+function subjectOnBlur() {
+    var subjectCd = getObj('sectionBudgetIdentify.subject.subjectCd').value;
+    if(!subjectCd) {
+        getObj('sectionBudgetIdentify.subject.subjectName').value = "";
+    } else {
+         $.ajax({
+            type: "POST",
+            async:false,
+            url:"../../getSubjectOnBlur",
+            data: {
+                termFlag:'0',
+                companyCd:'#jsEscape($!loginUserCompanyCd)',
+                subjectCd:subjectCd
+            },
+            success:function(data){
+                //設定
+                getObj('sectionBudgetIdentify.subject.subjectName').value = data.subjectName;
+            }
+        });
+    }
+}
+
+function budgetAmountFByAjax() {
+    var amount = getObj("budgetAmountFT.amountFormat").value;
+    if(!amount) {
+        getObj("budgetAmountFT.amountFormat").value = "";
+    } else {
+        $.ajax({
+            type: "POST",
+            async:false,
+            url:"../../buyPriceController/itemAmount",
+            data: {
+                #foreach($!item in $!sectionBudget.budgetAmountItems)
+                   "amountArray[$velocityCount].amountFormat":getObj('budgetAmountItems[$velocityCount].budgetAmountF.amountFormat').value,
+                #end
+                currencyCd:'#jsEscape($!sectionBudget.currency.currencyCd)'
+            },
+            success:function(data){
+                getObj('budgetAmountFT.amountFormat').value = data.amount.amountFormat;
+            }
+        });
+    }
+}
+
+function budgetAmountMonthByAjax(i) {
+    var amountF = getObj("budgetAmountItems["+i+"].budgetAmountF.amountFormat").value;
+    var amountM = getObj("budgetAmountItems["+i+"].budgetAmountM.amountFormat").value;
+    if(amountM == 0) {
+        getObj("budgetAmountItems["+i+"].budgetAmount.amountFormat").value = amountF;
+    } else {
+        getObj("budgetAmountItems["+i+"].budgetAmount.amountFormat").value = amountM;
+    }
+
+    var amount = getObj('budgetAmountT.amountFormat').value;
+    if(!amount) {
+        getObj("budgetAmountT.amountFormat").value = "";
+    } else {
+        $.ajax({
+            type: "POST",
+            async:false,
+            url:"../../buyPriceController/itemAmount",
+            data: {
+                #foreach($!item in $!sectionBudget.budgetAmountItems)
+                   "amountArray[$velocityCount].amountFormat":getObj('budgetAmountItems[$velocityCount].budgetAmount.amountFormat').value,
+                #end
+                currencyCd:'#jsEscape($!sectionBudget.currency.currencyCd)'
+            },
+            success:function(data){
+                getObj('budgetAmountT.amountFormat').value = data.amount.amountFormat;
+            }
+        });
+    }
+}
+
+function budgetYearOnBlur() {
+    var budgetYear = getObj('sectionBudgetIdentify.budgetYear').value;
+    if(!budgetYear) {
+        var budgetYear = '#jsEscape($!sysYear)';
+    }
+    if(!budgetYear) {
+        return;
+    }
+    $.ajax({
+        type: "POST",
+        async:false,
+        url:"../../getBudgetYearInfoOnblur",
+        data: {
+            budgetYear:budgetYear
+        },
+        success:function(data){
+            if (data.length) {
+                //設定
+                getObj('startMonth').value = data[0];
+                #foreach($!headerNameMonth in $!headerNameMonths)
+                    getObj('headerNameMonths[$velocityCount]').value = $("#"+ data[$velocityCount + 1]).val();
+                #end
+            }
+        }
+    });
+}
+
+//-->
+</script>
+<style>
+    .input_readonly {
+        border-width: 0!important;
+        background-color:transparent!important;
+    }
+    .input_no_border{
+        border-width: 0!important;
+        background: none transparent scroll repeat 0% 0%!important;
+    }
+</style>
+</head>
+<body class="CreateArea" onload="onLoad();">
+<form id="Body" name="Body" method="post">
+    #customFormHiddenInput("isClassify" "false")
+    #foreach($!headerNameMonth in $!headerNameMonths)
+        <input id="$!headerNameMonth" type="hidden" value="#customSpringMessage($!headerNameMonth)"/>
+    #end
+    <table class="HomeBox">
+        <tr>
+            <td>
+                <table>
+                    <tr>
+                        <td align="left">
+                            <table class="NoBorder" width="98%">
+                                <tr>
+                                    <td>
+                                        <u><img src="../../image/mrkCircle.gif"><span id="StepTitle" class="FontStepTitle">#customSpringMessage("SECTION_BUDGET_INPUT")</span></u><br><br>
+                                            #if ($!pattern == "new" || $!pattern == "")
+                                                <span id="STEPMSG" class="FontSmallBold DarkBlue">#customSpringMessage("PSBDT010_ADD_HEADER_COMMENT")</span><!--コメント-->
+                                            #elseif ($!pattern ==  "edit")
+                                                <span id="STEPMSG" class="FontSmallBold DarkBlue">#customSpringMessage("PSBDT010_EDIT_HEADER_COMMENT")</span><!--コメント-->
+                                            #end
+                                    </td>
+                                    <td align="right" valign="middle" nowrap>
+                                        #if ($!pattern == "new" || $!pattern == "")
+                                            <input name="Button2" type="button" class="LargeButton" value="#customSpringMessage('ACTION_REGISTER')" onclick="exec();"><!--登録-->
+                                        #elseif ($!pattern ==  "edit")
+                                            <input name="Button2" type="button" class="LargeButton" value="#customSpringMessage('UPDATE')" onclick="update();"><!--更新-->
+                                        #end
+                                    </td>
+                                </tr>
+                                <tr id ="TR_ERROR" style="display:none;">
+                                    <td class="error" style="height:0px; width: 600px;">
+                                        $!errorMessage
+                                    </td>
+                                </tr>
+                            </table>
+                            <table class="Box1G ListBorderWidth" width="100%" id="base_input_table">
+                                <tbody class="Box1G ListBorderWidth">
+                                    #if ($!pattern == "edit")
+                                        <tr>
+                                            <td class="Box1H FontBoxHeader">
+                                                #customSpringMessage('ACTION_DELETE')<!--削除-->
+                                            </td>
+                                            <td nowrap class="Box1D FontSmall">
+                                                    #customFormCheckbox("sectionBudget.deleteFlg" "" "1" "0")#customSpringMessage('ACTION_DELETE')<!--削除-->
+                                            </td>
+                                        </tr>
+                                    #end
+                                    <tr>
+                                        <td class="Box1H FontBoxHeader">
+                                            #customSpringMessage('FISCAL_YEAR')<!--年度-->
+                                            <span class="FontWarn">※</span>
+                                        </td>
+                                        <td class="Box1D FontSmall">
+                                            #if ($!pattern == "new")
+                                                #springFormInput("sectionBudget.sectionBudgetIdentify.budgetYear" 'class="Small noIME" size="6" maxLength="4" onblur="budgetYearOnBlur();"')#customSpringMessage('FISCAL_YEAR')
+                                            #elseif ($!pattern == "edit")
+                                                #springFormInput("sectionBudget.sectionBudgetIdentify.budgetYear" 'class="Small input_no_border" style="text-align:center;" tabindex="-1" size="4"')#customSpringMessage('FISCAL_YEAR')
+                                            #end
+                                            <span style="display:none;">
+                                                #springFormInput("sectionBudget.startMonth" 'class="Small noIME"')
+                                            </span>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td class="Box1H FontBoxHeader">
+                                            #customSpringMessage('SECTION')<!--部門-->
+                                            <span class="FontWarn">※</span>
+                                        </td>
+                                        <td class="Box1D FontSmall">
+                                            #if ($!pattern == "new")
+                                                #springFormInput("sectionBudget.sectionBudgetIdentify.section.sectionCd" 'class="Small noIME" size="20" maxLength="12" onblur="sectionOnBlur();"')
+                                                #springFormInput("sectionBudget.sectionBudgetIdentify.section.sectionName" 'class="SmallDsp" readonly tabIndex="-1" size="40"')
+                                                <img class="Icon" name="ProductSearch" src="../../image/btnLupe.gif" onclick="openSectionPop();">
+                                            #elseif ($!pattern == "edit")
+                                                #out($!sectionBudget.sectionBudgetIdentify.section.sectionCd) #out($!sectionBudget.sectionBudgetIdentify.section.sectionName)
+                                            #end
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td class="Box1H FontBoxHeader">
+                                            #customSpringMessage('SUBJECT')<!--科目-->
+                                        </td>
+                                        <td class="Box1D FontSmall">
+                                            #if ($!pattern == "new")
+                                                #springFormInput("sectionBudget.sectionBudgetIdentify.subject.subjectCd" 'class="Small noIME" size="20" maxLength="12" onblur="subjectOnBlur();"')
+                                                #springFormInput("sectionBudget.sectionBudgetIdentify.subject.subjectName" 'class="SmallDsp" readonly tabIndex="-1" size="40"')
+                                                <img class="Icon" name="ProductSearch" src="../../image/btnLupe.gif" onclick="openSubjectPop();">
+                                            #elseif ($!pattern == "edit")
+                                                #out($!sectionBudget.sectionBudgetIdentify.subject.subjectCd) #out($!sectionBudget.sectionBudgetIdentify.subject.subjectName)
+                                            #end
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td class="Box1H FontBoxHeader">
+                                            #customSpringMessage('BUDGET_NAME')
+                                            <span class="FontWarn">※</span><!--予算名-->
+                                        </td>
+                                        <td class="Box1D">
+                                            #springFormInput("sectionBudget.budgetName" 'class="Small onIME" maxlength="30" size="40"')
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td class="Box1H FontBoxHeader">
+                                            #customSpringMessage('CURRENCY_CD')<!--通貨-->
+                                        </td>
+                                        <td class="Box1D FontSmall">
+                                            #out($!sectionBudget.currency.currencyCd)
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td class="Box1H FontBoxHeader">
+                                            #customSpringMessage('CHECK_IND')<!--チェック区分-->
+                                        </td>
+                                        <td class="Box1D FontSmall">
+                                            #customFormCheckbox("sectionBudget.secTotalChkInd" "" "1" "0")#customSpringMessage('TOTAL_CHK')<!--総額チェック-->
+                                            <br>
+                                            <span class="FontMini Blue" height="30px">#customSpringMessage('TOTAL_CHK_SECTION_COMMENT')</span><!--チェックなし：月単位で予算金額と実績をチェック／チェックあり：年度単位で予算金額と実績をチェック-->
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td class="Box1H FontBoxHeader">
+                                            #customSpringMessage('TOTAL_DIFF_MAX_AMOUNT')<!--総額差額上限金額-->
+                                        </td>
+                                        <td class="Box1D">
+                                            <span class="FontCurrSmall">#out($!sectionBudget.currency.currencyMark)</span>
+                                            #springFormInput("sectionBudget.diffMaxAmount.amountFormat" "class='SmallRight noIME' maxLength='16' size='25' onblur='editVal(this);' onfocus='deleteComma(this);'")
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td class="Box1H FontBoxHeader">
+                                            #customSpringMessage('NOTES')<!--備考-->
+                                        </td>
+                                        <td class="Box1D">
+                                            #springFormTextarea("sectionBudget.notes.comment" "rows='4' class='Small onIME' style='width:99%;' maxLength='200'")
+                                        </td>
+                                    </tr>
+                               </tbody>
+                            </table>
+                            <br>
+                            <!-- detail部分 -->
+                            <table id="DetailTable" class="Box1G" width="100%">
+                                <tbody class="Box1G ListBorderWidth">
+                                    <tr>
+                                        <td class="Box1H FontBoxHeader" width="15%">
+                                            #customSpringMessage("DISP_FISCAL_MONTH")<!--月度-->
+                                        </td>
+                                        <td class="Box1H FontBoxHeader" width="20%">
+                                            #customSpringMessage("FIRST_BUDGET")<!--期初予算-->
+                                        </td>
+                                        <td class="Box1H FontBoxHeader" width="20%">
+                                            #customSpringMessage("MODIFY_BUDGET")<!--修正予算-->
+                                        </td>
+                                        <td class="Box1H FontBoxHeader" width="20%">
+                                            #customSpringMessage("BUDGET_AMOUNT")<!--予算金額-->
+                                        </td>
+                                    </tr>
+                                #if($!initValidate)
+                                    #set($index = 0)
+                                    #foreach($!item in $!sectionBudget.budgetAmountItems)
+                                    <tr>
+                                        <td class="Box1H FontBoxHeader">
+                                            #springFormInput("sectionBudget.headerNameMonths[$velocityCount]" 'class="FontBoxHeader input_no_border" style="text-align:center;" tabindex="-1" readonly')
+                                        </td>
+                                        <td nowrap class="Box1D FontSmall">
+                                            <span class="FontCurrSmall">#out($!sectionBudget.currency.currencyMark)</span>
+                                            #springFormInput("sectionBudget.budgetAmountItems[$velocityCount].budgetAmountF.amountFormat" "class='SmallRight noIME' maxLength='16' size='22' onblur='editVal(this);budgetAmountFByAjax();budgetAmountMonthByAjax($velocityCount);' onfocus='deleteComma(this);'")
+                                        </td>
+                                        <td nowrap class="Box1D FontSmall">
+                                            <span class="FontCurrSmall">#out($!sectionBudget.currency.currencyMark)</span>
+                                            #springFormInput("sectionBudget.budgetAmountItems[$velocityCount].budgetAmountM.amountFormat" "class='SmallRight noIME' maxLength='16' size='22' onblur='editVal(this);budgetAmountMonthByAjax($velocityCount);' onfocus='deleteComma(this);'")
+                                        </td>
+                                        <td nowrap class="Box1D FontSmall">
+                                            <span class="FontCurrSmall Brown">
+                                                #out($!sectionBudget.currency.currencyMark)#springFormInput("sectionBudget.budgetAmountItems[$velocityCount].budgetAmount.amountFormat" 'class="FontCurrSmall Brown input_no_border" style="text-align:right" size="15" tabindex="-1" readonly')
+                                            </span>
+                                        </td>
+                                    </tr>
+                                    #end
+                                 #end
+                                    <tr>
+                                        <td class="Box1H FontBoxHeader">
+                                            #customSpringMessage('BUDGET_TOTAL_AMOUNT')<!--予算合計金額-->
+                                        </td>
+                                        <td nowrap class="Box1D FontSmall">
+                                            <span class="FontCurrSmall Brown">#out($!sectionBudget.currency.currencyMark)</span>
+                                            #springFormInput("sectionBudget.budgetAmountFT.amountFormat" 'class="FontCurrSmall Brown input_no_border" style="text-align:right" size="15" tabindex="-1" readonly')
+                                           </span>
+                                        </td>
+                                        <td nowrap class="Box1D FontSmall">
+                                        </td>
+                                        <td nowrap class="Box1D FontSmall">
+                                            <span class="FontCurrSmall Brown">#out($!sectionBudget.currency.currencyMark)</span>
+                                            #springFormInput("sectionBudget.budgetAmountT.amountFormat" 'class="FontCurrSmall Brown input_no_border" style="text-align:right" size="15" tabindex="-1" readonly')
+                                        </td>
+                                    </tr>
+                               </tbody>
+                            </table>
+                            <br>
+                            <table class="NoBorder" width="100%">
+                                <tr>
+                                    <td>
+                                        #if ($!pattern == "new" || $!pattern == "")
+                                            #customSpringMessage("PSBDT010_ADD_FOOTER_COMMENT")<!--コメント-->
+                                        #elseif ($!pattern ==  "edit")
+                                            #customSpringMessage("PSBDT010_EDIT_FOOTER_COMMENT")<!--コメント-->
+                                        #end
+                                    </td>
+                                    <td align="right" valign="middle" nowrap>
+                                        #if ($!pattern == "new" || $!pattern == "")
+                                            <input name="Button2" type="button" class="LargeButton" value="#customSpringMessage('ACTION_REGISTER')" onclick="exec();"><!--登録-->
+                                        #elseif ($!pattern ==  "edit")
+                                            <input name="Button2" type="button" class="LargeButton" value="#customSpringMessage('UPDATE')" onclick="update();"><!--更新-->
+                                        #end
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+</form>
+</body>
+</html>

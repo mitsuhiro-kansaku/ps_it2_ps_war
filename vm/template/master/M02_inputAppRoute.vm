@@ -1,0 +1,80 @@
+    <td $!_td_style_left nowrap>
+        #customSpringMessage($!itemDefinitionDetail.elementNameCd)
+        #if($!itemDefinitionDetail.searchMethod.searchType.searchType=='1')
+            <span class="FontComment">＊</span>
+        #elseif($!itemDefinitionDetail.searchMethod.searchType.searchType=='2')
+            <span class="FontComment">％</span>
+        #end
+        #if($!itemDefinitionDetail.inputMethod.mustEnterFlg.mustEnterFlg=='1') 
+            <span class="FontWarn">&nbsp;※</span>
+        #end
+    </td>
+    <td $!_td_style_right nowrap>
+        #customFormAppRouteSingleSelectForItemSetting("$!property" $!options "$!_item_style" "$!propertyValue")
+        <input 
+            type="button" 
+            id="ViewRoot" 
+            name="ViewRoot" 
+            class="SmallButton" 
+            value="#customSpringMessage('SHOW')" 
+            onclick="appRouteDetailPopup.setParam('#jsEscapeInHTML($!_companyCd)','#jsEscapeInHTML($!_sectionCd)','#jsEscapeInHTML($!_voucherType)',getObj('$!property').options[getObj('$!property').selectedIndex].value);poppage('../../src/apr/PSCMN030','PLACESEARCHBOX','700','300');" 
+            #if($!propertyValue=='')
+            disabled
+            #end
+            $!_event>
+        <input 
+            id="$!appRouteName" 
+            name="$!appRouteName" 
+            type="hidden" 
+            value="$!appRouteNameValue">
+    </td>
+    <script language="javascript" type="text/javascript">
+        ## +++++ 強化-00980-000 2013/04/23 ADD SBO_pangzhen START +++++
+        setShowButton();
+        ## +++++ 強化-00980-000 2013/04/23 ADD SBO_pangzhen -END- +++++
+        function setAppRouteName() {
+            var selObj = getObj('$!property');
+            var index = selObj.selectedIndex;
+            if(!selObj.options[0].selected){
+                getObj('$!appRouteName').value = selObj.options[index].text;
+            } else {
+                getObj('$!appRouteName').value = "";
+            }
+        }
+        function setShowButton() {
+            var selObj = getObj('$!property');
+            if(!selObj.options[0].selected){
+              getObj("ViewRoot").disabled = false;
+            } else{
+              getObj("ViewRoot").disabled = true;
+            }; 
+        }
+        function setAppRouteByAmount(approuteVoucherInd, amount, currencyCd){
+            if(!amount || !currencyCd) {
+                return;
+            } else {
+                $.ajax({
+                    type: "POST", 
+                    async:false, 
+                    url:"../../appRouteController/getAppRouteByAmount",
+                    data: {
+                        "approuteVoucherInd.approuteVoucherInd":approuteVoucherInd,
+                        "amount.amountFormat":amount,
+                        "amount.currencyCd":currencyCd,
+                        current:getObj('$!property').options[getObj('$!property').selectedIndex].value
+                    },
+                    success:function(data){
+                        $("[id='$!property']").empty();
+                        $.each(data,function(index,element){
+                            var varItem = new Option(element.text, element.value);
+                            varItem.selected = element.selected;
+                            getObj("$!property").options.add(varItem);
+                          });
+                    }
+                 });   
+            }
+            setAppRouteName();
+            setShowButton();
+        }
+     </script>
+    

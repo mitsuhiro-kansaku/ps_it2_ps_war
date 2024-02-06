@@ -1,0 +1,748 @@
+<!doctype html>
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="ja" lang="ja">
+<html LANG="ja">
+<head>
+<title>
+    #customSpringMessage('PRICE_M_REGISTER')（#customSpringMessage('REVISION')）
+</title>
+<meta http-equiv="Content-type" content="text/html; charset=UTF-8">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Content-script-type" content="text/javascript">
+
+<link id="CSS_FONT" rel="stylesheet" href="../../include/FontS.css" type="text/css">
+<link rel="stylesheet" href="../../include/ime.css" type="text/css">
+<link rel="stylesheet" href="../../include/searchbox.css" type="text/css">
+<link rel="stylesheet" href="../../include/Layout.css" type="text/css">
+<link rel="stylesheet" href="../../include/Color.css" type="text/css">
+<script language="javascript" type="text/javascript" src="../../include/common.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/check.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/date.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/searchbox.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/jquery-1.7.2.min.js"></script>
+<script language="javascript" type="text/javascript">
+<!--
+#parse("./common/common_js.vm")
+
+var isClickable = false;
+
+function onload() {
+    setFocusForInput();
+    top.document.title = document.title;
+
+    initAppRoute($!domain.managementInfo.approute.appRouteNo);
+    setAppRouteName();
+    setShowButton();
+
+    var alertMessage = "$!alertMessage";
+    #set( $purprice = "#customSpringMessage('M_PRICE')" )
+    if (alertMessage != ""){
+        alert(alertMessage);
+    }
+    var errorMsg = "$!errorMessage";
+    if (errorMsg != ""){
+        document.getElementById("TR_ERROR").style.display = "";
+        isClickable = true;
+        return;
+    }
+    var isSuccess = '#jsEscape($!isSuccess)';
+    if(isSuccess == 'true'){
+        alert('#customMessageArgs("I005",[$!purprice])');
+        buttonDisable();
+        top.iframeChange("${flowExecutionUrl}&_eventId=back");
+        return;
+    }
+
+    isClickable = true;
+}
+
+function initAppRoute(currentRoute){
+    $.ajax({
+        type: "POST",
+        async:false,
+        url:"../../appRouteController/getAppRoute",
+        data: {
+            "approuteVoucherInd.approuteVoucherInd":'D',
+            current:currentRoute
+        },
+        success:function(data){
+            $("[id='managementInfo.approute.appRouteNo']").empty();
+            $.each(data,function(index,element){
+                var varItem = new Option(element.text, element.value);
+                varItem.selected = element.selected;
+                getObj('managementInfo.approute.appRouteNo').options.add(varItem);
+            });
+        }
+    });
+}
+
+function setAppRouteName() {
+    var selObj = getObj('managementInfo.approute.appRouteNo');
+    var index = selObj.selectedIndex;
+    if(!selObj.options[0].selected){
+        getObj('managementInfo.approute.appRouteName').value = selObj.options[index].text;
+    } else {
+        getObj('managementInfo.approute.appRouteName').value = "";
+    }
+}
+function setShowButton() {
+    var selObj = getObj('managementInfo.approute.appRouteNo');
+    if(!selObj.options[0].selected){
+      getObj("ViewRoot").disabled = false;
+    } else{
+      getObj("ViewRoot").disabled = true;
+    };
+}
+
+function exec() {
+    if(!isClickable) {
+        return;
+    }
+    var viewList = document.getElementById("viewSelect");
+    for(var i = 0; i < viewList.options.length; i++) {
+        if (viewList.options[i].selected == true) {
+            document.getElementById("managementInfo.requesterFromList[" + i + "].selectedFlg").value = "1";
+        }
+    }
+
+    #set( $purprice = "#customSpringMessage('M_PRICE')" )
+    #set( $register = "#customSpringMessage('ACTION_REGISTER')" )
+    if( !confirm('#customMessageArgs("W001",[$purprice,$register])') ) {
+        return;
+    }
+    buttonDisable();
+    getObj("Body").submit();
+}
+
+//添付ファイル
+function downloadFile() {
+    iframeChange("${flowExecutionUrl}&_eventId=downloadGreenFile");
+}
+//添付ファイル
+function downloadImg() {
+    iframeChange("${flowExecutionUrl}&_eventId=downloadImgFile");
+}
+
+function userOnblur(UserType) {
+    var UserId, UserName;
+    //購買担当者の場合
+    if ('buyerUser' == UserType) {
+        UserId = getObj('managementInfo.buyerUser.buyerUserId').value;
+        UserName = getObj('managementInfo.buyerUser.buyerUserName');
+    } else {//価格管理者の場合
+        UserId = getObj('managementInfo.priceMngUser.priceMngUserId').value;
+        UserName = getObj('managementInfo.priceMngUser.priceMngUserName');
+    }
+    var userId = UserId;
+    var userCompanyCd = "#jsEscape($!loginCompanyCd)";
+    var referenceRangeFlg = "3";
+    var termFlag = "0";
+    var userPermissionFlg = "ALL";
+    if(userId == "") {
+        UserName.value = "";
+    } else {
+        $.ajax({
+            type: "POST",
+            async:true,
+            url:"../../getUserInfoOnBlur",
+            data: {
+                termFlag:termFlag,
+                companyCd:userCompanyCd,
+                referenceRangeFlg:referenceRangeFlg,
+                userPermissionFlg:userPermissionFlg,
+                userId:userId
+            },
+            success:function(data){
+                //設定
+                UserName.value = data.userName;
+            }
+        });
+    }
+}
+//-->
+</script>
+</head>
+<body class="CreateArea" onload="onload();">
+<form id="Body" name="Body" action="${flowExecutionUrl}&_eventId=apply" method="post" enctype="multipart/form-data">
+    <table class="HomeBox" style="width:50%;">
+        <tr>
+            <td>
+                <!-- ＊＊＊＊＊　カレンダーボックス　＊＊＊＊＊ -->
+                <iframe id="CALENDARBOX" class="CALENDARBOX" framespacing="0" scrolling="no" frameborder="0" src="../../sbxCalendar/body.vm"></iframe>
+                <table>
+                    <tr>
+                        <td align="left">
+                            <table class="NoBorder" width="98%">
+                                <tr>
+                                    <td>
+                                        <u><img src="../../image/mrkCircle.gif"><span id="StepTitle" class="FontStepTitle"><script>document.write(document.title);</script></span></u><br><br>
+                                        <span id="STEPMSG" class="FontSmallBold DarkBlue">#customSpringMessage('PSPRC030_HEADER_COMMENT')</span>
+                                        <br><br>
+                                    </td>
+                                    <td align="right" valign="middle" id="Submit1" nowrap>
+                                        <input name="Button2" type="button" class="LargeButton" value="#customSpringMessage('ACTION_REGISTER')" onclick="exec();"><!--登録-->
+                                    </td>
+                                </tr>
+                                <tr id ="TR_ERROR" style="display:none;">
+                                    <td class="error" style="height:0px;" colspan="2">
+                                        $!errorMessage
+                                    </td>
+                                </tr>
+                            </table>
+                            <table class="NoBorder" width="98%">
+                                <tbody class="Box1G">
+                                    <tr>
+                                        <td nowrap class="Box1H FontBoxHeader">
+                                            #customSpringMessage('REGISTER_DATE')<!--登録日-->
+                                        </td>
+                                        <td nowrap class="Box1D FontSmallAnk" colspan="3">
+                                            #out($!domain.managementInfo.registerDate.reqDate.dateOfymdDispYMD)
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td class="Box1H FontBoxHeader">
+                                            #customSpringMessage('ITEM_CD')<!--品名コード-->
+                                        </td>
+                                        <td class="Box1D FontSmall" colspan="3">
+                                            #out($!domain.identify.item.itemCd)
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td class="Box1H FontBoxHeader">
+                                            #customSpringMessage('ITEM_NAME')<!-- 品名-->
+                                        </td>
+                                        <td class="Box1D FontSmall" colspan="3">
+                                            #out($!domain.identify.item.itemName)
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td class="Box1H FontBoxHeader">
+                                            #customSpringMessage('PRODUCT_CLASS')<!--品名分類-->
+                                        </td>
+                                        <td nowrap class="Box1D" colspan="3">
+                                            <table class="FontSmall">
+                                                <tr>
+                                                    <td>
+                                                        <div class="ItemKind">#customSpringMessage('ITEM_CLASS_L_ABBR')</div>
+                                                    </td>
+                                                    <td>
+                                                        #out($!domain.identify.item.itemClass.itemClassNameL)
+                                                    </td>
+                                                    <td>
+                                                        <div class="ItemKind">#customSpringMessage('ITEM_CLASS_M_ABBR')</div>
+                                                    </td>
+                                                    <td>
+                                                        #out($!domain.identify.item.itemClass.itemClassNameM)
+                                                    </td>
+                                                    <td>
+                                                        <div class="ItemKind">#customSpringMessage('ITEM_CLASS_S_ABBR')</div>
+                                                    </td>
+                                                    <td>
+                                                        #out($!domain.identify.item.itemClass.itemClassNameS)
+                                                    </td>
+                                                </tr>
+                                            </table>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td nowrap class="Box1H FontBoxHeader">
+                                            #customSpringMessage('CATALOG_IND')<!--カタログ区分-->
+                                        </td>
+                                        <td nowrap class="Box1D FontSmall" colspan="3">
+                                            #customFormRadioButtons("domain.managementInfo.catalogInd" $!CatalogIndCodeList "" "")
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td nowrap class="Box1H FontBoxHeader">
+                                            #customSpringMessage('SUPPLIER')<!--取引先-->
+                                        </td>
+                                        <td nowrap class="Box1D FontSmall" colspan="3">
+                                            #out($!domain.identify.supplierFrom.supCd)
+                                            &nbsp;
+                                            #out($!domain.identify.supplierFrom.supplierName.supplierAbbrName)
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td nowrap class="Box1H FontBoxHeader" >
+                                            #customSpringMessage('VALID_PERIOD')<span class="FontWarn">&nbsp;※</span><!--有効期間-->
+                                        </td>
+                                        <td nowrap class="Box1D" colspan="3">
+                                            #springFormInput("domain.identify.validityPeriod.period.startDate.dateOfymdFormat" "maxLength=8 size=12 class='Small noIME'
+                                                onblur='dateOnBlur(this);'
+                                                onfocus='dateOnFocus(this);'
+                                                ")
+                                            <img class="Icon" src="../../image/btnCalendar.gif" onclick="initSearchBox(1,getElementById('identify.validityPeriod.period.startDate.dateOfymdFormat'));">
+                                            <span class="FontSmall">～</span>
+                                            #springFormInput("domain.identify.validityPeriod.period.endDate.dateOfymdFormat" "maxLength=8 size=12 class='Small noIME'
+                                                onblur='dateOnBlur(this);'
+                                                onfocus='dateOnFocus(this);'
+                                                ")
+                                            <img class="Icon" src="../../image/btnCalendar.gif" onclick="initSearchBox(1,getElementById('identify.validityPeriod.period.endDate.dateOfymdFormat'));">
+                                        </td>
+                                    </tr>
+
+                                    <tr>
+                                        <td nowrap class="Box1H FontBoxHeader">
+                                            #customSpringMessage('REVISION_NUMBER')<!--履歴番号-->
+                                        </td>
+                                        <td nowrap class="Box1D FontSmall" colspan="3">
+                                            #out($!domain.managementInfo.historyNo.historyNo)
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td nowrap class="Box1H FontBoxHeader">
+                                            #customSpringMessage('MNG_IND')<span class="FontWarn">&nbsp;※</span><!--価格管理区分-->
+                                        </td>
+                                        <td nowrap class="Box1D FontSmall" colspan="3">
+                                            #customFormSingleSelectForItemSetting("managementInfo.priceManagementInd.priceManagementInd" $!mngIndList "class='Small'" "$!domain.managementInfo.priceManagementInd.priceManagementInd")
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td nowrap class="Box1H FontBoxHeader">
+                                            #customSpringMessage('AUTO_ORDER_FLG')<!--自動発注フラグ-->
+                                        </td>
+                                        <td nowrap class="Box1D FontSmall" colspan="3">
+                                            #customFormRadioButtons("domain.orderDeliv.autoOrderFlg.autoOrderFlg" $autoOrderFlgList "" "")
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td nowrap class="Box1H FontBoxHeader">
+                                            #customSpringMessage('BUYER_USER_SECTION_CD')<!--購買担当部門コード-->
+                                        </td>
+                                        <td nowrap class="Box1D FontSmall" colspan="3">
+                                            #out($!domain.managementInfo.buyerUserSectionCd)
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td nowrap class="Box1H FontBoxHeader">
+                                            #customSpringMessage('PUR_SECTION_NAME')<!--購買担当部門名-->
+                                        </td>
+                                        <td nowrap class="Box1D FontSmall" colspan="3">
+                                           #out($!domain.managementInfo.buyerUserSectionName)
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td nowrap class="Box1H FontBoxHeader">
+                                            #customSpringMessage('BUYER_USER')<!--購買担当者-->
+                                        </td>
+                                        <td nowrap class="Box1D" colspan="3">
+                                            <table class="NoBorder">
+                                                <tr>
+                                                    <td nowrap class="FontSmall">
+                                                        #springFormInput("domain.managementInfo.buyerUser.buyerUserId" "class='Small noIME' maxlength='12' type='text' size='20' onblur=userOnblur('buyerUser');")
+                                                        #springFormInput("domain.managementInfo.buyerUser.buyerUserName" "class='SmallDsp noIME' readonly tabIndex='-1' maxlength='12' type='text' size='32'")
+                                                        <img
+                                                            class="Icon"
+                                                            id="buyerSearch"
+                                                            src="../../image/btnLupe.gif"
+                                                            onclick="userPopup.setObject(getObj('managementInfo.buyerUser.buyerUserId'),
+                                                                                        getObj('managementInfo.buyerUser.buyerUserName'),
+                                                                                        null,
+                                                                                        null,
+                                                                                        null,
+                                                                                        null,
+                                                                                        null,
+                                                                                        null,
+                                                                                        null,
+                                                                                        null,
+                                                                                        null);
+                                                                    masterSearch('../../src/userPopup/search?pageid=userPopupSearch&popupPageid=PSPRC030&projectId=buyerUser',
+                                                                                  'UserSearch',
+                                                                                  '750',
+                                                                                  '500');">
+                                                    </td>
+                                                </tr>
+                                            </table>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td nowrap class="Box1H FontBoxHeader">
+                                            #customSpringMessage('PRICE_MNG_USER')<!--価格管理者-->
+                                        </td>
+                                        <td nowrap class="Box1D" colspan="3">
+                                            <table class="NoBorder">
+                                                <tr>
+                                                    <td nowrap class="FontSmall">
+                                                        #springFormInput("domain.managementInfo.priceMngUser.priceMngUserId" "class='Small noIME' maxlength='12' type='text' size='20'  onblur=userOnblur('priceMngUser');")
+                                                        #springFormInput("domain.managementInfo.priceMngUser.priceMngUserName" "class='SmallDsp noIME' readonly tabIndex='-1' maxlength='12' type='text' size='32'")
+                                                        <img
+                                                            class="Icon"
+                                                            id="buyerSearch"
+                                                            src="../../image/btnLupe.gif"
+                                                            onclick="userPopup.setObject(getObj('managementInfo.priceMngUser.priceMngUserId'),
+                                                                                        getObj('managementInfo.priceMngUser.priceMngUserName'),
+                                                                                        null,
+                                                                                        null,
+                                                                                        null,
+                                                                                        null,
+                                                                                        null,
+                                                                                        null,
+                                                                                        null,
+                                                                                        null,
+                                                                                        null);
+                                                                    masterSearch('../../src/userPopup/search?pageid=userPopupSearch&popupPageid=PSPRC030&projectId=priceMngUser',
+                                                                                  'UserSearch',
+                                                                                  '750',
+                                                                                  '500');">
+                                                    </td>
+                                                </tr>
+                                            </table>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td nowrap class="Box1H FontBoxHeader">
+                                            #customSpringMessage('APP_ROUTE_SELECT')<span class="FontWarn">&nbsp;※</span><!--承認ルート選択-->
+                                        </td>
+                                        <td nowrap class="Box1D" colspan="3">
+                                            #customFormSingleSelect("domain.managementInfo.approute.appRouteNo" $appRouteList "class='Small' onchange='setShowButton();setAppRouteName();'")
+                                            <input
+                                                type="button"
+                                                id="ViewRoot"
+                                                name="ViewRoot"
+                                                class="SmallButton"
+                                                value="#customSpringMessage('SHOW')"
+                                                onclick="appRouteDetailPopup.setParam('#jsEscapeInHTML($!loginCompanyCd)','#jsEscapeInHTML($!loginSectionCd)','D',getObj('managementInfo.approute.appRouteNo').options[getObj('managementInfo.approute.appRouteNo').selectedIndex].value);poppage('../../src/apr/PSCMN030','PLACESEARCHBOX','700','300');"
+                                                #if($!domain.managementInfo.approute.appRouteNo=='')
+                                                disabled
+                                                #end
+                                                >
+                                            #customFormHiddenInput("managementInfo.approute.appRouteName" "$!domain.managementInfo.approute.appRouteName")
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td nowrap class="Box1H FontBoxHeader">
+                                            #customSpringMessage('AUTO_STOP_FLG')<!--自動打切フラグ-->
+                                        </td>
+                                        <td nowrap class="Box1D FontSmall" colspan="3">
+                                            #customFormRadioButtons("domain.orderDeliv.autoTerminateFlg.autoTerminateFlg" $autoOrderCloseFlgList "" "")
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <th nowrap class="Box1H FontBoxHeader">
+                                           #customSpringMessage('STD_ORDER_LT')<!--標準納入日数--><span class="FontWarn">&nbsp;※</span>
+                                        </th>
+                                        <td nowrap class="Box1D FontSmallAnk" colspan="3">
+                                            #springFormInput("domain.orderDeliv.standardDelivDayCount.standardDelivDayCount.dayCount" "onblur='editVal(this);' onfocus='deleteComma(this);' class='SmallRight noIME' maxlength='3' type='text' size='9'")
+                                            &nbsp;#customSpringMessage('STD_DELIVE_DAY')
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td class="Box1H FontBoxHeader">
+                                            #customSpringMessage('KATASHIKI')<!--型式-->
+                                        </td>
+                                        <td class="Box1D FontSmall" colspan="3">
+                                            #out($!domain.identify.item.katashiki)
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td class="Box1H FontBoxHeader">
+                                           #customSpringMessage('MANUFACT')<!--メーカーコード-->
+                                        </td>
+                                        <td class="Box1D FontSmall" colspan="3">
+                                            #out($!domain.identify.item.manufact.manufactCd) &nbsp; #out($!domain.identify.item.manufact.manufactName)
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td nowrap class="Box1H FontBoxHeader">
+                                        #customSpringMessage('ORDER_UNIT')<span class="FontWarn">&nbsp;※</span><!--発注単位数量-->
+                                        </td>
+                                        <td nowrap class="Box1D FontSmall" colspan="3">
+                                            #springFormInput("domain.orderDeliv.custUnitVol.custUnitVol.volFormat" "class='SmallRight noIME' maxlength='13' type='text' size='20' onblur='editVal(this);' onfocus='deleteComma(this);' ")
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td nowrap class="Box1H FontBoxHeader">
+                                            #customSpringMessage('MIN_ORDER_VOL')<span class="FontWarn">&nbsp;※</span><!--最小発注数量-->
+                                        </td>
+                                        <td nowrap class="Box1D FontSmall" colspan="3">
+                                            #springFormInput("domain.orderDeliv.minCustVol.minCustVol.volFormat" "class='SmallRight noIME' maxlength='13' type='text' size='20' onblur='editVal(this);' onfocus='deleteComma(this);' ")
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td nowrap class="Box1H FontBoxHeader">
+                                            #customSpringMessage('PRICE_LIST_NO')<!--価格表No.-->
+                                        </td>
+                                        <td nowrap class="Box1D FontSmall" colspan="3">
+                                            #springFormInput("domain.supple.priceNo" "class='Small noIME' maxlength='15' type='text' size='20'")
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td nowrap class="Box1H FontBoxHeader">
+                                            #customSpringMessage('NEXT_UPD_YM')<!--次回見直時期-->
+                                        </td>
+                                        <td nowrap class="Box1D" colspan="3">
+                                            #springFormInput("domain.revision.lastUpdYm.lastUpdYm.dateOfymFormat" "class='Small noIME' maxlength='6' type='text' size='8' onblur='dateOnBlurYYYYMM(this);' onfocus='dateOnFocus(this);'")
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td nowrap class="Box1H FontBoxHeader">
+                                            #customSpringMessage('UPDATE_CYCLE')## 価格改定サイクル
+                                        </td>
+                                        <td nowrap class="Box1D" colspan="3">
+                                            #customFormSingleSelectForItemSetting("revision.updateCycle.updateCycle" $!updateCycleList "class='Small'" "$!domain.revision.updateCycle.updateCycle")
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td nowrap class="Box1H FontBoxHeader">
+                                            #customSpringMessage('QUOT_REQ_NO')<!--見積依頼番号-->
+                                        </td>
+                                        <td nowrap class="Box1D FontSmallAnk" colspan="3">
+                                            <span nowrap class="FontSlipNo">#out($!domain.managementInfo.quotReqNo.quotReqNo)</span>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td nowrap class="Box1H FontBoxHeader">
+                                            #customSpringMessage('INSPECT_IND')<span class="FontWarn">&nbsp;※</span><!--検査区分-->
+                                        </td>
+                                        <td nowrap class="Box1D FontSmall" colspan="3">
+                                            #customFormRadioButtons("domain.orderDeliv.inspectInd.inspectInd" $inspectIndList "" "")
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td nowrap class="Box1H FontBoxHeader">
+                                            #customSpringMessage('TAX_IND')<span class="FontWarn">&nbsp;※</span><!--課税区分-->
+                                        </td>
+                                        <td nowrap class="Box1D" colspan="3">
+                                            #customFormSingleSelectForItemSetting("supItem.amountTypePrice.taxCalculationInd.taxInd.taxInd" $!taxCdList "class='Small'" "$!domain.supItem.amountTypePrice.taxCalculationInd.taxInd.taxInd")
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td nowrap class="Box1H FontBoxHeader">
+                                            #customSpringMessage('CONSUMPT_IND')<!--消費税区分-->
+                                        </td>
+                                        <td nowrap class="Box1D FontSmall" colspan="3">
+                                            #out($!domain.supItem.amountTypePrice.taxCalculationInd.consumptInd.consumptInd_PageValue)
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td nowrap class="Box1H FontBoxHeader">
+                                            #customSpringMessage('GREEN_ITEM_PUR')<!--グリーン品購入-->
+                                        </td>
+                                        <td nowrap class="Box1D FontSmall" colspan="3">
+                                            #customFormRadioButtons("domain.supple.green.greenPur" $greenFlgList "" "")
+                                        </td>
+                                    </tr>
+
+                                    <tr>
+                                        <td nowrap class="Box1H FontBoxHeader">
+                                            #customSpringMessage('PRICE_LABEL')<!--環境ラベル-->
+                                        </td>
+                                        <td nowrap class="Box1D" colspan="3">
+                                            #customFormSingleSelect("domain.supple.green.priceLabel" $greenLabelList "class='Small'")
+                                        </td>
+                                    </tr>
+
+                                    <tr>
+                                        <td class="Box1H FontBoxHeader">
+                                            #customSpringMessage('GREEN_ITEM_ATTACH')<!--グリーン品添付-->
+                                        </td>
+                                        <td nowrap class="Box1D FontSmall" colspan="3">
+                                            <table width="100%" class="FontMini">
+                                                <tr>
+                                                    #set( $fileDisp = "" )
+                                                    #if($!domain.supple.green.greenItemAttach.fileName!='')
+                                                        <td id="FileLink1" nowrap>
+                                                            <a href="#" onclick="downloadFile();">#out($!domain.supple.green.greenItemAttach.fileName)</a>
+                                                            <input type="checkbox" onclick="getObj('supple.green.greenItemAttach.file').disabled =!this.checked;getObj('greenClearBtn').disabled =!this.checked;getObj('supple.green.greenItemAttach.delFlg').value = this.checked?'1':'0';"/>#customSpringMessage('ACTION_DELETE')
+                                                        </td>
+                                                        #set( $fileDisp = "disabled" )
+                                                    #end
+                                                    <td id="greenFile" nowrap>
+                                                        <input class="Small" id="supple.green.greenItemAttach.file" name="supple.green.greenItemAttach.file" type="file" size="70" $fileDisp>
+                                                        <input id="greenClearBtn" type="button" class="MinimumButton" onclick="clearGreenFile();" value="#customSpringMessage('ACTION_CLEAR')" $fileDisp>
+                                                        #customFormHiddenInput("supple.green.greenItemAttach.delFlg" "0")
+                                                    </td>
+                                                    <script language="javascript" type="text/javascript">
+                                                        function clearGreenFile(){
+                                                            var file=getObj("supple.green.greenItemAttach.file");
+                                                            file.outerHTML = file.outerHTML;
+                                                        }
+                                                    </script>
+                                            </tr>
+                                            </table>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td nowrap class="Box1H FontBoxHeader">
+                                            #customSpringMessage('CATALOG_FLG')##カタログ種別
+                                        </td>
+                                        <td nowrap class="Box1D FontSmall" colspan="3">
+                                            #out($!domain.supItem.kind.materialType.materialType_PageValue)
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td nowrap class="Box1H FontBoxHeader">
+                                            #customSpringMessage('CONNECT_TYPE')<!--接続種別-->
+                                        </td>
+                                        <td nowrap class="Box1D" colspan="3">
+                                            #customFormSingleSelect("domain.orderDeliv.connectType.connectTypeInd" $connectTypeList "class='Small'")
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td nowrap class="Box1H FontBoxHeader" >
+                                            #customSpringMessage('PUR_STOP_PERIOD')<!--購入停止期間-->
+                                        </td>
+                                        <td nowrap class="Box1D" colspan="3">
+                                            #springFormInput("domain.managementInfo.purStopFlag.purStopPeriod.purStopPeriodStart.dateOfymdFormat" "maxLength=8 size=12 class='Small noIME'
+                                                onblur='dateOnBlur(this);'
+                                                onfocus='dateOnFocus(this);'
+                                                ")
+                                            <img class="Icon" src="../../image/btnCalendar.gif" onclick="initSearchBox(1,getElementById('managementInfo.purStopFlag.purStopPeriod.purStopPeriodStart.dateOfymdFormat'));">
+                                            <span class="FontSmall">～</span>
+                                            #springFormInput("domain.managementInfo.purStopFlag.purStopPeriod.purStopPeriodEnd.dateOfymdFormat" "maxLength=8 size=12 class='Small noIME'
+                                                onblur='dateOnBlur(this);'
+                                                onfocus='dateOnFocus(this);'
+                                                ")
+                                            <img class="Icon" src="../../image/btnCalendar.gif" onclick="initSearchBox(1,getElementById('managementInfo.purStopFlag.purStopPeriod.purStopPeriodEnd.dateOfymdFormat'));">
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td nowrap class="Box1H FontBoxHeader">
+                                            #customSpringMessage('PRICE_REMARKS')<!--購買価格説明-->
+                                        </td>
+                                        <td class="Box1D" colspan="3">
+                                            #springFormTextarea("domain.supple.buyerPriceRemarks" "class='Small onIME' rows='4' maxLength='200' style='width:99%;'")
+                                        </td>
+                                    </tr>
+
+                                    <tr>
+                                        <td class="Box1H FontBoxHeader">
+                                            #customSpringMessage('REF_URL')<!--参照先URL-->
+                                        </td>
+                                        <td class="Box1D" colspan="3">
+                                            #springFormInput("domain.supple.refUrl" "class='Small' maxlength='255' type='text' size='100'")
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td class="Box1H FontBoxHeader">
+                                            #customSpringMessage('IMG_FILE')<!--画像ファイル-->
+                                        </td>
+                                        <td class="Box1D" colspan="3">
+                                            <table width="100%" class="FontMini">
+                                                <tr>
+                                                    <!-- 2013/03/11 MODIFY SBO_SOKOU START -->
+                                                    #set( $fileDisp = "" )
+                                                    #if($!domain.supple.imgFile.fileName!='')
+                                                        <td id="FileLink1" nowrap>
+                                                            <a href="#" onclick="downloadImg();">#out($!domain.supple.imgFile.fileName)</a>
+                                                            <input type="checkbox" onclick="getObj('supple.imgFile.file').disabled =!this.checked;getObj('impClearBtn').disabled =!this.checked;getObj('supple.imgFile.delFlg').value = this.checked?'1':'0';"/>#customSpringMessage('ACTION_DELETE')
+                                                        </td>
+                                                        #set( $fileDisp = "disabled" )
+                                                    #end
+                                                    <td id="imgFile" nowrap>
+                                                        <input class="Small" id="supple.imgFile.file" name="supple.imgFile.file" type="file" size="70" $fileDisp>
+                                                        <input id="impClearBtn" type="button" class="MinimumButton" onclick="clearImgFile();" value="#customSpringMessage('ACTION_CLEAR')" $fileDisp>
+                                                        #customFormHiddenInput("supple.imgFile.delFlg" "0")
+                                                        </td>
+                                                        <script language="javascript" type="text/javascript">
+                                                            function clearImgFile(){
+                                                                var file=getObj("supple.imgFile.file");
+                                                                file.outerHTML = file.outerHTML;
+                                                            }
+                                                        </script>
+                                                </tr>
+                                            </table>
+                                        </td>
+                                    </tr>
+
+                                    <tr>
+                                        <td class="Box1H FontBoxHeader">
+                                            #customSpringMessage('UNIT_NAME')<!--単位-->
+                                        </td>
+                                        <td class="Box1D">
+                                            #springFormInput("domain.identify.item.unit.unitName" "class='SmallDsp' readOnly tabIndex='-1' maxlength='10' type='text' size='10'")
+                                        </td>
+                                        <td nowrap class="Box1H FontBoxHeader">
+                                            #customSpringMessage('CURRENCY_CD')<!--通貨コード-->
+                                        </td>
+                                        <td nowrap class="Box1D FontSmall">#out($!domain.identify.supplierFrom.currency.currencyCd)</td>
+                                    </tr>
+
+                                    <tr>
+                                        <td nowrap class="Box1H FontBoxHeader " rowspan="5">
+                                            #customSpringMessage('MIN_AMOUNT')<!--下限数量-->
+                                        </td>
+                                        <td nowrap class="Box1D FontSmallAnk">
+                                            0
+                                        </td>
+                                        <td nowrap class="Box1H FontBoxHeader"  rowspan="5">
+                                            #customSpringMessage('STD_PRICE')<!--購買単価-->
+                                        </td>
+                                        <td nowrap class="Box1D FontCurrSmall">
+                                            #springFormInput("domain.supItem.amountTypePrice.amountPrice1.price.amountFormat" "class='SmallRight noIME' maxlength='17' type='text' size='25' onblur='editVal(this);' onfocus='deleteComma(this);'")
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td nowrap class="Box1D FontSmall" >
+                                            #springFormInput("domain.supItem.amountTypePrice.amountPrice2.minAmount.volFormat" "class='SmallRight noIME' maxlength='13' type='text' size='20' onblur='editVal(this);' onfocus='deleteComma(this);'")
+                                        </td>
+                                        <td  nowrap class="Box1D FontCurrSmall">
+                                            #springFormInput("domain.supItem.amountTypePrice.amountPrice2.price.amountFormat" "class='SmallRight noIME' maxlength='17' type='text' size='25' onblur='editVal(this);' onfocus='deleteComma(this);'")
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td nowrap class="Box1D FontSmall" >
+                                            #springFormInput("domain.supItem.amountTypePrice.amountPrice3.minAmount.volFormat" "class='SmallRight noIME' maxlength='13' type='text' size='20' onblur='editVal(this);' onfocus='deleteComma(this);'")
+                                        </td>
+                                        <td nowrap class="Box1D FontCurrSmall">
+                                            #springFormInput("domain.supItem.amountTypePrice.amountPrice3.price.amountFormat" "class='SmallRight noIME' maxlength='17' type='text' size='25' onblur='editVal(this);' onfocus='deleteComma(this);'")
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td nowrap class="Box1D FontSmall" >
+                                            #springFormInput("domain.supItem.amountTypePrice.amountPrice4.minAmount.volFormat" "class='SmallRight noIME' maxlength='13' type='text' size='20' onblur='editVal(this);' onfocus='deleteComma(this);'")
+                                        </td>
+                                        <td nowrap class="Box1D FontCurrSmall">
+                                            #springFormInput("domain.supItem.amountTypePrice.amountPrice4.price.amountFormat" "class='SmallRight noIME' maxlength='17' type='text' size='25' onblur='editVal(this);' onfocus='deleteComma(this);'")
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td nowrap class="Box1D FontSmall" >
+                                            #springFormInput("domain.supItem.amountTypePrice.amountPrice5.minAmount.volFormat" "class='SmallRight noIME' maxlength='13' type='text' size='20' onblur='editVal(this);' onfocus='deleteComma(this);'")
+                                        </td>
+                                        <td nowrap class="Box1D FontCurrSmall">
+                                            #springFormInput("domain.supItem.amountTypePrice.amountPrice5.price.amountFormat" "class='SmallRight noIME' maxlength='17' type='text' size='25' onblur='editVal(this);' onfocus='deleteComma(this);'")
+                                        </td>
+                                    </tr>
+                                     <tr>
+                                            <td nowrap class="Box1H FontBoxHeader">
+                                                #customSpringMessage('VIEW_PRICE_RANGE')<span class="FontWarn">&nbsp;※</span><!--価格公開範囲-->
+                                            </td>
+                                            <td  nowrap class="Box1D FontSmall" colspan="3">
+                                                #customFormRadioButtons("domain.managementInfo.priceVisibility" $priceViewList "" "")
+                                            <BR>
+                                            <select id="viewSelect" name="viewSelect" class="FontSmall" multiple size="10" algin="left">
+                                                #foreach($!requesterFrom in $!domain.managementInfo.requesterFromList)
+                                                    #if($!requesterFrom.selectedFlg == "1")
+                                                        <option value="#out($!requesterFrom.reqCompanyCd)" selected>#out($!requesterFrom.reqCompanyName) &nbsp; #out($!requesterFrom.reqSectionPlaceName)</option>
+                                                    #else
+                                                        <option value="#out($!requesterFrom.reqCompanyCd)">#out($!requesterFrom.reqCompanyName) &nbsp; #out($!requesterFrom.reqSectionPlaceName)</option>
+                                                    #end
+                                                #end
+                                                #foreach($!requesterFrom in $!domain.managementInfo.requesterFromList)
+                                                    #customFormHiddenInput("managementInfo.requesterFromList[$velocityCount].selectedFlg" "$!managementInfo.requesterFromList[$velocityCount].selectedFlg")
+                                                #end
+                                            </select>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                            <br>
+                            <table class="NoBorder" width="98%">
+                                <tr>
+                                    <td align="left" valign="top">
+                                        #customSpringMessage('PSPRC030_FOOTER_COMMENT')
+                                    </td>
+                                    <td align="right" valign="middle" id="Submit1">
+                                        <input name="Button2" type="button" class="LargeButton" value="#customSpringMessage('ACTION_REGISTER')" onclick="exec();"><!--登録-->
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+</form>
+</body>
+</html>

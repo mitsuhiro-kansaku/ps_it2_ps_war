@@ -1,0 +1,241 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="ps.dataaccess.ajax.UserOnblurMapper">
+     <select id="getUserInfoOnBlur" resultType="fw.domain.mst.userauthority.user.UserPopupItem">
+        SELECT
+            M_USER.USER_ID AS "userIdentify.userId",
+            M_USER.COMPANY_CD AS "companyCd",
+            M_USER.SECTION_CD AS "userIdentify.sectionCd",
+            M_SECTION_LANG.SECTION_NAME AS "sectionName",
+            M_SECTION_PLACE.SECTION_PLACE_CD AS "sectionPlaceCd",
+            M_SECTION_PLACE_LANG.SECTION_PLACE_NAME AS "sectionPlaceName",
+            M_B_USER_LANG.USER_NAME AS "userName",
+            M_USER.OFFICIAL_NAME AS "officialName",
+            M_USER.EXTENSION_NO AS "extensionNo",
+            M_USER.TEL_NO AS "externalNo",
+            M_USER.FAX_NO AS "faxNo",
+            M_B_USER.MAIL_ADDR AS "mailAddr",
+            M_SECTION.SECTION_CD,
+            M_SECTION_LANG.SECTION_NAME
+       FROM M_USER
+        INNER JOIN M_COMPANY
+            ON  M_USER.COMPANY_CD=M_COMPANY.COMPANY_CD
+            <!-- 強化-01784-000   2013.06.14 DEL SBO_WANGXM 
+            AND M_COMPANY.COMPANY_USE_LANGUAGE_IND = '${@fw.security.SecurityUtil@getCompanyUseLanguageIndByEscapeSql()}'-->
+        LEFT JOIN M_B_USER
+            ON M_USER.USER_ID=M_B_USER.USER_ID
+            AND M_USER.COMPANY_CD=M_B_USER.COMPANY_CD
+        LEFT JOIN M_B_USER_LANG
+            ON M_B_USER.USER_ID=M_B_USER_LANG.USER_ID
+            AND M_B_USER.COMPANY_CD=M_B_USER_LANG.COMPANY_CD
+            AND M_B_USER_LANG.LANGUAGE_IND=M_COMPANY.COMPANY_USE_LANGUAGE_IND
+        LEFT JOIN  M_SECTION
+            ON M_SECTION.SECTION_CD =  M_USER.SECTION_CD
+            AND M_USER.COMPANY_CD =  M_SECTION.COMPANY_CD
+        LEFT JOIN M_SECTION_LANG 
+            ON M_SECTION.SECTION_CD = M_SECTION_LANG.SECTION_CD
+            AND M_USER.COMPANY_CD =  M_SECTION_LANG.COMPANY_CD
+            AND M_SECTION.VALID_START_DATE = M_SECTION_LANG.VALID_START_DATE
+            AND M_SECTION.VALID_END_DATE = M_SECTION_LANG.VALID_END_DATE
+            AND M_SECTION_LANG.LANGUAGE_IND=M_COMPANY.COMPANY_USE_LANGUAGE_IND
+        LEFT JOIN M_SECTION_PLACE
+            ON M_SECTION_PLACE.SECTION_PLACE_CD = M_SECTION.SECTION_PLACE_CD
+            AND M_SECTION_PLACE.COMPANY_CD = M_SECTION.COMPANY_CD
+        LEFT JOIN M_SECTION_PLACE_LANG 
+             ON M_SECTION_PLACE_LANG.SECTION_PLACE_CD = M_SECTION_PLACE.SECTION_PLACE_CD
+             AND M_SECTION_PLACE_LANG.COMPANY_CD = M_SECTION_PLACE.COMPANY_CD 
+             AND M_SECTION_PLACE_LANG.LANGUAGE_IND=M_COMPANY.COMPANY_USE_LANGUAGE_IND
+        <!-- 2013/02/10 DEL DAIKO_YAMAGUCHI
+        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(userPermissionFlg) and userPermissionFlg != 'ALL'">
+         -->
+        <!-- 2013/02/10 ADD DAIKO_YAMAGUCHI -->
+        <if test="userPermissionList.size() > 0">
+        <!-- 強化-00180-000 2013/03/12 MODIFY SBO_SOKOU START -->
+        INNER JOIN M_ROLE
+                ON (M_USER.COMPANY_CD = M_ROLE.COMPANY_CD
+                OR M_ROLE.COMPANY_CD = '${@fw.common.constant.ApplicationConstant@COMPANY_CD_ALL}')
+               AND M_USER.ROLE_NO = M_ROLE.ROLE_NO
+        INNER JOIN M_ROLE_DTL
+                ON M_ROLE.COMPANY_CD = M_ROLE_DTL.COMPANY_CD
+               AND M_ROLE_DTL.ROLE_NO = M_ROLE.ROLE_NO
+        <!-- 強化-00180-000 2013/03/12 MODIFY SBO_SOKOU END -->
+        </if>
+        WHERE
+                '${@fw.common.util.AppUtil@getSysDate(@fw.common.util.AppUtil@DATE_SHORT)}' BETWEEN M_SECTION.VALID_START_DATE AND M_SECTION.VALID_END_DATE
+            AND '${@fw.common.util.AppUtil@getSysDate(@fw.common.util.AppUtil@DATE_SHORT)}' BETWEEN M_SECTION_PLACE.VALID_START_DATE AND M_SECTION_PLACE.VALID_END_DATE      
+            AND '${@fw.common.util.AppUtil@getSysDate(@fw.common.util.AppUtil@DATE_SHORT)}' BETWEEN M_USER.VALID_START_DATE AND M_USER.VALID_END_DATE
+            AND M_USER.USER_ID = #{userId}
+            AND M_USER.COMPANY_CD = #{companyCd}
+	        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(sectionPlaceCd)">
+	           AND M_SECTION_PLACE.SECTION_PLACE_CD = #{sectionPlaceCd}
+	        </if>
+            <if test="@org.apache.commons.lang.StringUtils@isNotBlank(sectionCd)">
+               AND M_USER.SECTION_CD = #{sectionCd}
+            </if>
+	        <!-- 2013/02/08 ADD DAIKO_YAMAGUCHI START -->
+	        <if test="userPermissionList.size() > 0">
+	           AND M_ROLE_DTL.AUTH_NO IN 
+	           <foreach collection="userPermissionList" item="userPermission" open="(" separator="," close=")">
+               #{userPermission}
+               </foreach>
+               AND M_ROLE_DTL.AUTH_IND = '1'
+	        </if>
+	        <!-- 2013/02/08 ADD DAIKO_YAMAGUCHI -END- -->
+	        
+	        <!-- 2013/02/08 DEL DAIKO_YAMAGUCHI
+	        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(userPermissionFlg) and userPermissionFlg != 'ALL'">
+	              AND M_ROLE_DTL.AUTH_NO = #{userPermissionFlg, jdbcType=VARCHAR}
+	              AND M_ROLE_DTL.AUTH_IND = '1'
+	        </if>
+	         -->
+	        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(termFlag) and termFlag==0">
+	              AND M_USER.TERM_FLG = #{termFlag, jdbcType=VARCHAR}
+	              AND M_B_USER.TERM_FLG = #{termFlag, jdbcType=VARCHAR}
+	        </if>
+    </select>
+
+    <!-- 強化-00180-000 2013/03/12 MODIFY SBO_SOKOU START -->
+    <select id="getBuyUserInfoOnBlur" resultType="fw.domain.mst.userauthority.user.UserPopupItem">
+        SELECT
+            M_USER.USER_ID AS "userIdentify.userId",
+            M_USER.COMPANY_CD AS "companyCd",
+            M_USER.SECTION_CD AS "userIdentify.sectionCd",
+            M_SECTION_LANG.SECTION_NAME AS "sectionName",
+            M_SECTION_PLACE.SECTION_PLACE_CD AS "sectionPlaceCd",
+            M_SECTION_PLACE_LANG.SECTION_PLACE_NAME AS "sectionPlaceName",
+            M_B_USER_LANG.USER_NAME AS "userName",
+            M_USER.OFFICIAL_NAME AS "officialName",
+            M_USER.EXTENSION_NO AS "extensionNo",
+            M_USER.TEL_NO AS "externalNo",
+            M_USER.FAX_NO AS "faxNo",
+            M_B_USER.MAIL_ADDR AS "mailAddr",
+            M_SECTION.SECTION_CD,
+            M_SECTION_LANG.SECTION_NAME
+       FROM M_USER
+        INNER JOIN M_COMPANY
+            ON  M_USER.COMPANY_CD=M_COMPANY.COMPANY_CD
+            <!-- 強化-01784-000   2013.06.14 DEL SBO_WANGXM 
+            AND M_COMPANY.COMPANY_USE_LANGUAGE_IND = '${@fw.security.SecurityUtil@getCompanyUseLanguageIndByEscapeSql()}'-->
+        LEFT JOIN M_B_USER
+            ON M_USER.USER_ID=M_B_USER.USER_ID
+            AND M_USER.COMPANY_CD=M_B_USER.COMPANY_CD
+        LEFT JOIN M_B_USER_LANG
+            ON M_B_USER.USER_ID=M_B_USER_LANG.USER_ID
+            AND M_B_USER.COMPANY_CD=M_B_USER_LANG.COMPANY_CD
+            AND M_B_USER_LANG.LANGUAGE_IND=M_COMPANY.COMPANY_USE_LANGUAGE_IND
+        LEFT JOIN  M_SECTION
+            ON M_SECTION.SECTION_CD =  M_USER.SECTION_CD
+            AND M_USER.COMPANY_CD =  M_SECTION.COMPANY_CD
+        LEFT JOIN M_SECTION_LANG 
+            ON M_SECTION.SECTION_CD = M_SECTION_LANG.SECTION_CD
+            AND M_USER.COMPANY_CD =  M_SECTION_LANG.COMPANY_CD
+            AND M_SECTION.VALID_START_DATE = M_SECTION_LANG.VALID_START_DATE
+            AND M_SECTION.VALID_END_DATE = M_SECTION_LANG.VALID_END_DATE
+            AND M_SECTION_LANG.LANGUAGE_IND=M_COMPANY.COMPANY_USE_LANGUAGE_IND
+        LEFT JOIN M_SECTION_PLACE
+            ON M_SECTION_PLACE.SECTION_PLACE_CD = M_SECTION.SECTION_PLACE_CD
+            AND M_SECTION_PLACE.COMPANY_CD = M_SECTION.COMPANY_CD
+        LEFT JOIN M_SECTION_PLACE_LANG 
+             ON M_SECTION_PLACE_LANG.SECTION_PLACE_CD = M_SECTION_PLACE.SECTION_PLACE_CD
+             AND M_SECTION_PLACE_LANG.COMPANY_CD = M_SECTION_PLACE.COMPANY_CD 
+             AND M_SECTION_PLACE_LANG.LANGUAGE_IND=M_COMPANY.COMPANY_USE_LANGUAGE_IND
+        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(userPermissionFlg) and userPermissionFlg != 'ALL'">
+        INNER JOIN M_ROLE
+                ON (M_USER.COMPANY_CD = M_ROLE.COMPANY_CD
+                OR M_ROLE.COMPANY_CD = '${@fw.common.constant.ApplicationConstant@COMPANY_CD_ALL}')
+               AND M_USER.ROLE_NO = M_ROLE.ROLE_NO
+        INNER JOIN M_ROLE_DTL
+                ON M_ROLE.COMPANY_CD = M_ROLE_DTL.COMPANY_CD
+               AND M_ROLE_DTL.ROLE_NO = M_ROLE.ROLE_NO
+        </if>
+        WHERE
+                '${@fw.common.util.AppUtil@getSysDate(@fw.common.util.AppUtil@DATE_SHORT)}' BETWEEN M_SECTION.VALID_START_DATE AND M_SECTION.VALID_END_DATE
+            AND '${@fw.common.util.AppUtil@getSysDate(@fw.common.util.AppUtil@DATE_SHORT)}' BETWEEN M_SECTION_PLACE.VALID_START_DATE AND M_SECTION_PLACE.VALID_END_DATE      
+            AND '${@fw.common.util.AppUtil@getSysDate(@fw.common.util.AppUtil@DATE_SHORT)}' BETWEEN M_USER.VALID_START_DATE AND M_USER.VALID_END_DATE
+            <if test="@org.apache.commons.lang.StringUtils@isNotBlank(companyCd)">
+                AND M_USER.COMPANY_CD = #{companyCd}
+            </if>
+            <if test="@org.apache.commons.lang.StringUtils@isNotBlank(sectionCd)">
+                AND M_USER.SECTION_CD = #{sectionCd}
+            </if>
+                  AND M_USER.TERM_FLG = '0'
+                  AND M_B_USER.TERM_FLG = '0'
+    </select>
+    <!-- 強化-00180-000 2013/03/12 MODIFY SBO_SOKOU END -->
+    
+    <!-- 検索条件 M_USER.SECTION_CD = '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}' を抜いた-->
+     <select id="getMsgUserInfoOnBlur" resultType="fw.domain.mst.userauthority.user.UserPopupItem">
+        SELECT
+            M_USER.USER_ID AS "userIdentify.userId",
+            M_USER.COMPANY_CD AS "companyCd",
+            M_USER.SECTION_CD AS "userIdentify.sectionCd",
+            M_SECTION_LANG.SECTION_NAME AS "sectionName",
+            M_SECTION_PLACE.SECTION_PLACE_CD AS "sectionPlaceCd",
+            M_SECTION_PLACE_LANG.SECTION_PLACE_NAME AS "sectionPlaceName",
+            M_B_USER_LANG.USER_NAME AS "userName",
+            M_USER.OFFICIAL_NAME AS "officialName",
+            M_USER.EXTENSION_NO AS "extensionNo",
+            M_USER.TEL_NO AS "externalNo",
+            M_USER.FAX_NO AS "faxNo",
+            M_B_USER.MAIL_ADDR AS "mailAddr",
+            M_SECTION.SECTION_CD,
+            M_SECTION_LANG.SECTION_NAME
+       FROM M_USER
+        INNER JOIN M_COMPANY
+            ON  M_USER.COMPANY_CD=M_COMPANY.COMPANY_CD
+        LEFT JOIN M_B_USER
+            ON M_USER.USER_ID=M_B_USER.USER_ID
+            AND M_USER.COMPANY_CD=M_B_USER.COMPANY_CD
+        LEFT JOIN M_B_USER_LANG
+            ON M_B_USER.USER_ID=M_B_USER_LANG.USER_ID
+            AND M_B_USER.COMPANY_CD=M_B_USER_LANG.COMPANY_CD
+            AND M_B_USER_LANG.LANGUAGE_IND=M_COMPANY.COMPANY_USE_LANGUAGE_IND
+        LEFT JOIN  M_SECTION
+            ON M_SECTION.SECTION_CD =  M_USER.SECTION_CD
+            AND M_USER.COMPANY_CD =  M_SECTION.COMPANY_CD
+        LEFT JOIN M_SECTION_LANG 
+            ON M_SECTION.SECTION_CD = M_SECTION_LANG.SECTION_CD
+            AND M_USER.COMPANY_CD =  M_SECTION_LANG.COMPANY_CD
+            AND M_SECTION.VALID_START_DATE = M_SECTION_LANG.VALID_START_DATE
+            AND M_SECTION.VALID_END_DATE = M_SECTION_LANG.VALID_END_DATE
+            AND M_SECTION_LANG.LANGUAGE_IND=M_COMPANY.COMPANY_USE_LANGUAGE_IND
+        LEFT JOIN M_SECTION_PLACE
+            ON M_SECTION_PLACE.SECTION_PLACE_CD = M_SECTION.SECTION_PLACE_CD
+            AND M_SECTION_PLACE.COMPANY_CD = M_SECTION.COMPANY_CD
+        LEFT JOIN M_SECTION_PLACE_LANG 
+             ON M_SECTION_PLACE_LANG.SECTION_PLACE_CD = M_SECTION_PLACE.SECTION_PLACE_CD
+             AND M_SECTION_PLACE_LANG.COMPANY_CD = M_SECTION_PLACE.COMPANY_CD 
+             AND M_SECTION_PLACE_LANG.LANGUAGE_IND=M_COMPANY.COMPANY_USE_LANGUAGE_IND
+        <if test="userPermissionList.size() > 0">
+        INNER JOIN M_ROLE
+                ON (M_USER.COMPANY_CD = M_ROLE.COMPANY_CD
+                OR M_ROLE.COMPANY_CD = '${@fw.common.constant.ApplicationConstant@COMPANY_CD_ALL}')
+               AND M_USER.ROLE_NO = M_ROLE.ROLE_NO
+        INNER JOIN M_ROLE_DTL
+                ON M_ROLE.COMPANY_CD = M_ROLE_DTL.COMPANY_CD
+               AND M_ROLE_DTL.ROLE_NO = M_ROLE.ROLE_NO
+        </if>
+        WHERE
+                '${@fw.common.util.AppUtil@getSysDate(@fw.common.util.AppUtil@DATE_SHORT)}' BETWEEN M_SECTION.VALID_START_DATE AND M_SECTION.VALID_END_DATE
+            AND '${@fw.common.util.AppUtil@getSysDate(@fw.common.util.AppUtil@DATE_SHORT)}' BETWEEN M_SECTION_PLACE.VALID_START_DATE AND M_SECTION_PLACE.VALID_END_DATE      
+            AND '${@fw.common.util.AppUtil@getSysDate(@fw.common.util.AppUtil@DATE_SHORT)}' BETWEEN M_USER.VALID_START_DATE AND M_USER.VALID_END_DATE
+            AND M_USER.USER_ID = #{userId}
+            AND M_USER.COMPANY_CD = #{companyCd}
+            <if test="@org.apache.commons.lang.StringUtils@isNotBlank(sectionPlaceCd)">
+               AND M_SECTION_PLACE.SECTION_PLACE_CD = #{sectionPlaceCd}
+            </if>
+            <if test="userPermissionList.size() > 0">
+               AND M_ROLE_DTL.AUTH_NO IN 
+               <foreach collection="userPermissionList" item="userPermission" open="(" separator="," close=")">
+               #{userPermission}
+               </foreach>
+               AND M_ROLE_DTL.AUTH_IND = '1'
+            </if>
+            <if test="@org.apache.commons.lang.StringUtils@isNotBlank(termFlag) and termFlag==0">
+                  AND M_USER.TERM_FLG = #{termFlag, jdbcType=VARCHAR}
+                  AND M_B_USER.TERM_FLG = #{termFlag, jdbcType=VARCHAR}
+            </if>
+    </select>
+</mapper>

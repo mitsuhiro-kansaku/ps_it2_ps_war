@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<flow xmlns="http://www.springframework.org/schema/webflow"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.springframework.org/schema/webflow
+        http://www.springframework.org/schema/webflow/spring-webflow-2.0.xsd"
+    parent="base">
+    
+    <var name="defaultSearchCondition" class="fw.domain.slip.receive.inspect.uninspectlist.UnInspectSearchCondition" />
+    
+    <on-start>
+        <evaluate expression="PSTST010Service.init()" result="flowScope.searchCondition" />
+        <set name="flowScope.isCurrentPageSearch" value="false" />
+    </on-start>
+    
+    <view-state id="PSTST010" view="tst/ins/PSTST010" model="searchCondition">
+        <transition on="validate" validate="true">
+            <set name="flowScope.isCurrentPageSearch" value="false" />
+            <set name="flowScope.isShowList" value="true" />
+            <set name="flowScope.quickLink" value="''" />
+            <evaluate expression="PSTST010Service.search(searchCondition)" />
+        </transition>
+        <transition on="search" to="list" validate="false"/>
+        <transition on="back" to="home" validate="false"/>
+        <transition on="downloadValidate" validate="true">
+            <evaluate expression="PSTST010Service.downloadValidate(searchCondition)" result="flashScope.isDownLoadValidate"/>
+        </transition>
+        <transition on="download" validate="false">
+            <evaluate expression="PSTST010Service.download(searchCondition)"/>
+        </transition>
+    </view-state> 
+
+    <subflow-state id="list" subflow="tst/ins/PSTST011" >
+        <input name="searchCondition" value="searchCondition" />
+        <input name="isCurrentPageSearch" value="isCurrentPageSearch" />
+        <input name="quickLink" value="flowScope.quickLink" />
+        <transition on="back" to="PSTST010" >
+            <set name="flowScope.isCurrentPageSearch" value="true" />
+        </transition>
+        <transition on="returnList" to="PSTST010" >
+            <set name="flowScope.isCurrentPageSearch" value="false" />
+        </transition>
+    </subflow-state>
+</flow>

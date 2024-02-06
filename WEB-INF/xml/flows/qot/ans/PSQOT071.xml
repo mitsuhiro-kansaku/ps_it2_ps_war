@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<flow xmlns="http://www.springframework.org/schema/webflow"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.springframework.org/schema/webflow
+        http://www.springframework.org/schema/webflow/spring-webflow-2.0.xsd"
+    parent="base">
+
+
+    <var name="domain" class="fw.domain.slip.quot.quotreq.QuotManagement" />
+    <var name="identify" class="fw.domain.slip.quot.quotstatus.purreqstatuslist.reqstatuslist.QuotStatusIdentify" />
+    <input name="SessionKey" />
+    <input name="quotStatusIdentify" />
+    <input name="quotReqSeq" />
+    <input name="quotSupplierLineNo" />
+
+    <on-start>
+        <evaluate expression="PSQOT071Service.init(quotReqSeq, quotSupplierLineNo)" result="flowScope.domain" />
+        <set name="identify.quotReqSeq" value="quotReqSeq"></set>
+    </on-start>
+
+    <view-state id="PSQOT071" view="qot/ans/PSQOT071" model="domain">
+
+        <!-- 回答 -->
+        <transition on="answerInputEach" validate="true">
+            <evaluate expression="PSQOT071Service.answer(domain, quotReqSeq, quotSupplierLineNo,quotStatusIdentify)"></evaluate>
+            <set name="flashScope.isSuccess" value="true"></set>
+        </transition>
+        <!-- 辞退 -->
+        <transition on="dismiss" validate="true">
+            <evaluate expression="PSQOT071Service.dismiss(domain, quotReqSeq, quotSupplierLineNo,quotStatusIdentify)"></evaluate>
+            <set name="flashScope.isSuccess" value="true"></set>
+        </transition>
+        <!-- ＩＴ２-01477-000 2013/04/09 DEL SBO_pangzhen START -->
+        <!-- <transition on="PSQOT070" to="PSQOT070Status" validate="false"/> -->
+        <!-- ＩＴ２-01477-000 2013/04/09 DEL SBO_pangzhen -END- -->
+
+        <transition on="download" validate="false">
+        <!-- 2015/06/17 ADD RIKI_SUGIYAMA START -->
+            <evaluate
+                expression="PSQOT071Service.download(domain, requestParameters.index, requestParameters.attachNo)" />
+        <!-- 2015/06/17 ADD RIKI_SUGIYAMA END -->
+        <!-- 2015/06/17 DELETE RIKI_SUGIYAMA START -->
+<!--             <evaluate -->
+<!--                 expression="PSQOT071Service.download(domain, requestParameters.index)" /> -->
+        <!-- 2015/06/17 DELETE RIKI_SUGIYAMA END -->
+        </transition>
+    </view-state>
+
+    <!-- ＩＴ２-01477-000 2013/04/09 DEL SBO_pangzhen START -->
+    <!-- 見積状況画面へ遷移-->
+<!--     <subflow-state id="PSQOT070Status" subflow="qot/ref/PSQOT070"> -->
+<!--         <input name="quotStatusIdentify" value="identify" /> -->
+<!--         <input name="SessionKey" value="SessionKey" /> -->
+<!--     </subflow-state> -->
+    <!-- ＩＴ２-01477-000 2013/04/09 DEL SBO_pangzhen -END- -->
+</flow>

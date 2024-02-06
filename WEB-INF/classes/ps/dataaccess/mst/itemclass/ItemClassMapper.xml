@@ -1,0 +1,693 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="ps.dataaccess.mst.itemclass.ItemClassMapper">
+
+<select id="listItemClass" parameterType="fw.domain.mst.material.itemclass.ItemClassSearchCondition" resultType="fw.domain.mst.material.itemclass.ItemClassManagement">
+        <include refid="pageHeader"/>
+        SELECT 
+            M_ITEM_CLASS.ITEM_CLASS_L as "itemClassIdentify.itemClassL",
+            M_ITEM_CLASS.ITEM_CLASS_M as "itemClassIdentify.itemClassM",
+            M_ITEM_CLASS.ITEM_CLASS_S as "itemClassIdentify.itemClassS",
+            M_ITEM_CLASS.ITEM_CLASS_IND as "itemClassInd",
+            M_ITEM_CLASS_LANG.LANGUAGE_IND as "baseLanguageInd.languageInd",
+            M_ITEM_CLASS_LANG.ITEM_CLASS_NAME as "itemClassNameL",
+            M_ITEM_CLASS.DLV_MAX_PCT as "dlvPctInfo.dlvMaxPct",
+            M_ITEM_CLASS.DLV_MIN_PCT as "dlvPctInfo.dlvMinPct",
+            M_ITEM_CLASS.DSP_ORDER as "dspOrder",
+            M_ITEM_CLASS.TERM_FLG as "term.termFlg",
+            M_ITEM_CLASS.LAST_UPD_DATE as "registInfo.lastUpdDate",
+            M_ITEM_CLASS.LAST_UPD_COMPANY_CD as "registInfo.lastUpdCompanyCd",
+            M_ITEM_CLASS.LAST_UPD_SECTION_CD as "registInfo.lastUpdSectionCd",
+            M_ITEM_CLASS.LAST_UPD_USER_ID as "registInfo.lastUpdUserId",
+            M_ITEM_CLASS.REG_DATE as "registInfo.regDate",
+            M_ITEM_CLASS.REG_COMPANY_CD as "registInfo.regCompanyCd",
+            M_ITEM_CLASS.REG_SECTION_CD as "registInfo.regSectionCd",
+            M_ITEM_CLASS.REG_USER_ID as "registInfo.regUserId"
+        FROM M_ITEM_CLASS
+        LEFT JOIN M_ITEM_CLASS_LANG
+            ON 
+            M_ITEM_CLASS.ITEM_CLASS_L = M_ITEM_CLASS_LANG.ITEM_CLASS_L
+            AND M_ITEM_CLASS.ITEM_CLASS_M = M_ITEM_CLASS_LANG.ITEM_CLASS_M
+            AND M_ITEM_CLASS.ITEM_CLASS_S = M_ITEM_CLASS_LANG.ITEM_CLASS_S
+        <where>
+            <if test="@org.apache.commons.lang.StringUtils@isNotBlank(itemClassL)">
+              AND M_ITEM_CLASS.ITEM_CLASS_L ${@fw.common.util.SearchModeUtil@getSearchSQL("fw.domain.mst.material.itemclass.ItemClassSearchCondition","itemClassL")}
+            </if>
+            <if test="@org.apache.commons.lang.StringUtils@isNotBlank(itemClassM)">
+              AND M_ITEM_CLASS.ITEM_CLASS_M ${@fw.common.util.SearchModeUtil@getSearchSQL("fw.domain.mst.material.itemclass.ItemClassSearchCondition","itemClassM")}
+            </if>
+            <if test="@org.apache.commons.lang.StringUtils@isNotBlank(itemClassS)">
+              AND M_ITEM_CLASS.ITEM_CLASS_S ${@fw.common.util.SearchModeUtil@getSearchSQL("fw.domain.mst.material.itemclass.ItemClassSearchCondition","itemClassS")}
+            </if>
+            <if test="@fw.domain.mst.searchcondition.SearchCondition@termFlgIsNotEmpty(searchCondition.termFlg)">
+              AND M_ITEM_CLASS.TERM_FLG = #{searchCondition.termFlg, jdbcType=VARCHAR}
+            </if>
+        </where>
+        ORDER BY ${searchCondition.columnOrder.columnOrder()}
+        <include refid="pageRoot"/>
+    </select>
+
+   <select id="downloadCount" parameterType="fw.domain.mst.material.itemclass.ItemClassSearchCondition" 
+   resultType="java.lang.Long">
+        SELECT 
+            COUNT(*)
+        FROM M_ITEM_CLASS
+        LEFT JOIN M_ITEM_CLASS_LANG
+            ON 
+            M_ITEM_CLASS.ITEM_CLASS_L = M_ITEM_CLASS_LANG.ITEM_CLASS_L
+            AND M_ITEM_CLASS.ITEM_CLASS_M = M_ITEM_CLASS_LANG.ITEM_CLASS_M
+            AND M_ITEM_CLASS.ITEM_CLASS_S = M_ITEM_CLASS_LANG.ITEM_CLASS_S
+            AND M_ITEM_CLASS_LANG.LANGUAGE_IND = '${@fw.security.SecurityUtil@getCompanyUseLanguageIndByEscapeSql()}'
+        <where>
+            <if test="@org.apache.commons.lang.StringUtils@isNotBlank(itemClassL)">
+              AND M_ITEM_CLASS.ITEM_CLASS_L ${@fw.common.util.SearchModeUtil@getSearchSQL("fw.domain.mst.material.itemclass.ItemClassSearchCondition","itemClassL")}
+            </if>
+            <if test="@org.apache.commons.lang.StringUtils@isNotBlank(itemClassM)">
+              AND M_ITEM_CLASS.ITEM_CLASS_M ${@fw.common.util.SearchModeUtil@getSearchSQL("fw.domain.mst.material.itemclass.ItemClassSearchCondition","itemClassM")}
+            </if>
+            <if test="@org.apache.commons.lang.StringUtils@isNotBlank(itemClassS)">
+              AND M_ITEM_CLASS.ITEM_CLASS_S ${@fw.common.util.SearchModeUtil@getSearchSQL("fw.domain.mst.material.itemclass.ItemClassSearchCondition","itemClassS")}
+            </if>
+            <if test="@fw.domain.mst.searchcondition.SearchCondition@termFlgIsNotEmpty(searchCondition.termFlg)">
+              AND M_ITEM_CLASS.TERM_FLG = #{searchCondition.termFlg, jdbcType=VARCHAR}
+            </if>
+        </where>
+        ORDER BY ${searchCondition.columnOrder.columnOrder()}
+    </select>
+    <select id="listItemClassItem" parameterType="fw.domain.mst.searchcondition.SearchCondition" resultType="fw.domain.mst.material.itemclass.ItemClassItem">
+        SELECT
+            M_ITEM_CLASS.ITEM_CLASS_L as "itemClassIdentify.itemClassL",
+            M_ITEM_CLASS.ITEM_CLASS_M as "itemClassIdentify.itemClassM",
+            M_ITEM_CLASS.ITEM_CLASS_S as "itemClassIdentify.itemClassS",
+            M_ITEM_CLASS.ITEM_CLASS_IND,
+            <if test="itemClassInd==3">
+                M_ITEM_CLASS_LANG.ITEM_CLASS_NAME as "itemClassNameS"
+            </if>
+            <if test="itemClassInd==2">
+                M_ITEM_CLASS_LANG.ITEM_CLASS_NAME as "itemClassNameM"
+            </if>
+            <if test="itemClassInd==1">
+                M_ITEM_CLASS_LANG.ITEM_CLASS_NAME as "itemClassNameL"
+            </if>
+        FROM M_ITEM_CLASS 
+        INNER JOIN M_ITEM_CLASS_LANG
+            ON 
+            M_ITEM_CLASS.ITEM_CLASS_L = M_ITEM_CLASS_LANG.ITEM_CLASS_L
+            AND M_ITEM_CLASS.ITEM_CLASS_M = M_ITEM_CLASS_LANG.ITEM_CLASS_M
+            AND M_ITEM_CLASS.ITEM_CLASS_S = M_ITEM_CLASS_LANG.ITEM_CLASS_S
+            AND M_ITEM_CLASS_LANG.LANGUAGE_IND = '${@fw.security.SecurityUtil@getCompanyUseLanguageIndByEscapeSql()}'
+         WHERE 
+            M_ITEM_CLASS.ITEM_CLASS_IND = #{itemClassInd}
+            <if test="itemClassInd==3">
+                AND M_ITEM_CLASS.ITEM_CLASS_L ${@fw.common.util.SearchModeUtil@getSearchSQL("fw.domain.mst.material.itemclass.ItemClassSearchCondition","itemClassL")}
+                AND M_ITEM_CLASS.ITEM_CLASS_M ${@fw.common.util.SearchModeUtil@getSearchSQL("fw.domain.mst.material.itemclass.ItemClassSearchCondition","itemClassM")}
+            </if>
+            <if test="itemClassInd==2">
+                AND M_ITEM_CLASS.ITEM_CLASS_L ${@fw.common.util.SearchModeUtil@getSearchSQL("fw.domain.mst.material.itemclass.ItemClassSearchCondition","itemClassL")}
+            </if>
+            ORDER BY ${searchCondition.columnOrder.columnOrder()}
+    </select>
+
+    <select id="listKeyIdentity" parameterType="fw.domain.mst.material.itemclass.ItemClassSearchCondition" resultType="fw.domain.mst.material.itemclass.ItemClassIdentify">
+        SELECT 
+            ITEM_CLASS_L as "itemClassL",
+            ITEM_CLASS_M as "itemClassM",
+            ITEM_CLASS_S as "itemClassS"
+        FROM M_ITEM_CLASS 
+        <where>
+            <if test="@org.apache.commons.lang.StringUtils@isNotBlank(itemClassL)">
+              AND ITEM_CLASS_L ${@fw.common.util.SearchModeUtil@getSearchSQL("fw.domain.mst.material.itemclass.ItemClassSearchCondition","itemClassL")}
+            </if>
+            <if test="@org.apache.commons.lang.StringUtils@isNotBlank(itemClassM)">
+              AND ITEM_CLASS_M ${@fw.common.util.SearchModeUtil@getSearchSQL("fw.domain.mst.material.itemclass.ItemClassSearchCondition","itemClassM")}
+            </if>
+            <if test="@org.apache.commons.lang.StringUtils@isNotBlank(itemClassS)">
+              AND ITEM_CLASS_S ${@fw.common.util.SearchModeUtil@getSearchSQL("fw.domain.mst.material.itemclass.ItemClassSearchCondition","itemClassS")}
+            </if>
+            <if test="@fw.domain.mst.searchcondition.SearchCondition@termFlgIsNotEmpty(searchCondition.termFlg)">
+              AND TERM_FLG = #{searchCondition.termFlg, jdbcType=VARCHAR}
+            </if>
+        </where>
+         ORDER BY M_ITEM_CLASS.ITEM_CLASS_L ASC,
+               M_ITEM_CLASS.ITEM_CLASS_M ASC,
+               M_ITEM_CLASS.ITEM_CLASS_S ASC
+    </select>
+
+    <select id="listPageItem" parameterType="fw.domain.mst.searchcondition.SearchCondition" resultType="fw.domain.mst.material.itemclass.ItemClassItem">
+         SELECT
+            M_ITEM_CLASS.ITEM_CLASS_L as "itemClassIdentify.itemClassL",
+            M_ITEM_CLASS.ITEM_CLASS_M as "itemClassIdentify.itemClassM",
+            M_ITEM_CLASS.ITEM_CLASS_S as "itemClassIdentify.itemClassS",
+            M_ITEM_CLASS.ITEM_CLASS_IND as "itemClassInd",
+            CASE
+                WHEN M_ITEM_CLASS.ITEM_CLASS_L!=' ' then M_ITEM_CLASS.ITEM_CLASS_L
+            END as "itemClassL",
+            CASE
+                WHEN M_ITEM_CLASS.ITEM_CLASS_M!=' ' then M_ITEM_CLASS.ITEM_CLASS_M
+            END as "itemClassM",
+            CASE
+                WHEN M_ITEM_CLASS.ITEM_CLASS_S!=' ' then M_ITEM_CLASS.ITEM_CLASS_S
+            END as "itemClassS",
+            M_ITEM_CLASS.TERM_FLG as "term.termFlg",
+            M_ITEM_CLASS.LAST_UPD_DATE as "itemClassIdentify.lastUpdDate"
+         FROM M_ITEM_CLASS
+         LEFT JOIN M_ITEM_CLASS_LANG
+             ON 
+                M_ITEM_CLASS.ITEM_CLASS_L = M_ITEM_CLASS_LANG.ITEM_CLASS_L
+                AND M_ITEM_CLASS.ITEM_CLASS_M = M_ITEM_CLASS_LANG.ITEM_CLASS_M
+                AND M_ITEM_CLASS.ITEM_CLASS_S = M_ITEM_CLASS_LANG.ITEM_CLASS_S
+                AND M_ITEM_CLASS_LANG.LANGUAGE_IND = '${@fw.security.SecurityUtil@getCompanyUseLanguageIndByEscapeSql()}'
+         WHERE 
+             (M_ITEM_CLASS.ITEM_CLASS_L,M_ITEM_CLASS.ITEM_CLASS_M,M_ITEM_CLASS.ITEM_CLASS_S) in
+             <foreach collection="searchCondition.page.keyDomainEntityList" item="keyList" open="(" separator="," close=")">
+               (#{keyList.itemClassL},#{keyList.itemClassM},#{keyList.itemClassS})
+             </foreach>
+            <if test="@org.apache.commons.lang.StringUtils@isNotBlank(itemClassL)">
+              AND M_ITEM_CLASS.ITEM_CLASS_L ${@fw.common.util.SearchModeUtil@getSearchSQL("fw.domain.mst.material.itemclass.ItemClassSearchCondition","itemClassL")}
+            </if>
+            <if test="@org.apache.commons.lang.StringUtils@isNotBlank(itemClassM)">
+              AND M_ITEM_CLASS.ITEM_CLASS_M ${@fw.common.util.SearchModeUtil@getSearchSQL("fw.domain.mst.material.itemclass.ItemClassSearchCondition","itemClassM")}
+            </if>
+            <if test="@org.apache.commons.lang.StringUtils@isNotBlank(itemClassS)">
+              AND M_ITEM_CLASS.ITEM_CLASS_S ${@fw.common.util.SearchModeUtil@getSearchSQL("fw.domain.mst.material.itemclass.ItemClassSearchCondition","itemClassS")}
+            </if>
+            <if test="@fw.domain.mst.searchcondition.SearchCondition@termFlgIsNotEmpty(searchCondition.termFlg)">
+              AND TERM_FLG = #{searchCondition.termFlg, jdbcType=VARCHAR}
+            </if>
+         ORDER BY M_ITEM_CLASS.ITEM_CLASS_L ASC,
+               M_ITEM_CLASS.ITEM_CLASS_M ASC,
+               M_ITEM_CLASS.ITEM_CLASS_S ASC
+    </select>
+
+    <!-- 強化-01784-000 2013/06/12 DEL SBO_SOKOU START -->
+    <!-- 
+    <select id="search" parameterType="fw.domain.mst.material.itemclass.ItemClassIdentify" resultType="fw.domain.mst.material.itemclass.ItemClassManagement">
+        SELECT
+            M_ITEM_CLASS.ITEM_CLASS_L as "itemClassIdentify.itemClassL",
+            M_ITEM_CLASS.ITEM_CLASS_M as "itemClassIdentify.itemClassM",
+            M_ITEM_CLASS.ITEM_CLASS_S as "itemClassIdentify.itemClassS",
+            DSP_ORDER as "dspOrder",
+            M_ITEM_CLASS.TERM_FLG as "term.termFlg",
+            M_ITEM_CLASS.ITEM_CLASS_IND as "itemClassInd",
+            DLV_MAX_PCT as "dlvPctInfo.dlvMaxPct",
+            DLV_MIN_PCT as "dlvPctInfo.dlvMinPct",
+            CASE
+                WHEN ITEM_CLASS_COMPANY.ITEM_CLASS_NAME IS NOT NULL THEN
+                    ITEM_CLASS_COMPANY.LANGUAGE_IND
+                ELSE
+                    ITEM_CLASS_SYSTEM.LANGUAGE_IND
+            END AS "baseLanguageInd.languageInd",
+            M_ITEM_CLASS.LAST_UPD_DATE as "itemClassIdentify.lastUpdDate",
+            CASE
+                WHEN M_ITEM_CLASS.ITEM_CLASS_IND='1' THEN 
+                    CASE
+                        WHEN ITEM_CLASS_COMPANY.ITEM_CLASS_NAME IS NOT NULL THEN
+                            ITEM_CLASS_COMPANY.ITEM_CLASS_NAME
+                        ELSE
+                            ITEM_CLASS_SYSTEM.ITEM_CLASS_NAME
+                    END
+            END as "itemClassNameL",
+            CASE
+                WHEN M_ITEM_CLASS.ITEM_CLASS_IND='2' THEN
+                    CASE
+                        WHEN ITEM_CLASS_COMPANY.ITEM_CLASS_NAME IS NOT NULL THEN
+                            ITEM_CLASS_COMPANY.ITEM_CLASS_NAME
+                        ELSE
+                            ITEM_CLASS_SYSTEM.ITEM_CLASS_NAME
+                    END
+            END as "itemClassNameM",
+            CASE
+                WHEN M_ITEM_CLASS.ITEM_CLASS_IND='3' THEN
+                    CASE
+                        WHEN ITEM_CLASS_COMPANY.ITEM_CLASS_NAME IS NOT NULL THEN
+                            ITEM_CLASS_COMPANY.ITEM_CLASS_NAME
+                        ELSE
+                            ITEM_CLASS_SYSTEM.ITEM_CLASS_NAME
+                    END
+            END as "itemClassNameS"
+        FROM M_ITEM_CLASS 
+        LEFT JOIN M_ITEM_CLASS_LANG ITEM_CLASS_COMPANY
+            ON M_ITEM_CLASS.ITEM_CLASS_L = ITEM_CLASS_COMPANY.ITEM_CLASS_L
+            AND M_ITEM_CLASS.ITEM_CLASS_M = ITEM_CLASS_COMPANY.ITEM_CLASS_M
+            AND M_ITEM_CLASS.ITEM_CLASS_S = ITEM_CLASS_COMPANY.ITEM_CLASS_S
+            AND ITEM_CLASS_COMPANY.LANGUAGE_IND = '${@fw.security.SecurityUtil@getCompanyUseLanguageIndByEscapeSql()}'
+        LEFT JOIN M_ITEM_CLASS_LANG ITEM_CLASS_SYSTEM
+            ON M_ITEM_CLASS.ITEM_CLASS_L = ITEM_CLASS_SYSTEM.ITEM_CLASS_L
+            AND M_ITEM_CLASS.ITEM_CLASS_M = ITEM_CLASS_SYSTEM.ITEM_CLASS_M
+            AND M_ITEM_CLASS.ITEM_CLASS_S = ITEM_CLASS_SYSTEM.ITEM_CLASS_S
+            AND ITEM_CLASS_SYSTEM.LANGUAGE_IND = '${@fw.common.util.AppUtil@getSysLanguageByEscapeSql()}'
+        WHERE M_ITEM_CLASS.ITEM_CLASS_L = #{itemClassL}
+            AND M_ITEM_CLASS.ITEM_CLASS_M = #{itemClassM}
+            AND M_ITEM_CLASS.ITEM_CLASS_S = #{itemClassS}
+    </select>
+    -->
+    <!-- 強化-01784-000 2013/06/12 DEL SBO_SOKOU -END- -->
+    <!-- 強化-01784-000 2013/06/12 ADD SBO_SOKOU START -->
+    <select id="search"
+            parameterType="fw.domain.mst.material.itemclass.ItemClassIdentify"
+            resultType="fw.domain.mst.material.itemclass.ItemClassManagement">
+        SELECT M_ITEM_CLASS.ITEM_CLASS_L AS "itemClassIdentify.itemClassL"
+             , M_ITEM_CLASS.ITEM_CLASS_M AS "itemClassIdentify.itemClassM"
+             , M_ITEM_CLASS.ITEM_CLASS_S AS "itemClassIdentify.itemClassS"
+             , M_ITEM_CLASS.DSP_ORDER AS "dspOrder"
+             , M_ITEM_CLASS.TERM_FLG AS "term.termFlg"
+             , M_ITEM_CLASS.ITEM_CLASS_IND AS "itemClassInd"
+             , M_ITEM_CLASS.DLV_MAX_PCT AS "dlvPctInfo.dlvMaxPct"
+             , M_ITEM_CLASS.DLV_MIN_PCT AS "dlvPctInfo.dlvMinPct"
+             , M_ITEM_CLASS.LAST_UPD_DATE AS "itemClassIdentify.lastUpdDate"
+             , '${@fw.common.util.AppUtil@getSysLanguageByEscapeSql()}' AS "baseLanguageInd.languageInd"
+             , CASE
+               WHEN M_ITEM_CLASS.ITEM_CLASS_IND = '1'
+               THEN M_ITEM_CLASS_LANG.ITEM_CLASS_NAME END as "itemClassNameL"
+             , CASE
+               WHEN M_ITEM_CLASS.ITEM_CLASS_IND = '2'
+               THEN M_ITEM_CLASS_LANG.ITEM_CLASS_NAME END as "itemClassNameM"
+             , CASE
+               WHEN M_ITEM_CLASS.ITEM_CLASS_IND = '3'
+               THEN M_ITEM_CLASS_LANG.ITEM_CLASS_NAME END as "itemClassNameS"
+          FROM M_ITEM_CLASS
+         LEFT JOIN M_ITEM_CLASS_LANG
+                 ON M_ITEM_CLASS.ITEM_CLASS_L = M_ITEM_CLASS_LANG.ITEM_CLASS_L
+                AND M_ITEM_CLASS.ITEM_CLASS_M = M_ITEM_CLASS_LANG.ITEM_CLASS_M
+                AND M_ITEM_CLASS.ITEM_CLASS_S = M_ITEM_CLASS_LANG.ITEM_CLASS_S
+                AND M_ITEM_CLASS_LANG.LANGUAGE_IND = '${@fw.common.util.AppUtil@getSysLanguageByEscapeSql()}'
+         WHERE M_ITEM_CLASS.ITEM_CLASS_L = #{itemClassL}
+           AND M_ITEM_CLASS.ITEM_CLASS_M = #{itemClassM}
+           AND M_ITEM_CLASS.ITEM_CLASS_S = #{itemClassS}
+    </select>
+    <!-- 強化-01784-000 2013/06/12 ADD SBO_SOKOU -END- -->
+
+    <select id="searchExclusive" parameterType="fw.domain.mst.material.itemclass.ItemClassIdentify" resultType="fw.domain.mst.material.itemclass.ItemClassIdentify">
+        SELECT
+            ITEM_CLASS_L as "itemClassL",
+            ITEM_CLASS_M as "itemClassM",
+            ITEM_CLASS_S as "itemClassS"
+        FROM M_ITEM_CLASS 
+        WHERE
+            ITEM_CLASS_L = #{itemClassL}
+            AND ITEM_CLASS_M = #{itemClassM}
+            AND ITEM_CLASS_S = #{itemClassS}
+            AND LAST_UPD_DATE = #{lastUpdDate}
+    </select>
+
+    <resultMap type="fw.domain.mst.material.itemclass.ItemClassFilter" id="FILTER_MAP_AA">
+        <id column="ITEM_CLASS_L" property="itemClassFilterIndentify.itemClassL" />
+        <id column="ITEM_CLASS_M" property="itemClassFilterIndentify.itemClassM" />
+        <id column="ITEM_CLASS_S" property="itemClassFilterIndentify.itemClassS" />
+        <id column="FILTER_COMPANY_CD" property="itemClassFilterIndentify.company.companyCd" />
+        <id column="FILTER_SECTION_PLACE_CD" property="itemClassFilterIndentify.sectionPlace.sectionPlaceCd" />
+    </resultMap>
+
+    <select id="listItemClassFilter" parameterType="fw.domain.mst.material.itemclass.ItemClassIdentify" 
+            resultMap="FILTER_MAP_AA" >
+        SELECT
+            M_ITEM_CLASS_FILTER.ITEM_CLASS_L ,
+            M_ITEM_CLASS_FILTER.ITEM_CLASS_M ,
+            M_ITEM_CLASS_FILTER.ITEM_CLASS_S ,
+            M_ITEM_CLASS_FILTER.FILTER_COMPANY_CD ,
+            M_ITEM_CLASS_FILTER.FILTER_SECTION_PLACE_CD 
+        FROM M_ITEM_CLASS_FILTER
+        INNER JOIN M_ITEM_CLASS
+            ON M_ITEM_CLASS_FILTER.ITEM_CLASS_L = M_ITEM_CLASS.ITEM_CLASS_L
+            AND M_ITEM_CLASS_FILTER.ITEM_CLASS_M = M_ITEM_CLASS.ITEM_CLASS_M
+            AND M_ITEM_CLASS_FILTER.ITEM_CLASS_S = M_ITEM_CLASS.ITEM_CLASS_S
+        WHERE 
+            M_ITEM_CLASS_FILTER.ITEM_CLASS_L = #{itemClassL}
+            AND M_ITEM_CLASS_FILTER.ITEM_CLASS_M = #{itemClassM}
+            AND M_ITEM_CLASS_FILTER.ITEM_CLASS_S = #{itemClassS}
+        ORDER BY M_ITEM_CLASS_FILTER.ITEM_CLASS_L,
+            M_ITEM_CLASS_FILTER.ITEM_CLASS_M,
+            M_ITEM_CLASS_FILTER.ITEM_CLASS_S
+    </select>
+
+    <select id="listItemClassLanguage" parameterType="fw.domain.mst.material.itemclass.ItemClassIdentify" 
+            resultType="fw.domain.mst.material.itemclass.ItemClassLanguage">
+        SELECT
+            M_ITEM_CLASS_LANG.ITEM_CLASS_L as "itemClassIdentify.itemClassL",
+            M_ITEM_CLASS_LANG.ITEM_CLASS_M as "itemClassIdentify.itemClassM",
+            M_ITEM_CLASS_LANG.ITEM_CLASS_S as "itemClassIdentify.itemClassS",
+            ITEM_CLASS_NAME as "itemClassName",
+            LANGUAGE_IND as "languageInd.languageInd"
+        FROM M_ITEM_CLASS_LANG
+            INNER JOIN M_ITEM_CLASS
+                ON M_ITEM_CLASS_LANG.ITEM_CLASS_L = M_ITEM_CLASS.ITEM_CLASS_L
+                AND M_ITEM_CLASS_LANG.ITEM_CLASS_M = M_ITEM_CLASS.ITEM_CLASS_M
+                AND M_ITEM_CLASS_LANG.ITEM_CLASS_S = M_ITEM_CLASS.ITEM_CLASS_S
+            <!-- 強化-01784-000 2013/06/12 DEL SBO_SOKOU START -->
+                 <!-- AND M_ITEM_CLASS_LANG.LANGUAGE_IND != '${@fw.security.SecurityUtil@getCompanyUseLanguageIndByEscapeSql()}' -->
+            <!-- 強化-01784-000 2013/06/12 DEL SBO_SOKOU -END- -->
+            <!-- 強化-01784-000 2013/06/12 ADD SBO_SOKOU START -->
+                 AND M_ITEM_CLASS_LANG.LANGUAGE_IND != '${@fw.common.util.AppUtil@getSysLanguageByEscapeSql()}'
+            <!-- 強化-01784-000 2013/06/12 ADD SBO_SOKOU -END- -->
+            INNER JOIN M_CODE_NAME M_CODE_NAME_DSP_ORDER
+                ON M_CODE_NAME_DSP_ORDER.CODE_KEY = 'LANGUAGE_IND'
+                AND M_CODE_NAME_DSP_ORDER.CODE_VALUE = M_ITEM_CLASS_LANG.LANGUAGE_IND
+        WHERE 
+            M_ITEM_CLASS_LANG.ITEM_CLASS_L = #{itemClassL}
+            AND M_ITEM_CLASS_LANG.ITEM_CLASS_M = #{itemClassM}
+            AND M_ITEM_CLASS_LANG.ITEM_CLASS_S = #{itemClassS}
+        ORDER BY 
+            M_CODE_NAME_DSP_ORDER.DSP_ORDER
+    </select>
+
+    <insert id="insert" parameterType="fw.domain.mst.material.itemclass.ItemClassManagement">
+        INSERT INTO M_ITEM_CLASS
+        (
+            ITEM_CLASS_L,
+            iTEM_CLASS_M,
+            ITEM_CLASS_S,
+            ITEM_CLASS_IND,
+            DLV_MAX_PCT,
+            DLV_MIN_PCT,
+            DSP_ORDER,
+            TERM_FLG,
+            LAST_UPD_DATE,
+            LAST_UPD_COMPANY_CD,
+            LAST_UPD_SECTION_CD,
+            LAST_UPD_USER_ID,
+            REG_DATE,
+            REG_COMPANY_CD,
+            REG_SECTION_CD,
+            REG_USER_ID
+        ) VALUES (
+            #{itemClassIdentify.itemClassL, jdbcType=VARCHAR},
+            #{itemClassIdentify.itemClassM, jdbcType=VARCHAR},
+            #{itemClassIdentify.itemClassS, jdbcType=VARCHAR},
+            #{itemClassInd, jdbcType=VARCHAR},
+            <if test="itemClassInd==1">
+                100,
+                0,
+            </if>
+            <if test="itemClassInd!=1">
+                #{dlvPctInfo.dlvMaxPct, jdbcType=VARCHAR},
+                #{dlvPctInfo.dlvMinPct, jdbcType=VARCHAR},
+            </if>
+            #{dspOrder,jdbcType=VARCHAR},
+            #{term.termFlg, jdbcType=VARCHAR},
+            #{registInfo.lastUpdDate, jdbcType=VARCHAR},
+            #{registInfo.lastUpdCompanyCd, jdbcType=VARCHAR},
+            #{registInfo.lastUpdSectionCd, jdbcType=VARCHAR},
+            #{registInfo.lastUpdUserId, jdbcType=VARCHAR},
+            #{registInfo.regDate, jdbcType=VARCHAR},
+            #{registInfo.regCompanyCd, jdbcType=VARCHAR},
+            #{registInfo.regSectionCd, jdbcType=VARCHAR},
+            #{registInfo.regUserId, jdbcType=VARCHAR}
+        )
+    </insert>
+
+    <insert id="insertItemClassLanguage" parameterType="fw.domain.mst.material.itemclass.ItemClassLanguage">
+        INSERT INTO M_ITEM_CLASS_LANG
+        (
+            ITEM_CLASS_L,
+            iTEM_CLASS_M,
+            ITEM_CLASS_S,
+            LANGUAGE_IND,
+            ITEM_CLASS_NAME,
+            LAST_UPD_DATE,
+            LAST_UPD_COMPANY_CD,
+            LAST_UPD_SECTION_CD,
+            LAST_UPD_USER_ID,
+            REG_DATE,
+            REG_COMPANY_CD,
+            REG_SECTION_CD,
+            REG_USER_ID
+        )VALUES(
+            #{itemClassIdentify.itemClassL, jdbcType=VARCHAR},
+            #{itemClassIdentify.itemClassM, jdbcType=VARCHAR},
+            #{itemClassIdentify.itemClassS, jdbcType=VARCHAR},
+            #{languageInd.languageInd, jdbcType=VARCHAR},
+            #{itemClassName, jdbcType=VARCHAR},
+            #{registInfo.lastUpdDate, jdbcType=VARCHAR},
+            #{registInfo.lastUpdCompanyCd, jdbcType=VARCHAR},
+            #{registInfo.lastUpdSectionCd, jdbcType=VARCHAR},
+            #{registInfo.lastUpdUserId, jdbcType=VARCHAR},
+            #{registInfo.regDate, jdbcType=VARCHAR},
+            #{registInfo.regCompanyCd, jdbcType=VARCHAR},
+            #{registInfo.regSectionCd, jdbcType=VARCHAR},
+            #{registInfo.regUserId, jdbcType=VARCHAR}
+        )
+    </insert>
+
+    <insert id="insertItemClassFilter" parameterType="fw.domain.mst.material.itemclass.ItemClassFilter">
+        INSERT INTO M_ITEM_CLASS_FILTER
+        (
+            ITEM_CLASS_L,
+            iTEM_CLASS_M,
+            ITEM_CLASS_S,
+            FILTER_COMPANY_CD,
+            FILTER_SECTION_PLACE_CD,
+            LAST_UPD_DATE,
+            LAST_UPD_COMPANY_CD,
+            LAST_UPD_SECTION_CD,
+            LAST_UPD_USER_ID,
+            REG_DATE,
+            REG_COMPANY_CD,
+            REG_SECTION_CD,
+            REG_USER_ID
+        )VALUES(
+            #{itemClassFilterIndentify.itemClassL, jdbcType=VARCHAR},
+            #{itemClassFilterIndentify.itemClassM, jdbcType=VARCHAR},
+            #{itemClassFilterIndentify.itemClassS, jdbcType=VARCHAR},
+            #{itemClassFilterIndentify.company.companyCd, jdbcType=VARCHAR},
+            #{itemClassFilterIndentify.sectionPlace.sectionPlaceCd, jdbcType=VARCHAR},
+            #{registInfo.lastUpdDate, jdbcType=VARCHAR},
+            #{registInfo.lastUpdCompanyCd, jdbcType=VARCHAR},
+            #{registInfo.lastUpdSectionCd, jdbcType=VARCHAR},
+            #{registInfo.lastUpdUserId, jdbcType=VARCHAR},
+            #{registInfo.regDate, jdbcType=VARCHAR},
+            #{registInfo.regCompanyCd, jdbcType=VARCHAR},
+            #{registInfo.regSectionCd, jdbcType=VARCHAR},
+            #{registInfo.regUserId, jdbcType=VARCHAR}
+        )
+    </insert>
+
+    <update id="update" parameterType="fw.domain.mst.material.itemclass.ItemClassManagement">
+        UPDATE M_ITEM_CLASS
+        SET
+            ITEM_CLASS_IND = #{itemClassInd},
+            DLV_MAX_PCT = #{dlvPctInfo.dlvMaxPct},
+            DLV_MIN_PCT = #{dlvPctInfo.dlvMinPct},
+            DSP_ORDER = #{dspOrder},
+            TERM_FLG = #{term.termFlg},
+            LAST_UPD_DATE = #{registInfo.lastUpdDate},
+            LAST_UPD_COMPANY_CD = #{registInfo.lastUpdCompanyCd},
+            LAST_UPD_SECTION_CD = #{registInfo.lastUpdSectionCd},
+            LAST_UPD_USER_ID = #{registInfo.lastUpdUserId}
+        WHERE
+            ITEM_CLASS_L = #{itemClassIdentify.itemClassL}
+            AND ITEM_CLASS_M = #{itemClassIdentify.itemClassM}
+            AND ITEM_CLASS_S = #{itemClassIdentify.itemClassS}
+    </update>
+
+    <delete id="delete" parameterType="fw.domain.mst.material.itemclass.ItemClassIdentify">
+        DELETE FROM M_ITEM_CLASS
+        WHERE
+            ITEM_CLASS_L = #{itemClassL}
+            AND ITEM_CLASS_M = #{itemClassM}
+            AND ITEM_CLASS_S = #{itemClassS}
+    </delete>
+
+    <delete id="deleteItemClassLanguage" parameterType="fw.domain.mst.material.itemclass.ItemClassIdentify">
+        DELETE FROM M_ITEM_CLASS_LANG
+        WHERE
+            ITEM_CLASS_L = #{itemClassL}
+            AND ITEM_CLASS_M = #{itemClassM}
+            AND ITEM_CLASS_S = #{itemClassS}
+    </delete>
+
+    <delete id="deleteItemClassFilter" parameterType="fw.domain.mst.material.itemclass.ItemClassIdentify">
+        DELETE FROM M_ITEM_CLASS_FILTER
+        WHERE
+            ITEM_CLASS_L = #{itemClassL}
+            AND ITEM_CLASS_M = #{itemClassM}
+            AND ITEM_CLASS_S = #{itemClassS}
+    </delete>
+
+    <select id="searchItemClassName" parameterType="fw.domain.mst.material.itemclass.ItemClassIdentify" resultType="fw.domain.mst.material.itemclass.ItemClassManagement">
+         SELECT
+            M_ITEM_CLASS.ITEM_CLASS_L as "itemClassIdentify.itemClassL",
+            M_ITEM_CLASS.ITEM_CLASS_M as "itemClassIdentify.itemClassM",
+            M_ITEM_CLASS.ITEM_CLASS_S as "itemClassIdentify.itemClassS",
+            CASE
+              WHEN ITEM_CLASS_COMPANY.ITEM_CLASS_NAME IS NOT NULL THEN
+                ITEM_CLASS_COMPANY.ITEM_CLASS_NAME
+              ELSE
+                ITEM_CLASS_SYSTEM.ITEM_CLASS_NAME
+            END AS "itemClassNameL",
+            M_ITEM_CLASS.ITEM_CLASS_IND as "itemClassInd"
+         FROM M_ITEM_CLASS 
+         LEFT JOIN M_ITEM_CLASS_LANG ITEM_CLASS_COMPANY
+            ON 
+            M_ITEM_CLASS.ITEM_CLASS_L = ITEM_CLASS_COMPANY.ITEM_CLASS_L
+            AND M_ITEM_CLASS.ITEM_CLASS_M = ITEM_CLASS_COMPANY.ITEM_CLASS_M
+            AND M_ITEM_CLASS.ITEM_CLASS_S = ITEM_CLASS_COMPANY.ITEM_CLASS_S
+            AND ITEM_CLASS_COMPANY.LANGUAGE_IND = '${@fw.security.SecurityUtil@getCompanyUseLanguageIndByEscapeSql()}'
+         LEFT JOIN M_ITEM_CLASS_LANG ITEM_CLASS_SYSTEM
+            ON 
+            M_ITEM_CLASS.ITEM_CLASS_L = ITEM_CLASS_SYSTEM.ITEM_CLASS_L
+            AND M_ITEM_CLASS.ITEM_CLASS_M = ITEM_CLASS_SYSTEM.ITEM_CLASS_M
+            AND M_ITEM_CLASS.ITEM_CLASS_S = ITEM_CLASS_SYSTEM.ITEM_CLASS_S
+            AND ITEM_CLASS_SYSTEM.LANGUAGE_IND = '${@fw.common.util.AppUtil@getSysLanguageByEscapeSql()}'
+        WHERE 
+            M_ITEM_CLASS.ITEM_CLASS_L = #{itemClassL}
+            AND M_ITEM_CLASS.ITEM_CLASS_M = #{itemClassM}
+            AND M_ITEM_CLASS.ITEM_CLASS_S = #{itemClassS}
+    </select>
+
+    <!-- 強化-01784-000 2013/06/12 ADD SBO_SOKOU START -->
+    <select id="searchItemClassNameWithSystemLanguage"
+            parameterType="fw.domain.mst.material.itemclass.ItemClassIdentify"
+            resultType="fw.domain.mst.material.itemclass.ItemClassManagement">
+        SELECT M_ITEM_CLASS.ITEM_CLASS_L as "itemClassIdentify.itemClassL"
+             , M_ITEM_CLASS.ITEM_CLASS_M as "itemClassIdentify.itemClassM"
+             , M_ITEM_CLASS.ITEM_CLASS_S as "itemClassIdentify.itemClassS"
+             , M_ITEM_CLASS.ITEM_CLASS_IND as "itemClassInd"
+             , M_ITEM_CLASS_LANG.ITEM_CLASS_NAME AS "itemClassNameL"
+          FROM M_ITEM_CLASS
+         INNER JOIN M_ITEM_CLASS_LANG
+                 ON M_ITEM_CLASS.ITEM_CLASS_L = M_ITEM_CLASS_LANG.ITEM_CLASS_L
+                AND M_ITEM_CLASS.ITEM_CLASS_M = M_ITEM_CLASS_LANG.ITEM_CLASS_M
+                AND M_ITEM_CLASS.ITEM_CLASS_S = M_ITEM_CLASS_LANG.ITEM_CLASS_S
+                AND M_ITEM_CLASS_LANG.LANGUAGE_IND = '${@fw.common.util.AppUtil@getSysLanguageByEscapeSql()}'
+         WHERE M_ITEM_CLASS.ITEM_CLASS_L = #{itemClassL}
+           AND M_ITEM_CLASS.ITEM_CLASS_M = #{itemClassM}
+           AND M_ITEM_CLASS.ITEM_CLASS_S = #{itemClassS}
+    </select>
+    <!-- 強化-01784-000 2013/06/12 ADD SBO_SOKOU -END- -->
+
+    <select id="searchCountItemClassUpdate" resultType="int">
+         SELECT
+            count(1)
+         FROM M_ITEM_CLASS 
+         INNER JOIN M_ITEM_CLASS_LANG
+            ON 
+            M_ITEM_CLASS.ITEM_CLASS_L = M_ITEM_CLASS_LANG.ITEM_CLASS_L
+            AND M_ITEM_CLASS.ITEM_CLASS_M = M_ITEM_CLASS_LANG.ITEM_CLASS_M
+            AND M_ITEM_CLASS.ITEM_CLASS_S = M_ITEM_CLASS_LANG.ITEM_CLASS_S
+            <!-- 強化-01784-000 2013/06/12 DEL SBO_SOKOU START -->
+            <!-- AND M_ITEM_CLASS_LANG.LANGUAGE_IND = '${@fw.security.SecurityUtil@getCompanyUseLanguageIndByEscapeSql()}' -->
+            <!-- 強化-01784-000 2013/06/12 DEL SBO_SOKOU -END- -->
+            <!-- 強化-01784-000 2013/06/12 ADD SBO_SOKOU START -->
+            AND M_ITEM_CLASS_LANG.LANGUAGE_IND = '${@fw.common.util.AppUtil@getSysLanguageByEscapeSql()}'
+            <!-- 強化-01784-000 2013/06/12 ADD SBO_SOKOU -END- -->
+        WHERE 
+            <if test="itemClassInd==1">
+                M_ITEM_CLASS.ITEM_CLASS_IND = '2'
+                AND M_ITEM_CLASS.ITEM_CLASS_L = #{itemClassIdentify.itemClassL}
+            </if>
+            <if test="itemClassInd==2">
+                M_ITEM_CLASS.ITEM_CLASS_IND = '3'
+                AND M_ITEM_CLASS.ITEM_CLASS_L = #{itemClassIdentify.itemClassL}
+                AND M_ITEM_CLASS.ITEM_CLASS_M = #{itemClassIdentify.itemClassM}
+            </if>
+    </select>
+
+    <select id="searchCountItemClassAdd" resultType="int">
+         SELECT
+            count(1)
+         FROM M_ITEM_CLASS 
+         INNER JOIN M_ITEM_CLASS_LANG
+            ON 
+            M_ITEM_CLASS.ITEM_CLASS_L = M_ITEM_CLASS_LANG.ITEM_CLASS_L
+            AND M_ITEM_CLASS.ITEM_CLASS_M = M_ITEM_CLASS_LANG.ITEM_CLASS_M
+            AND M_ITEM_CLASS.ITEM_CLASS_S = M_ITEM_CLASS_LANG.ITEM_CLASS_S
+            <!-- 強化-01784-000 2013/06/12 DEL SBO_SOKOU START -->
+            <!-- AND M_ITEM_CLASS_LANG.LANGUAGE_IND = '${@fw.security.SecurityUtil@getCompanyUseLanguageIndByEscapeSql()}' -->
+            <!-- 強化-01784-000 2013/06/12 DEL SBO_SOKOU -END- -->
+            <!-- 強化-01784-000 2013/06/12 ADD SBO_SOKOU START -->
+            AND M_ITEM_CLASS_LANG.LANGUAGE_IND = '${@fw.common.util.AppUtil@getSysLanguageByEscapeSql()}'
+            <!-- 強化-01784-000 2013/06/12 ADD SBO_SOKOU -END- -->
+        WHERE 
+            <if test="itemClassInd==2">
+                M_ITEM_CLASS.ITEM_CLASS_IND = '1'
+                AND M_ITEM_CLASS.ITEM_CLASS_L = #{itemClassIdentify.itemClassL}
+            </if>
+            <if test="itemClassInd==3">
+                M_ITEM_CLASS.ITEM_CLASS_IND = '2'
+                AND M_ITEM_CLASS.ITEM_CLASS_L = #{itemClassIdentify.itemClassL}
+                AND M_ITEM_CLASS.ITEM_CLASS_M = #{itemClassIdentify.itemClassM}
+            </if>
+    </select>
+    
+    <select id="searchCountItemClassUpdateNotAbolish" resultType="int">
+         SELECT
+            count(1)
+         FROM M_ITEM_CLASS 
+         INNER JOIN M_ITEM_CLASS_LANG
+            ON 
+            M_ITEM_CLASS.ITEM_CLASS_L = M_ITEM_CLASS_LANG.ITEM_CLASS_L
+            AND M_ITEM_CLASS.ITEM_CLASS_M = M_ITEM_CLASS_LANG.ITEM_CLASS_M
+            AND M_ITEM_CLASS.ITEM_CLASS_S = M_ITEM_CLASS_LANG.ITEM_CLASS_S
+            AND M_ITEM_CLASS_LANG.LANGUAGE_IND = '${@fw.common.util.AppUtil@getSysLanguageByEscapeSql()}'
+        WHERE 
+            M_ITEM_CLASS.TERM_FLG = '0'
+            <if test="itemClassInd==1">
+                AND M_ITEM_CLASS.ITEM_CLASS_IND = '2'
+                AND M_ITEM_CLASS.ITEM_CLASS_L = #{itemClassIdentify.itemClassL}
+            </if>
+            <if test="itemClassInd==2">
+                AND M_ITEM_CLASS.ITEM_CLASS_IND = '3'
+                AND M_ITEM_CLASS.ITEM_CLASS_L = #{itemClassIdentify.itemClassL}
+                AND M_ITEM_CLASS.ITEM_CLASS_M = #{itemClassIdentify.itemClassM}
+            </if>
+    </select>
+
+    <select id="searchCountItemClassAddNotAbolish" resultType="int">
+         SELECT
+            count(1)
+         FROM M_ITEM_CLASS 
+         INNER JOIN M_ITEM_CLASS_LANG
+            ON 
+            M_ITEM_CLASS.ITEM_CLASS_L = M_ITEM_CLASS_LANG.ITEM_CLASS_L
+            AND M_ITEM_CLASS.ITEM_CLASS_M = M_ITEM_CLASS_LANG.ITEM_CLASS_M
+            AND M_ITEM_CLASS.ITEM_CLASS_S = M_ITEM_CLASS_LANG.ITEM_CLASS_S
+            AND M_ITEM_CLASS_LANG.LANGUAGE_IND = '${@fw.common.util.AppUtil@getSysLanguageByEscapeSql()}'
+        WHERE 
+            M_ITEM_CLASS.TERM_FLG = '0'
+            <if test="itemClassInd==2">
+                AND M_ITEM_CLASS.ITEM_CLASS_IND = '1'
+                AND M_ITEM_CLASS.ITEM_CLASS_L = #{itemClassIdentify.itemClassL}
+            </if>
+            <if test="itemClassInd==3">
+                AND M_ITEM_CLASS.ITEM_CLASS_IND = '2'
+                AND M_ITEM_CLASS.ITEM_CLASS_L = #{itemClassIdentify.itemClassL}
+                AND M_ITEM_CLASS.ITEM_CLASS_M = #{itemClassIdentify.itemClassM}
+            </if>
+    </select>
+
+    <select id="searchItemClassNotAbolish" resultType="fw.domain.mst.material.itemclass.ItemClassManagement">
+         SELECT
+            M_ITEM_CLASS.ITEM_CLASS_L AS "itemClassIdentify.itemClassL"
+             , M_ITEM_CLASS.ITEM_CLASS_M AS "itemClassIdentify.itemClassM"
+             , M_ITEM_CLASS.ITEM_CLASS_S AS "itemClassIdentify.itemClassS"
+             , M_ITEM_CLASS.TERM_FLG AS "term.termFlg"
+             , M_ITEM_CLASS.ITEM_CLASS_IND AS "itemClassInd"
+         FROM M_ITEM_CLASS 
+         INNER JOIN M_ITEM_CLASS_LANG
+            ON 
+            M_ITEM_CLASS.ITEM_CLASS_L = M_ITEM_CLASS_LANG.ITEM_CLASS_L
+            AND M_ITEM_CLASS.ITEM_CLASS_M = M_ITEM_CLASS_LANG.ITEM_CLASS_M
+            AND M_ITEM_CLASS.ITEM_CLASS_S = M_ITEM_CLASS_LANG.ITEM_CLASS_S
+            AND M_ITEM_CLASS_LANG.LANGUAGE_IND = '${@fw.common.util.AppUtil@getSysLanguageByEscapeSql()}'
+        WHERE 
+            M_ITEM_CLASS.TERM_FLG = '0'
+            <if test="itemClassInd==1">
+                AND M_ITEM_CLASS.ITEM_CLASS_IND = '2'
+                AND M_ITEM_CLASS.ITEM_CLASS_L = #{itemClassIdentify.itemClassL}
+            </if>
+            <if test="itemClassInd==2">
+                AND M_ITEM_CLASS.ITEM_CLASS_IND = '3'
+                AND M_ITEM_CLASS.ITEM_CLASS_L = #{itemClassIdentify.itemClassL}
+                AND M_ITEM_CLASS.ITEM_CLASS_M = #{itemClassIdentify.itemClassM}
+            </if>
+    </select>
+
+    <sql id="pageHeader">
+       SELECT * FROM (
+    </sql>
+    <sql id="pageRoot">
+        ) WHERE  ROWNUM &lt;=${@fw.common.util.PropertiesUtil@getLong("DOWNLOAD_MAXCNT")}
+    </sql>
+</mapper>

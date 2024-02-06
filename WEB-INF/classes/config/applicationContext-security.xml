@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+    xmlns:security="http://www.springframework.org/schema/security"
+    xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+        http://www.springframework.org/schema/security http://www.springframework.org/schema/security/spring-security-3.1.xsd">
+
+    <!-- 認証を必要としません start-->
+    <security:http pattern="/" security="none" />
+    <security:http pattern="/403.vm*" security="none" />
+    <security:http pattern="/404.vm*" security="none" />
+    <security:http pattern="/500.vm*" security="none" />
+    <security:http pattern="/image/**" security="none" />
+    <security:http pattern="/include/**" security="none" />
+    <security:http pattern="/lgn/login/PSLGN010*" security="none" />
+    <security:http pattern="/lgn/logout/logout" security="none" />
+    <!-- 認証を必要としません end-->
+    <!-- セキュリティの基本構成  start
+        auto-config 自動設定
+        use-expressions EL式を可能にするアクセスの章で説明したように
+        entry-point-refエントリポイント-ref
+                                この属性は、この動作はカスタマイズされた定義によってオーバーライドすることができます
+            AuthenticationEntryPointの認証プロセスが開始
+    -->
+    <security:http auto-config="false" use-expressions="true"
+        entry-point-ref="loginUrlAuthenticationEntryPoint">
+
+    <security:logout logout-success-url="/lgn/login/PSLGN010"
+        delete-cookies="JSESSIONID" />
+
+    <!-- この要素は、フィルタチェインにフィルタを追加するために使用されます -->
+    <!-- position 明示的な位置は、カスタムフィルタは、チェーンに配置する必要があります。
+                            あなたは、標準のフィルターを交換する場合に使用します。 -->
+    <security:custom-filter ref="loginFilter"
+        position="FORM_LOGIN_FILTER" />
+
+    </security:http>
+    <!-- セキュリティの基本構成  end-->
+    <!-- 認証の詳細 -->
+    <bean id="loginFilter"
+        class="ps.security.CustomUsernamePasswordAuthenticationFilter">
+        <property name="filterProcessesUrl" value="/j_spring_security_check" /><!-- ログイン処理-URL -->
+        <property name="authenticationSuccessHandler" ref="authenticationSuccessHandler" />
+        <property name="authenticationFailureHandler" ref="authenticationFailureHandler" />
+        <property name="authenticationManager" ref="authenticationManager" />
+        <property name="sessionAuthenticationStrategy" ref="sessionAuthenticationStrategy" />
+    </bean>
+    <!-- 認証成功-->
+    <bean id="authenticationSuccessHandler"
+        class="org.springframework.security.web.authentication.SavedRequestAwareAuthenticationSuccessHandler">
+        <property name="defaultTargetUrl" value="/hme/PSHME010" /><!--デフォルトのターゲット認証成功-URL-->
+    </bean>
+    <!-- 認証失敗 -->
+    <bean id="authenticationFailureHandler"
+        class="org.springframework.security.web.authentication.SimpleUrlAuthenticationFailureHandler">
+        <!-- デフォルトのターゲット認証失敗-URL-->
+        <property name="defaultFailureUrl" value="/lgn/login/PSLGN010" />
+    </bean>
+
+    <!-- entry-point-refエントリポイント-ref -->
+    <bean id="loginUrlAuthenticationEntryPoint"
+        class="org.springframework.security.web.authentication.LoginUrlAuthenticationEntryPoint">
+        <property name="loginFormUrl" value="/lgn/login/PSLGN010" />
+    </bean>
+    
+
+    <!-- セッション認証エラー-URL start -->
+    <bean id="sessionAuthenticationStrategy"
+        class="org.springframework.security.web.authentication.session.ConcurrentSessionControlStrategy">
+        <constructor-arg name="sessionRegistry" ref="sessionRegistry" />
+    </bean>
+
+    <!-- セッションのレジストリ-ref -->
+    <bean id="sessionRegistry"
+        class="org.springframework.security.core.session.SessionRegistryImpl">
+        
+    </bean>
+    <!-- セッション認証エラー-URL end -->
+
+    <!-- authentication-manager start -->
+
+    <security:authentication-manager alias="authenticationManager">
+    <!-- ユーザーのservice-ref -->
+        <security:authentication-provider
+            user-service-ref="userService">
+            <security:password-encoder ref="passwordEncoder" />
+        </security:authentication-provider>
+    </security:authentication-manager>
+    <!-- ユーザーのservice-ref -->
+    <bean id="userService"
+        class="ps.security.UserDetailService"/>
+
+    <!-- 認証プロバイダは、オプションで説明したようにエンコーダのパスワードを使用するように構成することができ、名前空間の導入。
+             これは、適切に注入されるBeanになりますPasswordEncoderに 付随して潜在的に、
+                インスタンス SaltSourceのハッシュに塩値を提供するBean。 -->
+    <bean id="passwordEncoder"
+        class="org.springframework.security.authentication.encoding.PlaintextPasswordEncoder" />
+
+    <!-- authentication-manager end -->
+
+</beans>

@@ -1,0 +1,1085 @@
+<!doctype html>
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="ja" lang="ja">
+<html LANG="ja">
+<head>
+<title>
+#if ($!pagePattern == "back" || $!pagePattern ==  "reApply")
+    #customSpringMessage('PAY_REQ_CORRECT')
+#end
+#if ($!pagePattern == "new" || $!pagePattern ==  "history" || $!pagePattern ==  "edit")
+    #customSpringMessage('PAY_REQ_INPUT')
+#end
+</title>
+<meta http-equiv="Content-type" content="text/html; charset=UTF-8">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Content-script-type" content="text/javascript">
+
+<link id="CSS_FONT" rel="stylesheet" href="../../include/FontS.css" type="text/css">
+<link rel="stylesheet" href="../../include/ime.css" type="text/css">
+<link rel="stylesheet" href="../../include/searchbox.css" type="text/css">
+<link rel="stylesheet" href="../../include/Layout.css" type="text/css">
+<link rel="stylesheet" href="../../include/Color.css" type="text/css">
+<script language="javascript" type="text/javascript" src="../../include/common.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/check.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/date.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/searchbox.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/jquery-1.7.2.min.js"></script>
+<script language="javascript" type="text/javascript">
+<!--
+
+#parse("./common/common_js.vm")
+
+display();
+
+// 取引先コード の古い値を保存する
+var supCode_x = "";
+//変更前の負担部門コード
+var sectionCd_x = "";
+//変更前の科目コード
+var subjectCd_x = "";
+var chgUserId = "";
+
+var isClickable = false;
+
+function onLoad() {
+    setFocusForInput();
+    setChgUserIdValue();
+
+    var alertMessage = "$!alertMessage";
+    var errorMsg = "$!errorMessage";
+    if (errorMsg != ""){
+        document.getElementById("TR_ERROR").style.display = "";
+        isClickable = true;
+        return;
+    }
+
+    var isSuccess = '#jsEscape($!isSuccess)';
+    var pattern = '#jsEscape($!pagePattern)';
+    if (alertMessage != "" && isSuccess == "") {
+        if (confirm(alertMessage)) {
+            if(pattern == 'reApply') {
+                getObj("Body").action="${flowExecutionUrl}&_eventId=applyAgain&checkPass=1";
+            } else {
+                getObj("Body").action="${flowExecutionUrl}&_eventId=apply&checkPass=1";
+            }
+            buttonDisable();
+            getObj("Body").submit();
+            return;
+        }
+    }
+
+    #set($param = "#customSpringMessage('PAY_CLAIM')" )
+
+    var istempSuccess = '#jsEscape($!isTempSuccess)';
+    var from = '#jsEscape($!pageFrom)';
+
+    if(isSuccess == 'true'){
+        if(pattern == 'back' || pattern == 'reApply') {
+            alert('#customMessageArgs("I002",[$param])'+'\n\n#customSpringMessage('PAY_NO'):$!domain.payReqInput.payNo.payNo');
+        } else {
+            alert('#customMessageArgs("I005",[$param])'+'\n\n#customSpringMessage('PAY_NO'):$!domain.payReqInput.payNo.payNo');
+        }
+        buttonDisable();
+        if(from == '') {
+           top.iframeChange('${flowExecutionUrl}&_eventId=showdetail','pageid','PSPAY010','pattern','new', 'from','#jsEscape($!pageFrom)','isFromList','true' );
+           return;
+        } else {
+            top.iframeChange('${flowExecutionUrl}&_eventId=back');
+           return;
+        }
+
+    } else {
+        if(istempSuccess == 'true'){
+           alert('#customMessageArgs("I030",[$param])'+'\n\n#customSpringMessage('PAY_NO'):$!domain.payReqInput.payNo.payNo');
+           buttonDisable();
+           top.iframeChange('${flowExecutionUrl}&_eventId=showdetail','pageid','PSPAY010','pattern','edit', 'payReqSeq','#jsEscape($!domain.payReqIdentify.payReqSeq)','from','#jsEscape($!pageFrom)');
+           return;
+        }
+    }
+
+    #foreach($!item in $!domain.itemList.itemList)
+        setConsumptInd($velocityCount, 1);
+    #end
+
+    setAppRouteByAmount('7', getObj('payReqInput.totalAmount.totalAmount.amountFormat').value, getObj('payReqInput.supplierFrom.currency.currencyCd').value);
+    setAppRouteName();
+
+    isClickable = true;
+}
+
+function setFileDeleteFlg() {
+    var del1 = getObj("payReqInput.attachFile1.screenDelFlg").value;
+    var file1 = getObj("payReqInput.attachFile1.screenFile").value;
+    if("1" == del1 && file1.length > 0) {
+        getObj("payReqInput.attachFile1.screenDelFlg").value = "0";
+    }
+
+    var del2 = getObj("payReqInput.attachFile2.screenDelFlg").value;
+    var file2 = getObj("payReqInput.attachFile2.screenFile").value;
+    if("1" == del2 && file2.length > 0) {
+        getObj("payReqInput.attachFile2.screenDelFlg").value = "0";
+    }
+
+    var del3 = getObj("payReqInput.attachFile3.screenDelFlg").value;
+    var file3 = getObj("payReqInput.attachFile3.screenFile").value;
+    if("1" == del3 && file3.length > 0) {
+        getObj("payReqInput.attachFile3.screenDelFlg").value = "0";
+    }
+
+}
+function display(){
+    #if ($!pagePattern == "back" || $!pagePattern ==  "reApply")
+        top.document.title = "#customSpringMessage('PAY_REQ_CORRECT')";
+    #end
+    #if ($!pagePattern == "new" || $!pagePattern ==  "history" || $!pagePattern ==  "edit")
+        top.document.title = "#customSpringMessage('PAY_REQ_INPUT')";
+    #end
+    #if ($!pagePattern == "new")
+     top.backUrl="${flowExecutionUrl}&_eventId=home";
+    #end
+    #if ($!pageFrom == "")
+     top.backUrl="${flowExecutionUrl}&_eventId=home";
+    #end
+}
+
+function exec_pre() {
+    if(!isClickable) {
+        return;
+    }
+
+	if(isFresh() == true) {
+		return;
+	}
+    setItemEnable();
+
+    buttonDisable();
+    setFileDeleteFlg();
+    getObj("Body").action="${flowExecutionUrl}&_eventId=tempSave";
+    getObj("Body").submit();
+
+}
+
+function execReApply() {
+    if(!isClickable) {
+        return;
+    }
+
+	if(isFresh() == true) {
+		return;
+	}
+    #set( $quotreq = "#customSpringMessage('PAY_CLAIM')" )
+    #set( $update = "#customSpringMessage('UPDATE')" )
+    if( !confirm('#customMessageArgs("W001",[$quotreq,$update])') ) {
+        return;
+    }
+
+    setItemEnable();
+
+    setFileDeleteFlg();
+    buttonDisable();
+    getObj("Body").action="${flowExecutionUrl}&_eventId=applyAgain";
+    getObj("Body").submit();
+}
+
+function exec() {
+    if(!isClickable) {
+        return;
+    }
+
+	if(isFresh() == true) {
+		return;
+	}
+    #set( $quotreq = "#customSpringMessage('PAY_CLAIM')" )
+    #set( $register = "#customSpringMessage('ACTION_REGISTER')" )
+    if( !confirm('#customMessageArgs("W001",[$quotreq,$register])') ) {
+        return;
+    }
+
+    setItemEnable();
+
+    setFileDeleteFlg();
+    buttonDisable();
+    getObj("Body").action="${flowExecutionUrl}&_eventId=apply";
+    getObj("Body").submit();
+}
+
+function isFresh() {
+	var isSuccess = '#jsEscape($!isSuccess)';
+	var istempSuccess = '#jsEscape($!isTempSuccess)';
+	if(isSuccess == 'true'
+		|| istempSuccess == 'true') {
+		return true;
+	} else {
+	    return false;
+	}
+}
+
+function addDetail() {
+    if(!isClickable) {
+        return;
+    }
+
+    setItemEnable();
+
+    setFileDeleteFlg();
+    getObj("Body").action="${flowExecutionUrl}&_eventId=addDetail";
+    getObj("Body").submit();
+}
+
+function deleteDetail(index) {
+    if(!isClickable) {
+        return;
+    }
+
+    setItemEnable();
+
+    setFileDeleteFlg();
+    getObj("Body").action="${flowExecutionUrl}&_eventId=deleteDetail&detailIndex="+index;
+    getObj("Body").submit();
+}
+
+function downloadFile(seqNo,index) {
+    parent.iframeChange("${flowExecutionUrl}&_eventId=download",'seqNo',seqNo, 'index',index);
+}
+
+function userSelectAfterProc() {
+    //メール更新
+    getObj('link.payReqInput.reqUser.reqUser.mailAddr.mail').innerHTML=getObj('payReqInput.reqUser.reqUser.mailAddr.mail').value;
+
+}
+function afterProc() {
+    //通貨コード設定
+    getObj('payReqInput.supplierFrom.currency.currencyCd.Lable').innerHTML = getObj('payReqInput.supplierFrom.currency.currencyCd').value;
+    //口座種別、通貨記号を取得
+    $.ajax({
+        type: "POST",
+        async:false,
+        url:"../../payClaimController/bankCurrentInfo",
+        data: {
+            companyCd:cleanXss('#jsEscape($!userCompanyCd)'),
+            supCd:cleanXss(getObj('payReqInput.supplierFrom.supCd').value),
+            currencyCd:cleanXss(getObj('payReqInput.supplierFrom.currency.currencyCd').value),
+            accountType:cleanXss(getObj('payReqInput.account.acType.acType').value)
+        },
+        success:function(data){
+            getObj('payReqInput.account.acType.name').value = data.accountTypeName;
+            $('.CurrencyMark').text(data.currencyMark);
+            #foreach($!item in $!domain.itemList.itemList)
+                getObj('mark.itemList.itemList[$velocityCount].unitPrice.amount.amountFormat').innerText = data.currencyMark;
+                getObj('mark.itemList.itemList[$velocityCount].claimAmount.amount.amountFormat').innerText = data.currencyMark;
+                getObj('mark.itemList.itemList[$velocityCount].amountMng.consumptAmount.consumptAmount.amountFormat').innerText = data.currencyMark;
+                getObj('currencyMarkOut[$velocityCount]').innerText = data.currencyMark;
+                getObj('currencyMarkIn[$velocityCount]').innerText = data.currencyMark;
+            #end
+            getObj('payReqInput.payConditionManagement.payConditionIdentify.payConditionCd').value = data.payConditionCd;
+        }
+    });
+
+    //取引先の銀行関連項目
+    getObj("payReqInput.account.bankName.Label").innerHTML = getObj("payReqInput.account.bankName").value;
+    getObj("payReqInput.account.branchName.Label").innerHTML = getObj("payReqInput.account.branchName").value;
+    getObj("payReqInput.account.acType.name.Label").innerHTML = getObj("payReqInput.account.acType.name").value;
+    getObj("payReqInput.account.accountNo.Label").innerHTML = getObj("payReqInput.account.accountNo").value;
+    getObj("payReqInput.account.accountName.Label").innerHTML = getObj("payReqInput.account.accountName").value;
+
+    setAppRouteByAmount('7',
+        getObj('payReqInput.totalAmount.totalAmount.amountFormat').value,
+        getObj('payReqInput.supplierFrom.currency.currencyCd').value);
+}
+
+function pasteItemSect() {
+    var APP_SECTION_CD  = getObj("APP_SECTION_CD").value;
+    var APP_SECTION_NAME = getObj("APP_SECTION_NAME").value;
+    var APP_COMPANY_CD  = getObj("APP_COMPANY_CD").value;
+    var APP_COMPANY_NAME = getObj("APP_COMPANY_NAME").value;
+    var APP_SECTION_PLACE_CD  = getObj("APP_SECTION_PLACE_CD").value;
+    var APP_SECTION_PLACE_NAME = getObj("APP_SECTION_PLACE_NAME").value;
+
+    #foreach($!item in $!domain.itemList.itemList)
+        getObj('itemList.itemList[$velocityCount].loadSection.loadSection.sectionCd').value = APP_SECTION_CD;
+        getObj('itemList.itemList[$velocityCount].loadSection.loadSection.sectionName').value = APP_SECTION_NAME;
+        getObj('itemList.itemList[$velocityCount].loadSection.loadSection.company.companyCd').value = APP_COMPANY_CD;
+        getObj('itemList.itemList[$velocityCount].loadSection.loadSection.company.companyName').value = APP_COMPANY_NAME;
+        getObj('itemList.itemList[$velocityCount].loadSection.loadSection.sectionPlace.sectionPlaceCd').value = APP_SECTION_PLACE_CD;
+        getObj('itemList.itemList[$velocityCount].loadSection.loadSection.sectionPlace.sectionPlaceName').value = APP_SECTION_PLACE_NAME;
+    #end
+}
+
+function pasteItemSubject() {
+    var APP_SubjectCd = getObj("APP_SubjectCd").value;
+    var APP_SubjectName = getObj("APP_SubjectName").value;
+    #foreach($!item in $!domain.itemList.itemList)
+        getObj('itemList.itemList[$velocityCount].subject.subjectCd').value = APP_SubjectCd;
+        getObj('itemList.itemList[$velocityCount].subject.subjectName').value = APP_SubjectName;
+    #end
+}
+## 何かを計算するか不明、想定
+## 単価、数量を変更すると、請求金額 、消費税額 、請求金額合計を計算する
+## 請求金額 (または課税区分)を変更すると消費税額 、請求金額合計を計算する
+## 消費税額 を変更すると請求金額合計を計算する
+## 消費税区分 を変更すると請求金額合計を計算する
+function calculateTaxAmountByAjax(index, type) {
+    var consumptInd = getObj('itemList.itemList['+ index+'].amountMng.taxCalculationInd.consumptInd.consumptInd').value;
+    var taxInd = getObj('itemList.itemList['+ index+'].amountMng.taxCalculationInd.taxInd.taxInd').value;
+    var unitPrice = getObj('itemList.itemList['+ index+'].unitPrice.amount.amountFormat').value;
+    var vol = getObj('itemList.itemList['+ index+'].val.vol.volFormat').value;
+    var claimAmount = getObj('itemList.itemList['+ index+'].claimAmount.amount.amountFormat').value;
+    var consumptAmount = getObj('itemList.itemList['+ index+'].amountMng.consumptAmount.consumptAmount.amountFormat').value;
+    var totalAmountInTax = getObj('payReqInput.totalAmount.totalAmount.amountFormat').value;
+
+    var claimPriceTaxOut = getObj('itemList.itemList['+ index+'].amountMng.noTaxAmount.noTaxAmount.amountFormat').value;
+    var claimPriceTaxIn = getObj('itemList.itemList['+ index+'].amountMng.totalAmount.totalAmount.amountFormat').value;
+    var invoiceDate = getObj('payReqInput.invoice.invoiceDate.dateOfymdFormat').value;
+
+    $.ajax({
+        type: "POST",
+        async:false,
+        url:"../../payClaimController/itemAmount",
+        data:  {
+            index:cleanXss(index),
+            type:cleanXss(type),
+            consumptInd:cleanXss(consumptInd),
+            #foreach($!item in $!domain.itemList.itemList)
+              "amountArray[$velocityCount].amountFormat":cleanXss(getObj('itemList.itemList[$velocityCount].claimAmount.amount.amountFormat').value),
+              "taxIndArray[$velocityCount]":cleanXss(getObj('itemList.itemList[$velocityCount].amountMng.taxCalculationInd.taxInd.taxInd').value),
+              "consumptIndArray[$velocityCount]":cleanXss(getObj('itemList.itemList[$velocityCount].amountMng.taxCalculationInd.consumptInd.consumptInd').value),
+              "consumptAmountArray[$velocityCount].amountFormat":cleanXss(getObj('itemList.itemList[$velocityCount].amountMng.consumptAmount.consumptAmount.amountFormat').value),
+              "claimPriceTaxOutArray[$velocityCount].amountFormat":cleanXss(getObj('itemList.itemList[$velocityCount].amountMng.noTaxAmount.noTaxAmount.amountFormat').value),
+              "claimPriceTaxInArray[$velocityCount].amountFormat":cleanXss(getObj('itemList.itemList[$velocityCount].amountMng.totalAmount.totalAmount.amountFormat').value),
+            #end
+            taxInd:cleanXss(taxInd),
+            "unitPrice.amountFormat":cleanXss(unitPrice),
+            "vol.volFormat":cleanXss(vol),
+            "claimAmount.amountFormat":cleanXss(claimAmount),
+            "consumptAmount.amountFormat":cleanXss(consumptAmount),
+            currencyCd:cleanXss(getObj('payReqInput.supplierFrom.currency.currencyCd').value),
+            "total.amountFormat":cleanXss(totalAmountInTax),
+            "claimPriceTaxOut.amountFormat":cleanXss(claimPriceTaxOut),
+            "claimPriceTaxIn.amountFormat":cleanXss(claimPriceTaxIn),
+            invoiceDate:cleanXss(invoiceDate)
+        },
+        success:function(data){
+            var index =  data.index;
+            if(data.type == '0'){
+                if(data.unitPrice.amount != "") {
+                    getObj('itemList.itemList['+ index+'].unitPrice.amount.amountFormat').value = data.unitPrice.amountFormat;
+                }
+                if(data.termflg == '1') {
+                    getObj('itemList.itemList['+index+'].claimAmount.amount.amountFormat').value = "";
+                    getObj('itemList.itemList['+index+'].amountMng.consumptAmount.consumptAmount.amountFormat').value = "";
+                    return;
+                }
+                getObj('itemList.itemList['+index+'].claimAmount.amount.amountFormat').value = data.claimAmount.amountFormat;
+                getObj('itemList.itemList['+index+'].amountMng.consumptAmount.consumptAmount.amountFormat').value = data.consumptAmount.amountFormat;
+            }
+            if(data.type == '1'){
+                if(data.termflg == '1') {
+                    getObj('itemList.itemList['+index+'].claimAmount.amount.amountFormat').value = "";
+                    getObj('itemList.itemList['+index+'].amountMng.consumptAmount.consumptAmount.amountFormat').value = "";
+                    return;
+                }
+                getObj('itemList.itemList['+index+'].claimAmount.amount.amountFormat').value = data.claimAmount.amountFormat;
+                getObj('itemList.itemList['+index+'].amountMng.consumptAmount.consumptAmount.amountFormat').value = data.consumptAmount.amountFormat;
+            }
+            if(data.type == '2'){
+                getObj('itemList.itemList['+index+'].claimAmount.amount.amountFormat').value = data.claimAmount.amountFormat;
+                getObj('itemList.itemList['+index+'].amountMng.consumptAmount.consumptAmount.amountFormat').value = data.consumptAmount.amountFormat;
+            }
+            if(data.type == '3'){
+                getObj('itemList.itemList['+index+'].amountMng.consumptAmount.consumptAmount.amountFormat').value = data.consumptAmount.amountFormat;
+            }
+            getObj('payReqInput.claimAmountPerTax.taxRate.taxRate').innerHTML = data.claimAmountPerTax.taxRate.taxRate;
+            getObj('payReqInput.claimAmountPerTax.reducedTaxRate.taxRate').innerHTML = data.claimAmountPerTax.reducedTaxRate.taxRate;
+            getObj('payReqInput.claimAmountPerTax.taxClaimAmount.amountFormat').innerHTML = data.claimAmountPerTax.taxClaimAmount.amountFormat;
+            getObj('payReqInput.claimAmountPerTax.taxConsumptAmount.amountFormat').innerHTML = data.claimAmountPerTax.taxConsumptAmount.amountFormat;
+            getObj('payReqInput.claimAmountPerTax.reducedTaxClaimAmount.amountFormat').innerHTML = data.claimAmountPerTax.reducedTaxClaimAmount.amountFormat;
+            getObj('payReqInput.claimAmountPerTax.reducedTaxConsumptAmount.amountFormat').innerHTML = data.claimAmountPerTax.reducedTaxConsumptAmount.amountFormat;
+            getObj('payReqInput.claimAmountPerTax.nonTaxClaimAmount.amountFormat').innerHTML = data.claimAmountPerTax.nonTaxClaimAmount.amountFormat;
+            getObj('payReqInput.claimAmountPerTax.nonTaxConsumptAmount.amountFormat').innerHTML = data.claimAmountPerTax.nonTaxConsumptAmount.amountFormat;
+            getObj('payReqInput.claimAmountPerTax.taxExemptionClaimAmount.amountFormat').innerHTML = data.claimAmountPerTax.taxExemptionClaimAmount.amountFormat;
+            getObj('payReqInput.claimAmountPerTax.taxExemptionConsumptAmount.amountFormat').innerHTML = data.claimAmountPerTax.taxExemptionConsumptAmount.amountFormat;
+            getObj('payReqInput.claimAmountPerTax.unTaxClaimAmount.amountFormat').innerHTML = data.claimAmountPerTax.unTaxClaimAmount.amountFormat;
+            getObj('payReqInput.claimAmountPerTax.unTaxConsumptAmount.amountFormat').innerHTML = data.claimAmountPerTax.unTaxConsumptAmount.amountFormat;
+            getObj('payReqInput.claimAmountPerTax.totalClaimAmount.amountFormat').innerHTML = data.claimAmountPerTax.totalClaimAmount.amountFormat;
+            getObj('payReqInput.claimAmountPerTax.totalConsumptAmount.amountFormat').innerHTML = data.claimAmountPerTax.totalConsumptAmount.amountFormat;
+            getObj('payReqInput.totalAmount.totalAmount.amountFormat').value = data.total.amountFormat;
+
+            if(getObj('itemList.itemList['+index+'].amountMng.consumptAmount.consumptAmount.amountFormat').value != "" &&
+             getObj('itemList.itemList['+index+'].claimAmount.amount.amountFormat').value != "") {
+                getObj('claimPriceTaxOut['+index+']').innerHTML = data.claimPriceTaxOut.amountFormat;
+                getObj('itemList.itemList['+index+'].amountMng.noTaxAmount.noTaxAmount.amountFormat').value = data.claimPriceTaxOut.amountFormat;
+                getObj('currencyMarkOut['+index+']').innerText = data.currencyMark;
+                getObj('claimPriceTaxIn['+index+']').innerHTML = data.claimPriceTaxIn.amountFormat;
+                getObj('itemList.itemList['+index+'].amountMng.totalAmount.totalAmount.amountFormat').value = data.claimPriceTaxIn.amountFormat;
+                getObj('currencyMarkIn['+index+']').innerText = data.currencyMark;
+            }else{
+                getObj('claimPriceTaxOut['+index+']').innerHTML = "";
+                getObj('itemList.itemList['+index+'].amountMng.noTaxAmount.noTaxAmount.amountFormat').value = "";
+                getObj('currencyMarkOut['+index+']').innerText = "";
+                getObj('claimPriceTaxIn['+index+']').innerHTML = "";
+                getObj('itemList.itemList['+index+'].amountMng.totalAmount.totalAmount.amountFormat').value = "";
+                getObj('currencyMarkIn['+index+']').innerText = "";
+            }
+
+            // Lost focusの時、0になる問題対応. 請求金額は共通js方法で０にすれば、空白にする。
+            if(getObj('itemList.itemList['+index+'].claimAmount.amount.amountFormat').value == 0) {
+                getObj('itemList.itemList['+index+'].claimAmount.amount.amountFormat').value = "";
+            }
+            // 消費税額は共通js方法で０にすれば、且つ請求金額が空白の場合、空白にする,
+            if(getObj('itemList.itemList['+index+'].amountMng.consumptAmount.consumptAmount.amountFormat').value == 0 && getObj('itemList.itemList['+index+'].claimAmount.amount.amountFormat').value == "") {
+                getObj('itemList.itemList['+index+'].amountMng.consumptAmount.consumptAmount.amountFormat').value = "";
+            }
+
+            setAppRouteByAmount('7',
+                        getObj('payReqInput.totalAmount.totalAmount.amountFormat').value,
+                        getObj('payReqInput.supplierFrom.currency.currencyCd').value);
+        }
+
+     });
+
+}
+
+// 依頼者コードのonBlur処理
+function userOnblur() {
+    var userId = getObj("payReqInput.reqUser.reqUser.userID").value;
+    if(userId == "") {
+        getObj("payReqInput.reqUser.reqUser.section.sectionCd").value = "";
+        getObj("payReqInput.reqUser.reqUser.section.sectionName").value = "";
+        getObj("payReqInput.reqUser.reqUser.section.sectionPlace.sectionPlaceCd").value = "";
+        getObj("payReqInput.reqUser.reqUser.section.sectionPlace.sectionPlaceName").value = "";
+        getObj("payReqInput.reqUser.reqUser.userName").value = "";
+        getObj("payReqInput.reqUser.reqUser.externalNo.externalNo").value = "";
+        getObj("payReqInput.reqUser.reqUser.extNo.extensionNo").value = "";
+        getObj("payReqInput.reqUser.reqUser.mailAddr.mail").value = "";
+        getObj('link.payReqInput.reqUser.reqUser.mailAddr.mail').innerHTML="";
+        chgUserId = userId;
+    } else if (userId != chgUserId) {
+        chgUserId = userId;
+        $.ajax({
+            type: "POST",
+            async:false,
+            url:"../../getUserInfoOnBlur",
+            data: {
+                termFlag:'0',
+                companyCd:cleanXss('#jsEscape($!userCompanyCd)'),
+                referenceRangeFlg:cleanXss('#jsEscape($!referenceRangeFlg)'),
+                userPermissionFlg:'80',
+                userId:cleanXss(userId)
+            },
+            success:function(data){
+                //設定
+                getObj("payReqInput.reqUser.reqUser.section.sectionCd").value = data.userIdentify.sectionCd;
+                getObj("payReqInput.reqUser.reqUser.section.sectionName").value = data.sectionName;
+                getObj("payReqInput.reqUser.reqUser.section.sectionPlace.sectionPlaceCd").value = data.sectionPlaceCd;
+                getObj("payReqInput.reqUser.reqUser.section.sectionPlace.sectionPlaceName").value = data.sectionPlaceName;
+                getObj("payReqInput.reqUser.reqUser.userName").value = data.userName;
+                getObj("payReqInput.reqUser.reqUser.externalNo.externalNo").value = data.externalNo;
+                getObj("payReqInput.reqUser.reqUser.extNo.extensionNo").value = data.extensionNo;
+                getObj("payReqInput.reqUser.reqUser.mailAddr.mail").value = data.mailAddr;
+                getObj('link.payReqInput.reqUser.reqUser.mailAddr.mail').innerHTML=data.mailAddr;
+            }
+        });
+    }
+}
+
+## 取引先コードのonBlur処理
+function supcdOnBlur() {
+    var supCd = getObj("payReqInput.supplierFrom.supCd").value;
+
+    // 取引先コード の古い値と新しい値が同じの場合、何もしない。同じではない場合、古い値を新しい値に更新後、処理を継続。
+    if(supCd == supCode_x) {
+        return false;
+    } else {
+        supCode_x = supCd;
+    }
+
+    if(supCd == "") {
+        getObj("payReqInput.supplierFrom.supplierName.supplierName").value = "";
+        getObj("payReqInput.supplierFrom.currency.currencyCd").value = "";
+        getObj("payReqInput.supplierFrom.supplierName.supplierAbbrName").value = "";
+        getObj("payReqInput.account.bankCd").value = "";
+        getObj("payReqInput.account.bankName").value = "";
+        getObj("payReqInput.account.branchName").value = "";
+        getObj("payReqInput.account.branchCd").value = "";
+        getObj("payReqInput.account.acType.acType").value = "";
+        getObj("payReqInput.account.acType.name").value = "";
+        getObj("payReqInput.account.accountNo").value = "";
+        getObj("payReqInput.account.accountName").value = "";
+        $('.CurrencyMark').text('');
+        #foreach($!item in $!domain.itemList.itemList)
+            getObj('mark.itemList.itemList[$velocityCount].unitPrice.amount.amountFormat').innerHTML = "";
+            getObj('mark.itemList.itemList[$velocityCount].claimAmount.amount.amountFormat').innerHTML = "";
+            getObj('mark.itemList.itemList[$velocityCount].amountMng.consumptAmount.consumptAmount.amountFormat').innerHTML = "";
+            getObj('currencyMarkOut[$velocityCount]').innerText = "";
+            getObj('currencyMarkIn[$velocityCount]').innerText = "";
+        #end
+        getObj('payReqInput.payConditionManagement.payConditionIdentify.payConditionCd').value = "";
+        getObj('payReqInput.supplierFrom.currency.currencyCd.Lable').innerHTML = "";
+        // 取引先の銀行関連項目
+        getObj("payReqInput.account.bankName.Label").innerHTML = "";
+        getObj("payReqInput.account.branchName.Label").innerHTML = "";
+        getObj("payReqInput.account.acType.name.Label").innerHTML = "";
+        getObj("payReqInput.account.accountNo.Label").innerHTML = "";
+        getObj("payReqInput.account.accountName.Label").innerHTML = "";
+    } else {
+        $.ajax({
+            type: "POST",
+            async:false,
+            url:"../../getSupplierInfoOnBlur",
+            data: {
+                termFlag:'0',
+                companyCd:cleanXss('#jsEscape($!userCompanyCd)'),
+                supCd:cleanXss(supCd)
+            },
+            success:function(data){
+                //設定
+                getObj("payReqInput.supplierFrom.supplierName.supplierName").value = data.supName;
+                getObj("payReqInput.supplierFrom.currency.currencyCd").value = data.currencyCd;
+                getObj("payReqInput.supplierFrom.supplierName.supplierAbbrName").value = data.supAbbrName;
+                getObj("payReqInput.account.bankCd").value = data.bankCd;
+                getObj("payReqInput.account.bankName").value = data.bankName;
+                getObj("payReqInput.account.branchName").value = data.branchName;
+                getObj("payReqInput.account.branchCd").value = data.branchCd;
+                getObj("payReqInput.account.acType.acType").value = data.accountType;
+                getObj("payReqInput.account.acType.name").value = data.accountTypeName;
+                getObj("payReqInput.account.accountNo").value = data.accountNo;
+                getObj("payReqInput.account.accountName").value = data.accountName;
+                $('.CurrencyMark').text(data.currencyMark);
+                #foreach($!item in $!domain.itemList.itemList)
+                    getObj('mark.itemList.itemList[$velocityCount].unitPrice.amount.amountFormat').innerText = data.currencyMark;
+                    getObj('mark.itemList.itemList[$velocityCount].claimAmount.amount.amountFormat').innerText = data.currencyMark;
+                    getObj('mark.itemList.itemList[$velocityCount].amountMng.consumptAmount.consumptAmount.amountFormat').innerText = data.currencyMark;
+                    if(getObj('itemList.itemList[$velocityCount].amountMng.noTaxAmount.noTaxAmount.amountFormat').value != "" && getObj('itemList.itemList[$velocityCount].amountMng.totalAmount.totalAmount.amountFormat').value != ""){
+                        getObj('currencyMarkOut[$velocityCount]').innerText = data.currencyMark;
+                        getObj('currencyMarkIn[$velocityCount]').innerText = data.currencyMark;
+                    }
+                #end
+                getObj('payReqInput.payConditionManagement.payConditionIdentify.payConditionCd').value = data.payConditonCd;
+                //通貨コード設定
+                getObj('payReqInput.supplierFrom.currency.currencyCd.Lable').innerHTML = getObj('payReqInput.supplierFrom.currency.currencyCd').value;
+                //取引先の銀行関連項目
+                getObj("payReqInput.account.bankName.Label").innerHTML = getObj("payReqInput.account.bankName").value;
+                getObj("payReqInput.account.branchName.Label").innerHTML = getObj("payReqInput.account.branchName").value;
+                getObj("payReqInput.account.acType.name.Label").innerHTML = getObj("payReqInput.account.acType.name").value;
+                getObj("payReqInput.account.accountNo.Label").innerHTML = getObj("payReqInput.account.accountNo").value;
+                getObj("payReqInput.account.accountName.Label").innerHTML = getObj("payReqInput.account.accountName").value;
+            }
+        });
+        setAppRouteByAmount('7', getObj('payReqInput.totalAmount.totalAmount.amountFormat').value, getObj('payReqInput.supplierFrom.currency.currencyCd').value);
+
+    }
+}
+
+## 負担部門（明細）のonBlur処理
+function sectionInfoOnBlur(index) {
+    var sectionCd = getObj("itemList.itemList["+index+"].loadSection.loadSection.sectionCd").value;
+    if(sectionCd == sectionCd_x) {
+        return;
+    } else {
+        sectionCd_x = sectionCd;
+    }
+    if(sectionCd == "") {
+        getObj("itemList.itemList["+index+"].loadSection.loadSection.sectionName").value = "";
+        getObj("itemList.itemList["+index+"].loadSection.loadSection.company.companyCd").value = "";
+        getObj("itemList.itemList["+index+"].loadSection.loadSection.company.companyName").value = "";
+        getObj("itemList.itemList["+index+"].loadSection.loadSection.sectionPlace.sectionPlaceCd").value = "";
+        getObj("itemList.itemList["+index+"].loadSection.loadSection.sectionPlace.sectionPlaceName").value = "";
+    } else {
+        $.ajax({
+            type: "POST",
+            async:false,
+            url:"../../getSectionInfoOnBlur",
+            data: {
+                termFlag:'0',
+                sectionCd:cleanXss(sectionCd),
+                companyCd:cleanXss('#jsEscape($!userCompanyCd)'),
+                loadSectionFlg:'1'
+            },
+            success:function(data){
+                //設定
+                getObj("itemList.itemList["+index+"].loadSection.loadSection.sectionName").value = data.sectionName;
+                getObj("itemList.itemList["+index+"].loadSection.loadSection.company.companyCd").value = data.sectionIdentify.companyCd;
+                getObj("itemList.itemList["+index+"].loadSection.loadSection.company.companyName").value = data.companyName;
+                getObj("itemList.itemList["+index+"].loadSection.loadSection.sectionPlace.sectionPlaceCd").value = data.sectionPlaceCd;
+                getObj("itemList.itemList["+index+"].loadSection.loadSection.sectionPlace.sectionPlaceName").value = data.sectionPlaceName;
+            }
+        });
+    }
+}
+
+function sectionCodeGetfocus(obj){
+    sectionCd_x  = obj.value;
+}
+
+## 負担部門（貼付）のonBlur処理
+function sectionInfoOnBlurPaste() {
+    var sectionCd = getObj("APP_SECTION_CD").value;
+    if(sectionCd == "") {
+        getObj("APP_SECTION_NAME").value = "";
+        getObj("APP_COMPANY_CD").value = "";
+        getObj("APP_COMPANY_NAME").value = "";
+        getObj("APP_SECTION_PLACE_CD").value = "";
+        getObj("APP_SECTION_PLACE_NAME").value = "";
+    } else {
+        $.ajax({
+            type: "POST",
+            async:false,
+            url:"../../getSectionInfoOnBlur",
+            data: {
+                termFlag:'0',
+                sectionCd:cleanXss(sectionCd),
+                companyCd:cleanXss('#jsEscape($!userCompanyCd)'),
+                loadSectionFlg:'1'
+            },
+            success:function(data){
+                //設定
+                getObj("APP_SECTION_NAME").value = data.sectionName;
+                getObj("APP_COMPANY_CD").value = data.sectionIdentify.companyCd;
+                getObj("APP_COMPANY_NAME").value = data.companyName;
+                getObj("APP_SECTION_PLACE_CD").value = data.sectionPlaceCd;
+                getObj("APP_SECTION_PLACE_NAME").value = data.sectionPlaceName;
+            }
+        });
+    }
+}
+
+## 科目コード(明細)のonBlur処理
+function subjectOnblur(index) {
+    var subjectCd = getObj("itemList.itemList["+index+"].subject.subjectCd").value;
+    if(subjectCd == subjectCd_x) {
+        return;
+    } else {
+        subjectCd_x = subjectCd;
+    }
+    if(subjectCd == "") {
+        getObj("itemList.itemList["+index+"].subject.subjectName").value = "";
+    } else {
+        $.ajax({
+            type: "POST",
+            async:false,
+            url:"../../getSubjectOnBlur",
+            data: {
+                termFlag:'0',
+                subjectCd:cleanXss(subjectCd),
+                companyCd:cleanXss('#jsEscape($!userCompanyCd)')
+            },
+            success:function(data){
+                //設定
+                getObj("itemList.itemList["+index+"].subject.subjectName").value = data.subjectName;
+            }
+        });
+    }
+}
+
+function subjectCodeGetfocus(obj){
+    subjectCd_x  = obj.value;
+}
+
+## 科目コード(貼付)のonBlur処理
+function subjectOnblurPaste() {
+    var subjectCd = getObj("APP_SubjectCd").value;
+    if(subjectCd == "") {
+        getObj("APP_SubjectName").value = "";
+    } else {
+        $.ajax({
+            type: "POST",
+            async:false,
+            url:"../../getSubjectOnBlur",
+            data: {
+                termFlag:'0',
+                subjectCd:cleanXss(subjectCd),
+                companyCd:cleanXss('#jsEscape($!userCompanyCd)')
+            },
+            success:function(data){
+                //設定
+                getObj("APP_SubjectName").value = data.subjectName;
+            }
+        });
+    }
+}
+
+function setConsumptInd(index, flg) {
+    taxInd = getObj("itemList.itemList["+index+"].amountMng.taxCalculationInd.taxInd.taxInd");
+    consumptInd = getObj("itemList.itemList[" + index + "].amountMng.taxCalculationInd.consumptInd.consumptInd");
+    vol = getObj("itemList.itemList["+ index+"].val.vol.volFormat");
+    claimAmount = getObj("itemList.itemList["+ index+"].claimAmount.amount.amountFormat");
+    consumptAmount = getObj("itemList.itemList["+ index+"].amountMng.consumptAmount.consumptAmount.amountFormat");
+
+    // 初期表示時(詳細エリア変更無)の場合,処理無
+    if(taxInd.value == "1" && consumptInd.value == "1" && vol.value == "" && claimAmount.value == "" && consumptAmount.value == "") {
+        return;
+    }
+
+    if( taxInd.value == "1" || taxInd.value == "" || taxInd.value == "8") { //　課税取引か？消費税区分含(税込み,税抜き)
+        consumptInd.disabled = false;
+        consumptAmount.disabled = false;
+        consumptAmount.style.backgroundColor = 'white';
+        // onLoad時ではない場合（1:onLoad呼出、それ以外(2:onchange呼出)）
+        if(flg != 1) {
+            calculateTaxAmountByAjax(index,"2"); // 消費税額 、請求金額合計を計算する
+        }
+    } else { // 課税取引以外なら税抜き固定
+        for(var i=0; i<consumptInd.options.length; i++) {
+            if( consumptInd.options[i].value=="2" ) { // 消費税区分＝２：税抜きを探してロックする。
+                consumptInd.options.selectedIndex = i;
+                consumptInd.disabled = true;
+                break;
+            }
+        }
+        consumptAmount.value = "0";// 課税取引以外なら消費税額を0にする
+        consumptAmount.disabled = true;
+        consumptAmount.style.backgroundColor = '#ECECEC';
+        // onLoad時ではない場合（1:onLoad呼出、それ以外(2:onchange呼出)）
+        if(flg != 1) {
+            calculateTaxAmountByAjax(index,"4"); // 請求金額合計を計算する
+        }
+    }
+    if(flg == 1) {
+        calculateTaxAmountByAjax(index,"4"); // 税込金額、税抜金額を表示する
+    }
+}
+
+function setItemEnable() {
+
+    #foreach($!item in $!domain.itemList.itemList)
+        getObj('itemList.itemList[$velocityCount].amountMng.taxCalculationInd.consumptInd.consumptInd').disabled = false;
+        getObj('itemList.itemList[$velocityCount].amountMng.consumptAmount.consumptAmount.amountFormat').disabled = false;
+    #end
+}
+
+// 取引先コードを保存する。
+function supCodeGetfocus(obj) {
+    supCode_x = obj.value;
+}
+
+function setChgUserIdValue() {
+    chgUserId = getObj("payReqInput.reqUser.reqUser.userID").value;
+}
+
+//-->
+</script>
+
+</head>
+<body class="CreateArea" onload="onLoad();">
+
+<form id="Body" name="Body" method="post" enctype="multipart/form-data">
+    <table class="HomeBox">
+        <tr>
+            <td>
+                <!-- カレンダーボックス  -->
+                <iframe id="CALENDARBOX" class="CALENDARBOX" framespacing="0" scrolling="no" frameborder="0" src="../../sbxCalendar/body.vm"></iframe>
+                <table>
+                    <tr>
+                        <td align="left">
+
+                            <table class="NoBorder" width="98%">
+                               <tr>
+
+                                  #if ($!pagePattern == "new" || $!pagePattern ==  "history" || $!pagePattern ==  "edit")
+                                    <td id="Title1">
+                                        <u><img src="../../image/mrkCircle.gif"><span id="StepTitle" class="FontStepTitle">#customSpringMessage("PAY_REQ_INPUT")</span></u><br><br>
+                                        <span id="STEPMSG" class="FontSmallBold DarkBlue">#customSpringMessage("PSPAY010_HEADER_COMMENT")</span>
+                                    <br><br>
+                                    </td>
+                                  #end
+                                  #if ($!pagePattern == "back" || $!pagePattern ==  "reApply")
+                                    <td id="Title2">
+                                        <u><img src="../../image/mrkCircle.gif"><span id="StepTitle" class="FontStepTitle">#customSpringMessage("PAY_REQ_CORRECT")</span></u><br><br>
+                                        <span id="STEPMSG" class="FontSmallBold DarkBlue">#customSpringMessage("PSPAY010_HEADER_COMMENT")</span>
+                                    <br><br>
+                                    </td>
+                                   #end
+                                   #if ($!pagePattern == "new" || $!pagePattern ==  "history" || $!pagePattern ==  "edit")
+                                    <td align="right" valign="middle" id="Submit1" nowrap>
+                                        <input name="Button1" type="button" class="LargeButton" value="#customSpringMessage('TEMPORARY_PRESERVATION')" onclick="exec_pre();">&nbsp;&nbsp;<input name="Button2" type="button" class="LargeButton" value="#customSpringMessage('REQ')" onclick="javascript:exec();">
+                                    </td>
+                                    #end
+                                    #if ($!pagePattern == "back" || $!pagePattern ==  "reApply")
+                                    <td align="right" valign="middle" id="Submit3" nowrap>
+                                        <input name="Button2" type="button" class="LargeButton" value="#customSpringMessage('RE_REQ')" onclick="execReApply();">
+                                    </td>
+                                    #end
+                                </tr>
+                                <tr id="status" style="display:none;">
+                                    <td>
+                                        <input id="sts" type="text">
+                                    </td>
+                                </tr>
+                                <tr id ="TR_ERROR" style="display:none;"><td class="error" style="height:0px;">
+                                    $!errorMessage
+                                </td></tr>
+
+                            </table>
+
+
+                            <table class="Box1G ListBorderWidth" width="100%">
+                                <tbody class="Box1G ListBorderWidth">
+                                    $!PSPAY010PageCreater.build('reg','_td_style_left','class="Box1H FontBoxHeader"','_td_style_right','class="Box1D"', '_label_style', 'FontSmallAnk')
+                                    #set($isFirstItem = true)
+                                    #foreach($!item in $!PSPAY010PageCreater.getItemListForBody())
+                                        #if($!item.getColumnName() == "T_P_PAY.PAY_NO")
+                                            #if(($!pagePattern!='new' && $!pagePattern!='history') || $!isSuccess == "true" || $!isTempSuccess == "true")
+                                                $!PSPAY010PageCreater.printSpecial('s00_label', $!item, '_item_style', 'nowrap class="FontSlipNo"')
+                                            #end
+                                        #elseif($!item.getColumnName() == "T_P_PAY.REQ_DATE")
+                                             $!PSPAY010PageCreater.printSpecial("s00_label",$!item,'_item_style','class="Small"','_td_style_right', 'class="Box1D FontSmallAnk"')
+                                        #elseif($!item.getColumnName() == "T_P_PAY.TITLE_NAME")
+                                            $!PSPAY010PageCreater.printDefault($!item)
+                                        #elseif($!item.getColumnName() == "T_P_PAY.REQ_USER_ID")
+                                            $!PSPAY010PageCreater.printSpecial("CLIENT","m01_inputUser",$!item,"popupPageid","PSPAY010",
+                                            '_userCdEvent', 'onblur="userOnblur()";', '_extensionNoEvent', 'onfocus="this.select();"')
+                                        #elseif($!item.getColumnName() == "T_P_PAY.REQ_APP_ROUTE_NO")
+                                            $!PSPAY010PageCreater.printSpecial("APP_ROUTE","m02_inputAppRoute",$!item,'_voucherType', '7', '_item_style','class="Small" onchange="setAppRouteName();setShowButton();"','_companyCd',$!userCompanyCd,'_sectionCd',$!userSectCd,'_currentAppRoute',"$!domain.approute.appRouteNo")
+                                        #elseif($!item.getColumnName() == "T_P_PAY.PAY_CONDITION_CD")
+                                            $!PSPAY010PageCreater.printSpecial("m26_inputPayCondition",$!item)
+                                        #elseif($!item.getColumnName() == "T_P_PAY.SUP_CD")
+                                            $!PSPAY010PageCreater.printSpecial("SUPPLIER","m27_inputSupplierBank",$!item,"popupPageid","PSPAY010",
+                                            '_bankName',"payReqInput.account.bankName",
+                                            '_branchName',"payReqInput.account.branchName",
+                                            '_accountNo',"payReqInput.account.accountNo",
+                                            '_accountName', "payReqInput.account.accountName",
+                                            '_currentCd','payReqInput.supplierFrom.currency.currencyCd',
+                                            '_event', 'onblur="supcdOnBlur()"; onfocus = "supCodeGetfocus(this)";')
+                                        #elseif($!item.getColumnName() == "T_P_PAY.BANK_NAME")
+                                            $!PSPAY010PageCreater.printSpecial("s00_label",$!item,'_item_style','id="payReqInput.account.bankName.Label" class="FontSmall"')
+                                        #elseif($!item.getColumnName() == "T_P_PAY.BRANCH_NAME")
+                                            $!PSPAY010PageCreater.printSpecial("s00_label",$!item,'_item_style','id="payReqInput.account.branchName.Label" class="FontSmall"')
+                                        #elseif($!item.getColumnName() == "T_P_PAY.ACCOUNT_TYPE")
+                                            $!PSPAY010PageCreater.printSpecial("s00_label",$!item,'_item_style','id="payReqInput.account.acType.name.Label" class="FontSmall"')
+                                        #elseif($!item.getColumnName() == "T_P_PAY.ACCOUNT_NO")
+                                            $!PSPAY010PageCreater.printSpecial("s00_label",$!item,'_item_style','id="payReqInput.account.accountNo.Label" class="FontSmall"')
+                                        #elseif($!item.getColumnName() == "T_P_PAY.ACCOUNT_NAME")
+                                            $!PSPAY010PageCreater.printSpecial("s00_label",$!item,'_item_style','id="payReqInput.account.accountName.Label" class="FontSmall"')
+                                        #elseif($!item.getColumnName() == "T_P_PAY.PS_BILL_NO")
+                                            $!PSPAY010PageCreater.printDefault($!item)
+                                        #elseif($!item.getColumnName() == "T_P_PAY.PS_BILL_DATE")
+                                            $!PSPAY010PageCreater.printDefault($!item)
+                                        #elseif($!item.getColumnName() == "T_P_PAY.CURRENCY_CD")
+                                            $!PSPAY010PageCreater.printSpecial("s00_label",$!item,'_item_style','id="payReqInput.supplierFrom.currency.currencyCd.Lable" class="FontSmall"')
+                                        #elseif($!item.getColumnName() == "T_P_PAY.TOTAL_AMOUNT_IN_TAX")
+                                          $!PSPAY010PageCreater.printSpecial('s49_claimAmountPerTax', $!item
+                                              , '_currency_mark_style', 'class="FontCurrSmall CurrencyMark"'
+                                              , '_amount_style', 'class="FontCurrSmall"'
+                                              , '_taxCdTaxName', $!taxCdTaxName
+                                              , '_taxCdReducedTaxName', $!taxCdReducedTaxName
+                                              , '_taxCdNonTaxName', $!taxCdNonTaxName
+                                              , '_taxCdTaxExemptionName', $!taxCdTaxExemptionName
+                                              , '_taxCdUnTaxName', $!taxCdUnTaxName
+                                          )
+                                        #elseif($!item.getColumnName() == "T_P_PAY.ATTACH_FILE_SEQ1")
+                                            $!PSPAY010PageCreater.printSpecial("s34_file3NoRange",$!item, '_item_style', 'Small', '_td_style_left', 'class="Box1H FontBoxHeader"','_td_style_right', 'class="Box1D FontSmallAnk"')
+                                         #elseif($!item.getColumnName() == "T_P_PAY.FOR_BOSS_COMMENT")
+                                            $!PSPAY010PageCreater.printDefault($!item)
+                                         #elseif($!item.getColumnName() == "T_P_PAY.FOR_ACC_COMMENT")
+                                            $!PSPAY010PageCreater.printDefault($!item)
+                                         #elseif($!item.getColumnName() == "T_QUOT_ACQ_APL.QUOT_ACQ_APL_VERSION")
+                                            $!PSPAY010PageCreater.printDefault($!item)
+                                         #else
+                                            $!PSPAY010PageCreater.printDefault($!item)
+                                        #end
+                                    #end
+                               </tbody>
+                            </table>
+                            <br>
+                            <table class="NoBorder" width="100%">
+
+                                <tr>
+                                    <td>
+                                        <span class="CornerTopBrown"><span class="Corner1"></span> <span class="Corner2"></span> <span class="Corner3"></span><span class="Corner4"></span></span>
+                                        <div class="CornerMidBrown" width="100%">
+                                            <table>
+                                                <tbody>
+                                                    <tr>
+                                                        <td>
+                                                            &nbsp;<img src="../../image/mrkInfo.gif">&nbsp;
+                                                        </td>
+                                                        <td class="FontSmallBold DarkBlue" align="left">
+                                                        #customSpringMessage("DTL_ADD_COMMENT")
+                                                        </td>
+                                                        <td align="left">
+                                                            <input type="button" class="SmallButton" value="#customSpringMessage('DETAIL_ADD')" onclick="addDetail();">
+                                                        </td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td>
+                                                            &nbsp;<img src="../../image/mrkInfo.gif">&nbsp;
+                                                        </td>
+                                                        <td width="300px;" class="FontSmallBold DarkBlue" align="left">
+                                                            #customSpringMessage("COMMENT_PASTE_INPUT_VALUE")
+                                                        </td>
+                                                        <td>
+                                                            <span class="FontBoxHeader">#customSpringMessage('SECTION_TYPE_PLANNED')</span>
+                                                            <input id="APP_SECTION_CD" class="Small noIME" maxlength="12" type="text" size="20" onblur ="sectionInfoOnBlurPaste();" >
+                                                            <input id="APP_SECTION_NAME" class="SmallDsp" type="text" size="71" readonly tabindex="-1">
+                                                              <img class="Icon"
+                                                                 name="$!_imageName"
+                                                                 src="../../image/btnLupe.gif"
+                                                                       onclick="sectionPopup.setObject(getObj('APP_SECTION_CD'),getObj('APP_SECTION_NAME'),getObj('APP_COMPANY_CD'),getObj('APP_COMPANY_NAME'),getObj('APP_SECTION_PLACE_CD'),getObj('APP_SECTION_PLACE_NAME'));
+                                                                            masterSearch('../../src/sectionPopup/search?pageid=sectionPopupSearch&popupPageid=PSPAY010&projectId=paster',
+                                                                                       'SectionSearch',
+                                                                                       '700',
+                                                                                       '500');">
+
+                                                            #customFormHiddenInput("APP_COMPANY_CD" "")
+                                                            #customFormHiddenInput("APP_COMPANY_NAME" "")
+                                                            #customFormHiddenInput("APP_SECTION_PLACE_CD" "")
+                                                            #customFormHiddenInput("APP_SECTION_PLACE_NAME" "")
+
+                                                        </td>
+                                                        <td align="left">
+                                                            <input class="SmallButton" type="button" value="#customSpringMessage('ACTION_PASTE')" onclick="pasteItemSect();">
+                                                        </td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td>
+                                                            &nbsp;
+                                                        </td>
+                                                        <td>
+                                                            &nbsp;
+                                                        </td>
+                                                        <td nowrap>
+                                                            <span class="FontBoxHeader">#customSpringMessage('SUBJECT')&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>
+                                                            <input id="APP_SubjectCd" class="Small noIME" maxlength="12" type="text" size="20"  onblur ="subjectOnblurPaste();" >
+                                                            <input id="APP_SubjectName" class="SmallDsp" type="text" size="71" readonly tabindex="-1">
+                                                            <img class="Icon"
+                                                                     name="$!_imageName"
+                                                                     src="../../image/btnLupe.gif"
+                                                                     onclick="subjectPopup.setObject(getObj('APP_SubjectCd'),getObj('APP_SubjectName'));masterSearch('../../src/subjectPopup/search?pageid=subjectPopupSearch&popupPageid=PSPAY010&projectId=paster',
+                                                                                           'subjectPopup',
+                                                                                           '700',
+                                                                                           '500');">
+
+                                                        </td>
+                                                        <td align="left">
+                                                            <input class="SmallButton" type="button" value="#customSpringMessage('ACTION_PASTE')" onclick="pasteItemSubject();">
+                                                        </td>
+                                                    </tr>
+                                                </tbody>
+                                            </table>
+
+                                        </div>
+                                        <span class="CornerBtmBrown"><span class="Corner4"></span> <span class="Corner3"></span> <span class="Corner1"></span><span class="Corner1"></span></span>
+                                    </td>
+                                </tr>
+                            </table>
+                            <br>
+
+                            <!-- detail部分 -->
+                            <table id="DetailTable" class="Box1G" width="100%">
+                            $!PSPAY010PageCreater.buildDetail('index&cancel')
+                              #foreach($!item in $!domain.itemList.itemList)
+                              <tbody id="Detail$velocityCount" class="ListBorderWidth">
+                                 #set($countindex=$velocityCount)
+                                 #set($listCount=$!PSPAY010PageCreater.getItemListForDetail($velocityCount).size())
+                                 #foreach($!item in $!PSPAY010PageCreater.getItemListForDetail($velocityCount))
+                                     #if(($velocityCount+1) == $listCount)
+                                        #set($td_style_left="class='Box1Hdt FontBoxHeader'")
+                                        #set($td_style_right="class='Box1Ddt'")
+                                     #else
+                                        #set($td_style_left="class='Box1Hd FontBoxHeader'")
+                                        #set($td_style_right="class='Box1Dd'")
+                                     #end
+                                    #if($!item.getColumnName()=="T_P_PAY_DTL.DETAIL_SUBJECT")
+                                        $!PSPAY010PageCreater.printDefault($!item, '_td_style_right', $td_style_right,'_td_style_left',$td_style_left)
+                                    #elseif($!item.getColumnName()=="T_P_PAY_DTL.PS_APPLY")
+                                        $!PSPAY010PageCreater.printDefault($!item, '_td_style_right', $td_style_right,'_td_style_left',$td_style_left)
+                                    #elseif($!item.getColumnName()=="T_P_PAY_DTL.LOAD_SECTION_CD")
+                                        #set($prif='onblur="sectionInfoOnBlur(')
+                                        #set($post=');"')
+                                        #set($onfocus='onfocus="sectionCodeGetfocus(this);"')
+                                        #set($onblur="$prif$countindex$post$onfocus")
+                                                $!PSPAY010PageCreater.printSpecial('m03_inputSection', $!item,'popupPageid','PSPAY010','projectId','buyerSection','_td_style_right', 'class="Box1Dd"','_td_style_left','class="Box1Hd FontBoxHeader"','_event', $onblur)
+                                    #elseif($!item.getColumnName()=="T_P_PAY_DTL.SUBJECT_CD")
+                                        #set($prif='onblur="subjectOnblur(')
+                                        #set($post=');"')
+                                        #set($onfocus='onfocus="subjectCodeGetfocus(this);"')
+                                        #set($onblur="$prif$countindex$post$onfocus")
+                                        $!PSPAY010PageCreater.printSpecial('m07_inputSubject', $!item, 'popupPageid', 'PSPAY010', 'projectId', 'subject',  '_td_style_right', $td_style_right,'_td_style_left',$td_style_left,'_event', $onblur)
+                                    #elseif($!item.getColumnName()=="T_P_PAY_DTL.BUDGET_NO")
+                                        $!PSPAY010PageCreater.printDefault($!item, '_td_style_right', $td_style_right,'_td_style_left',$td_style_left)
+                                    #elseif($!item.getColumnName()=="T_P_PAY_DTL.TAX_IND")
+                                        $!PSPAY010PageCreater.printSpecial('s46_inputTaxInd', $!item, '_td_style_left', $td_style_left,'_td_style_right', $td_style_right,'_event',"onchange='setConsumptInd($countindex, 2);'")
+                                    #elseif($!item.getColumnName()=="T_P_PAY_DTL.CONSUMPT_IND")
+                                        $!PSPAY010PageCreater.printDefault($!item, '_td_style_right', $td_style_right,'_td_style_left',$td_style_left,'_event',"onchange='setConsumptInd($countindex, 2);'",'_spaceAddFlg', '1')
+                                    #elseif($!item.getColumnName()=="T_P_PAY_DTL.UNIT_PRICE")
+                                        $!PSPAY010PageCreater.printSpecial("s02_currency", $!item,'_detailtype', '0','_index',$countindex, '_td_style_right', $td_style_right,'_td_style_left',$td_style_left)
+                                    #elseif($!item.getColumnName()=="T_P_PAY_DTL.PAY_VOL")
+                                        $!PSPAY010PageCreater.printSpecial("s03_volUnit",$!item, '_detailtype', '1','_index',$countindex, '_td_style_right', $td_style_right,'_td_style_left',$td_style_left)
+                                    #elseif($!item.getColumnName()=="T_P_PAY_DTL.CLAIM_PRICE")
+                                        $!PSPAY010PageCreater.printSpecial("s02_currency", $!item, '_detailtype', '2','_index',$countindex, '_td_style_right', $td_style_right,'_td_style_left',$td_style_left)
+                                    #elseif($!item.getColumnName()=="T_P_PAY_DTL.CONSUMPT_AMOUNT")
+                                        $!PSPAY010PageCreater.printSpecial("s02_currency", $!item, '_detailtype', '3','_index',$countindex, '_td_style_right', $td_style_right,'_td_style_left',$td_style_left)
+                                    #elseif($!item.getColumnName()=="T_P_PAY_DTL.DETAIL_BODY")
+                                        #set($currencyMarkId1='currencyMarkOut[')
+                                        #set($currencyMarkId2=']')
+                                        #set($currencyMarkId="$!currencyMarkId1$countindex$!currencyMarkId2")
+                                        #set($taxOut1='id="claimPriceTaxOut[')
+                                        #set($taxOut2=']" class="FontCurrSmall"')
+                                        #set($taxOut="$taxOut1$countindex$taxOut2")
+                                        $!PSPAY010PageCreater.printSpecial('s24_currency', $!item, '_td_style_left', $td_style_left, '_td_style_right', 'class="Box1Dd FontSmall"', '_item_style', $taxOut, 'currencyMarkId', $!currencyMarkId)
+                                    #elseif($!item.getColumnName()=="T_P_PAY_DTL.CLAIM_TOTAL_AMOUNT")
+                                        #set($currencyMarkId1='currencyMarkIn[')
+                                        #set($currencyMarkId2=']')
+                                        #set($currencyMarkId="$!currencyMarkId1$countindex$!currencyMarkId2")
+                                        #set($taxIn1='id="claimPriceTaxIn[')
+                                        #set($taxIn2=']" class="FontCurrSmall"')
+                                        #set($taxIn="$taxIn1$countindex$taxIn2")
+                                        $!PSPAY010PageCreater.printSpecial('s24_currency', $!item, '_td_style_left', $td_style_left, '_td_style_right', 'class="Box1Ddt FontSmall"', '_item_style', $taxIn, 'currencyMarkId', $!currencyMarkId)
+                                    #else
+                                        $!PSPAY010PageCreater.printDefault($!item, '_td_style_right', $td_style_right,'_td_style_left',$td_style_left)
+                                    #end
+                               #end
+                               </tbody>
+                             #end
+
+                            </table>
+                            <br>
+                            <span class="CornerTopBrown"><span class="Corner1"></span> <span class="Corner2"></span> <span class="Corner3"></span><span class="Corner4"></span></span>
+                            <div class="CornerMidBrown" width="100%">
+                                <table>
+                                    <tbody>
+                                        <tr>
+                                            <td>
+                                                &nbsp;<img src="../../image/mrkInfo.gif">&nbsp;
+                                            </td>
+                                            <td class="FontSmallBold DarkBlue" align="left">
+                                                #customSpringMessage("DTL_ADD_COMMENT")
+                                                <input type="button" class="SmallButton" value="#customSpringMessage('DETAIL_ADD')" onclick="addDetail();">
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                            <span class="CornerBtmBrown"><span class="Corner4"></span> <span class="Corner3"></span> <span class="Corner1"></span><span class="Corner1"></span></span>
+                            <br>
+                            <table class="NoBorder" width="100%">
+                                <tr>
+                                    <td align="left" >
+                                        #customSpringMessage("PSPAY010_FOOTER_COMMENT")
+                                    </td>
+                                    #if ($!pagePattern == "new" || $!pagePattern ==  "history" || $!pagePattern ==  "edit")
+                                    <td align="right" valign="middle" id="Submit2" nowrap>
+                                        <input name="Button1" type="button" class="LargeButton" value="#customSpringMessage('TEMPORARY_PRESERVATION')" onclick="exec_pre();">&nbsp;&nbsp;<input name="Button2" type="button" class="LargeButton" value="#customSpringMessage('REQ')" onclick="javascript:exec();">
+                                    </td>
+                                    #end
+                                    #if ($!pagePattern == "back" || $!pagePattern ==  "reApply")
+                                    <td align="right" valign="middle" id="Submit4" nowrap>
+                                        <input name="Button2" type="button" class="LargeButton" value="#customSpringMessage('RE_REQ')" onclick="execReApply();">
+                                    </td>
+                                    #end
+
+                                </tr>
+                            </table>
+
+                        </td>
+                    </tr>
+                </table>
+
+            </td>
+        </tr>
+    </table>
+
+</form>
+</body>
+
+</html>

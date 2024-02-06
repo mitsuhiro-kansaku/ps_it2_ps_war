@@ -1,0 +1,239 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="ps.dataaccess.src.elementnamepopup.ElementNamePopupMapper">
+
+    <select id="listKeyIdentity"
+            parameterType="fw.domain.mst.resource.customize.elementname.ElementNamePopupSearchCondition"
+            resultType="fw.domain.mst.resource.customize.elementname.ElementNameIdentify">
+        SELECT element_name.ELEMENT_NAME_CD AS "elementNameCd",
+               CASE WHEN company_lang.ELEMENT_NAME IS NOT NULL
+                    THEN company_lang.ELEMENT_NAME
+                    ELSE system_lang.ELEMENT_NAME
+                    END
+                    AS ELEMENT_NAME,
+               CASE WHEN company_lang.REMARKS IS NOT NULL
+                    THEN company_lang.REMARKS
+                    ELSE system_lang.REMARKS
+                    END
+                    AS REMARKS
+          FROM (SELECT S_ELEMENT_NAME.ELEMENT_NAME_CD
+                  FROM S_ELEMENT_NAME
+              GROUP BY ELEMENT_NAME_CD) element_name
+     LEFT JOIN S_ELEMENT_NAME company_lang
+            ON element_name.ELEMENT_NAME_CD = company_lang.ELEMENT_NAME_CD
+           AND company_lang.LANGUAGE_IND = '${@fw.security.SecurityUtil@getCompanyUseLanguageIndByEscapeSql()}'
+     LEFT JOIN S_ELEMENT_NAME system_lang
+            ON element_name.element_name_cd = system_lang.ELEMENT_NAME_CD
+           AND system_lang.LANGUAGE_IND = '${@fw.common.util.AppUtil@getSysLanguageByEscapeSql()}'
+          <where>
+            <if test="@org.apache.commons.lang.StringUtils@isNotBlank(elementNameCode)">
+           AND element_name.ELEMENT_NAME_CD ${@fw.common.util.SearchModeUtil@getSearchSQL("fw.domain.mst.resource.customize.elementname.ElementNamePopupSearchCondition","elementNameCode")}
+            </if>
+            <if test="@org.apache.commons.lang.StringUtils@isNotBlank(elementName)">
+           AND (company_lang.ELEMENT_NAME ${@fw.common.util.SearchModeUtil@getSearchSQL("fw.domain.mst.resource.customize.elementname.ElementNamePopupSearchCondition","elementName")}
+            OR system_lang.ELEMENT_NAME ${@fw.common.util.SearchModeUtil@getSearchSQL("fw.domain.mst.resource.customize.elementname.ElementNamePopupSearchCondition","elementName")})
+            </if>
+            <if test="@org.apache.commons.lang.StringUtils@isNotBlank(remarks)">
+           AND (company_lang.REMARKS ${@fw.common.util.SearchModeUtil@getSearchSQL("fw.domain.mst.resource.customize.elementname.ElementNamePopupSearchCondition","remarks")}
+            OR system_lang.REMARKS ${@fw.common.util.SearchModeUtil@getSearchSQL("fw.domain.mst.resource.customize.elementname.ElementNamePopupSearchCondition","remarks")})
+            </if>
+            <if test="@org.apache.commons.lang.StringUtils@isNotBlank(extSettingFlg)">
+           AND (company_lang.EXT_SETTING_FLG = #{extSettingFlg, jdbcType=VARCHAR}
+            OR system_lang.EXT_SETTING_FLG = #{extSettingFlg, jdbcType=VARCHAR})
+            </if>
+         </where>
+         ORDER BY ${searchCondition.columnOrder.columnOrder()}
+    </select>
+    
+    <select id="listSortKeyIdentity"
+            resultType="fw.domain.mst.resource.customize.elementname.ElementNameIdentify">
+        SELECT element_name.ELEMENT_NAME_CD AS "elementNameCd",
+               CASE WHEN company_lang.ELEMENT_NAME IS NOT NULL
+                    THEN company_lang.ELEMENT_NAME
+                    ELSE system_lang.ELEMENT_NAME
+                    END
+                    AS ELEMENT_NAME,
+               CASE WHEN company_lang.REMARKS IS NOT NULL
+                    THEN company_lang.REMARKS
+                    ELSE system_lang.REMARKS
+                    END
+                    AS REMARKS
+          FROM (SELECT S_ELEMENT_NAME.ELEMENT_NAME_CD
+                  FROM S_ELEMENT_NAME
+              GROUP BY ELEMENT_NAME_CD) element_name
+     LEFT JOIN S_ELEMENT_NAME company_lang
+            ON element_name.ELEMENT_NAME_CD = company_lang.ELEMENT_NAME_CD
+           AND company_lang.LANGUAGE_IND = '${@fw.security.SecurityUtil@getCompanyUseLanguageIndByEscapeSql()}'
+     LEFT JOIN S_ELEMENT_NAME system_lang
+            ON element_name.element_name_cd = system_lang.ELEMENT_NAME_CD
+           AND system_lang.LANGUAGE_IND = '${@fw.common.util.AppUtil@getSysLanguageByEscapeSql()}'
+          <where>
+            <if test="@org.apache.commons.lang.StringUtils@isNotBlank(elementNameCode)">
+           AND element_name.ELEMENT_NAME_CD ${@fw.common.util.SearchModeUtil@getSearchSQL("fw.domain.mst.resource.customize.elementname.ElementNamePopupSearchCondition","elementNameCode")}
+            </if>
+            <if test="@org.apache.commons.lang.StringUtils@isNotBlank(elementName)">
+           AND (company_lang.ELEMENT_NAME ${@fw.common.util.SearchModeUtil@getSearchSQL("fw.domain.mst.resource.customize.elementname.ElementNamePopupSearchCondition","elementName")}
+            OR system_lang.ELEMENT_NAME ${@fw.common.util.SearchModeUtil@getSearchSQL("fw.domain.mst.resource.customize.elementname.ElementNamePopupSearchCondition","elementName")})
+            </if>
+            <if test="@org.apache.commons.lang.StringUtils@isNotBlank(remarks)">
+           AND (company_lang.REMARKS ${@fw.common.util.SearchModeUtil@getSearchSQL("fw.domain.mst.resource.customize.elementname.ElementNamePopupSearchCondition","remarks")}
+            OR system_lang.REMARKS ${@fw.common.util.SearchModeUtil@getSearchSQL("fw.domain.mst.resource.customize.elementname.ElementNamePopupSearchCondition","remarks")})
+            </if>
+            <if test="@org.apache.commons.lang.StringUtils@isNotBlank(extSettingFlg)">
+           AND (company_lang.EXT_SETTING_FLG = #{extSettingFlg, jdbcType=VARCHAR}
+            OR system_lang.EXT_SETTING_FLG = #{extSettingFlg, jdbcType=VARCHAR})
+            </if>
+         </where>
+         ORDER BY ${searchCondition.columnOrder.columnOrder()}
+    </select>
+    <!-- ＩＴ２-01494-000 20130801 ADD SBO_SOKOU END -->
+    
+    <resultMap type="fw.domain.mst.resource.customize.elementname.ElementNameItem"
+         id="ElementNameItem_Map">
+        <id column="ELEMENT_NAME_CD" property="elementNameIdentify.elementNameCd"/>
+        <id column="ELEMENT_NAME" property="elementName"/>
+        <id column="REMARKS" property="remarks"/>
+        <id column="LANGUAGE_IND" property="elementNameIdentify.languageInd.languageInd"/>
+        <id column="LAST_UPD_DATE" property="elementNameIdentify.lastUpdDate"/>
+    </resultMap>
+    
+     <select id="listPageItem"
+             parameterType="fw.domain.mst.resource.customize.elementname.ElementNamePopupSearchCondition"
+             resultMap="ElementNameItem_Map">
+        SELECT element_name.ELEMENT_NAME_CD,
+               CASE WHEN company_lang.ELEMENT_NAME IS NOT NULL
+                    THEN company_lang.ELEMENT_NAME
+                    ELSE system_lang.ELEMENT_NAME
+                    END
+                    AS ELEMENT_NAME,
+               CASE WHEN company_lang.REMARKS IS NOT NULL
+                    THEN company_lang.REMARKS
+                    ELSE system_lang.REMARKS
+                    END
+                    AS REMARKS,
+               CASE WHEN company_lang.ELEMENT_NAME IS NOT NULL
+                    THEN company_lang.LANGUAGE_IND
+                    ELSE system_lang.LANGUAGE_IND
+                    END
+                    AS LANGUAGE_IND,
+               CASE WHEN company_lang.ELEMENT_NAME IS NOT NULL
+                    THEN company_lang.LAST_UPD_DATE
+                    ELSE system_lang.LAST_UPD_DATE
+                    END
+                    AS LAST_UPD_DATE
+          FROM (SELECT S_ELEMENT_NAME.ELEMENT_NAME_CD
+                  FROM S_ELEMENT_NAME
+              GROUP BY ELEMENT_NAME_CD) element_name
+     LEFT JOIN S_ELEMENT_NAME company_lang
+            ON element_name.ELEMENT_NAME_CD = company_lang.ELEMENT_NAME_CD
+           AND company_lang.LANGUAGE_IND = '${@fw.security.SecurityUtil@getCompanyUseLanguageIndByEscapeSql()}'
+     LEFT JOIN S_ELEMENT_NAME system_lang
+            ON element_name.element_name_cd = system_lang.ELEMENT_NAME_CD
+           AND system_lang.LANGUAGE_IND = '${@fw.common.util.AppUtil@getSysLanguageByEscapeSql()}'
+          <where>
+            element_name.ELEMENT_NAME_CD in 
+            <foreach collection="searchCondition.page.keyDomainEntityList" item="keyList"  open="(" separator="," close=")">  
+                #{keyList.elementNameCd}  
+            </foreach> 
+            <if test="@org.apache.commons.lang.StringUtils@isNotBlank(elementNameCode)">
+           AND element_name.ELEMENT_NAME_CD ${@fw.common.util.SearchModeUtil@getSearchSQL("fw.domain.mst.resource.customize.elementname.ElementNamePopupSearchCondition","elementNameCode")}
+            </if>
+            <if test="@org.apache.commons.lang.StringUtils@isNotBlank(elementName)">
+           AND (company_lang.ELEMENT_NAME ${@fw.common.util.SearchModeUtil@getSearchSQL("fw.domain.mst.resource.customize.elementname.ElementNamePopupSearchCondition","elementName")}
+            OR system_lang.ELEMENT_NAME ${@fw.common.util.SearchModeUtil@getSearchSQL("fw.domain.mst.resource.customize.elementname.ElementNamePopupSearchCondition","elementName")})
+            </if>
+            <if test="@org.apache.commons.lang.StringUtils@isNotBlank(remarks)">
+           AND (company_lang.REMARKS ${@fw.common.util.SearchModeUtil@getSearchSQL("fw.domain.mst.resource.customize.elementname.ElementNamePopupSearchCondition","remarks")}
+            OR system_lang.REMARKS ${@fw.common.util.SearchModeUtil@getSearchSQL("fw.domain.mst.resource.customize.elementname.ElementNamePopupSearchCondition","remarks")})
+            </if>
+            <if test="@org.apache.commons.lang.StringUtils@isNotBlank(extSettingFlg)">
+           AND (company_lang.EXT_SETTING_FLG = #{extSettingFlg, jdbcType=VARCHAR}
+            OR system_lang.EXT_SETTING_FLG = #{extSettingFlg, jdbcType=VARCHAR})
+            </if>
+         </where>
+         ORDER BY ${searchCondition.columnOrder.columnOrder()}
+    </select>
+
+    <resultMap type="fw.domain.mst.resource.customize.elementname.ElementNameManagement"
+         id="ElementNameManagement_Map">
+        <id column="ELEMENT_NAME_CD" property="elementNameIdentify.elementNameCd"/>
+        <id column="LANGUAGE_IND" property="elementNameIdentify.languageInd.languageInd"/>
+        <id column="ELEMENT_NAME" property="elementName.elementName"/>
+        <id column="REMARKS" property="remarks.remarks"/>
+        <id column="LAST_UPD_DATE" property="elementNameIdentify.lastUpdDate"/>
+    </resultMap>
+    
+     <select id="search" parameterType="fw.domain.mst.resource.customize.elementname.ElementNameIdentify" 
+        resultMap="ElementNameManagement_Map">
+        SELECT
+            S_ELEMENT_NAME.ELEMENT_NAME_CD,
+            S_ELEMENT_NAME.LANGUAGE_IND,
+            S_ELEMENT_NAME.ELEMENT_NAME,
+            S_ELEMENT_NAME.REMARKS,
+            S_ELEMENT_NAME.LAST_UPD_DATE
+       FROM S_ELEMENT_NAME 
+       WHERE
+            S_ELEMENT_NAME.ELEMENT_NAME_CD = #{elementNameCd}
+    </select>
+        
+    <delete id="delete" parameterType="fw.domain.mst.resource.customize.elementname.ElementNameIdentify">
+        DELETE FROM S_ELEMENT_NAME
+        WHERE 
+            ELEMENT_NAME_CD = #{elementNameCd}
+    </delete>
+    
+    
+    <insert id="insert" parameterType="fw.domain.mst.resource.customize.elementname.ElementNameManagement">
+        INSERT INTO S_ELEMENT_NAME 
+        (
+	        ELEMENT_NAME_CD,
+	        LANGUAGE_IND,
+	        ELEMENT_NAME,
+	        EXT_SETTING_FLG,
+	        REMARKS,
+	        LAST_UPD_DATE,
+	        LAST_UPD_COMPANY_CD,
+	        LAST_UPD_SECTION_CD,
+	        LAST_UPD_USER_ID,
+	        REG_DATE,
+	        REG_COMPANY_CD,
+	        REG_SECTION_CD,
+	        REG_USER_ID
+        )VALUES(
+            #{elementNameIdentify.elementNameCd, jdbcType=VARCHAR},
+            #{elementNameIdentify.languageInd.languageInd, jdbcType=VARCHAR},
+            #{elementName.elementName, jdbcType=VARCHAR},
+            '1',
+            #{remarks.remarks, jdbcType=VARCHAR},
+            '${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}',
+            '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}',
+            '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}',
+            '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}',
+            '${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}',
+            '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}',
+            '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}',
+            '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}'
+               )
+    </insert>
+    
+    <select id="countElementConfig" parameterType="fw.domain.mst.resource.customize.elementname.ElementNameIdentify" resultType="int">
+        SELECT
+		    COUNT(ELEMENT_SEQ)
+		FROM
+		    S_ELEMENT_CONFIG
+		WHERE
+		    ELEMENT_NAME_CD = #{elementNameCd} 
+    </select>
+    
+    <select id="searchElementNameByElementNameCd" parameterType="fw.domain.mst.resource.customize.elementname.ElementNameIdentify" resultType="int">
+        SELECT
+            COUNT(ELEMENT_NAME_CD)
+        FROM
+            S_ELEMENT_NAME
+        WHERE
+            ELEMENT_NAME_CD = #{elementNameCd} 
+    </select>
+  
+</mapper>

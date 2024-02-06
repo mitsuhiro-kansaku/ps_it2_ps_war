@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<flow xmlns="http://www.springframework.org/schema/webflow"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.springframework.org/schema/webflow
+        http://www.springframework.org/schema/webflow/spring-webflow-2.0.xsd"
+    parent="base">
+    
+    <input name="quotReqIdentify" />
+    <input name="isInitIndividualApr" />
+    <input name="SessionKey"/>
+    <input name="searchCondition" />
+    
+    <decision-state id="isInitIndividualApr">
+        <if test="flowScope.isExclusiveCheck != null and flowScope.isExclusiveCheck" then="PSAPR062" />
+        <if test="flowScope.isInitIndividualApr == null or flowScope.isInitIndividualApr" then="initIndividualApr" else="back" />
+       
+    </decision-state>
+    
+    <action-state id="initIndividualApr">
+        <evaluate expression="PSAPR062Service.init(quotReqIdentify)" result="conversationScope.domain" />
+        <transition to="PSAPR062"/> 
+    </action-state>
+    
+    <view-state id="PSAPR062" view="apr/qotado/PSAPR062" model="domain">
+        <transition on="PSAPR062_3" validate="false" to="PSAPR062_3">
+        </transition>
+        
+        <!-- 承認 -->
+        <transition on="approval" validate="false">
+            <evaluate expression="PSAPR062Service.approval(domain)" />
+            <set name="flashScope.hasApprovaled" value="true"></set> 
+        </transition>
+        
+        <!-- 差戻し -->
+        <transition on="sendBack" validate="false">
+            <evaluate expression="PSAPR062Service.sendBack(domain)" /> 
+            <set name="flashScope.hasSendBacked" value="true"></set> 
+        </transition>
+        
+        <transition on="next" validate="false" to="isInitIndividualApr">
+             <evaluate expression="PSAPR062Service.next()" result="flowScope.quotReqIdentify"/> 
+             <set name="flashScope.hasApprovaled" value="false"></set> 
+             <set name="flashScope.hasSendBacked" value="false"></set> 
+        </transition>
+        
+        <!-- ページ -->
+        <transition on="page" validate="false" to="isInitIndividualApr">
+             <evaluate expression="PSAPR062Service.page()" result="flowScope.quotReqIdentify"/> 
+        </transition>
+    </view-state> 
+
+    <view-state id="PSAPR062_3" view="apr/qotado/PSAPR062_03" model="domain">
+        <transition on="PSAPR062_1" validate="false" to="PSAPR062_1"/>
+        
+        <!-- 承認者の追加  -->
+        <transition on="addAuthorizer" validate="true">
+             <evaluate expression="PSAPR062Service.addAuthorizer(domain)" result="conversationScope.domain"/> 
+        </transition>
+        
+        <!-- 承認者の削除  -->
+        <transition on="removeAuthorizer" validate="false">
+             <evaluate expression="PSAPR062Service.removeAuthorizer(domain, requestParameters.appSeq)" result="conversationScope.domain"/> 
+        </transition>
+        <transition on="downloadFromAttach" validate="false">
+            <evaluate expression="PSAPR062Service.downloadFromAttachMng(requestParameters.seqNo)"/>
+        </transition>
+    </view-state>
+    
+    <view-state id="PSAPR062_1" view="apr/qotado/PSAPR062_01" >
+        <transition on="PSAPR062_2" validate="false" to="PSAPR062_2"/>
+        
+        <!-- 添付管理からダウンロード -->
+        <transition on="download" validate="false">
+            <evaluate expression="PSAPR062Service.downloadFromAttachMng(requestParameters.seqNo)" />
+        </transition>
+
+        <transition on="downloadext" validate="false">
+            <evaluate expression="PSAPR062Service.downloadFileExt(domain)"/>
+        </transition>
+    </view-state>
+    
+    <view-state id="PSAPR062_2" view="apr/qotado/PSAPR062_02" >
+        <!-- 見積回答添付からダウンロード -->
+        <transition on="download" validate="false">
+            <evaluate expression="PSAPR062Service.downloadFromQuotRespAttach(requestParameters.seqNo)" />
+        </transition>
+    </view-state>
+</flow> 

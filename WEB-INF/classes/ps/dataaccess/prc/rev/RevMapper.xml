@@ -1,0 +1,455 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="ps.dataaccess.prc.rev.RevMapper">
+
+    <sql id="listKeyIdentityWhereCondition">
+            <!-- 購買会社コード -->
+            AND  M_PUR_PRICE.BUYER_COMPANY_CD='${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}'
+            <!-- 購買部門コード -->
+            AND M_PUR_PRICE.BUYER_SECTION_CD='${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}'
+            <!-- 廃止フラグ -->
+            AND M_PUR_PRICE.TERM_FLG='0'
+            <!-- 取引先コード -->
+           <if test="@org.apache.commons.lang.StringUtils@isNotBlank(supplierCd)">
+                 AND M_PUR_PRICE.SUP_CD=  #{supplierCd, jdbcType=VARCHAR}
+            </if>
+            <!-- 次回見直時期 -->
+            <if test="@org.apache.commons.lang.StringUtils@isNotBlank(nextUpdateYMFrom.dateOfym)">
+                 AND M_PUR_PRICE.NEXT_UPD_YM>=#{nextUpdateYMFrom.dateOfym}
+             </if>
+             <if test="@org.apache.commons.lang.StringUtils@isNotBlank(nextUpdateYMTo.dateOfym)">
+                 <![CDATA[AND M_PUR_PRICE.NEXT_UPD_YM<=#{nextUpdateYMTo.dateOfym}]]>
+             </if>
+            <!-- 購買担当者ID -->
+            <if test="@org.apache.commons.lang.StringUtils@isNotBlank(buyerUserId)">
+                 AND M_PUR_PRICE.BUYER_USER_ID=  #{buyerUserId, jdbcType=VARCHAR}
+            </if>
+            <!-- 次回見直時期 -->
+             AND M_PUR_PRICE.VALID_START_DATE=(
+                 SELECT MAX(M_PUR_PRICE_A.VALID_START_DATE)
+                 FROM M_PUR_PRICE  M_PUR_PRICE_A
+                 WHERE
+                         M_PUR_PRICE.BUYER_COMPANY_CD=M_PUR_PRICE_A.BUYER_COMPANY_CD
+                     AND M_PUR_PRICE.BUYER_SECTION_CD=M_PUR_PRICE_A.BUYER_SECTION_CD
+                     AND M_PUR_PRICE.ITEM_CD=M_PUR_PRICE_A.ITEM_CD
+                     AND M_PUR_PRICE.SUP_CD=M_PUR_PRICE_A.SUP_CD
+                     AND M_PUR_PRICE.TERM_FLG='0')
+    </sql>
+    
+    <!--検索条件で全てキリストを取得する-->
+    <select id="listKeyIdentity" 
+        parameterType="fw.domain.slip.price.revision.req.pricerevisionreq.pricerevisioncreate.PriceRevCreateSearchCondition"
+        resultType="fw.domain.slip.price.revision.req.pricerevisionreq.pricerevisioncreate.PriceRevCreateIdentify">
+        SELECT 
+            DISTINCT M_PUR_PRICE.SUP_CD AS "supCd"
+        FROM M_PUR_PRICE
+        <where>
+            <include refid="listKeyIdentityWhereCondition"/>
+        </where>
+         ORDER BY ${searchCondition.columnOrder.columnOrder()}
+    </select>
+    
+    <select id="listPageItem" 
+        resultType="fw.domain.slip.price.revision.req.pricerevisionreq.pricerevisioncreate.PriceRevCreateDetail">
+        SELECT 
+            M_PUR_PRICE.SUP_CD AS "priceRevCreateIdentify.supCd",
+            M_PUR_PRICE.SUP_CD AS "supplierCd",
+            M_PUR_PRICE.BUYER_COMPANY_CD AS "buyerCompanyCd",
+            M_PUR_PRICE.BUYER_SECTION_CD AS "buyerSectionCd",   
+            MIN(M_PUR_PRICE.NEXT_UPD_YM) AS "nextUpdateYMFrom.dateOfym",
+            MAX(M_PUR_PRICE.NEXT_UPD_YM) AS "nextUpdateYMTo.dateOfym",
+            COUNT(DISTINCT M_PUR_PRICE.ITEM_CD) AS "itemNamePoint"
+        FROM M_PUR_PRICE
+        <where> 
+            <!-- 取引先コード -->
+            M_PUR_PRICE.SUP_CD IN
+            <foreach collection="searchCondition.page.keyDomainEntityList" item="keyList"  open="(" separator="," close=")">  
+               (#{keyList.supCd})
+            </foreach>
+            <include refid="listKeyIdentityWhereCondition"/>
+        </where>
+        GROUP BY M_PUR_PRICE.BUYER_COMPANY_CD,
+                 M_PUR_PRICE.BUYER_SECTION_CD,
+                 M_PUR_PRICE.SUP_CD
+       ORDER BY ${searchCondition.columnOrder.columnOrder()}
+    </select>
+    <resultMap type="fw.domain.slip.price.revision.req.pricerevisionreq.PriceRev"
+        id="PriceRev_Map">
+        <id column="ORDER_LT" property="standardDelivDayCount.standardDelivDayCount.dayCount"/>
+        <id column="CURRENCY_CD" property="supplierFrom.currency.currencyCd"/>
+        <id column="BUY_PRICE" property="lotList.lot1.unitPrice.amount.amount"/>
+        <id column="VALID_START_DATE" property="validityPeriod.period.startDate.dateOfymd"/>
+        <id column="VALID_END_DATE" property="validityPeriod.period.endDate.dateOfymd"/>
+    </resultMap>
+    
+    <select id="searchPriceRev" 
+        parameterType="fw.domain.slip.price.revision.req.pricerevisionreq.pricerevisioncreate.PriceRevCreateDetail" 
+        resultType="int">
+        SELECT COUNT(DISTINCT M_PUR_PRICE.ITEM_CD)  AS "item.itemCd"
+        FROM M_PUR_PRICE
+        WHERE 
+           <!-- 購買会社コード -->
+           M_PUR_PRICE.BUYER_COMPANY_CD='${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}'
+           <!-- 購買部門コード -->
+           AND M_PUR_PRICE.BUYER_SECTION_CD='${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}'
+          <!--  廃止フラグ -->
+           AND M_PUR_PRICE.TERM_FLG='0'
+          <!--  取引先コード -->
+           AND M_PUR_PRICE.SUP_CD=#{supplierCd, jdbcType=VARCHAR}
+           <!-- 次回見直時期-->
+           <if test="@org.apache.commons.lang.StringUtils@isNotBlank(nextUpdateYMFrom.dateOfym)">
+                AND M_PUR_PRICE.NEXT_UPD_YM &gt;= #{nextUpdateYMFrom.dateOfym, jdbcType=VARCHAR}
+           </if>
+           <if test="@org.apache.commons.lang.StringUtils@isNotBlank(nextUpdateYMTo.dateOfym)">
+               AND M_PUR_PRICE.NEXT_UPD_YM &lt;= #{nextUpdateYMTo.dateOfym, jdbcType=VARCHAR}
+           </if>
+           <!-- 購買担当者ID -->
+           <if test="@org.apache.commons.lang.StringUtils@isNotBlank(buyerUserId)">
+               AND M_PUR_PRICE.BUYER_USER_ID=#{buyerUserId, jdbcType=VARCHAR}
+           </if>
+           AND M_PUR_PRICE.VALID_START_DATE=(
+                 SELECT MAX(M_PUR_PRICE_A.VALID_START_DATE)
+                 FROM M_PUR_PRICE  M_PUR_PRICE_A
+                 WHERE
+                     M_PUR_PRICE.BUYER_COMPANY_CD=M_PUR_PRICE_A.BUYER_COMPANY_CD
+                     AND M_PUR_PRICE.BUYER_SECTION_CD=M_PUR_PRICE_A.BUYER_SECTION_CD
+                     AND M_PUR_PRICE.ITEM_CD=M_PUR_PRICE_A.ITEM_CD
+                     AND M_PUR_PRICE.SUP_CD=M_PUR_PRICE_A.SUP_CD
+                     AND M_PUR_PRICE.TERM_FLG='0')
+    </select>
+
+    <select id="search" 
+        parameterType="fw.domain.slip.price.revision.req.pricerevisionreq.pricerevisioncreate.PriceRevCreateDetail" 
+        resultMap="PriceRev_Map">
+        SELECT
+          M_PUR_PRICE.BUYER_COMPANY_CD AS "buySection.company.companyCd",
+          M_PUR_PRICE.BUYER_SECTION_CD AS "buySection.sectionCd",
+          M_PUR_PRICE.SUP_CD AS "supplierFrom.supCd",
+          M_PUR_PRICE.BUYER_USER_SECTION_CD AS "buyerUserSectionCd",
+          M_ITEM.UNIT_CD AS "item.unit.unitCd",
+          M_ITEM.COMPANY_CD AS "item.itemCompanyCd",
+          M_PUR_PRICE.ITEM_CD AS "item.itemCd",
+          M_ITEM.KATASHIKI AS "item.katashiki",
+          M_ITEM.MANUFACT_CD AS "item.manufact.manufactCd",
+          M_PUR_PRICE.ORDER_LT,
+          M_PUR_PRICE.CURRENCY_CD,
+          M_PUR_PRICE_DTL.BUY_PRICE,
+          M_PUR_PRICE_DTL.LOWER_VOL AS "lotList.lot1.lowerVol.vol",
+          M_PUR_PRICE_DTL.VALID_START_DATE,
+          M_PUR_PRICE_DTL.VALID_END_DATE
+        FROM M_PUR_PRICE
+        LEFT JOIN M_PUR_PRICE_DTL
+          ON M_PUR_PRICE.BUYER_COMPANY_CD=M_PUR_PRICE_DTL.BUYER_COMPANY_CD
+          AND M_PUR_PRICE.BUYER_SECTION_CD=M_PUR_PRICE_DTL.BUYER_SECTION_CD
+          AND M_PUR_PRICE.ITEM_CD=M_PUR_PRICE_DTL.ITEM_CD
+          AND M_PUR_PRICE.SUP_CD=M_PUR_PRICE_DTL.SUP_CD
+          AND M_PUR_PRICE.VALID_START_DATE=M_PUR_PRICE_DTL.VALID_START_DATE
+          AND M_PUR_PRICE.VALID_END_DATE=M_PUR_PRICE_DTL.VALID_END_DATE
+        INNER JOIN M_ITEM
+          ON (M_PUR_PRICE.BUYER_COMPANY_CD=M_ITEM.COMPANY_CD
+          OR M_ITEM.COMPANY_CD='${@fw.common.constant.ApplicationConstant@COMPANY_CD_ALL}')
+          AND M_PUR_PRICE.ITEM_CD=M_ITEM.ITEM_CD
+          AND M_ITEM.TERM_FLG='0'
+        WHERE 
+           <!-- 購買会社コード -->
+           M_PUR_PRICE.BUYER_COMPANY_CD='${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}'
+           <!-- 購買部門コード -->
+           AND M_PUR_PRICE.BUYER_SECTION_CD='${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}'
+          <!--  廃止フラグ -->
+           AND M_PUR_PRICE.TERM_FLG='0'
+          <!--  取引先コード -->
+           AND M_PUR_PRICE.SUP_CD=#{supplierCd, jdbcType=VARCHAR}
+           <!-- 次回見直時期-->
+           <if test="@org.apache.commons.lang.StringUtils@isNotBlank(nextUpdateYMFrom.dateOfym)">
+                AND M_PUR_PRICE.NEXT_UPD_YM>=#{nextUpdateYMFrom.dateOfym, jdbcType=VARCHAR}
+           </if>
+           <if test="@org.apache.commons.lang.StringUtils@isNotBlank(nextUpdateYMTo.dateOfym)">
+               <![CDATA[AND M_PUR_PRICE.NEXT_UPD_YM<=#{nextUpdateYMTo.dateOfym, jdbcType=VARCHAR}]]>
+           </if>
+           <!-- 購買担当者ID -->
+           <if test="@org.apache.commons.lang.StringUtils@isNotBlank(buyerUserId)">
+           AND M_PUR_PRICE.BUYER_USER_ID=#{buyerUserId, jdbcType=VARCHAR}
+           </if>
+           AND M_PUR_PRICE.VALID_START_DATE=(
+                 SELECT MAX(M_PUR_PRICE_A.VALID_START_DATE)
+                 FROM M_PUR_PRICE  M_PUR_PRICE_A
+                 WHERE
+                     M_PUR_PRICE.BUYER_COMPANY_CD=M_PUR_PRICE_A.BUYER_COMPANY_CD
+                     AND M_PUR_PRICE.BUYER_SECTION_CD=M_PUR_PRICE_A.BUYER_SECTION_CD
+                     AND M_PUR_PRICE.ITEM_CD=M_PUR_PRICE_A.ITEM_CD
+                     AND M_PUR_PRICE.SUP_CD=M_PUR_PRICE_A.SUP_CD
+                     AND M_PUR_PRICE.TERM_FLG='0')
+        ORDER BY 
+          M_PUR_PRICE.ITEM_CD,
+          M_PUR_PRICE.SUP_CD,
+          M_PUR_PRICE.VALID_START_DATE,
+          M_PUR_PRICE.VALID_END_DATE
+          ,M_PUR_PRICE_DTL.LOWER_VOL
+    </select>
+    
+    <!-- 価格改定一覧start -->
+    <!--  -->
+    <select id="listKeyIdentitySearchPrice" parameterType="fw.domain.slip.price.revision.req.pricerevisionreq.pricerevisionlist.PriceRevSearchCondition"
+                                                resultType="fw.domain.slip.price.revision.req.pricerevisionreq.PriceRevIdentify">
+        SELECT  T_PRICE_REV.PRICE_REV_SEQ as "priceRevSeq"
+        FROM    T_PRICE_REV
+        <where>  
+                <choose>
+                  <when test="@org.apache.commons.lang.StringUtils@equals(status,'00') || @org.apache.commons.lang.StringUtils@equals(status,'01')">
+                      AND T_PRICE_REV.PRICE_STATUS =#{status}
+                  </when> 
+                  <otherwise>
+                      AND T_PRICE_REV.PRICE_STATUS IN ('00', '01','02')
+                  </otherwise>
+                </choose>
+               AND T_PRICE_REV.DELETE_FLG = '0'
+               <if test="@org.apache.commons.lang.StringUtils@isNotBlank(regDateFrom.dateOfymd)"> 
+               AND T_PRICE_REV.PRICE_REQ_DATE &gt;= #{regDateFrom.dateOfymd}
+               </if>
+               <if test="@org.apache.commons.lang.StringUtils@isNotBlank(regDateTo.dateOfymd)"> 
+               <!-- 2013/06/05 ADD DAIKO_TAKEDA -->
+               AND T_PRICE_REV.PRICE_REQ_DATE &lt;= #{regDateTo.dateOfymd}
+               </if>
+               <if test="@org.apache.commons.lang.StringUtils@isNotBlank(nextUpdateYMFrom.dateOfym)">
+               AND T_PRICE_REV.UPD_YM &gt;= #{nextUpdateYMFrom.dateOfym}
+               </if>
+               <if test="@org.apache.commons.lang.StringUtils@isNotBlank(nextUpdateYMTo.dateOfym)">
+               AND T_PRICE_REV.UPD_YM &lt;= #{nextUpdateYMTo.dateOfym}
+               </if>
+               <if test="@org.apache.commons.lang.StringUtils@isNotBlank(supplierCd)">
+               AND T_PRICE_REV.SUP_CD =  #{supplierCd}
+               </if>
+               <if test="@org.apache.commons.lang.StringUtils@isNotBlank(buyerUserId)">
+               AND T_PRICE_REV.PRICE_REQ_USER_ID =  #{buyerUserId}
+               </if>
+               AND T_PRICE_REV.PRICE_REQ_SECTION_CD = '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}'
+               AND T_PRICE_REV.PRICE_REQ_COMPANY_CD = '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}'
+        </where>               
+        ORDER BY ${searchCondition.columnOrder.columnOrder()}
+    </select>
+    
+    <resultMap id="listPageItemPrice_Map"  type="fw.domain.slip.price.revision.req.pricerevisionreq.pricerevisionlist.PriceRevTableDetail">
+        <id column="PRICE_STATUS" property="status" />
+        <id column="LAST_UPD_DATE" property="lastUpdate" />
+        <id column="PRICE_REQ_DATE" property="regDate.dateOfymd" />
+        <id column="UPD_YM" property="nextUpdateYM.dateOfym" />
+        <id column="TITLE_NAME" property="titleName" />
+        <id column="SUP_CD" property="supplierCd" />
+        <id column="PRICE_REQ_COMPANY_CD" property="buyerUserCompanyCd" />
+        <id column="PRICE_REQ_SECTION_CD" property="buyerUserSectionCd" />
+        <id column="PRICE_REQ_USER_ID" property="buyerUserId" />
+        <id column="PRICE_REQ_ITME_VOL" property="itemNamePoint" />
+        <id column="PRICE_REQ_SECTION_NAME" property="buyerSectionName" />
+        <id column="BACK_APP_COMMENTS" property="backAppComments" />
+        <id column="PRICE_REV_SEQ" property="priceRevIdentify.priceRevSeq" />
+        <id column="SUP_ABBR_NAME" property="supAbbrName" />
+        <id column="PRICE_REQ_USER_NAME" property="buyerUserName" />
+    </resultMap>
+    <select id="listPageItemPrice" parameterType="fw.domain.slip.price.revision.req.pricerevisionreq.pricerevisionlist.PriceRevSearchCondition"
+                                            resultMap="listPageItemPrice_Map">
+            SELECT     T_PRICE_REV.PRICE_STATUS,
+                    T_PRICE_REV.LAST_UPD_DATE,
+                    T_PRICE_REV.PRICE_REQ_DATE,
+                    T_PRICE_REV.UPD_YM,
+                    T_PRICE_REV.TITLE_NAME,
+                    T_PRICE_REV.SUP_CD,
+                    T_PRICE_REV.SUP_ABBR_NAME,
+                    T_PRICE_REV.PRICE_REQ_COMPANY_CD,
+                    T_PRICE_REV.PRICE_REQ_SECTION_CD,
+                    T_PRICE_REV.PRICE_REQ_USER_ID,
+                    T_PRICE_REV.PRICE_REQ_USER_NAME,
+                    T_PRICE_REV.PRICE_REQ_ITME_VOL,
+                    T_PRICE_REV.PRICE_REQ_SECTION_NAME,
+                    T_APPROVAL.BACK_APP_COMMENTS,
+                    T_PRICE_REV.PRICE_REV_SEQ
+             FROM   T_PRICE_REV
+             LEFT JOIN T_APPROVAL ON
+                       T_APPROVAL.APP_VOUCHER_KEY = T_PRICE_REV.PRICE_REV_SEQ
+                   AND T_APPROVAL.APP_VOUCHER_IND = 'E'
+        WHERE
+                 T_PRICE_REV.PRICE_REV_SEQ IN
+        <foreach collection="searchCondition.page.keyDomainEntityList" item="keyList"  open="(" separator="," close=")">  
+                 #{keyList.priceRevSeq}
+        </foreach>
+                <choose>
+                  <when test="@org.apache.commons.lang.StringUtils@equals(status,'00') || @org.apache.commons.lang.StringUtils@equals(status,'01')">
+                      AND T_PRICE_REV.PRICE_STATUS =#{status}
+                  </when> 
+                  <otherwise>
+                      AND T_PRICE_REV.PRICE_STATUS IN ('00', '01','02')
+                  </otherwise>
+                </choose>
+               AND T_PRICE_REV.DELETE_FLG = '0'
+               <if test="@org.apache.commons.lang.StringUtils@isNotBlank(regDateFrom.dateOfymd)"> 
+               AND T_PRICE_REV.PRICE_REQ_DATE &gt;= #{regDateFrom.dateOfymd}
+               </if>
+               <if test="@org.apache.commons.lang.StringUtils@isNotBlank(regDateTo.dateOfymd)"> 
+               AND T_PRICE_REV.PRICE_REQ_DATE &lt;= #{regDateTo.dateOfymd}
+               </if>
+               <if test="@org.apache.commons.lang.StringUtils@isNotBlank(nextUpdateYMFrom.dateOfym)">
+               AND T_PRICE_REV.UPD_YM &gt;= #{nextUpdateYMFrom.dateOfym}
+               </if>
+               <if test="@org.apache.commons.lang.StringUtils@isNotBlank(nextUpdateYMTo.dateOfym)">
+               AND T_PRICE_REV.UPD_YM &lt;= #{nextUpdateYMTo.dateOfym}
+               </if>
+               
+               <if test="@org.apache.commons.lang.StringUtils@isNotBlank(supplierCd)">
+               AND T_PRICE_REV.SUP_CD =  #{supplierCd}
+               </if>
+               <choose>
+                  <when test="@org.apache.commons.lang.StringUtils@equals(status,'00') || @org.apache.commons.lang.StringUtils@equals(status,'01')">
+                  </when> 
+                  <otherwise>
+                    <if test="@org.apache.commons.lang.StringUtils@isNotBlank(buyerUserId)">
+                      AND T_PRICE_REV.PRICE_REQ_USER_ID =  #{buyerUserId}
+                    </if>
+                  </otherwise>
+                </choose>
+               AND T_PRICE_REV.PRICE_REQ_SECTION_CD = '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}'
+               AND T_PRICE_REV.PRICE_REQ_COMPANY_CD = '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}'                                   
+        ORDER BY ${searchCondition.columnOrder.columnOrder()}
+    </select>
+    
+    <update id="openDelRev">
+        UPDATE  T_PRICE_REV
+               SET T_PRICE_REV.DELETE_FLG = '1'
+                 , T_PRICE_REV.LAST_UPD_DATE = '${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}'
+                 , T_PRICE_REV.LAST_UPD_COMPANY_CD = '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}'
+                 , T_PRICE_REV.LAST_UPD_SECTION_CD = '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}'
+                 , T_PRICE_REV.LAST_UPD_USER_ID = '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}'
+            WHERE 
+                 T_PRICE_REV.PRICE_REV_SEQ = #{seqNo}
+    </update>
+    <update id="openDelRevAttch">
+              UPDATE  T_PRICE_REV_ATTACH
+               SET T_PRICE_REV_ATTACH.DELETE_FLG = '1'
+                 , T_PRICE_REV_ATTACH.LAST_UPD_DATE = '${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}'
+                 , T_PRICE_REV_ATTACH.LAST_UPD_COMPANY_CD = '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}'
+                 , T_PRICE_REV_ATTACH.LAST_UPD_SECTION_CD = '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}'
+                 , T_PRICE_REV_ATTACH.LAST_UPD_USER_ID = '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}'
+            WHERE 
+                 T_PRICE_REV_ATTACH.PRICE_REV_SEQ = #{seqNo}
+    </update>
+    
+    <!-- 価格改定一覧end -->
+    
+    <insert id="insertPriceRev">
+        INSERT INTO T_PRICE_REV (
+            PRICE_REV_SEQ,
+            PRICE_STATUS,
+            PRICE_REQ_COMPANY_CD,
+            PRICE_REQ_COMPANY_NAME,
+            PRICE_REQ_SECTION_PLACE_CD,
+            PRICE_REQ_SECTION_PLACE_NAME,
+            PRICE_REQ_SECTION_CD,
+            PRICE_REQ_SECTION_NAME,
+            PRICE_REQ_USER_ID,
+            PRICE_REQ_USER_NAME,
+            PRICE_REQ_USER_EXTENSION_NO,
+            PRICE_REQ_USER_TEL_NO,
+            UPD_YM,
+            PRICE_CREATE_DATE,
+            PRICE_REQ_DATE,
+            PRICE_REQ_ITME_VOL,
+            PRICE_RESP_DATE,
+            FROM_SUP_COMMENT,
+            PRICE_REV_DATE,
+            PRICE_REV_ITME_VOL,
+            SUP_COMPANY_CD,
+            SUP_CD,
+            SUP_NAME,
+            SUP_ABBR_NAME,
+            TITLE_NAME,
+            APP_ROUTE_NO,
+            APP_ROUTE_NAME,
+            RES_APP_ROUTE_NO,
+            RES_APP_ROUTE_NAME,
+            SEND_IND,
+            RECEIPT_NUMBER,
+            DELETE_FLG,
+            LAST_UPD_DATE,
+            LAST_UPD_COMPANY_CD,
+            LAST_UPD_SECTION_CD,
+            LAST_UPD_USER_ID,
+            REG_DATE,
+            REG_COMPANY_CD,
+            REG_SECTION_CD,
+            REG_USER_ID
+        ) VALUES (
+            #{priceRev.priceRevIdentify.priceRevSeq}, 
+            #{priceRev.priceRevStatus.priceRevStatus},
+            '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}',
+            #{priceRev.reqUser.reqUser.section.company.companyName},
+            '${@fw.security.SecurityUtil@getSectionPlaceCdByEscapeSql()}',
+            #{priceRev.reqUser.reqUser.section.sectionPlace.sectionPlaceName},
+            '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}',
+            #{priceRev.reqUser.reqUser.section.sectionName},
+            '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}',
+            '${@fw.security.SecurityUtil@getUserNameByEscapeSql()}',
+            #{priceRev.reqUser.reqUser.extNo.extensionNo},
+            #{priceRev.reqUser.reqUser.externalNo.externalNo},
+            #{priceRev.nextUpdateYM.nextUpdateYM.dateOfym},
+            '${@fw.common.util.AppUtil@getSysDate()}',
+            '${@fw.common.util.AppUtil@getSysDate()}',
+            #{priceRev.priceReqItemVol.vol},
+            '',
+            '',
+            '',
+            '',
+            '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}',
+            #{priceRev.supplierFrom.supCd},
+            #{priceRev.supplierFrom.supplierName.supplierName},
+            #{priceRev.supplierFrom.supplierName.supplierAbbrName},
+            #{priceRev.titleName.titleName},
+            #{priceRev.approute.appRouteNo},
+            #{priceRev.approute.appRouteName},
+            '',
+            '',
+            #{priceRev.dataInd.dataSendInd.sendInd},
+            '',
+            '0',
+            '${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}',
+            '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}',
+            '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}',
+            '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}',
+            '${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}',
+            '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}',
+            '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}',
+            '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}'
+        )
+    </insert>
+    
+    <insert id="insertPriceRevAttach">
+        INSERT INTO T_PRICE_REV_ATTACH (
+            PRICE_REV_SEQ,
+            PRICE_FILE_NAME,
+            PRICE_FILE,
+            PRICE_FILE_SIZE,
+            DELETE_FLG,
+            LAST_UPD_DATE,
+            LAST_UPD_COMPANY_CD,
+            LAST_UPD_SECTION_CD,
+            LAST_UPD_USER_ID,
+            REG_DATE,
+            REG_COMPANY_CD,
+            REG_SECTION_CD,
+            REG_USER_ID
+        ) VALUES (
+            #{priceRev.priceRevIdentify.priceRevSeq}, 
+            #{priceRev.priceRevTable.attachFile.fileName},
+            #{priceRev.priceRevTable.attachFile.data},
+            #{priceRev.priceRevTable.attachFile.size},
+            '0',
+            '${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}',
+            '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}',
+            '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}',
+            '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}',
+            '${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}',
+            '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}',
+            '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}',
+            '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}'
+        )
+    </insert>
+</mapper>

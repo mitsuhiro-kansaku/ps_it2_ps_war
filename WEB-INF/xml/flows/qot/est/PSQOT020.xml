@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<flow xmlns="http://www.springframework.org/schema/webflow"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.springframework.org/schema/webflow
+        http://www.springframework.org/schema/webflow/spring-webflow-2.0.xsd"
+    parent="base">
+
+    <var name="dlFlg" class="java.lang.String" />
+
+    <input name="quotReqIdentify"/>
+    <input name="isInitIndividualApr"  />
+    <input name="SessionKey" />
+    <input name="isSearchByHistory" />
+    <input name="historyIdentify" />
+    <input name="isSearchByAll" />
+    <input name="isSearchByHistoryAll" />
+
+    <decision-state id="isSearchByHistory">
+        <if test="isSearchByAll" then="searchByAll" />
+        <if test="isSearchByHistoryAll" then="searchByHistoryAll" />
+        <if test="isSearchByHistory" then="searchByHistory" else="searchByCondition" />
+    </decision-state>
+   
+    <action-state id="searchByCondition">
+       <evaluate expression="PSQOT020Service.init(quotReqIdentify)" result="flowScope.domain" />
+        <transition to="PSQOT020"/>
+    </action-state>
+
+    <action-state  id="searchByHistory" >
+        <evaluate expression="PSQOT020Service.initFromHistory(historyIdentify.historySeq)" result="flowScope.domain" />
+        <transition to="PSQOT020"/>
+    </action-state>
+
+    <action-state id="searchByAll">
+       <evaluate expression="PSQOT020Service.initAll(quotReqIdentify)" result="flowScope.domain" />
+        <transition to="PSQOT020">
+            <set name="dlFlg" value="true"/>
+        </transition>
+    </action-state>
+
+    <action-state  id="searchByHistoryAll" >
+        <evaluate expression="PSQOT020Service.initFromHistoryAll(historyIdentify.historySeq)" result="flowScope.domain" />
+        <transition to="PSQOT020">
+            <set name="dlFlg" value="true"/>
+        </transition>
+    </action-state>
+
+    <view-state id="PSQOT020" model="domain" view="qot/est/PSQOT020">
+        <transition on="download" to="downloadIf" />
+        <transition on="downloadext" validate="false">
+            <evaluate expression="PSQOT020Service.downloadFileExt()"/>
+        </transition>
+    </view-state> 
+
+    <decision-state id="downloadIf">
+        <if test="dlFlg" then="PSQOT020_downloadAll" else="PSQOT020_download"/>
+    </decision-state>
+
+    <action-state id="PSQOT020_downloadAll" >
+        <evaluate expression="PSQOT020Service.downloadByteFileAll()"/>
+        <transition to="PSQOT020"/> 
+    </action-state> 
+    
+    <action-state id="PSQOT020_download">
+        <evaluate expression="PSQOT020Service.downloadByteFile()"/>
+        <transition to="PSQOT020"/> 
+    </action-state> 
+
+</flow>

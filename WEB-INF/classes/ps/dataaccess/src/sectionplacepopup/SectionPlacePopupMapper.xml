@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="ps.dataaccess.src.sectionplacepopup.SectionPlacePopupMapper">
+
+    <!-- SRC-00115-00 include化共通-->
+    <sql id="listKeyIdentityWhereCondition">
+        <if test="@org.apache.commons.lang.StringUtils@isEmpty(validDateFlg)">
+            AND '${@fw.common.util.AppUtil@getSysDate()}' BETWEEN M_SECTION_PLACE.VALID_START_DATE AND M_SECTION_PLACE.VALID_END_DATE
+        </if>
+        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(companyCd)">
+            AND M_SECTION_PLACE.COMPANY_CD ${@fw.common.util.SearchModeUtil@getSearchSQL("fw.domain.mst.organization.sectionplace.SectionPlacePopupSearchCondition","companyCd")}
+        </if>
+        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(sectionPlaceCd)">
+            AND M_SECTION_PLACE.SECTION_PLACE_CD ${@fw.common.util.SearchModeUtil@getSearchSQL("fw.domain.mst.organization.sectionplace.SectionPlacePopupSearchCondition","sectionPlaceCd")}
+        </if>
+        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(sectionPlaceName)">
+            AND M_SECTION_PLACE_LANG.SECTION_PLACE_NAME ${@fw.common.util.SearchModeUtil@getSearchSQL("fw.domain.mst.organization.sectionplace.SectionPlacePopupSearchCondition","sectionPlaceName")}
+        </if>
+        <if test="@fw.domain.mst.searchcondition.SearchCondition@termFlgIsNotEmpty(searchCondition.termFlg) and searchCondition.termFlg==0">
+            AND M_SECTION_PLACE.TERM_FLG = #{searchCondition.termFlg, jdbcType=VARCHAR}
+        </if>
+    </sql>
+
+    <select id="listKeyIdentity" parameterType ="fw.domain.mst.organization.sectionplace.SectionPlacePopupSearchCondition" resultType="fw.domain.mst.organization.sectionplace.SectionPlaceIdentify">
+       SELECT 
+            M_SECTION_PLACE.COMPANY_CD AS "companyCd",
+            M_SECTION_PLACE.SECTION_PLACE_CD AS "sectionPlaceCd"
+        FROM M_SECTION_PLACE
+        INNER JOIN M_COMPANY
+            ON 
+                M_SECTION_PLACE.COMPANY_CD=M_COMPANY.COMPANY_CD
+            <!-- 強化-01784-000  2013.06.14 DEL SBO_WANGXM     
+            AND M_COMPANY.COMPANY_USE_LANGUAGE_IND = '${@fw.security.SecurityUtil@getCompanyUseLanguageIndByEscapeSql()}'-->
+        LEFT JOIN M_SECTION_PLACE_LANG
+            ON M_SECTION_PLACE.COMPANY_CD=M_SECTION_PLACE_LANG.COMPANY_CD
+            AND M_SECTION_PLACE.SECTION_PLACE_CD=M_SECTION_PLACE_LANG.SECTION_PLACE_CD
+            AND M_SECTION_PLACE_LANG.LANGUAGE_IND=M_COMPANY.COMPANY_USE_LANGUAGE_IND
+        <where>
+            <include refid="listKeyIdentityWhereCondition"/>
+        </where> 
+         ORDER BY ${searchCondition.columnOrder.columnOrder()}
+    </select>
+
+    <resultMap type="fw.domain.mst.organization.sectionplace.SectionPlacePopupItem" id="SectionPlacePopupItem_Map">
+        <id column="COMPANY_CD" property="sectionPlaceIdentify.companyCd" />
+        <id column="SECTION_PLACE_CD" property="sectionPlaceIdentify.sectionPlaceCd" />
+    </resultMap>
+
+    <select id="listPageItem" parameterType ="fw.domain.mst.organization.sectionplace.SectionPlacePopupSearchCondition" 
+            resultMap="SectionPlacePopupItem_Map">
+        SELECT 
+            M_SECTION_PLACE.COMPANY_CD,
+            M_SECTION_PLACE.SECTION_PLACE_CD,
+            M_SECTION_PLACE.SECTION_PLACE_CD AS "sectionPlaceCd",
+            M_SECTION_PLACE_LANG.SECTION_PLACE_NAME as "sectionPlaceName"
+        FROM M_SECTION_PLACE
+        INNER JOIN M_COMPANY
+            ON M_SECTION_PLACE.COMPANY_CD=M_COMPANY.COMPANY_CD
+            <!-- 強化-01784-000  2013.06.14 DEL SBO_WANGXM     
+           AND M_COMPANY.COMPANY_USE_LANGUAGE_IND = '${@fw.security.SecurityUtil@getCompanyUseLanguageIndByEscapeSql()}'-->
+        LEFT JOIN M_SECTION_PLACE_LANG
+            ON M_SECTION_PLACE.COMPANY_CD=M_SECTION_PLACE_LANG.COMPANY_CD
+            AND M_SECTION_PLACE.SECTION_PLACE_CD=M_SECTION_PLACE_LANG.SECTION_PLACE_CD
+            AND M_SECTION_PLACE_LANG.LANGUAGE_IND =  M_COMPANY.COMPANY_USE_LANGUAGE_IND
+        <where>
+            (M_SECTION_PLACE.COMPANY_CD, M_SECTION_PLACE.SECTION_PLACE_CD) IN         
+            <foreach collection="searchCondition.page.keyDomainEntityList" item="keyList"  open="(" separator="," close=")">  
+                (#{keyList.companyCd}, #{keyList.sectionPlaceCd}) 
+            </foreach>
+            <include refid="listKeyIdentityWhereCondition"/>
+        </where>
+        ORDER BY ${searchCondition.columnOrder.columnOrder()}
+    </select>
+
+    <select id="lostFocusSearch" parameterType ="fw.domain.mst.searchcondition.SearchCondition" 
+            resultType="String">
+        SELECT 
+            M_SECTION_PLACE_LANG.SECTION_PLACE_NAME
+        FROM M_SECTION_PLACE
+        INNER JOIN M_COMPANY
+            ON M_SECTION_PLACE.COMPANY_CD=M_COMPANY.COMPANY_CD
+            <!-- 強化-01784-000  2013.06.14 DEL SBO_WANGXM     
+           AND M_COMPANY.COMPANY_USE_LANGUAGE_IND = '${@fw.security.SecurityUtil@getCompanyUseLanguageIndByEscapeSql()}'-->
+        LEFT JOIN M_SECTION_PLACE_LANG
+            ON M_SECTION_PLACE.COMPANY_CD=M_SECTION_PLACE_LANG.COMPANY_CD
+            AND M_SECTION_PLACE.SECTION_PLACE_CD=M_SECTION_PLACE_LANG.SECTION_PLACE_CD
+            AND M_SECTION_PLACE_LANG.LANGUAGE_IND =  M_COMPANY.COMPANY_USE_LANGUAGE_IND
+        WHERE
+             M_SECTION_PLACE.COMPANY_CD = #{companyCd, jdbcType=VARCHAR}
+             AND M_SECTION_PLACE.SECTION_PLACE_CD = #{sectionPlaceCd, jdbcType=VARCHAR}
+    </select>
+    
+</mapper>

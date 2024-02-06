@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<flow xmlns="http://www.springframework.org/schema/webflow"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.springframework.org/schema/webflow
+        http://www.springframework.org/schema/webflow/spring-webflow-2.0.xsd"
+    parent="base">
+    <input name="searchCondition" />
+    <input name="fromPattern" />
+    <input name="SessionKey" />
+    <input name="catalogName" />
+
+    <on-start>
+        <evaluate expression="PSCAT010OuterCatalogListService.init(searchCondition)" result="flowScope.outerCatalogList" />
+    </on-start>
+
+    <view-state id="PSCAT010OuterCatalogList" view="cat/catalog/PSCAT010OuterCatalogList"  model="searchCondition">
+        <transition on="create" to="PSCAT020Insert" validate="false" />
+        <transition on="edit" to="PSCAT020Update" validate="false" />
+        <transition on="applyAgain" to="PSCAT020Correct" validate="false" />
+        <transition on="everyPurReq" to="PSPUR010" validate="false" />
+
+        <transition on="order" validate="false">
+            <evaluate expression="PSCAT010OuterCatalogListService.order(searchCondition.searchCondition)"  result="flowScope.outerCatalogList" />
+        </transition>
+        <transition on="searchCategoryList" to="PSCAT010CategoryList" validate="false"/>
+        <transition on="searchOuterCatalogList" validate="false">
+        <evaluate expression="PSCAT010OuterCatalogListService.init(searchCondition)" result="flowScope.outerCatalogList" />
+        </transition>
+
+        <transition on="back" to="home" validate="false" />
+    </view-state>
+
+    <subflow-state id="PSCAT020Insert" subflow="cat/catalog/PSCAT020Insert" >
+    	 <input name="fromPattern" value="fromPattern" />
+    </subflow-state>
+
+    <subflow-state id="PSCAT020Update" subflow="cat/catalog/PSCAT020Update" >
+         <input name="fromPattern" value="'Select'" />
+    </subflow-state>
+
+    <subflow-state id="PSCAT020Correct" subflow="cat/catalog/PSCAT020Correct" >
+         <input name="fromPattern" value="'Select'" />
+         <input name="SessionKey" value="SessionKey" />
+    </subflow-state>
+
+     <subflow-state id="PSPUR010" subflow="pur/req/PSPUR010New" >
+        <input name="patternName" value="'New'" />
+        <input name="isInitIndividualApr" value="true" />
+    </subflow-state>
+
+    <subflow-state id="PSCAT010CategoryList" subflow="cat/catalog/PSCAT010CategoryList" >
+        <input name="searchCondition" value="searchCondition" />
+        <input name="SessionKey" value="SessionKey" />
+    </subflow-state>
+
+</flow>

@@ -1,0 +1,204 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<META http-equiv="Content-type" content="text/html; charset=UTF-8">
+#set($commonTitle = "#customSpringMessage('FAX_IND_ACCPAY')")
+<title>$commonTitle</title><!--検収明細-->
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Content-script-type" content="text/javascript">
+<link id="CSS_FONT" rel="stylesheet" href="../../include/FontS.css" type="text/css">
+<link rel="stylesheet" href="../../include/Layout.css" type="text/css">
+<link rel="stylesheet" href="../../include/Color.css" type="text/css">
+<link rel="stylesheet" href="../../include/searchbox.css" type="text/css">
+<link rel="stylesheet" href="../../include/ime.css" type="text/css">
+<script language="javascript" type="text/javascript" src="../../include/common.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/check.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/date.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/searchbox.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/jquery-1.7.2.min.js"></script>
+<script language="javascript" type="text/javascript">
+<!--
+#set($searchViewStateID = 'PSACP100')
+#set($listViewStateID = 'PSACP101')
+#parse("./common/common_js.vm")
+var pinName="PSACP100_Pin";
+## ビューが初めて表示される直前に発生します。
+function onLoad(){
+  bodyLoad();
+    var alertMessage="$!alertMessage";
+    if(alertMessage!=""){
+        alert(alertMessage);
+    }
+    var errorMsg="$!errorMessage";
+    if(errorMsg!=""){
+        setErrorMessage("ERRORDIV",errorMsg,"DATAAREA");
+        return;
+    }
+    var isDownload="#jsEscape($!isDownLoadValidate)";
+    if(isDownload=="true"){
+        iframeChange("${flowExecutionUrl}&_eventId=download","pageid","PSACP100","HIDDENAREA");
+        return;
+    }
+    var isSumDownload="#jsEscape($!isSumDownLoadValidate)";
+    if(isSumDownload=="true"){
+        iframeChange("${flowExecutionUrl}&_eventId=sumDownload","pageid","PSACP100","HIDDENAREA");
+        return;
+    }
+    var isShowList="#jsEscape($isShowList)";
+    if(isShowList=="true"){
+        iframeChange("${flowExecutionUrl}&_eventId=search","pageid","PSACP100");
+        return;
+    }
+}
+## 「検索」ボタンをクリックしたとき発生します。
+function execSearch() {
+    buttonDisable();
+    getObj("BodyForm").target="_self";
+    getObj("BodyForm").action="${flowExecutionUrl}&_eventId=validate";
+    getObj("BodyForm").submit();
+}
+## 「検収明細表ダウンロード」ボタンをクリックしたとき発生します。
+function doSumDownload(){
+    getObj("downloadTargetInd").value="1";
+    getObj("TR_ERROR").style.display="none";
+    getObj("ERRORDIV").innerHTML="";
+    buttonDisable();
+    setTimeout(buttonUsable,1000);
+    getObj("BodyForm").target="HIDDENAREA";
+    getObj("BodyForm").action="${flowExecutionUrl}&_eventId=sumDownloadValidate";
+    getObj("BodyForm").submit();
+}
+## 「検収明細詳細ダウンロード」ボタンをクリックしたとき発生します。
+function doDownload(){
+    getObj("downloadTargetInd").value="0";
+    getObj("TR_ERROR").style.display="none";
+    getObj("ERRORDIV").innerHTML="";
+    buttonDisable();
+    setTimeout(buttonUsable,1000);
+    getObj("BodyForm").target="HIDDENAREA";
+    getObj("BodyForm").action="${flowExecutionUrl}&_eventId=downloadValidate";
+    getObj("BodyForm").submit();
+}
+## 「検収部門」検索POPUPボタンをクリックしたとき発生します。
+function acceptSectionPopupOnClick(){
+    sectionPopup.setObject(getObj('acceptSectionCd'),getObj('acceptSectionName'));
+    masterSearch('../../src/sectionPopup/search?pageid=sectionPopupSearch&popupPageid=PSACP100','sectionPopup','700','500');
+}
+## 「検収部門」を変更したとき発生します。
+function acceptSectionOnChange(){
+    getObj("acceptSectionName").value="";
+}
+## 「取引先」検索POPUPボタンをクリックしたとき発生します。
+function supplierPopupOnClick(){
+    supplierPopup.setObject(getObj('supplierFrom.supCd'),'',getObj('supplierFrom.supplierName.supplierName'));
+    masterSearch('../../src/supplierPopup/search?pageid=supplierPopupSearch&popupPageid=PSACP100','supplierPopup','700','500');
+}
+## 「取引先」を変更したとき発生します。
+function supplierOnChange(){
+    getObj("supplierFrom.supplierName.supplierName").value="";
+}
+//-->
+</script>
+</head>
+<body topmargin="0" leftmargin="0" marginwidth="0" marginheight="0" align="center" width="100%" height="100%" onload="onLoad();" style="overflow-y:hidden;">
+<form id="BodyForm" name="Body"  method="post">
+    <iframe id="CALENDARBOX" class="CALENDARBOX" framespacing="0" scrolling="no" frameborder="0" src="../../sbxCalendar/body.vm"></iframe>
+    #customFormHiddenInput("downloadTargetInd" "$!defaultSearchCondition.downloadTargetInd")
+        <table class="NoBorder" width="100%" height="100%">
+        <tr>
+            <td id="SEARCH_AREA" class="SearchArea"><!-- onLoadで変更 -->
+                #parse("./common/common_title_withoutnew.vm")
+                <table width="100%">
+                    <tr id="SEARCH_AREA2">
+                        <td id="Adjust">
+                            <!--検索条件入力部-->
+                            <table class="NoBorder" width="100%">
+                                <tr>
+                                    <td nowrap align="left" colspan="4">
+                                        #customSpringMessage('PSACP100_HEADER_COMMENT')
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td nowrap class="FontSmallBold" align="right">
+                                        #customSpringMessage('FISCAL_YEAR_MONTH')<!--計上年月-->
+                                    </td>
+                                    <td nowrap align="left">
+                                        #springFormInput("searchCondition.fiscalYearMonth.dateOfymFormat" 'class="SmallAnk noIME" maxLength="6" size="8" onblur="dateOnBlurYYYYMM(this);" onfocus="dateOnFocus(this);"')
+                                    </td>
+                                    <td nowrap class="FontSmallBold" align="right">
+                                        #customSpringMessage("SUPPLIER")<!--取引先-->
+                                    </td>
+                                    <td nowrap align="left">
+                                        #springFormInput("searchCondition.supplierFrom.supCd" 'class="Small noIME" maxlength="12" size="20" onchange="supplierOnChange();"')
+                                        #springFormInput("searchCondition.supplierFrom.supplierName.supplierName" 'class="SmallDsp" size="60" readonly tabIndex="-1"')
+                                        <img class="Icon" src="../../image/btnLupe.gif" onclick="supplierPopupOnClick();">
+                                    </td>
+                                </tr>
+                            #if($!searchCondition.acceptItemReadAllGrantFlg == "1")
+                                <tr>
+                                    <td nowrap class="FontSmallBold" align="right">
+                                        #customSpringMessage("BUYER_SECTION")<!--購買部門-->
+                                    </td>
+                                    <td nowrap align="left" colspan="3">
+                                        #springFormInput("searchCondition.acceptSectionCd" 'class="Small noIME" maxlength="12" size="20" onchange="acceptSectionOnChange();"')
+                                        #springFormInput("searchCondition.acceptSectionName" 'class="SmallDsp" size="60" readonly tabIndex="-1"')
+                                        <img class="Icon" src="../../image/btnLupe.gif" onclick="acceptSectionPopupOnClick();">
+                                    </td>
+                                </tr>
+                            #end
+                                <tr>
+                                    <td nowrap class="FontComment" align="left" colspan="4">
+                                        #customSpringMessage('PSACP100_FOOTER_COMMENT')<!--＊:前方一致 / ％:中間一致 / なし:完全一致-->
+                                    </td>
+                                </tr>
+                            </table>
+                            <!--検索条件入力部-->
+                        </td>
+                        <td nowrap class="FontSmallBold" align="right" valign="top">
+                            <br>
+                            <input type="button" onclick="javascript:execSearch();" class="LargeButton" value="#customSpringMessage('ACTION_SEARCH')"><!--検索-->
+                            <br>
+                            <br>
+                            <a href="javascript:clear();">#customSpringMessage('ACTION_CLEAR_SEARCH_CRITERIA')<!--検索条件をクリアする--></a>&nbsp;
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+        <tr id="UPLOAD_AREA">
+            <td class="UploadArea">
+                <table class="NoBorder" width="100%" style="margin:auto;">
+                    <tr>
+                        <td align="left">
+                        </td>
+                        <td align="center">
+                        </td>
+                        <td align="right">
+                            <table>
+                                <tr>
+                                    <td align="right">
+                                        <input class="SmallButton" type="button" value="#customSpringMessage('ACCEPT_DETAIL_SUMMARY_DOWNLOAD')" onclick="javascript:doSumDownload()">
+                                        <input class="SmallButton" type="button" value="#customSpringMessage('ACCEPT_DETAIL_DATA_DOWNLOAD')" onclick="javascript:doDownload()">
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+        <tr id ="TR_ERROR" style="display:none;">
+            <td class="error" style="height:0px;">
+                <div id="ERRORDIV">$!errorMessage</div>
+            </td>
+        </tr>
+        <tr>
+            <td class="NoBorder" style="height:auto;">
+                <iframe id="DATAAREA" name="DATAAREA" class="DataArea" framespacing="0" frameborder="0" src="../../layout/default.vm" scrolling="no" frameborder="no"></iframe>
+            </td>
+        </tr>
+    </table>
+    <iframe id="HIDDENAREA" name="HIDDENAREA" framespacing="0" frameborder="0" src="" scrolling="no" frameborder="no" style="display:none"></iframe>
+</form>
+</body>
+</html>

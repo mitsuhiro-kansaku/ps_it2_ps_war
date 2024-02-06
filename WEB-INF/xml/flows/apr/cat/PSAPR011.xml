@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<flow xmlns="http://www.springframework.org/schema/webflow"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.springframework.org/schema/webflow
+        http://www.springframework.org/schema/webflow/spring-webflow-2.0.xsd"
+    parent="base">
+    <!-- カタログ購入依頼承認（一覧部） -->
+    
+    <!-- カタログ購入依頼一括承認 -->
+    <var name="catalogPackageApproval" class="fw.domain.slip.purreq.purreqcatalog.purreqcatalogapp.CatalogPackageApproval" />
+    <!-- カタログ購入依頼識別情報 -->
+    <var name="catalogIdentify" class="fw.domain.slip.purreq.purreqcatalog.CatalogIdentify" />
+
+    <input name="searchCondition" />
+    <input name="isCurrentPageSearch" />
+    <input name="isQuickLink" />
+    
+    <decision-state id="isSearchByKey">
+       <if test="flowScope.isCurrentPageSearch" then="searchByKey" else="searchByCondition" />
+    </decision-state>
+    
+    <action-state id="searchByCondition">
+        <evaluate expression="PSAPR011Service.init(searchCondition)" result="flowScope.itemList" />
+        <transition to="PSAPR011"/> 
+    </action-state>
+
+    <action-state  id="searchByKey" >
+        <evaluate expression="PSAPR011Service.page(searchCondition)" result="flowScope.itemList" />
+        <transition to="PSAPR011"/>
+    </action-state>
+    
+    <!-- カタログ購入依頼承認一覧  -->
+    <view-state id="PSAPR011" model="catalogPackageApproval" view="apr/cat/PSAPR011">
+        <transition on="order" validate="false">
+            <evaluate expression="PSAPR011Service.order(searchCondition)" result="flowScope.itemList" />
+        </transition>
+        <transition on="page" validate="false">
+             <evaluate expression="PSAPR011Service.page(searchCondition)" result="flowScope.itemList" /> 
+        </transition>
+        <transition on="back" to="home" validate="false" />
+        
+        <!--個別承認 -->
+        <transition on="individualApprovalValidate" validate="false">
+            <set name="catalogIdentify.purAplSeqNo" value="requestParameters.purAplSeqNo"/><!-- 購入申請シーケンス番号 -->
+            <set name="catalogIdentify.lastUpdDate" value="requestParameters.lastUpdDate"/><!-- 最終更新日時 -->
+            <set name="flashScope.isShowApproval" value="true"/>
+        </transition>
+        <!--詳細 -->
+        <transition on="detailValidate" validate="true">
+            <set name="catalogIdentify.purAplSeqNo" value="requestParameters.purAplSeqNo"/><!-- 購入申請シーケンス番号 -->
+            <set name="catalogIdentify.lastUpdDate" value="requestParameters.lastUpdDate"/><!-- 最終更新日時 -->
+            <set name="flashScope.isShowDetail" value="true"/>
+        </transition>
+        <!--一括承認 -->
+        <transition on="packageApproval" to="searchByKey" validate="false">
+            <evaluate expression="PSAPR011Service.packageApproval(catalogPackageApproval)" />
+            <set name="flashScope.isSuccess" value="true"></set>
+        </transition>
+        
+        <transition on="individualApproval" to="PSAPR012" validate="false"/>
+        <transition on="detail" to="PSCAT040TOP" validate="false" />
+    </view-state>
+    
+    <!--個別承認 -->
+    <subflow-state id="PSAPR012" subflow="apr/cat/PSAPR012">
+        <input name="catalogIdentify" value="catalogIdentify" />
+        <input name="isInitIndividualApr" value="true" />
+        <input name="SessionKey" value="SessionKey" />
+        <input name="searchCondition" value="searchCondition.getSearchCondition()"/>
+    </subflow-state>
+    
+    <!--詳細 -->
+    <subflow-state id="PSCAT040TOP" subflow="cat/catalog/PSCAT040TOP" >
+        <input name="catalogIdentify" value="catalogIdentify" />
+    </subflow-state>
+    
+   
+</flow>

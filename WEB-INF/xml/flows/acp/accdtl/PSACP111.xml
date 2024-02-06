@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<flow xmlns="http://www.springframework.org/schema/webflow"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.springframework.org/schema/webflow
+        http://www.springframework.org/schema/webflow/spring-webflow-2.0.xsd"
+    parent="base">
+
+    <var name="domain" class="fw.domain.slip.receive.acceptance.acceptanceitem.AcceptItem" />
+    <var name="identify" class="fw.domain.slip.receive.acceptance.acceptanceitem.AcceptItemIdentify" />
+    <input name="searchCondition" />
+    <input name="isCurrentPageSearch" />
+
+    <decision-state id="isSearchByKey">
+       <if test="flowScope.isCurrentPageSearch" then="searchByKey" else="searchByCondition" />
+    </decision-state>
+
+    <action-state id="searchByCondition">
+        <evaluate expression="PSACP111Service.init(searchCondition)" result="flowScope.itemList" />
+        <transition to="PSACP111"/> 
+    </action-state>
+
+    <action-state  id="searchByKey" >
+        <evaluate expression="PSACP111Service.page(searchCondition)" result="flowScope.itemList" />
+        <transition to="PSACP111"/> 
+    </action-state>
+
+    <view-state id="PSACP111" view="acp/accdtl/PSACP111" model="domain">
+       <transition on="order" validate="false">
+            <evaluate expression="PSACP111Service.order(searchCondition)" result="flowScope.itemList" />
+        </transition>
+        <transition on="page" validate="false">
+             <evaluate expression="PSACP111Service.page(searchCondition)" result="flowScope.itemList" /> 
+        </transition>
+        <transition on="detailValidate" validate="false" >
+            <set name="identify.fiscalYearMonth.dateOfym" value="requestParameters.fiscalYearMonth" />
+            <set name="identify.supCompanyCd" value="requestParameters.supCompanyCd" />
+            <set name="identify.supCd" value="requestParameters.supCd" />
+            <set name="identify.acceptSectionCd" value="requestParameters.acceptSectionCd" />
+            <set name="flashScope.isShowDetail" value="true" />
+        </transition>
+        <transition on="detail" to="PSACP112" validate="false" />
+        <transition on="back" to="home" validate="false" />
+    </view-state>
+
+    <subflow-state id="PSACP112" subflow="acp/accdtl/PSACP112" >
+        <input name="acceptItemIdentify" value="identify" />
+    </subflow-state>
+
+</flow>

@@ -1,0 +1,811 @@
+<!doctype html>
+<html LANG="ja">
+<head>
+<title>#customSpringMessage('CATALOG_SELECTION')</title><!--カタログ商品一览-->
+<meta http-equiv="Content-type" content="text/html; charset=UTF-8">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Content-script-type" content="text/javascript">
+<link id="CSS_FONT" rel="stylesheet" href="../../include/FontS.css" type="text/css">
+<link rel="stylesheet" href="../../include/Layout.css" type="text/css">
+<link rel="stylesheet" href="../../include/Color.css" type="text/css">
+<link rel="stylesheet" href="../../include/searchbox.css" type="text/css">
+<script language="javascript" type="text/javascript" src="../../include/common.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/check.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/date.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/searchbox.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/jquery-1.7.2.min.js"></script>
+<script language="javascript" type="text/javascript">
+<!--
+#set($searchCondition=$searchPath)
+
+#parse("./common/common_js.vm")
+
+var _width;
+
+function onLoad() {
+    cataLogDataLoadHasPage();
+    _width = fGetXY(document.Body.dummy1).x;
+    var i,w;
+    changeFontSize();
+    var alertMessage = "$!alertMessage";
+    if (alertMessage != ""){
+        alert(alertMessage);
+    }
+    #if($!hasAddCart=="true")
+        displayCart();
+    #end
+}
+function viewExp() {
+    #if($priceArticleList.priceArticleList)
+        #if($!priceArticleList.priceArticleList.size()!=0)
+            for(i=0; i<"#jsEscape($!priceArticleList.priceArticleList.size())"; i++) {
+                setDisplay("Exp_"+i,document.Body.Explain.checked);
+            }
+        #end
+    #end
+    #if($!favoritesCatalogItemList)
+        #if($!favoritesCatalogItemList.size()!=0)
+            for(i=0; i<"#jsEscape($!favoritesCatalogItemList.size())"; i++) {
+                setDisplay("Exp_"+i,document.Body.Explain.checked);
+            }
+        #end
+    #end
+}
+
+function cataLogDataLoadHasPage(){
+ 
+    cataLogPaging();
+    //TableSort.init();
+}
+
+function cataLogPaging(){
+     
+    #if($searchCondition)
+        if(getObj("COUNT") != null){
+            setText("COUNT","#jsEscape($!searchCondition.searchCondition.page.totalRows)");
+            setText("PAGECOUNT","#jsEscape($!searchCondition.searchCondition.page.totalPages)");
+        }
+        if(getObj("COUNT2") != null){
+            setText("COUNT2","#jsEscape($!searchCondition.searchCondition.page.totalRows)");
+            setText("PAGECOUNT2","#jsEscape($!searchCondition.searchCondition.page.totalPages)");
+        }
+        var pageNow=parseInt("#jsEscape($!searchCondition.searchCondition.page.pageNow)");
+        if(document.Body.PageNo != null){
+            getObj("PAGENO").options.length = "#jsEscape($!searchCondition.searchCondition.page.totalPages)";
+            for(i=1; i<=document.getElementById("PAGENO").options.length; i++) {
+                document.getElementById("PAGENO").options[i-1] = new Option(i,i);
+            }
+            getObj("PAGENO").selectedIndex = pageNow-1;
+            getObj("PAGENO").onchange= new Function(" var num=document.Body.PageNo.selectedIndex+1;parent.iframeChange('${flowExecutionUrl}&_eventId=page','pageNow',num)");
+        }
+        if(getObj("PAGENO2") != null){
+            getObj("PAGENO2").options.length = "#jsEscape($!searchCondition.searchCondition.page.totalPages)";
+            for(i=1; i<=getObj("PAGENO2").options.length; i++) {
+                getObj("PAGENO2").options[i-1] = new Option(i,i);
+            }
+            getObj("PAGENO2").selectedIndex = pageNow-1;
+            getObj("PAGENO2").onchange= new Function(" var num=document.Body.PageNo2.selectedIndex+1;parent.iframeChange('${flowExecutionUrl}&_eventId=page','pageNow',num)");
+        }
+
+        #if($!searchCondition.searchCondition.page.hasPreviousPage == true)
+            if(document.Body.PageFirst != null){
+                document.Body.PageFirst.style.display="none";
+                document.Body.PageFirstOn.style.display="";
+                document.Body.PageFirstOn.onclick = new Function("parent.iframeChange('${flowExecutionUrl}&_eventId=page','pageNow','1')");
+                document.Body.PagePrev.style.display="none";
+                document.Body.PagePrevOn.style.display="";
+                document.Body.PagePrevOn.onclick = new Function("parent.iframeChange('${flowExecutionUrl}&_eventId=page','pageNow','"+(pageNow-1)+"')");
+            }
+            if(document.Body.PageFirst2 != null){
+                document.Body.PageFirst2.style.display="none";
+                document.Body.PageFirstOn2.style.display="";
+                document.Body.PageFirstOn2.onclick = new Function("parent.iframeChange('${flowExecutionUrl}&_eventId=page','pageNow','1')");
+                document.Body.PagePrev2.style.display="none";
+                document.Body.PagePrevOn2.style.display="";
+                document.Body.PagePrevOn2.onclick = new Function("parent.iframeChange('${flowExecutionUrl}&_eventId=page','pageNow','"+(pageNow-1)+"')");
+            }
+         #else
+            if(document.Body.PageFirst != null){
+                document.Body.PageFirst.style.display="";
+                document.Body.PageFirstOn.style.display="none";
+                document.Body.PagePrev.style.display="";
+                document.Body.PagePrevOn.style.display="none";
+            }
+            if(document.Body.PageFirst2 != null){
+                document.Body.PageFirst2.style.display="";
+                document.Body.PageFirstOn2.style.display="none";
+                document.Body.PagePrev2.style.display="";
+                document.Body.PagePrevOn2.style.display="none";
+            }
+         #end
+             
+         #if($!searchCondition.searchCondition.page.hasNextPage == true)
+            if(document.Body.PageNext != null){
+                document.Body.PageNext.style.display="none";
+                document.Body.PageNextOn.style.display="";
+                document.Body.PageNextOn.onclick = new Function("parent.iframeChange('${flowExecutionUrl}&_eventId=page','pageNow','"+(pageNow+1)+"')");
+                document.Body.PageLast.style.display="none";
+                document.Body.PageLastOn.style.display="";
+                document.Body.PageLastOn.onclick = new Function("parent.iframeChange('${flowExecutionUrl}&_eventId=page','pageNow','#jsEscape($!{searchCondition.searchCondition.page.totalPages})')");
+            }
+            if(document.Body.PageNext2 != null){
+                document.Body.PageNext2.style.display="none";
+                document.Body.PageNextOn2.style.display="";
+                document.Body.PageNextOn2.onclick = new Function("parent.iframeChange('${flowExecutionUrl}&_eventId=page','pageNow','"+(pageNow+1)+"')");
+                document.Body.PageLast2.style.display="none";
+                document.Body.PageLastOn2.style.display="";
+                document.Body.PageLastOn2.onclick = new Function("parent.iframeChange('${flowExecutionUrl}&_eventId=page','pageNow','#jsEscape($!{searchCondition.searchCondition.page.totalPages})')");
+            }
+         #else
+            if(document.Body.PageNext != null){
+                document.Body.PageNext.style.display="";
+                document.Body.PageNextOn.style.display="none";
+                document.Body.PageLast.style.display="";
+                document.Body.PageLastOn.style.display="none";
+            }
+            if(document.Body.PageNext2 != null){
+                document.Body.PageNext2.style.display="";
+                document.Body.PageNextOn2.style.display="none";
+                document.Body.PageLast2.style.display="";
+                document.Body.PageLastOn2.style.display="none";
+            }
+         #end
+    #end
+}
+function changeFontSize() {
+    changeFontSize0();
+}
+
+function addCart(buyerCompanyCd,buyerSectionCd,itemCd,supCd,validStartDate,validEndDate) {
+    buttonDisable();
+    parent.iframeChange("${flowExecutionUrl}&_eventId=addCart","buyerCompanyCd",buyerCompanyCd,"buyerSectionCd",buyerSectionCd,"itemCd",itemCd,"supCd",supCd,"validStartDate",validStartDate,"validEndDate",validEndDate,"DATAAREA");
+}
+function displayCart(){
+    var point=fGetXY(getObj("CartLink"));
+    getObj("CartName").style.left = (point.x - 70) + "px";
+    getObj("CartName").style.top = (point.y + 20) + "px";
+    
+    getObj("CartName").style.display = "";
+    setTimeout('getObj("CartName").style.display = "none"',1000);    
+}
+
+function showCart() {
+    #if($!fromPattern=="Home")
+        top.iframeChange('${flowExecutionUrl}&_eventId=create','pageid','PSCAT020Insert');
+    #end
+    #if($!fromPattern=="Insert")
+        top.iframeChange('${flowExecutionUrl}&_eventId=create','pageid','PSCAT020Insert');
+    #end
+    #if($!fromPattern=="Update")
+        top.iframeChange('${flowExecutionUrl}&_eventId=edit','pageid','PSCAT020Update');
+    #end
+    #if($!fromPattern=="Correct")
+        top.iframeChange('${flowExecutionUrl}&_eventId=applyAgain','pageid','PSCAT020Correct');
+    #end
+}
+function toggleTreeArea() {
+
+    var img = document.getElementById("toggleImage");
+
+    if( img.src.indexOf("btnLeft.gif")>=0 ) {
+        parent.getObj("ADJUSTDATAAREA").style.width = "100%";
+        parent.getObj("Area").style.display = "none";
+        img.src='../../image/btnRight.gif';
+        img.title="商品検索を開きます";
+    } else {
+        parent.getObj("ADJUSTDATAAREA").style.width = "80%";
+        parent.getObj("Area").style.display = "";
+        img.src='../../image/btnLeft.gif';
+        img.title="商品検索を閉じます";
+    } 
+}
+
+// お気に入りに追加
+function addFav(buyerCompanyCd,buyerSectionCd,itemCd,supCd,validStartDate,validEndDate) {
+    poppage("${flowExecutionUrl}&_eventId=PSFAV010&&buyerCompanyCd=" + encodeURIComponent(buyerCompanyCd) + "&&buyerSectionCd=" + encodeURIComponent(buyerSectionCd) + "&&itemCd=" + encodeURIComponent(itemCd) + "&&supCd=" + encodeURIComponent(supCd) + "&&validStartDate=" + validStartDate+ "&&validEndDate=" + validEndDate, "PSFAV010","600", "600");
+}
+
+//詳細
+function openDetail(buyerCompanyCd,buyerSectionCd,itemCd,supCd,validStartDate,validEndDate,lastUpdDate) {
+    poppage("${flowExecutionUrl}&_eventId=detail&buyerCompanyCd=" + encodeURIComponent(buyerCompanyCd) + "&buyerSectionCd=" + encodeURIComponent(buyerSectionCd) + "&itemCd=" + encodeURIComponent(itemCd) + "&supCd=" + encodeURIComponent(supCd) + "&validStartDate=" + validStartDate + "&validEndDate=" + validEndDate + "&lastUpdDate=" + lastUpdDate,'DETAIL','900','850');
+}
+
+function imgFileName(buyerCompanyCd, buyerSectionCd, itemCd, supCd, validStartDate, validEndDate){
+    poppage('$!requestContext.contextPath/imageGet.do?buyerCompanyCd=' + encodeURIComponent(buyerCompanyCd) + '&buyerSectionCd=' + encodeURIComponent(buyerSectionCd) + '&itemCd=' + encodeURIComponent(itemCd) + '&supCd=' + encodeURIComponent(supCd) + '&validStartDate=' + validStartDate + '&validEndDate=' + validEndDate,'_blank',300,300);
+}
+
+function order(){
+    var column = getObj("column").value;
+    var ascOrder = getObj("ascOrder").value;
+    parent.iframeChange("${flowExecutionUrl}&_eventId=order","column",column,"ascOrder",ascOrder,"DATAAREA");
+}
+
+function selectPath(outputPlace,itemClassInd,itemClassL,itemClassM,itemClassS,keywordFlag,keywordIndex){
+
+    outputPlace = encodeURIComponent(outputPlace);
+    itemClassInd = encodeURIComponent(itemClassInd);
+    itemClassL = encodeURIComponent(itemClassL);
+    itemClassM = encodeURIComponent(itemClassM);
+    itemClassS = encodeURIComponent(itemClassS);
+    keywordFlag = encodeURIComponent(keywordFlag);
+    keywordIndex = encodeURIComponent(keywordIndex);
+
+    if(!keywordFlag){
+        keywordFlag = 0;
+    }
+    var url;
+    if(keywordFlag=="1"){
+         url="${flowExecutionUrl}&_eventId=searchPriceArticleList&outputPlace="+outputPlace+"&itemClassInd="+itemClassInd+"&itemClassL="+itemClassL+"&itemClassM="+itemClassM+"&itemClassS="+itemClassS+"&keywordFlag="+keywordFlag+"&keywordIndex="+keywordIndex;
+    }else{
+        if(itemClassInd=="1"){
+            url ="${flowExecutionUrl}&_eventId=searchCategoryList&outputPlace="+outputPlace+"&itemClassInd="+itemClassInd+"&itemClassL="+itemClassL+"&itemClassM="+itemClassM+"&itemClassS="+itemClassS;
+        }else{
+            if(outputPlace=="0"){
+                url ="${flowExecutionUrl}&_eventId=searchPriceArticleList&outputPlace="+outputPlace+"&itemClassInd="+itemClassInd+"&itemClassL="+itemClassL+"&itemClassM="+itemClassM+"&itemClassS="+itemClassS;
+            }else{
+                url ="${flowExecutionUrl}&_eventId=searchFavoritesCatalogList&outputPlace="+outputPlace+"&itemClassInd="+itemClassInd+"&itemClassL="+itemClassL+"&itemClassM="+itemClassM+"&itemClassS="+itemClassS;
+            }
+        }
+    }
+    getObj("Body").action= url;
+    getObj("Body").submit();
+}
+$(document).ready(function(){
+	var count = function(){
+		$.get('../../cartItemCount')
+		.done(function(response){
+				$('#cartItemCount').text(response);
+				setTimeout(count, interval);
+		});
+	}
+	var interval = '$!pollingInterval' || 1000;
+	if(interval != '0'){
+		count();
+	}
+});
+//-->
+</script>
+</head>
+
+<body class="CatalogMain" id="Body1"  onload="onLoad();">
+<div id="CartName" style="position: absolute;left:780px;top:48px;display:none">
+    <table id="IBX" name="IBX" class="NoBorder">
+        <tr>
+            <td id="IbxTriangluar" name="IbxTriangluar" class="NoBorder" ALIGN="left" ><img src="../../image/triangular.gif" style="margin-left:100px;margin-right:20px;"></td>
+        </tr>
+        <tr>
+            <td id="IbxBody">
+                <table class="IbxBody" width="100%" style="border: solid 1px #aa5c4D;" bgcolor="floralWhite">
+                    <tr>
+                        <td style="width:20px;" align="left" valign="top"><img src="../../image/mrkInfo.gif"></td>
+                        <td style="width:auto;" align="left" valign="top">
+                            <U><span id="IbxTitle" class="FontSmallBold DarkBlue">#customSpringMessage('ADDED_ITEM')</span></U>
+                            <span id="IbxSeparator" class="FontMiniAnk"><br></span>
+                            <span id="IbxMessage" class="FontMini">#customSpringMessage('ADDED_ITEM_COMMENT')</span>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+</div>
+    <form id="Body" name="Body"  method="post">
+        <table class="NoBorder" width="100%">
+            <tr id="TopView">
+                <td class="FontMini" nowrap>
+                    <table class="NoBorder" >
+                        <tr>
+                           <td class="FontMini">
+                           <A id="C1" class="Normal" href="#" onclick="javascript:selectPath('0','1','','','');"> #customSpringMessage('CATEGORY_TOP')</A> 
+                           #if($!searchPathKey.keywordFlag=="0")
+                                #if($!searchPathKey.catalogSelectSearchCondition.outputPlace=="0")
+                                    #if($!searchPathKey.itemClass.itemClassL!="")
+                                        > <A class="Normal" href="#" onclick='javascript:selectPath("#jsEscapeInHTML($!searchPathKey.catalogSelectSearchCondition.outputPlace)","1","#jsEscapeInHTML($!searchPathKey.itemClass.itemClassL)","","");'>#out($!searchPathKey.itemClass.itemClassNameL)</A>
+                                        #if($searchPathKey.itemClass.itemClassInd=='2')
+                                            >
+                                            #if($searchCondition.keywordFlag=='1')
+                                                <A class="Normal" href="#" onclick='javascript:selectPath("#jsEscapeInHTML($!searchPathKey.catalogSelectSearchCondition.outputPlace)","2","#jsEscapeInHTML($!searchPathKey.itemClass.itemClassL)","#jsEscapeInHTML($!searchPathKey.itemClass.itemClassM)","");'>#out($!searchPathKey.itemClass.itemClassNameM)</A>
+                                            #else
+                                                <B>#out($!searchCondition.itemClass.itemClassNameM)</B>
+                                            #end
+                                        #end
+                                        #if($searchPathKey.itemClass.itemClassInd=='3')
+                                            >
+                                            <A class="Normal" href="#" onclick='javascript:selectPath("#jsEscapeInHTML($!searchPathKey.catalogSelectSearchCondition.outputPlace)","2","#jsEscapeInHTML($!searchPathKey.itemClass.itemClassL)","#jsEscapeInHTML($!searchPathKey.itemClass.itemClassM)","");'>#out($!searchPathKey.itemClass.itemClassNameM)</A>
+                                            #if($searchCondition.keywordFlag=='1')
+                                                > <A class="Normal" href="#" onclick='javascript:selectPath("#jsEscapeInHTML($!searchPathKey.catalogSelectSearchCondition.outputPlace)","3","#jsEscapeInHTML($!searchPathKey.itemClass.itemClassL)","#jsEscapeInHTML($!searchPathKey.itemClass.itemClassM)","#jsEscapeInHTML($!searchPathKey.itemClass.itemClassS)");'>#out($!searchPathKey.itemClass.itemClassNameS)</A> 
+                                            #else
+                                                > <B>#out($!searchCondition.itemClass.itemClassNameS)</B>
+                                            #end
+                                        #end
+                                    #end
+                                    #if($searchCondition.keywordFlag=='1')
+                                        #foreach($!catalogSelectSearchCondition in $!KeywordSearchCondition)
+                                        >
+                                            #if($!KeywordSearchCondition.size()==($velocityCount+1))
+                                                <B>#out($!catalogSelectSearchCondition.keyword)</B>
+                                            #else
+                                                <A id="C1" class="Normal" href="#" onclick='javascript:selectPath("0","#jsEscapeInHTML($searchPathKey.itemClass.itemClassInd)","#jsEscapeInHTML($!searchPathKey.itemClass.itemClassL)","#jsEscapeInHTML($!searchPathKey.itemClass.itemClassM)","#jsEscapeInHTML($!searchPathKey.itemClass.itemClassS)","1","$velocityCount");'> #out($!catalogSelectSearchCondition.keyword)</A>
+                                            #end
+                                        #end
+                                    #end
+                                #else
+                                    #if($searchCondition.keywordFlag=='0')
+                                        > <A class="Normal" href="#" onclick='javascript:selectPath("#jsEscapeInHTML($!searchPathKey.catalogSelectSearchCondition.outputPlace)","1","#jsEscapeInHTML($!searchPathKey.itemClass.itemClassL)","","");'>#out($!searchPathKey.itemClass.itemClassNameL)</A> > 
+                                        #if($searchPathKey.itemClass.itemClassInd=='2')
+                                            <B>#out($!searchPathKey.itemClass.itemClassNameM)</B>
+                                        #end
+                                        #if($searchPathKey.itemClass.itemClassInd=='3')
+                                            <A class="Normal" href="#" onclick='javascript:selectPath("#jsEscapeInHTML($!searchPathKey.catalogSelectSearchCondition.outputPlace)","2","#jsEscapeInHTML($!searchPathKey.itemClass.itemClassL)","#jsEscapeInHTML($!searchPathKey.itemClass.itemClassM)","");'>#out($!searchPathKey.itemClass.itemClassNameM)</A>
+                                            #if($searchCondition.keywordFlag=='1')
+                                                > <A class="Normal" href="#" onclick='javascript:selectPath("#jsEscapeInHTML($!searchPathKey.catalogSelectSearchCondition.outputPlace)","3","#jsEscapeInHTML($!searchPathKey.itemClass.itemClassL)","#jsEscapeInHTML($!searchPathKey.itemClass.itemClassM)","#jsEscapeInHTML($!searchPathKey.itemClass.itemClassS)");'>#out($!searchPathKey.itemClass.itemClassNameS)</A> 
+                                            #else
+                                                > <B>#out($!searchPathKey.itemClass.itemClassNameS)</B>
+                                            #end
+                                        #end
+                                    #end
+                                    #if($searchCondition.keywordFlag=='1')
+                                        #foreach($!catalogSelectSearchCondition in $!KeywordSearchCondition)
+                                        >
+                                            #if($!KeywordSearchCondition.size()==($velocityCount+1))
+                                                <B>#out($!catalogSelectSearchCondition.keyword)</B>
+                                            #else
+                                                <A id="C1" class="Normal" href="#" onclick='javascript:selectPath("0","#jsEscapeInHTML($searchPathKey.itemClass.itemClassInd)","#jsEscapeInHTML($!searchPathKey.itemClass.itemClassL)","#jsEscapeInHTML($!searchPathKey.itemClass.itemClassM)","#jsEscapeInHTML($!searchPathKey.itemClass.itemClassS)","1","$velocityCount");'> #out($!catalogSelectSearchCondition.keyword)</A>
+                                            #end
+                                        #end
+                                    #end
+                                #end
+                           #else
+                                #foreach($!catalogSelectSearchCondition in $!KeywordSearchCondition)
+                                    >
+                                    #if($!KeywordSearchCondition.size()==($velocityCount+1))
+                                        <B>#out($!catalogSelectSearchCondition.keyword)</B>
+                                    #else
+                                        <A id="C1" class="Normal" href="#" onclick='javascript:selectPath("0","3","","","","1","$velocityCount");'> #out($!catalogSelectSearchCondition.keyword)</A>
+                                    #end
+                                #end
+                           #end
+
+                           </td>
+                            <td><span id="A1" class="FontMini"></span>&nbsp;</td>
+                            <td><A id="C2" class="Normal"></A></td>
+                            <td>&nbsp;<span id="A2" class="FontMini"></span>&nbsp;</td>
+                            <td><A id="C3" class="Normal"></A></td>
+                            <td>&nbsp;<span id="A3" class="FontMini"></span>&nbsp;</td>
+                            <td><A id="C4" class="Normal"></A></td>
+                        </tr>
+                    </table>
+                </td>
+                <td class="NoBorder" align="right" valign="bottom" nowrap>
+                    <table class="NoBorder" style="margin-top:4px;margin-right:none;">
+                        <tr>
+                            <td valign="top" style="width:22px;">
+                                <img name="Cart" src="../../image/mrkCart2.gif">&nbsp;
+                            </td>
+                            <td valign="top" class="FontLarge">
+                                <a class="Dashed FontLarge" id="CartLink" href="#" onclick="showCart();">
+                                 #customSpringMessage('NEW_CART')
+                                 #if("$!shoppingCart.priceArticleIdentifyList.size()"!="")
+                                   (
+                                 #end
+                                 <span id="cartItemCount" class="Dashed FontLarge">
+                                 $!shoppingCart.priceArticleIdentifyList.size()
+                                 </span>
+                                 #if("$!shoppingCart.priceArticleIdentifyList.size()"!="")
+                                   )
+                                 #end
+                                </a>&nbsp;
+                                <img class="Icon" src="../../image/mrkRight.gif" onclick="showCart();"><input name="dummy1" type="text" style="border:1px solid #ffffff;width:1px;" >
+                            </td>
+                        </tr>
+                    </table>
+                </td>
+            </tr>
+            <tr>
+                <td valign="bottom" colspan="2">
+                    <table width="100%">
+                       <tr>
+                        <td style="width:16px;">
+                            <button type="button" class="Button" onclick="toggleTreeArea();" nowrap>
+                                <img id="toggleImage" src="../../image/btnLeft.gif" >
+                            </button>
+                        </td>
+                        <td id="HEADtitle" class="FontBigBold Green" align="left">
+                         #if($searchCondition.keywordFlag=='1')
+                                #out($!searchCondition.catalogSelectSearchCondition.keyword)
+                         #else
+                            #if($searchCondition.itemClass.itemClassInd=='2')
+                            #out($!searchCondition.itemClass.itemClassNameM)
+                            #elseif($searchCondition.itemClass.itemClassInd=='3')
+                            #out($!searchCondition.itemClass.itemClassNameS)
+                            #end
+                         #end
+                        </td>
+                        <td class="FontMini" align="right" nowrap;>
+                        </td>
+                        <td class="FontMini" align="right" nowrap;>
+                            <table class="NoBorder">
+                                <tr>
+                                    <td id="Explain_id">
+                                        <table >
+                                            <tr>
+                                               <td valign="middle" class="FontMini Green">
+                                                 #customSpringMessage('SORT_ORDER')：<!-- ソート順-->  
+                                                 <select class="FontSmall" id="column" name="column" onchange="order();">
+                                                        <option value="PRODUCT_CLASS_SORT" #if("$!column"== "PRODUCT_CLASS_SORT") selected="selected" #end> #customSpringMessage('PRODUCT_CLASS_SORT')</option><!-- 品名分類順-->  
+                                                        <option value="ITEM_NAME_CD_SORT"  #if("$!column"== "ITEM_NAME_CD_SORT")  selected="selected" #end> #customSpringMessage('ITEM_NAME_CD_SORT')</option><!-- 品名コード順-->  
+                                                        <option value="ITEM_NAME_SORT" #if("$!column"== "ITEM_NAME_SORT") selected="selected" #end> #customSpringMessage('ITEM_NAME_SORT')</option><!-- 品名順-->  
+                                                        <option value="SUPPLIER_ORDER" #if("$!column"== "SUPPLIER_ORDER") selected="selected" #end> #customSpringMessage('SUPPLIER_ORDER')</option><!-- 取引先順-->  
+                                                        <option value="UNIT_PRICE" #if("$!column"== "UNIT_PRICE") selected="selected" #end> #customSpringMessage('UNIT_PRICE')</option><!-- 単価順-->  
+                                                  </select>
+                                                    <select class="FontSmall" id="ascOrder" name="ascOrder" onchange="order();">
+                                                        <option value="true" #if("$!ascOrder"== "true") selected="selected" #end>#customSpringMessage('ASCENDING')</option><!-- 昇順-->  
+                                                        <option value="false" #if("$!ascOrder"== "false") selected="selected" #end>#customSpringMessage('DESCENDING')</option><!-- 降順-->  
+                                                    </select>
+                                                    &nbsp;
+                                                </td>
+                                                <td valign="middle" class="FontMini Green">
+                                                    <input name="Explain" type="checkbox" checked onclick="viewExp();">#customSpringMessage('ITEM_EXP')<!-- 商品説明を表示-->
+                                                </td>
+                                            </tr>
+                                        </table>
+                                    </td>
+                                    <td>
+                                    #if($LoginUser.hasAuth(${AuthNoConstant.getValue("PUR_UPDATE_GRANT")}))
+                                        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a class="FontSmallBold" href="#" onclick="javascript:top.iframeChange('${flowExecutionUrl}&_eventId=everyPurReq','pattern','create')">#customSpringMessage('TO_EVERY_PUR_REQ')</A>&nbsp;## 都度購入依頼へ
+                                    #end
+                                    </td>
+                                 </tr>
+                            </table>
+                        </td>
+                    </tr>
+                </table
+               </td>
+          </tr>
+        </table>
+
+        #if($!errorMessage && $!errorMessage!="")
+        <div id="error" name="error" class="error" style="background-color: transparent;">
+            $!errorMessage
+        </div>
+        #end
+
+       #if("$!priceArticleList.priceArticleList"!="")
+           #if("$priceArticleList.priceArticleList.size()"!="0")
+                       #parse("./common/src_title_catalog.vm")
+                        <!-- 商品リスト -->
+                     <table id="DetailTable" width="100%">
+                            #foreach($!priceArticle in $!priceArticleList.priceArticleList)
+                                <tbody id="DetailTable_A0">
+                                    <tr> 
+                                        <td class="ProductArea">
+                                            <table class="NoBorder">
+                                                <tr>
+                                                
+                                                    <td class="FontMini" nowrap>#customSpringMessage('PRODUCT_CLASS')</td><!--品名分類-->
+                                                    <td class="FontCategolyName" nowrap>
+                                                        <table class="NoBorder">
+                                                            <tr>
+                                                                <!--大分類-->
+                                                                <td id="CurclassL_IMGA0"><div class="ItemKind">#customSpringMessage('ITEM_CLASS_L_ABBR')</div></td><!--大-->
+                                                                <td class="FontCategolyName" nowrap id="CurclassL_A0">#out($priceArticle.item.itemClass.itemClassNameL)</td>
+                                                                <!--中分類-->
+                                                                <td id="CurclassM_IMGA0"><div class="ItemKind">#customSpringMessage('ITEM_CLASS_M_ABBR')</div></td><!--中-->
+                                                                <td class="FontCategolyName" nowrap id="CurclassM_A0">#out($priceArticle.item.itemClass.itemClassNameM)</td>
+                                                                <!--小分類-->
+                                                                <td id="CurclassS_IMGA0">
+                                                                    #if($!priceArticle.item.itemClass.itemClassS!=' ')
+                                                                        <div class="ItemKind">#customSpringMessage('ITEM_CLASS_S_ABBR')</div>
+                                                                    #end
+                                                                </td><!--小-->
+                                                                <td class="FontCategolyName" nowrap id="CurclassS_A0" >
+                                                                     #if($!priceArticle.item.itemClass.itemClassS!=' ')
+                                                                        #out($!priceArticle.item.itemClass.itemClassNameS)
+                                                                     #end
+                                                                </td>
+                                                            </tr>
+                                                        </table>
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <td class="FontMini" nowrap>#customSpringMessage('ITEM_CD'):</td><!--品名コード-->
+                                                    
+                                                    <td class="FontSmallAnk Brown" nowrap>#out($!priceArticle.item.itemCd) 
+                                                    #if($!priceArticle.greenFlg=="0")
+                                                    <span class="Green FontCurrMiddle" >&nbsp;&clubs;&clubs;&clubs;</span>
+                                                    #end
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <td class="FontMini" nowrap>#customSpringMessage('ITEM_NAME')：</td><!--品名-->
+                                                    #if(""=="$!priceArticle.refUrl")
+                                                    <td class="FontMiddleAnkBold" nowrap>
+                                                    #out($!priceArticle.item.itemName)
+                                                    </td>
+                                                    #else
+                                                    <td class="FontMiddleAnkBold" nowrap>
+                                                   <a href="javascript:void(0)" onclick="javascript:poppage('#jsEscapeInHTML($!priceArticle.refUrl)','_blank','600','600')">
+                                                    #out($!priceArticle.item.itemName)</a>
+                                                    </td>
+                                                    #end
+                                                </tr>
+                                                <tr>
+                                                    <td class="FontMini" nowrap>#customSpringMessage('SUPPLIER')：</td><!--取引先-->
+                                                    <td class="FontSmallBold Green" nowrap>#out($!priceArticle.priceArticleIdentify.supCd)&nbsp;#out($!priceArticle.supplierFrom.supplierName.supplierAbbrName)</td>
+                                                </tr>
+                                                <tr>
+                                                    <td class="FontMini" nowrap>#customSpringMessage('KATASHIKI')：</td><!--型式-->
+                                                    <td class="FontMiniAnk" nowrap>#out($!priceArticle.item.katashiki)</td>
+                                                </tr>
+                                                <tr>
+                                                    <td class="FontMini" nowrap>#customSpringMessage('MANUFACT')：</td><!--メーカー-->
+                                                    <td class="FontMiniAnk" nowrap>#out($!priceArticle.item.manufact.manufactCd)&nbsp;#out($!priceArticle.item.manufact.manufactName)</td>
+                                                </tr>
+                                                <tr>
+                                                    <td class="FontMini" nowrap>#customSpringMessage('UNIT')：</td>## 単位名
+                                                    <td class="FontMiniAnk" nowrap>#out($!priceArticle.item.unit.unitName)</td>
+                                                </tr>
+                                            </table>
+                                        </td>
+                                        <td align="right" class="FontMini">
+                                            <table style="margin-left:auto;margin-right:none;">
+                                                <tr>
+                                                    <td class="FontMini" colspan="2" align="right">
+                                                        <a id="F_0" href="#" onclick="addFav('#jsEscapeInHTML($!priceArticle.priceArticleIdentify.buyerCompanyCd)','#jsEscapeInHTML($!priceArticle.priceArticleIdentify.buyerSectionCd)','#jsEscapeInHTML($!priceArticle.priceArticleIdentify.itemCd)','#jsEscapeInHTML($!priceArticle.priceArticleIdentify.supCd)','#jsEscapeInHTML($!priceArticle.priceArticleIdentify.validStartDate)','#jsEscapeInHTML($!priceArticle.priceArticleIdentify.validEndDate)');">#customSpringMessage('ACTION_ADD_FAV')</a><br><!--お気に入りに追加...-->
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <td colspan="2" align="center" valign="middle">
+                                                        #if("$!priceArticle.goodsImage.imgFileName"=="")
+                                                                #catalogImage($!priceArticle.priceArticleIdentify.buyerCompanyCd,
+                                                                                $!priceArticle.priceArticleIdentify.buyerSectionCd, 
+                                                                                $!priceArticle.priceArticleIdentify.itemCd,
+                                                                                $!priceArticle.priceArticleIdentify.supCd,
+                                                                                $!priceArticle.priceArticleIdentify.validStartDate, 
+                                                                                $!priceArticle.priceArticleIdentify.validEndDate)
+                                                        #else
+                                                            <a href="#" onclick="imgFileName('#jsEscapeInHTML($!priceArticle.priceArticleIdentify.buyerCompanyCd)', '#jsEscapeInHTML($!priceArticle.priceArticleIdentify.buyerSectionCd)', '#jsEscapeInHTML($!priceArticle.priceArticleIdentify.itemCd)', '#jsEscapeInHTML($!priceArticle.priceArticleIdentify.supCd)', '#jsEscapeInHTML($!priceArticle.priceArticleIdentify.validStartDate)', '#jsEscapeInHTML($!priceArticle.priceArticleIdentify.validEndDate)');">
+                                                                #catalogImage($!priceArticle.priceArticleIdentify.buyerCompanyCd,
+                                                                                $!priceArticle.priceArticleIdentify.buyerSectionCd, 
+                                                                                $!priceArticle.priceArticleIdentify.itemCd,
+                                                                                $!priceArticle.priceArticleIdentify.supCd,
+                                                                                $!priceArticle.priceArticleIdentify.validStartDate, 
+                                                                                $!priceArticle.priceArticleIdentify.validEndDate)
+                                                            </a><!--クリックすると画像を拡大します-->
+                                                        #end
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <td style="padding-right:10px;text-align:right" nowrap>
+                                                        <a href="#" onclick="javascript:openDetail('#jsEscapeInHTML($!priceArticle.priceArticleIdentify.buyerCompanyCd)','#jsEscapeInHTML($!priceArticle.priceArticleIdentify.buyerSectionCd)','#jsEscapeInHTML($!priceArticle.item.itemCd)','#jsEscapeInHTML($!priceArticle.priceArticleIdentify.supCd)','#jsEscapeInHTML($!priceArticle.priceArticleIdentify.validStartDate)','#jsEscapeInHTML($!priceArticle.priceArticleIdentify.validEndDate)','');" class="FontMini">#customSpringMessage('PRICE_DETAIL')</a>&nbsp;<!--価格詳細-->
+                                                        <span id="Curr_0" class="FontCurrSmall">
+                                                          #if("$!priceArticle.supplierFrom.currency.currencyMark" == "\")
+                                                            &yen;
+                                                            #else
+                                                               #out($!priceArticle.supplierFrom.currency.currencyMark)
+                                                            #end
+                                                          #out($!priceArticle.buyPrice.amount.amountFormat)
+                                                        </span>
+                                                        <span class="FontMiniAnkBold">&nbsp;#out($!priceArticle.supplierFrom.currency.currencyCd)
+                                                        </span>
+                                                        <br>
+                                                        <span class="FontMini Green" id="Tax_0">
+                                                            #if("$!priceArticle.taxCalculationInd.taxInd.taxInd" !="")
+                                                              (#out($!priceArticle.taxCalculationInd.taxInd.taxInd_PageValue)
+                                                            #else
+                                                            (
+                                                            #end
+                                                            #if("$!priceArticle.taxCalculationInd.consumptInd.consumptInd" !="")
+                                                              #out($!priceArticle.taxCalculationInd.consumptInd.consumptInd_PageValue))
+                                                            #else
+                                                            )
+                                                            #end
+                                                        </span><!--(税抜き)-->
+                                                    </td>
+                                                    <td>
+                                                        <input type="button" class="SmallButton"  value="#customSpringMessage('CART_IN')" onclick="addCart('#jsEscapeInHTML($!priceArticle.priceArticleIdentify.buyerCompanyCd)','#jsEscapeInHTML($!priceArticle.priceArticleIdentify.buyerSectionCd)','#jsEscapeInHTML($!priceArticle.priceArticleIdentify.itemCd)','#jsEscapeInHTML($!priceArticle.priceArticleIdentify.supCd)','#jsEscapeInHTML($!priceArticle.priceArticleIdentify.validStartDate)','#jsEscapeInHTML($!priceArticle.priceArticleIdentify.validEndDate)');"><!--カートに入れる-->
+                                                    </td>
+                                                </tr>
+                                            </table>
+                                        </td>
+                                    </tr>
+                                    <tr id="Exp_$velocityCount" class="FontMini" nowrap valign="top">
+                                        <td colspan="2" class="ProductArea">
+                                            <table>
+                                                <tr>
+                                                    <td class="FontMini" nowrap valign="top">#customSpringMessage('DESCRIPTION')：</td><!--説明-->
+                                                    <td class="FontMini" nowrap>
+                                                        <div class="ProductComment">
+                                                           #out($!priceArticle.priceRemarks)
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            </table>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td class="Separator" colspan="2">&nbsp;</td>
+                                    </tr>
+                                </tbody>
+                             #end
+                 </table>
+               #parse("./common/src_title_catalog2.vm")
+              
+           #end
+       #end
+       #if("$!favoritesCatalogItemList"!="")
+           #if("$!favoritesCatalogItemList.size()"!="0")
+            #parse("./common/src_title_catalog.vm")
+            <!-- 商品リスト -->
+            <table id="DetailTable" width="100%">
+                    #foreach($!favoritesCatalogItem in $!favoritesCatalogItemList)
+                      <tr> 
+                                        <td class="ProductArea">
+                                                <table class="NoBorder">
+                                                        <tr>
+                                                                    <td class="FontMini" nowrap>#customSpringMessage('PRODUCT_CLASS')</td><!--品名分類-->
+                                                                    <td class="FontCategolyName" nowrap>
+                                                                                <table class="NoBorder">
+                                                                                    <tr>
+                                                                                        <!--大分類-->
+                                                                                        <td id="CurclassL_IMGA0"><div class="ItemKind">#customSpringMessage('ITEM_CLASS_L_ABBR')</div></td><!--大-->
+                                                                                        <td class="FontCategolyName" nowrap id="CurclassL_A0">#out($favoritesCatalogItem.priceArticle.item.itemClass.itemClassNameL)</td>
+                                                                                        <!--中分類-->
+                                                                                        <td id="CurclassM_IMGA0"><div class="ItemKind">#customSpringMessage('ITEM_CLASS_M_ABBR')</div></td><!--中-->
+                                                                                        <td class="FontCategolyName" nowrap id="CurclassM_A0">#out($favoritesCatalogItem.priceArticle.item.itemClass.itemClassNameM)</td>
+                                                                                        <!--小分類-->
+                                                                                        <td id="CurclassS_IMGA0">
+                                                                                            #if($favoritesCatalogItem.priceArticle.item.itemClass.itemClassS!=' ')
+                                                                                                <div class="ItemKind">#customSpringMessage('ITEM_CLASS_S_ABBR')</div>
+                                                                                            #end
+                                                                                        </td>
+                                                                                        <td class="FontCategolyName" nowrap id="CurclassS_A0" >
+                                                                                            #if($favoritesCatalogItem.priceArticle.item.itemClass.itemClassS!=' ')
+                                                                                                #out($favoritesCatalogItem.priceArticle.item.itemClass.itemClassNameS)
+                                                                                            #end
+                                                                                        </td>
+                                                                                    </tr>
+                                                                                </table>
+                                                                    </td>
+                                                        </tr>
+                                                        <tr>
+                                                                <td class="FontMini" nowrap>#customSpringMessage('ITEM_CD'):</td><!--品名コード-->
+                                                                <td class="FontSmallAnk Brown" nowrap>#out($!favoritesCatalogItem.priceArticle.item.itemCd) 
+                                                                #if($!favoritesCatalogItem.priceArticle.greenFlg=="0")
+                                                                <span class="Green FontCurrMiddle" >&nbsp;&clubs;&clubs;&clubs;</span>
+                                                                #end
+                                                                </td>
+                                                        </tr>
+                                                        <tr>
+                                                                 <td class="FontMini" nowrap>#customSpringMessage('ITEM_NAME')：</td><!--品名-->
+                                                                  #if(""=="$!favoritesCatalogItem.priceArticle.refUrl")
+                                                                   <td class="FontMiddleAnkBold" nowrap>
+                                                                  #out($!favoritesCatalogItem.priceArticle.item.itemName)
+                                                                  </td>
+                                                                 #else
+                                                                  <td class="FontMiddleAnkBold" nowrap>
+                                                                   <a href="javascript:void(0)" onclick="javascript:poppage('#jsEscapeInHTML($!favoritesCatalogItem.priceArticle.refUrl)','_blank','600','600')">
+                                                                   #out($!favoritesCatalogItem.priceArticle.item.itemName)</a>
+                                                                  </td>
+                                                                #end
+                                                        </tr>
+                                                        <tr>
+                                                                 <td class="FontMini" nowrap>#customSpringMessage('SUPPLIER')：</td><!--取引先-->
+                                                                 <td class="FontSmallBold Green" nowrap>#out($!favoritesCatalogItem.priceArticle.priceArticleIdentify.supCd)&nbsp;#out($!favoritesCatalogItem.priceArticle.supplierFrom.supplierName.supplierAbbrName)</td>
+                                                        </tr>
+                                                        <tr>
+                                                                 <td class="FontMini" nowrap>#customSpringMessage('KATASHIKI')：</td><!--型式-->
+                                                                <td class="FontMiniAnk" nowrap>#out($!favoritesCatalogItem.priceArticle.item.katashiki)</td>
+                                                       </tr>
+                                                      <tr>
+                                                                <td class="FontMini" nowrap>#customSpringMessage('MANUFACT')：</td><!--メーカー-->
+                                                                <td class="FontMiniAnk" nowrap>#out($!favoritesCatalogItem.priceArticle.item.manufact.manufactCd)&nbsp;#out($!favoritesCatalogItem.priceArticle.item.manufact.manufactName)</td>
+                                                     </tr>
+                                                     <tr>
+                                                                <td class="FontMini" nowrap>#customSpringMessage('UNIT')：</td>## 単位名
+                                                                <td class="FontMiniAnk" nowrap>#out($!favoritesCatalogItem.priceArticle.item.unit.unitName)</td>
+                                                     </tr>
+                                                </table>
+                                        </td>
+                                        <td align="right" class="FontMini" >
+                                            <table style="margin-left:auto;margin-right:none;">
+                                                <tr>
+                                                    <td class="FontMini" colspan="2" align="right">
+                                                        <a id="F_0" href="#" onclick="javascript:addFav('#jsEscapeInHTML($!favoritesCatalogItem.priceArticle.priceArticleIdentify.buyerCompanyCd)','#jsEscapeInHTML($!favoritesCatalogItem.priceArticle.priceArticleIdentify.buyerSectionCd)','#jsEscapeInHTML($!favoritesCatalogItem.priceArticle.priceArticleIdentify.itemCd)','#jsEscapeInHTML($!favoritesCatalogItem.priceArticle.priceArticleIdentify.supCd)','#jsEscapeInHTML($!favoritesCatalogItem.priceArticle.priceArticleIdentify.validStartDate)','#jsEscapeInHTML($!favoritesCatalogItem.priceArticle.priceArticleIdentify.validEndDate)');">
+                                                            #customSpringMessage('REGISTER_DATE')：<!--登録日-->#out($!favoritesCatalogItem.regDate.dateOfymdDispYMD)</a><br>
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <td colspan="2" align="center" valign="middle">
+                                                        #if("$!favoritesCatalogItem.priceArticle.goodsImage.imgFileName"=="")
+                                                                #catalogImage($!favoritesCatalogItem.priceArticle.priceArticleIdentify.buyerCompanyCd,
+                                                                                $!favoritesCatalogItem.priceArticle.priceArticleIdentify.buyerSectionCd, 
+                                                                                $!favoritesCatalogItem.priceArticle.priceArticleIdentify.itemCd,
+                                                                                $!favoritesCatalogItem.priceArticle.priceArticleIdentify.supCd,
+                                                                                $!favoritesCatalogItem.priceArticle.priceArticleIdentify.validStartDate, 
+                                                                                $!favoritesCatalogItem.priceArticle.priceArticleIdentify.validEndDate)
+                                                        
+                                                        #else
+                                                            <a href="#" onclick="imgFileName('#jsEscapeInHTML($!favoritesCatalogItem.priceArticle.priceArticleIdentify.buyerCompanyCd)', '#jsEscapeInHTML($!favoritesCatalogItem.priceArticle.priceArticleIdentify.buyerSectionCd)', '#jsEscapeInHTML($!favoritesCatalogItem.priceArticle.priceArticleIdentify.itemCd)', '#jsEscapeInHTML($!favoritesCatalogItem.priceArticle.priceArticleIdentify.supCd)', '#jsEscapeInHTML($!favoritesCatalogItem.priceArticle.priceArticleIdentify.validStartDate)', '#jsEscapeInHTML($!favoritesCatalogItem.priceArticle.priceArticleIdentify.validEndDate)');">
+                                                                #catalogImage($!favoritesCatalogItem.priceArticle.priceArticleIdentify.buyerCompanyCd,
+                                                                                $!favoritesCatalogItem.priceArticle.priceArticleIdentify.buyerSectionCd, 
+                                                                                $!favoritesCatalogItem.priceArticle.priceArticleIdentify.itemCd,
+                                                                                $!favoritesCatalogItem.priceArticle.priceArticleIdentify.supCd,
+                                                                                $!favoritesCatalogItem.priceArticle.priceArticleIdentify.validStartDate, 
+                                                                                $!favoritesCatalogItem.priceArticle.priceArticleIdentify.validEndDate)
+                                                            </a>
+                                                        #end
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <td style="padding-right:10px;text-align:right" nowrap>
+                                                        <a href="#" onclick="javascript:openDetail('#jsEscapeInHTML($!favoritesCatalogItem.priceArticle.priceArticleIdentify.buyerCompanyCd)','#jsEscapeInHTML($!favoritesCatalogItem.priceArticle.priceArticleIdentify.buyerSectionCd)','#jsEscapeInHTML($!favoritesCatalogItem.priceArticle.item.itemCd)','#jsEscapeInHTML($!favoritesCatalogItem.priceArticle.priceArticleIdentify.supCd)','#jsEscapeInHTML($!favoritesCatalogItem.priceArticle.priceArticleIdentify.validStartDate)','#jsEscapeInHTML($!favoritesCatalogItem.priceArticle.priceArticleIdentify.validEndDate)','');" class="FontMini">#customSpringMessage('PRICE_DETAIL')</a>&nbsp;<!--価格詳細-->
+                                                        <span id="Curr_0" class="FontCurrSmall">
+                                                          #if("$!favoritesCatalogItem.priceArticle.supplierFrom.currency.currencyMark" == "\")
+                                                            &yen;
+                                                            #else
+                                                               #out($!favoritesCatalogItem.priceArticle.supplierFrom.currency.currencyMark)
+                                                            #end
+                                                          #out($!favoritesCatalogItem.priceArticle.buyPrice.amount.amountFormat)
+                                                        </span>
+                                                        <span class="FontMiniAnkBold">&nbsp;#out($!favoritesCatalogItem.priceArticle.supplierFrom.currency.currencyCd)
+                                                        </span>
+                                                        <br>
+                                                        <span class="FontMini Green" id="Tax_0">
+                                                            #if("$!favoritesCatalogItem.priceArticle.taxCalculationInd.taxInd.taxInd" !="")
+                                                              (#out($!favoritesCatalogItem.priceArticle.taxCalculationInd.taxInd.taxInd_PageValue)
+                                                            #else
+                                                            (
+                                                            #end
+                                                            #if("$!favoritesCatalogItem.priceArticle.taxCalculationInd.consumptInd.consumptInd" !="")
+                                                              #out($!favoritesCatalogItem.priceArticle.taxCalculationInd.consumptInd.consumptInd_PageValue))
+                                                            #else
+                                                            )
+                                                            #end
+                                                        </span><!--(
+                                                        </span><!--(税抜き)-->
+                                                    </td>
+                                                    <td>
+                                                        <input type="button" class="SmallButton"  value="#customSpringMessage('CART_IN')" onclick="addCart('#jsEscapeInHTML($!favoritesCatalogItem.priceArticle.priceArticleIdentify.buyerCompanyCd)','#jsEscapeInHTML($!favoritesCatalogItem.priceArticle.priceArticleIdentify.buyerSectionCd)','#jsEscapeInHTML($!favoritesCatalogItem.priceArticle.priceArticleIdentify.itemCd)','#jsEscapeInHTML($!favoritesCatalogItem.priceArticle.priceArticleIdentify.supCd)','#jsEscapeInHTML($!favoritesCatalogItem.priceArticle.priceArticleIdentify.validStartDate)','#jsEscapeInHTML($!favoritesCatalogItem.priceArticle.priceArticleIdentify.validEndDate)');"><!--カートに入れる-->
+                                                    </td>
+                                                </tr>
+                                            </table>
+                                        </td>
+                                    </tr>
+                                    <tr id="Exp_$velocityCount" class="FontMini" nowrap valign="top">
+                                        <td colspan="2" class="ProductArea">
+                                            <table>
+                                                <tr>
+                                                    <td class="FontMini" nowrap valign="top">#customSpringMessage('DESCRIPTION')：</td><!--説明-->
+                                                    <td class="FontMini" nowrap>
+                                                        <div class="ProductComment">
+                                                           #out($!favoritesCatalogItem.priceArticle.priceRemarks)
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            </table>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td class="Separator" colspan="2">&nbsp;</td>
+                                   </tr>          
+                    #end
+                     </table>
+                  #parse("./common/src_title_catalog2.vm")
+                #end
+            #end
+         
+            <!-- 改ページ制御（下） -->
+    </form>
+    <script>
+    <!--
+       var docHref = parent.document.body.getElementsByTagName("a");
+       var aLength = docHref.length;
+       for (var i=0;i<aLength;i++) {
+          docHref[i].disabled=false;
+       }
+       parent.listOnclickFlg = false;
+     //-->
+    </script>
+</body>
+</html>

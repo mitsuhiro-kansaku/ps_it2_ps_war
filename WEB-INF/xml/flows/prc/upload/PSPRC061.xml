@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<flow xmlns="http://www.springframework.org/schema/webflow"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.springframework.org/schema/webflow
+        http://www.springframework.org/schema/webflow/spring-webflow-2.0.xsd"
+    parent="base">
+    
+    <var name="priceMstPackageRegIdentify" class="fw.domain.slip.price.packagereg.pricemstpackagereg.PriceMstPackageRegIdentify" />
+    
+    <input name="searchCondition" />
+    <input name="isCurrentPageSearch" />
+    
+    <decision-state id="isSearchByKey">
+       <if test="flowScope.isCurrentPageSearch" then="searchByKey" else="searchByCondition" />
+    </decision-state>
+    
+    <action-state id="searchByCondition">
+        <evaluate expression="PSPRC061Service.init(searchCondition)" result="flowScope.itemList" />
+        <transition to="PSPRC061"/> 
+    </action-state>
+
+    <action-state  id="searchByKey" >
+        <evaluate expression="PSPRC061Service.page(searchCondition)" result="flowScope.itemList" />
+        <transition to="PSPRC061"/>
+    </action-state>
+     
+    <view-state id="PSPRC061" view="prc/upload/PSPRC061" model="priceMstPackageRegIdentify">
+        <transition on="page" validate="false">
+            <evaluate expression="PSPRC061Service.page(searchCondition)"
+                result="flowScope.itemList" />
+        </transition>
+        <transition on="search" validate="false">
+            <evaluate expression="PSPRC061Service.init(searchCondition)"
+                result="flowScope.itemList" />
+        </transition>
+        <transition on="quickLinkSearch" validate="false">
+            <set name="flowScope.isCurrentPageSearch" value="false" />
+            <set name="flowScope.isShowList" value="true"></set>
+        </transition>
+        <transition on="order" validate="false">
+            <evaluate expression="PSPRC061Service.order(searchCondition)"
+                result="flowScope.itemList" />
+        </transition>
+        <transition on="back" to="home" validate="false" />
+         <transition on="download" validate="false">
+            <evaluate expression="PSPRC061Service.downloadByteFile(priceMstPackageRegIdentify)"/>
+        </transition>
+        <transition on="applyCancel" validate="false" to="searchByKey">
+            <evaluate expression="PSPRC061Service.applyCancel()"/>
+            <set name="flashScope.isApplyCancelSuccess" value="true"></set>
+        </transition>
+        <transition on="receipt" to="receipt" validate="false">
+             <evaluate expression="new fw.domain.slip.common.receipt.Remand
+             (requestParameters.aprDisplayModel,
+             requestParameters.aprRemandComment,
+             requestParameters.companyCd,
+             requestParameters.sectionCd,
+             requestParameters.userId,
+             requestParameters.authNo,
+             requestParameters.backUserShowFlg)" result="flowScope.remand" />
+        </transition>
+    </view-state>
+    
+    <subflow-state id="receipt" subflow="cmn/apr/PSCMN020">
+       <input name="remand" value="remand" />
+    </subflow-state>
+</flow> 

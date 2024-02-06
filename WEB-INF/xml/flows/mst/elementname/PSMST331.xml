@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<flow xmlns="http://www.springframework.org/schema/webflow"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.springframework.org/schema/webflow
+        http://www.springframework.org/schema/webflow/spring-webflow-2.0.xsd"
+    parent="base">
+
+    <var name="elementNameIdentify" class="fw.domain.mst.resource.customize.elementname.ElementNameIdentify" />
+
+    <input name="elementNameSearchCondition" />
+    <input name="isCurrentPageSearch" />
+
+    <decision-state id="isSearchByKey">
+       <if test="flowScope.isCurrentPageSearch" then="searchByKey" else="searchByCondition" />
+    </decision-state>
+    
+    <action-state id="searchByCondition">
+        <evaluate expression="PSMST331Service.init(elementNameSearchCondition)"
+            result="flowScope.elementNameList" />
+        <transition to="PSMST331" />
+    </action-state>
+
+    <action-state id="searchByKey">
+        <evaluate expression="PSMST331Service.page(elementNameSearchCondition)"
+            result="flowScope.elementNameList" />
+        <transition to="PSMST331" />
+    </action-state>
+
+    <view-state id="PSMST331" model="elementNameIdentify"
+        view="mst/elementname/PSMST331">
+        <transition on="editValidate" validate="true">
+            <set name="flashScope.isShowUpdate" value="true"></set>
+        </transition>
+        <transition on="edit" to="PSMST332" validate="false" />
+        <transition on="deleteValidate" validate="true">
+            <set name="flashScope.isShowDelete" value="true"></set>
+        </transition>
+        <transition on="delete" to="PSMST334" validate="false" />
+        
+        <transition on="order" validate="false">
+            <evaluate expression="PSMST331Service.order(elementNameSearchCondition)"
+                result="flowScope.elementNameList" />
+        </transition>
+        <transition on="page" validate="false">
+            <evaluate expression="PSMST331Service.page(elementNameSearchCondition)"
+                result="flowScope.elementNameList" />
+        </transition>
+        <transition on="back" to="home" validate="false" />
+    </view-state>
+    
+    <subflow-state id="PSMST332" subflow="mst/elementname/PSMST332">
+        <input name="elementNameIdentify" value="elementNameIdentify" />
+    </subflow-state>
+
+    <subflow-state id="PSMST334" subflow="mst/elementname/PSMST334">
+        <input name="elementNameIdentify" value="elementNameIdentify" />
+    </subflow-state>
+
+</flow>

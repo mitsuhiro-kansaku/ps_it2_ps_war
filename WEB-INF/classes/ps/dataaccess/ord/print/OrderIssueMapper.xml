@@ -1,0 +1,194 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="ps.dataaccess.ord.print.OrderIssueMapper">
+
+    <!--検索条件で全てキリストを取得する-->
+    
+    <!-- SRC-00115-00 include化共通-->
+	<sql id="listKeyIdentityWhereCondition">
+                 <!-- クイックリンクの場合 -->
+                 <if test="@org.apache.commons.lang.StringUtils@isNotBlank(status)">
+                     <if test="status=='01'">
+                             <!-- 印刷区分-->
+                            AND T_ORDER.PRINT_IND = '0'
+                            <!-- EDIデータ送受信方法-->
+                            AND T_ORDER.EDI_IND = '0'
+                     </if>
+                 </if>
+                 
+                 <if test="@org.apache.commons.lang.StringUtils@isBlank(status)">
+                      ${@ps.common.util.ItemSettingUtil@getItemSettingWhereSQL()}
+                    <!-- 依頼区分 -->
+                     <if test="@org.apache.commons.lang.StringUtils@isNotBlank(reqTypeInd)">
+                       AND T_ORDER.REQ_TYPE_IND IN
+                               (#{reqTypeInd, jdbcType=VARCHAR})
+                     </if>
+                     <if test="@org.apache.commons.lang.StringUtils@isBlank(reqTypeInd)">
+                       AND T_ORDER.REQ_TYPE_IND IN
+                               ('2','3','9')
+                     </if>
+                     <!--  発行状態 -->
+                     <if test="@org.apache.commons.lang.StringUtils@isNotBlank(issueStatus)">
+                        AND T_ORDER.PRINT_IND = (#{issueStatus, jdbcType=VARCHAR})
+                     </if>
+                     <if test="@org.apache.commons.lang.StringUtils@isBlank(issueStatus)">
+                        AND T_ORDER.PRINT_IND IN ('0','1')
+                     </if>
+                     <!--  EDI転送方法 -->
+                     <if test="@org.apache.commons.lang.StringUtils@isNotBlank(ediTransferMethod)">
+                        AND T_ORDER.EDI_IND = (#{ediTransferMethod, jdbcType=VARCHAR})
+                     </if>
+                     <if test="@org.apache.commons.lang.StringUtils@isBlank(ediTransferMethod)">
+                        AND T_ORDER.EDI_IND  IN ('0','1')
+                     </if>
+                     <!-- 最新の注文のみ表示 -->
+                     <if test="@org.apache.commons.lang.StringUtils@isNotBlank(newOrderOnly)">
+                        AND T_ORDER.NEW_APP_FLG = '1'
+                     </if>
+                 </if>
+                 <!-- 削除フラグ-->
+                 AND T_ORDER.DELETE_FLG='0'
+                 <!-- 購買会社コード-->
+                 AND T_ORDER.BUYER_COMPANY_CD = '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}'
+                 <!-- 購買部門コード-->
+                 AND T_ORDER.BUYER_SECTION_CD = '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}'
+                 <!-- 購買担当者ID-->
+                 <if test="@org.apache.commons.lang.StringUtils@equals('0',linkFlg)">
+                    AND T_ORDER.BUYER_USER_ID= '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}'
+                 </if>
+	</sql>
+    
+    <select id="listKeyIdentity" 
+        parameterType="fw.domain.slip.order.order.orderissue.OrderIssueSearchCondition"
+        resultType="fw.domain.slip.order.order.OrderIdentify">
+            SELECT 
+                    T_ORDER.ORDER_SEQ AS "orderSeq",
+                    T_ORDER.LAST_UPD_DATE AS "lastUpdDate"
+            FROM T_ORDER
+              LEFT JOIN 
+                (SELECT 
+                   SUM(T_RECEIVE_MNG.DELIV_VOL) AS DELIV_VOL,
+                   T_RECEIVE_MNG.ORDER_NO
+                  FROM   T_RECEIVE_MNG
+                  WHERE  T_RECEIVE_MNG.DELETE_FLG = '0'
+                  GROUP BY T_RECEIVE_MNG.ORDER_NO) T_RECEIVE_MNG
+              ON   T_ORDER.ORDER_NO=  T_RECEIVE_MNG.ORDER_NO
+            <where>
+                <include refid="listKeyIdentityWhereCondition"/>
+            </where>
+        ORDER BY ${searchCondition.columnOrder.columnOrder()}
+    </select>
+    
+    <select id="listKeyIdentityCount" 
+        parameterType="fw.domain.slip.order.order.orderissue.OrderIssueSearchCondition"
+        resultType="int">
+            SELECT COUNT(1)
+            FROM T_ORDER
+            <where>
+                <include refid="listKeyIdentityWhereCondition"/>
+            </where>
+    </select>    
+    
+    <!--注文書・納品書発行一覧 明細を取得する-->
+     <resultMap type="fw.domain.slip.order.order.orderissue.OrderIssueItem"
+        id="OrderIssueItem_Map">
+        <id column="ORDER_CANCEL_VOL" property="orderCancel.orderCancelVol.vol"/>
+        <id column="ORDER_CANCEL_AMOUNT" property="orderCancel.orderCancelAmount.amount"/>
+        <id column="CURRENCY_CD" property="orderCancel.orderCancelAmount.currencyCd"/>
+        <id column="EXCLUSIVE_SLIP_NO" property="orderIdentify.exclusiveSlipId.slipNo"/>
+        <id column="ITEM_CLASS_L_NAME" property="itemClassLName"/>
+        <id column="ITEM_CLASS_M_NAME" property="itemClassMName"/>
+        <id column="ITEM_CLASS_S_NAME" property="itemClassSName"/>
+        <id column="EXCLUSIVE_LAST_UPD_DATE" property="orderIdentify.exclusiveSlipId.lastUpdDate"/>
+     </resultMap>
+    <select id="listPageItem" 
+        parameterType="fw.domain.slip.order.order.orderissue.OrderIssueSearchCondition" 
+        resultMap="OrderIssueItem_Map">
+        SELECT 
+            T_ORDER.ORDER_SEQ AS "orderIdentify.orderSeq",
+            T_ORDER.ORDER_NO AS "orderNo",
+            T_ORDER.PRINT_IND AS "issueStatus",
+            T_ORDER.ORDER_FIRST_DATE AS "orderDate.dateOfymd",
+            T_ORDER.ORDER_DATE AS "changeOrderDate.dateOfymd",
+            T_ORDER.TITLE_NAME AS "titleName",
+            T_ORDER.SUP_CD AS "supCd",
+            T_ORDER.SUP_ABBR_NAME AS "supName",
+            T_ORDER.SUP_COMPANY_CD as "supCompanyCd",
+            T_ORDER.SUBCON_IND AS "subconInd",
+            T_ORDER.EDI_IND AS "edi",
+            T_ORDER.ITEM_CD AS "itemCd",
+            T_ORDER.ITEM_NAME AS "itemName",
+            T_ORDER.ORDER_VOL AS "orderVol.vol",
+            T_ORDER.UNIT_NAME AS "unitCd",
+            CASE 
+                WHEN T_RECEIVE_MNG.DELIV_VOL IS NULL THEN T_ORDER.ORDER_VOL
+                WHEN (T_ORDER.ORDER_VOL - T_RECEIVE_MNG.DELIV_VOL) &lt; 0 THEN 0
+                ELSE T_ORDER.ORDER_VOL - T_RECEIVE_MNG.DELIV_VOL
+            END AS "receiveRemainingVol.vol",
+            T_ORDER.CURRENCY_CD AS "currencyCd",
+            T_ORDER.UNIT_PRICE AS "unitPrice.amount",
+            T_ORDER.ORDER_AMOUNT AS "orderAmount.amount",
+            T_ORDER.ORDER_CANCEL_VOL,
+            T_ORDER.ORDER_CANCEL_AMOUNT,
+            T_ORDER.CURRENCY_CD,
+            T_ORDER.ORDER_DELIV_DATE AS "orderDelivDate.dateOfymd",
+            T_ORDER.DELIV_PLACE_CD AS "delivPlaceCd",
+            T_ORDER.DELIV_PLACE_NAME AS "delivPlaceName",
+            T_ORDER.REQ_SECTION_CD AS "reqSectionCd",
+            T_ORDER.REQ_SECTION_NAME AS "reqSectionName",
+            T_ORDER.REQ_USER_ID AS "reqUserCd",
+            T_ORDER.REQ_USER_NAME AS "reqUserName",
+            T_ORDER.BUYER_SECTION_CD AS "buyerSectionCd",
+            T_ORDER.BUYER_SECTION_NAME AS "buyerSectionName",
+            T_ORDER.BUYER_USER_ID AS "buyerUserId",
+            T_ORDER.BUYER_USER_NAME AS "buyerUserName",
+            T_ORDER.LAST_UPD_DATE AS "orderIdentify.lastUpdDate",
+            T_ORDER.INFO_CD AS "infoCd",
+            T_ORDER.ORDER_VERSION AS "orderVersion",
+            T_SLIP_MNG.SLIP_NO AS EXCLUSIVE_SLIP_NO,
+            T_SLIP_MNG.LAST_UPD_DATE AS EXCLUSIVE_LAST_UPD_DATE,
+            T_ORDER.ITEM_CLASS_L_NAME,
+            T_ORDER.ITEM_CLASS_M_NAME,
+            T_ORDER.ITEM_CLASS_S_NAME,
+            ${@ps.common.util.ItemSettingUtil@getItemSettingSelectSQLDomainAliasNonBinary("T_ORDER", "orderExtItem")}
+          FROM T_ORDER
+          LEFT JOIN 
+            (SELECT 
+               SUM(T_RECEIVE_MNG.DELIV_VOL) AS DELIV_VOL,
+               T_RECEIVE_MNG.ORDER_NO
+              FROM   T_RECEIVE_MNG
+              WHERE  T_RECEIVE_MNG.DELETE_FLG = '0'
+              GROUP BY T_RECEIVE_MNG.ORDER_NO) T_RECEIVE_MNG
+          ON   T_ORDER.ORDER_NO=  T_RECEIVE_MNG.ORDER_NO
+          INNER JOIN T_SLIP_MNG
+            ON T_ORDER.ORDER_NO = T_SLIP_MNG.SLIP_NO
+            AND T_SLIP_MNG.DELETE_FLG = '0'
+          <where>
+                <include refid="listKeyIdentityWhereCondition"/>
+                AND T_ORDER.ORDER_SEQ IN
+		        <foreach collection="searchCondition.page.keyDomainEntityList" item="keyList"  open="(" separator="," close=")">  
+		                 #{keyList.orderSeq, jdbcType=VARCHAR}
+		         </foreach>
+            </where>
+        ORDER BY ${searchCondition.columnOrder.columnOrder()}
+    </select>
+
+    <!--注文テーブルの更新 の場合-->
+    <update id="print" >
+        UPDATE T_ORDER
+        SET 
+            PRINT_IND='1',
+            LAST_UPD_DATE = '${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}',
+            LAST_UPD_COMPANY_CD = '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}',
+            LAST_UPD_SECTION_CD = '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}',
+            LAST_UPD_USER_ID = '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}'
+        WHERE ORDER_SEQ IN
+        <foreach item="seq" collection="seqList"
+          open="(" separator="," close=")">
+            #{seq}
+        </foreach>
+    </update>
+   
+</mapper>

@@ -1,0 +1,461 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<title>#customSpringMessage('PAY_CHECK_APP')</title><!--支払伝票登録承認-->
+#set($commonTitle = "#customSpringMessage('PAY_CHECK_APP')")
+<meta http-equiv="Content-type" content="text/html; charset=UTF-8">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Content-script-type" content="text/javascript">
+<link id="CSS_FONT" rel="stylesheet" href="../../include/FontS.css" type="text/css">
+<link rel="stylesheet" href="../../include/Layout.css" type="text/css">
+<link rel="stylesheet" href="../../include/Color.css" type="text/css">
+<link rel="stylesheet" href="../../include/searchbox.css" type="text/css">
+<link rel="stylesheet" href="../../include/ime.css" type="text/css">
+<script language="javascript" type="text/javascript" src="../../include/common.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/check.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/date.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/tablesort.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/searchbox.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/jquery-1.7.2.min.js"></script>
+<script LANGUAGE="javascript" type="text/javascript">
+<!--
+#parse("./common/common_js.vm")
+
+var count = 0;
+var isClickable = false;
+
+function onLoad(){
+    //setFocusForInput();
+    parent.document.title="#customSpringMessage('PAY_CHECK_APP')";
+    var alertMessage = "$!alertMessage";
+    if (alertMessage != ""){
+        alert(alertMessage);
+        if(alertMessage.indexOf("#customSpringMessage('E035')") != -1){
+            buttonDisable();
+            parent.iframeChange("${flowExecutionUrl}&_eventId=next");
+            return;
+        }
+    }
+    var errorMsg = "$!errorMessage";
+    if (errorMsg == ""){
+        var isSuccessForApproval = '#jsEscape($!isApprovalSuccess)';
+        if(isSuccessForApproval == 'true'){
+            #set( $checkPara = "#customSpringMessage('PAY_CHECK_REG')")
+            alert('#customMessageArgs("I028",[$!checkPara])');
+            buttonDisable();
+            parent.iframeChange("${flowExecutionUrl}&_eventId=next");
+            return;
+        }
+        var isSuccessForSendBack = '#jsEscape($!isSendBackSuccess)';
+        if(isSuccessForSendBack == 'true'){
+            #set( $checkPara = "#customSpringMessage('PAY_CHECK_REG')")
+            alert('#customMessageArgs("I029",[$!checkPara])');
+            buttonDisable();
+            parent.iframeChange("${flowExecutionUrl}&_eventId=next");
+            return;
+        }
+    }
+    else{
+        document.getElementById("TR_ERROR").style.display = "";
+    }
+    approvalPaging();
+    isClickable = true;
+}
+
+//差戻し
+function sendBack(){
+    if(!isClickable) {
+        return;
+    }
+    #set( $approval = "#customSpringMessage('PAY_CHECK_REG')" )
+    #set( $mreturn = "#customSpringMessage('RETURN')" )
+    if( !confirm('#customMessageArgs("W001",[$approval,$mreturn])') ) {
+        return;
+    }
+    buttonDisable();
+    getObj('Body').action = "${flowExecutionUrl}&_eventId=sendBack";
+    getObj('Body').submit();
+}
+
+//承認
+function approval(){
+    if(!isClickable) {
+        return;
+    }
+    #set( $approval = "#customSpringMessage('PAY_CHECK_REG')" )
+    #set( $mapproval = "#customSpringMessage('APPROVAL')" )
+    if( !confirm('#customMessageArgs("W001",[$approval,$mapproval])') ) {
+        return;
+    }
+    buttonDisable();
+    getObj('Body').action = "${flowExecutionUrl}&_eventId=approval";
+    getObj('Body').submit();
+}
+
+//承認者の削除
+function removeAuthorizer(obj) {
+    if(!isClickable) {
+        return;
+    }
+    
+    var appSeq = obj.parentNode.parentNode.children[0].innerHTML;
+    getObj("Body").action="${flowExecutionUrl}&_eventId=removeAuthorizer&appSeq="+appSeq;
+    getObj("Body").submit();
+}
+
+//承認者の追加
+function addAuthorizer() {
+    if(!isClickable) {
+        return;
+    }
+        getObj("Body").action="${flowExecutionUrl}&_eventId=addAuthorizer";
+        getObj("Body").submit();
+}
+
+//承認者を検索
+function searchAuthorizer() {
+    var userId = getObj('payReqManagement.appManagement.appList.appUserName.userID');
+    var userName = getObj('payReqManagement.appManagement.appList.appUserName.userName');
+    var sectionCd = getObj('payReqManagement.appManagement.appList.appUserName.section.sectionCd');
+    var sectionName = getObj('payReqManagement.appManagement.appList.appUserName.section.sectionName');
+    var officialName = getObj('payReqManagement.appManagement.appList.appUserName.official.officialName');
+    var sectionPlaceCd = getObj('payReqManagement.appManagement.appList.appUserName.section.sectionPlace.sectionPlaceCd');
+    var sectionPlaceName = getObj('payReqManagement.appManagement.appList.appUserName.section.sectionPlace.sectionPlaceName');
+    var mail = getObj('payReqManagement.appManagement.appList.appUserName.mailAddr.mail');
+    var extensionNo = getObj('payReqManagement.appManagement.appList.appUserName.extNo.extensionNo');
+    var externalNo = getObj('payReqManagement.appManagement.appList.appUserName.externalNo.externalNo');
+
+    userPopup.setObject(userId, userName, sectionCd, sectionName, officialName, sectionPlaceCd, sectionPlaceName, mail, extensionNo, externalNo); 
+    masterSearch('../../src/userPopup/search?pageid=userPopupSearch&popupPageid=PSAPR142','UserSearch','750','500');
+}
+
+//  ダウンロード（標準項目用）
+function downloadFile(seqNo) {
+    if (seqNo != "") {
+        parent.iframeChange("${flowExecutionUrl}&_eventId=download",'attachFileSeq',seqNo);
+    }
+}
+
+//  ダウンロード（拡張項目用）
+function downloadExt(filename, file) {
+    iframeChange("${flowExecutionUrl}&_eventId=downloadext", 'filename', filename, 'file', file);
+}
+
+//-->
+</script>
+</head>
+<body topmargin="0" leftmargin="0" marginwidth="0" marginheight="0" align="center" onload="onLoad()"  style="overflow:hidden">
+<form id="Body" name="Body"  method="post">
+<table class="SearchBody">
+    <tr>
+        <td id="SEARCH_AREA" class="SearchArea"><!-- onLoadで変更 -->
+                #parse("./common/common_title_tran_with_individual_approval.vm")
+        </td>
+    </tr>
+    <tr>
+        <td class="NoBorder" style="height:auto; background-color:#CCC;" align="center" valign="top">
+            <div id="Area" style="OVERFLOW-Y: auto;HEIGHT: 100%;display:none;">
+	<table class="HomeBox" align = "center">
+		<tr>
+			<td style="padding:60px,15px,0px,15px">
+				<table>
+					<tr>
+						<td align="left">
+							<table class="NoBorder" width="100%">
+								<tr>
+									<td>
+										<u><img src="../../image/mrkCircle.gif"><span id="StepTitle" class="FontStepTitle">#customSpringMessage('PAY_CHECK_APP')</span></u><br><br> ## 支払伝票登録承認
+                                        <span id="ReqNo" class="FontSmallBold DarkBlue">#customSpringMessage('PSAPR142_HEADER_COMMENT')</span>
+									</td>
+									<td align="right" valign="middle">
+										<input type="button" class="LargeButton Red" value="#customSpringMessage('RETURN')" onclick="javascript:sendBack();">&nbsp;&nbsp;<!--差戻し -->
+										<input id="button" type="button" class="LargeButton" value="#customSpringMessage('APPROVAL')" onclick="javascript:approval();"><!--承　認 -->
+									</td>
+								</tr>
+                                 <tr id ="TR_ERROR" style="display:none;"><td class="error" style="height:0px;">
+                                    $!errorMessage
+                                </td></tr>
+							</table>
+                           <table class="Box1G" width="100%">
+								<tbody class="Box1G ListBorderWidth">
+                                    $!PSAPR142PageCreater.build('upd','_td_style_right', 'class="Box1D FontSmall"', '_td_style_left','class="Box1H FontBoxHeader"')
+                                    #foreach($!item in $!PSAPR142PageCreater.getItemListForBody())
+                                        #if($!item.getColumnName() == "T_P_PAY.PAY_NO") <!-- 支払請求番号 -->
+                                            $!PSAPR142PageCreater.printSpecial("s00_label",$!item,"_item_style",'class="FontSlipNo"')
+                                        #elseif($!item.getColumnName() == "T_P_PAY.REQ_USER_ID") <!-- 依頼者 -->
+                                            $!PSAPR142PageCreater.printSpecial("CLIENT", "m15_showUser",$!item)
+                                    <tr>
+                                        <td class="Box1H FontBoxHeader" nowrap>#customSpringMessage('ACC_USER')</td><!-- 経理担当者-->
+                                        <td class="Box1D FontSmall" nowrap>
+                                            <table class="NoBorder">
+                                                <tr>
+                                                    <td valign="top" rowspan="2"><img class="Mark" src="../../image/mrkHuman.gif"></td>
+                                                    <td nowrap>
+                                                        <span class="FontSmall">#out($!domain.payReqManagement.payReqInput.accUser.accUser.section.sectionCd)  #out($!domain.payReqManagement.payReqInput.accUser.accUser.section.sectionName) &nbsp;&nbsp;</span><br>
+                                                    </td>
+                                                    <td><img class="Mark" src="../../image/mrkTel.gif"></td><!--連絡先 -->
+                                                    <td class="FontMini" nowrap>
+                                                        #customSpringMessage('EXTENSION_NO')：
+                                                        <span class="FontSmallAnk">#out($!domain.payReqManagement.payReqInput.accUser.accUser.extNo.extensionNo)</span>&nbsp;&nbsp;
+                                                        #customSpringMessage('EXTERNAL_NO')：
+                                                        <span class="FontSmallAnk">#out($!domain.payReqManagement.payReqInput.accUser.accUser.externalNo.externalNo)</span>
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <td>
+                                                        <span class="FontSmall">#out($!domain.payReqManagement.payReqInput.accUser.accUser.userID)</span>
+                                                        <span class="FontUserName">#out($!domain.payReqManagement.payReqInput.accUser.accUser.userName)</span>
+                                                    </td>
+                                                    <td><img class="Mark" src="../../image/mrkMail.gif"></td>
+                                                    <td nowrap>
+                                                        <span class="FontMiniAnk">
+                                                            <a href='mailto:#out($!domain.payReqManagement.payReqInput.accUser.accUser.userName)<#out($!domain.payReqManagement.payReqInput.accUser.accUser.mailAddr.mail)>'>
+                                                                #out($!domain.payReqManagement.payReqInput.accUser.accUser.mailAddr.mail)</a>
+                                                        </span>
+                                                    </td>
+                                                    <td align="right" valign="bottom">
+                                                    </td>
+                                                </tr>
+                                            </table>
+                                        </td>
+                                    </tr>
+                                        #elseif($!item.getColumnName() == "T_P_PAY.PAY_CONDITION_CD") <!-- 支払条件 -->
+                                            $!PSAPR142PageCreater.printSpecial("PAY_CONDITION_NAME","s00_label", $!item)
+                                        #elseif($!item.getColumnName() == "T_P_PAY.SUP_CD") <!-- 取引先 -->
+                                            $!PSAPR142PageCreater.printSpecial("SUPPLIER","m31_showSupplierSimple",$!item)
+                                        #elseif($!item.getColumnName() == "T_P_PAY.CURRENCY_CD") <!-- 通貨コード -->
+                                            $!PSAPR142PageCreater.printSpecial('s00_label', $!item)
+                                        #elseif($!item.getColumnName() == "T_P_PAY.TOTAL_AMOUNT_IN_TAX") <!-- 請求金額合計 -->
+                                            $!PSAPR142PageCreater.printSpecial('s49_claimAmountPerTax', $!item
+                                                , '_currency_mark_style', 'class="FontCurrSmall CurrencyMark"'
+                                                , '_amount_style', 'class="FontCurrSmall"'
+                                                , '_taxCdTaxName', $!taxCdTaxName
+                                                , '_taxCdReducedTaxName', $!taxCdReducedTaxName
+                                                , '_taxCdNonTaxName', $!taxCdNonTaxName
+                                                , '_taxCdTaxExemptionName', $!taxCdTaxExemptionName
+                                                , '_taxCdUnTaxName', $!taxCdUnTaxName
+                                            )
+                                        #elseif($!item.getColumnName() == "T_P_PAY.ATTACH_FILE_SEQ1") <!-- 添付ファイル -->
+                                             $!PSAPR142PageCreater.printSpecial("s14_showFile3",$!item,'_event','onclick = "downloadFile(id);"','_event2','onclick = "downloadFile(id);"','_event3','onclick = "downloadFile(id);"')
+                                        #elseif($!item.getColumnName() == "T_P_PAY.FOR_BOSS_COMMENT") <!-- 承認者向けコメント -->
+                                            $!PSAPR142PageCreater.printSpecial('s00_label', $!item)
+                                        #elseif($!item.getColumnName() == "T_P_PAY.FOR_ACC_COMMENT") <!-- 経理担当者向けコメント -->
+                                            $!PSAPR142PageCreater.printSpecial('s00_label', $!item)
+                                        #else
+                                            $!PSAPR142PageCreater.printDefaultForCancel($!item)
+                                        #end
+                                    #end
+								</tbody>
+							</table>
+							<br>
+							<table class="Box1G" width="100%">
+								<tbody class="Box1H FontBoxHeader">
+                                $!PSAPR142PageCreater.buildDetail('index')
+                                #foreach($!payReq in $!domain.payReqManagement.itemList.itemList)
+                                    <tbody id="Detail$velocityCount" class="Box1H FontBoxHeader">
+                                    #set($listCount=$!PSAPR142PageCreater.getItemListForDetail($velocityCount).size())
+                                    #foreach($!item in $!PSAPR142PageCreater.getItemListForDetail($velocityCount))
+                                        #if(($velocityCount+1) == $listCount)
+                                            $!PSAPR142PageCreater.build('upd','_td_style_left', 'class="Box1Hdt FontBoxHeader" width="17%"','_td_style_right', 'class="Box1Ddt FontSmall"')
+                                        #else
+                                            $!PSAPR142PageCreater.build('upd','_td_style_left', 'class="Box1Hd FontBoxHeader" width="17%"','_td_style_right', 'class="Box1Dd FontSmall"')
+                                        #end
+                                        #if($!item.getColumnName()=="T_P_PAY_DTL.UNIT_PRICE") <!-- 単価 -->
+                                            $!PSAPR142PageCreater.printSpecial("UNIT_PRICE","s24_currency", $!item,"_item_style",'class="FontCurrSmall"')
+                                        #elseif($!item.getColumnName()=="T_P_PAY_DTL.PAY_VOL") <!-- 数量 -->
+                                            $!PSAPR142PageCreater.printSpecial("VOL", 's16_showVol', $!item)
+                                        #elseif($!item.getColumnName()=="T_P_PAY_DTL.CLAIM_PRICE") <!-- 請求金額 -->
+                                            $!PSAPR142PageCreater.printSpecial("CLAIM_PRICE","s24_currency", $!item,"_item_style",'class="FontCurrSmall"')
+                                        #elseif($!item.getColumnName()=="T_P_PAY_DTL.CONSUMPT_AMOUNT") <!-- 消費税額 -->
+                                            $!PSAPR142PageCreater.printSpecial("CONSUMPT_AMOUNT","s24_currency", $!item,"_item_style",'class="FontCurrSmall"')
+                                        #elseif($!item.getColumnName()=="T_P_PAY_DTL.DETAIL_BODY") <!-- 税抜金額 -->
+                                            $!PSAPR142PageCreater.printSpecial("CLAIM_PRICE_TAX_OUT","s24_currency", $!item,"_item_style",'class="FontCurrSmall"')
+                                        #elseif($!item.getColumnName()=="T_P_PAY_DTL.CLAIM_TOTAL_AMOUNT") <!-- 税込金額 -->
+                                            $!PSAPR142PageCreater.printSpecial("CLAIM_PRICE_TAX_IN","s24_currency", $!item,"_item_style",'class="FontCurrSmall"')
+                                        #else
+                                            $!PSAPR142PageCreater.printDefaultForCancel($!item)
+                                        #end
+                                    #end
+                                #end
+								</tbody>								
+							</table>
+							<br>
+							<table class="Box1G" width="100%">
+								<tbody class="Box1H FontBoxHeader">
+									<tr>
+										<td class="Box1H FontBoxHeader">#customSpringMessage('APP_ROUTE_NAME')</td><!--承認ルート名 -->
+										<td class="Box1D FontSmall">#out($!domain.payReqManagement.approute.appRouteName)</td>
+									</tr>
+									<tr>
+										<td class="Box1H FontBoxHeader">#customSpringMessage('APP_USER')</td><!--承認者 -->
+										<td class="Box1D">
+											<table class="AppSheet" width="98%" style="-webkit-box-shadow:2px 2px 0px #000000">
+												 #set($index=0)
+                                                 #foreach($!appItem in $!domain.payReqManagement.appManagement.appList.appItemList)
+                                                 #set($index=$index+1)
+												<tr>
+													<td class="AppNoArea FontNumber">#out($!appItem.appSeq)</td>
+													<td class="AppPersonArea" nowrap>
+                                                        #if($!appItem.subAppFlg == '1')
+														<span class="FontSmall">
+															#out($!appItem.subAppUserName.section.sectionCd)  
+															#out($!appItem.subAppUserName.section.sectionName)
+														</span><br>
+														<span class="FontSmall">#out($!appItem.subAppUserName.userID)</span>
+														#else
+                                                        <span class="FontSmall">
+                                                            #out($!appItem.appUserName.section.sectionCd)  
+                                                            #out($!appItem.appUserName.section.sectionName)
+                                                        </span><br>
+                                                        <span class="FontSmall">#out($!appItem.appUserName.userID)</span>
+														#end
+                                                        #if($!appItem.subAppFlg == '1')
+                                                            <span class="FontUserName"> #out($!appItem.subAppUserName.userName)&nbsp;</span><span class="FontMini"> #out($!appItem.subAppUserName.official.officialName)</span>
+                                                        #else
+                                                            <span class="FontUserName">#out($!appItem.appUserName.userName) &nbsp;</span><span class="FontMini"> #out($!appItem.appUserName.official.officialName)</span>
+                                                        #end
+													</td>
+													<td class="AppPersonArea">
+														<table class="NoBorder">
+															<tr>
+																<td><img src="../../image/mrkTel.gif"></td><!--連絡先 -->
+																<td class="FontMini" nowrap>
+																	#customSpringMessage('EXTENSION_NO'):<!-- 内線番号-->
+																	<span class="FontSmallAnk">
+																		#if($!appItem.subAppFlg == '1')
+            																   #out($!appItem.subAppUserName.extNo.extensionNo)
+            															#else
+            																   #out($!appItem.appUserName.extNo.extensionNo)
+            															#end
+																	</span>&nbsp;&nbsp;
+																	#customSpringMessage('EXTERNAL_NO'):<!-- 外線番号-->
+																	<span class="FontSmallAnk">
+                    													#if($!appItem.subAppFlg == '1')
+                                                                              #out($!appItem.subAppUserName.externalNo.externalNo)
+                                                                        #else
+                                                                               #out($!appItem.appUserName.externalNo.externalNo)
+                                                                        #end
+																	</span>
+																</td>
+															</tr>
+															<tr>
+																<td><img src="../../image/mrkMail.gif"></td>
+																<td class="FontMiniAnkBold" nowrap>
+																	<span class="FontMiniAnk">
+																	  #if($!appItem.subAppFlg == '1')
+                                                                         <A HREF='mailto:#out($!appItem.subAppUserName.userName)<#out($!appItem.subAppUserName.mailAddr.mail)>'>
+                                                                             #out($!appItem.subAppUserName.mailAddr.mail)
+                                                                         </A>
+                                                                      #else
+                                                                         <A HREF='mailto:#out($!appItem.appUserName.userName)<#out($!appItem.appUserName.mailAddr.mail)>'>
+                                                                            #out($!appItem.appUserName.mailAddr.mail)
+                                                                         </A>
+                                                                      #end
+																	</span>
+																</td>
+																<td align="right" valign="bottom"></td>
+															</tr>
+														</table>
+													</td>
+													<!--0(未承認) 1(承認中) 3(最終承認済) 4(差戻し)-->
+            										 #if("$!appItem.appItemStatus.appItemStatus"=="2" || "$!appItem.appItemStatus.appItemStatus"=="3")
+                                                         <td nowrap class="AppStampArea">
+                                                             <span class="FontBigBold DarkBlue">#out($!appItem.appItemStatus.appItemStatus_PageValue)</span><!--承認-->
+                                                             <span class="FontMiniAnkBold"><br>#out($!appItem.appDate.appDate.dateOfymdDispYMD)</span>
+                                                         </td>
+                                                     #elseif("$!appItem.appItemStatus.appItemStatus"=="4")
+                                                         <td nowrap class="AppStampArea">
+                                                             <span class="FontBigBold Red">#out($!appItem.appItemStatus.appItemStatus_PageValue)</span><!--差戻し-->
+                                                             <span class="FontMiniAnkBold"><br>#out($!appItem.appDate.appDate.dateOfymdDispYMD)</span>
+                                                         </td>
+                                                     #elseif($!appItem.appSeq!=$!domain.payReqManagement.appManagement.appList.appSeq&&$!appItem.canDelete())
+                                                         <td class="AppStampArea">
+                                                             <input type='button' class='MiniButton' onclick='removeAuthorizer(this);' value='#customSpringMessage("ACTION_DELETE")'><!--削除-->
+                                                         </td>
+                                                     #else
+                                                         <td class="AppStampArea"><span>&nbsp;</span></td>
+                                                     #end
+												</tr>
+                                                #if($velocityCount+1 <$!domain.payReqManagement.appManagement.appList.appItemList.size())
+                                                <tr id = "row_$velocityCount" name = "row_$velocityCount"><td colspan="4" class="AppBorder">&nbsp;</td></tr>
+                                                #end
+												#end
+											</table>
+											<br>
+											<table>
+												<tr>
+													<td valign="top"><img src="../../image/mrkGuide.gif">&nbsp;</td>
+													<td class="FontMini">
+														#customSpringMessage('APP_ADD_BUTTON_COMMENT')
+														  <!--承認者を追加したい場合は、追加したい承認者とその順序を指定して、「承認者の追加」ボタンをクリックしてください。<br>自分の承認した後の順序に追加できます。-->
+														<br>
+													<td>
+												</tr>
+												<tr>
+													<td nowrap colspan="2" align="center">
+														<table>
+															<tr>
+																<td class="FontMini" align="left" valign="middle" nowrap>#customSpringMessage('ADD_APP_USER'):</td><!--追加する承認者 -->
+																<td>
+                                                                   #springFormInput("domain.payReqManagement.appManagement.appList.appUserName.userID" "class='SmallDsp' maxlength='12' type='text' size='14' readonly tabIndex='-1' ondblclick='searchAuthorizer();'")
+                                                                   #springFormInput("domain.payReqManagement.appManagement.appList.appUserName.userName" "class='SmallDsp' type='text' size='20' readonly tabIndex='-1' ondblclick='searchAuthorizer();'")
+                                                                   <img class="Icon" name="UserSearch" src="../../image/btnLupe.gif" onclick="searchAuthorizer();" />
+                                                                   
+                                                                   #springFormHiddenInput("domain.payReqManagement.appManagement.appList.appUserName.section.sectionCd" "")
+                                                                   #springFormHiddenInput("domain.payReqManagement.appManagement.appList.appUserName.section.sectionName" "")
+                                                                   #springFormHiddenInput("domain.payReqManagement.appManagement.appList.appUserName.official.officialName" "")
+                                                                   #springFormHiddenInput("domain.payReqManagement.appManagement.appList.appUserName.section.sectionPlace.sectionPlaceCd" "")
+                                                                   #springFormHiddenInput("domain.payReqManagement.appManagement.appList.appUserName.section.sectionPlace.sectionPlaceName" "")
+                                                                   #springFormHiddenInput("domain.payReqManagement.appManagement.appList.appUserName.mailAddr.mail" "")
+                                                                   #springFormHiddenInput("domain.payReqManagement.appManagement.appList.appUserName.extNo.extensionNo" "")
+                                                                   #springFormHiddenInput("domain.payReqManagement.appManagement.appList.appUserName.externalNo.externalNo" "")
+																</td>
+																<td class="FontMini" align="left" valign="middle" nowrap>#customSpringMessage('ORDER'):</td><!-- 順序-->
+																<td class="FontMini" align="left" valign="middle" nowrap>
+                                                                    #customFormSingleSelectForApproval("domain.payReqManagement.appManagement.appList.appSeqByAdd" $!approvalList "class='Small'")
+																</td>	
+																<td>
+																	<input type="button" class="MiniButton" value="#customSpringMessage('ACTION_ADD_APP_USER')" onclick="addAuthorizer();"><!--承認者の追加 -->
+																</td>
+															</tr>
+														</table>
+													</td>
+												</tr>
+											</table>
+										</td>
+									</tr>
+								</tbody>
+							</table>
+							<br>
+                            <table class="Box1G" width="100%">
+                                #set($backUserName = $!domain.payReqManagement.appManagement.backApp.backAppFirstUser.userName)
+                                #set($domainPath = "domain.payReqManagement.appManagement")
+                                #set($delComment = "USER_DEL_COMMENT")
+                                #parse("./common/common_back.vm")
+								<table class="NoBorder" width="98%">
+								<tr>
+								<br>
+                                    <td>#customSpringMessage('PSAPR142_FOOTER_COMMENT')</td>
+									<td align="right" valign="middle">
+										<input type="button" class="LargeButton Red" value="#customSpringMessage('RETURN')" onclick="javascript:sendBack();">&nbsp;&nbsp;<!--差戻し -->
+										<input id="Submit" type="button" class="LargeButton" value="#customSpringMessage('APPROVAL')" onclick="javascript:approval();"><!--承認 -->
+									</td>
+								</tr>
+							</table>
+						</td>
+					</tr>
+				</table>
+			</td>
+		</tr>
+	</table>
+</div>
+</td>
+</tr>
+</table>      
+</form>
+</body>
+</html>
+
+<script>
+    getObj("Area").style.display = "block";
+</script>

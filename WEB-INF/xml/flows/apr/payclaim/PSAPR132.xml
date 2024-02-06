@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<flow xmlns="http://www.springframework.org/schema/webflow"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.springframework.org/schema/webflow
+        http://www.springframework.org/schema/webflow/spring-webflow-2.0.xsd"
+	parent="base">
+	<!-- 支仏請求登録承認（個別） -->
+
+	<input name="payReqIdentify" />
+	<input name="isInitIndividualApr" />
+	<input name="SessionKey"/>
+    <input name="searchCondition" />
+
+	<decision-state id="isInitIndividualApr">
+        <if test="flowScope.isExclusiveCheck != null and flowScope.isExclusiveCheck" then="PSAPR132" /> 
+        <if test="flowScope.isInitIndividualApr == null or flowScope.isInitIndividualApr" then="initDetail" else="back" />
+    </decision-state>
+    
+	<action-state id="initDetail">
+        <evaluate expression="PSAPR132Service.init(payReqIdentify)" result="flowScope.domain" />
+        <transition to="PSAPR132"/> 
+    </action-state>
+    
+	<!-- PSAPR132_支仏請求登録承認（個別）_画面 -->
+	<view-state id="PSAPR132" view="apr/payclaim/PSAPR132" model="domain">
+		<!-- 承認 -->
+		<transition on="approval" validate="true">
+			<evaluate expression="PSAPR132Service.approval(domain)" />
+			<set name="flashScope.isApprovalSuccess" value="true"></set>
+		</transition>
+		<!-- 差戻し -->
+		<transition on="sendBack" validate="true">
+			<evaluate expression="PSAPR132Service.sendBack(domain)" />
+			<set name="flashScope.isSendBackSuccess" value="true"></set>
+		</transition>
+        <transition on="next" validate="false" to="isInitIndividualApr">
+             <evaluate expression="PSAPR132Service.next()" result="flowScope.payReqIdentify"/> 
+             <set name="flashScope.isSuccessForApproval" value="false"></set> 
+             <set name="flashScope.isSuccessForSendBack" value="false"></set> 
+        </transition>
+		<!-- ファイルdownLoad -->
+		<transition on="download" validate="false">
+            <evaluate expression="attachFileService.downloadFromPPayAttach(requestParameters.attachFileSeq)"/>
+        </transition>
+        <!-- ファイルダウンロード（拡張項目用） -->
+		<transition on="downloadext" validate="false">
+            <evaluate expression="PSAPR132Service.downloadFileExt(domain)"/>
+        </transition>
+		<transition on="page" validate="false" to="isInitIndividualApr">
+            <evaluate expression="PSAPR132Service.page()" result="flowScope.payReqIdentify" />
+        </transition>
+        
+         <!-- 承認者の追加  -->
+        <transition on="addAuthorizer" validate="false">
+             <evaluate expression="PSAPR132Service.addAuthorizer(domain)" result="flowScope.domain"/> 
+        </transition>
+        <!-- 承認者の削除  -->
+        <transition on="removeAuthorizer" validate="false">
+             <evaluate expression="PSAPR132Service.removeAuthorizer(domain)" result="flowScope.domain"/> 
+        </transition>
+	</view-state>
+
+</flow> 

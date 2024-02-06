@@ -1,0 +1,137 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="ps.dataaccess.src.itemkindpopup.ItemKindPopupMapper">
+
+    <!-- SRC-00115-00 include化共通-->
+    <sql id="listKeyIdentityWhereCondition">
+        AND M_SECTION.VALID_START_DATE &lt;= '${@fw.common.util.AppUtil@getSysDate()}'
+        AND M_SECTION.VALID_END_DATE &gt;= '${@fw.common.util.AppUtil@getSysDate()}'
+        AND (M_ITEM_KIND.COMPANY_CD = #{companyCd}
+         OR M_ITEM_KIND.COMPANY_CD = '${@fw.common.constant.ApplicationConstant@COMPANY_CD_ALL}')
+        AND M_ITEM_KIND.ITEM_CLASS_IND = '3'
+        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(itemClassM)">
+            AND M_ITEM_KIND.ITEM_CLASS_M ${@fw.common.util.SearchModeUtil@getSearchSQL("fw.domain.mst.material.itemkind.ItemKindSearchCondition","itemClassM")}
+        </if>
+        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(itemClassL)">
+            AND M_ITEM_KIND.ITEM_CLASS_L ${@fw.common.util.SearchModeUtil@getSearchSQL("fw.domain.mst.material.itemkind.ItemKindSearchCondition","itemClassL")}
+        </if>
+        <if test="@fw.domain.mst.searchcondition.SearchCondition@termFlgIsNotEmpty(searchCondition.termFlg) and searchCondition.termFlg==0">
+            AND M_ITEM_KIND.TERM_FLG = #{searchCondition.termFlg, jdbcType=VARCHAR}
+        </if>
+    </sql>
+
+    <select id="listKeyIdentity"
+            parameterType="fw.domain.mst.material.itemkind.ItemKindPopupSearchCondition"
+            resultType="fw.domain.mst.material.itemkind.ItemKindIdentify">
+        SELECT M_ITEM_KIND.COMPANY_CD as "companyCd",
+               M_ITEM_KIND.ITEM_CLASS_L as "itemClassL",
+               M_ITEM_KIND.ITEM_CLASS_M as "itemClassM",
+               M_ITEM_KIND.ITEM_CLASS_S as "itemClassS"
+          FROM M_ITEM_KIND 
+          LEFT JOIN M_ITEM_KIND_LANG
+                 ON M_ITEM_KIND.COMPANY_CD = M_ITEM_KIND_LANG.COMPANY_CD
+                AND M_ITEM_KIND.ITEM_CLASS_L = M_ITEM_KIND_LANG.ITEM_CLASS_L
+                AND M_ITEM_KIND.ITEM_CLASS_M = M_ITEM_KIND_LANG.ITEM_CLASS_M
+                AND M_ITEM_KIND.ITEM_CLASS_S = M_ITEM_KIND_LANG.ITEM_CLASS_S
+                AND M_ITEM_KIND_LANG.LANGUAGE_IND = '${@fw.security.SecurityUtil@getCompanyUseLanguageIndByEscapeSql()}'
+          LEFT JOIN M_B_USER
+                 <!-- 2013/05/28 強化-01686-000 MODIFY SBO_SOKOU START -->
+                 ON M_B_USER.COMPANY_CD = M_ITEM_KIND.BUYER_COMPANY_CD
+                 <!-- 2013/05/28 強化-01686-000 MODIFY SBO_SOKOU -END- -->
+                AND M_B_USER.USER_ID = M_ITEM_KIND.BUYER_USER_ID
+          LEFT JOIN M_B_USER_LANG 
+                 ON  M_B_USER_LANG.COMPANY_CD = M_B_USER.COMPANY_CD
+                AND M_B_USER_LANG.USER_ID = M_B_USER.USER_ID
+                AND M_B_USER_LANG.LANGUAGE_IND = '${@fw.security.SecurityUtil@getCompanyUseLanguageIndByEscapeSql()}'
+          LEFT JOIN M_SECTION
+                 <!-- 2013/05/28 強化-01686-000 MODIFY SBO_SOKOU START -->
+                 ON M_SECTION.COMPANY_CD = M_ITEM_KIND.BUYER_COMPANY_CD
+                 <!-- 2013/05/28 強化-01686-000 MODIFY SBO_SOKOU -END- -->
+                AND M_SECTION.SECTION_CD = M_ITEM_KIND.BUYER_SECTION_CD
+          LEFT JOIN M_SECTION_LANG 
+                 ON M_SECTION.COMPANY_CD = M_SECTION_LANG.COMPANY_CD
+                AND M_SECTION.SECTION_CD = M_SECTION_LANG.SECTION_CD
+                AND M_SECTION_LANG.VALID_START_DATE = M_SECTION.VALID_START_DATE
+                AND M_SECTION_LANG.VALID_END_DATE = M_SECTION.VALID_END_DATE
+                AND M_SECTION_LANG.LANGUAGE_IND = '${@fw.security.SecurityUtil@getCompanyUseLanguageIndByEscapeSql()}'
+        <!-- 2013/02/13 ADD DAIKO_YAMAGUCHI START -->
+        <if test="destinationSectionOnly">
+        INNER JOIN M_PROC_DEPT 
+            ON M_PROC_DEPT.BUYER_COMPANY_CD = M_ITEM_KIND.BUYER_COMPANY_CD
+            AND M_PROC_DEPT.BUYER_SECTION_CD = M_ITEM_KIND.BUYER_SECTION_CD
+            AND M_PROC_DEPT.REQ_COMPANY_CD = '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}'
+            AND M_PROC_DEPT.REQ_SECTION_CD = '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}'
+        </if>
+        <!-- 2013/02/13 ADD DAIKO_YAMAGUCHI -END- -->
+        <where>
+            <include refid="listKeyIdentityWhereCondition"/>
+        </where>
+        ORDER BY ${searchCondition.columnOrder.columnOrder()}
+    </select>
+
+    <select id="listPageItem"
+            parameterType="fw.domain.mst.material.itemkind.ItemKindPopupSearchCondition"
+            resultType="fw.domain.mst.material.itemkind.ItemKindPopupItem">
+        SELECT M_ITEM_KIND.COMPANY_CD as "itemKindIdentify.companyCd",
+               M_ITEM_KIND.ITEM_CLASS_L as "itemKindIdentify.itemClassL",
+               M_ITEM_KIND.ITEM_CLASS_M as "itemKindIdentify.itemClassM",
+               M_ITEM_KIND.ITEM_CLASS_S as "itemKindIdentify.itemClassS",
+               M_ITEM_KIND.BUYER_SECTION_CD as "buyerSectionCd",
+               M_ITEM_KIND.BUYER_USER_ID as "buyerUserId",
+               M_B_USER_LANG.USER_NAME as buyerUserName,
+               M_SECTION_LANG.SECTION_NAME as buyerSectionName,
+               LANG_L.ITEM_CLASS_NAME as "itemClassNameL",
+               LANG_M.ITEM_CLASS_NAME as "itemClassNameM",
+               LANG_S.ITEM_CLASS_NAME as "itemClassNameS"
+          FROM M_ITEM_KIND
+          LEFT JOIN M_B_USER
+                 <!-- 2013/05/28 強化-01686-000 MODIFY SBO_SOKOU START -->
+                 ON M_B_USER.COMPANY_CD = M_ITEM_KIND.BUYER_COMPANY_CD
+                 <!-- 2013/05/28 強化-01686-000 MODIFY SBO_SOKOU -END- -->
+                AND M_B_USER.USER_ID = M_ITEM_KIND.BUYER_USER_ID
+          LEFT JOIN M_B_USER_LANG 
+                 ON M_B_USER_LANG.COMPANY_CD = M_B_USER.COMPANY_CD
+                AND M_B_USER_LANG.USER_ID = M_B_USER.USER_ID
+                AND M_B_USER_LANG.LANGUAGE_IND = '${@fw.security.SecurityUtil@getCompanyUseLanguageIndByEscapeSql()}'
+          LEFT JOIN M_SECTION
+                 <!-- 2013/05/28 強化-01686-000 MODIFY SBO_SOKOU START -->
+                 ON M_SECTION.COMPANY_CD = M_ITEM_KIND.BUYER_COMPANY_CD
+                 <!-- 2013/05/28 強化-01686-000 MODIFY SBO_SOKOU -END- -->
+                AND M_SECTION.SECTION_CD = M_ITEM_KIND.BUYER_SECTION_CD
+          LEFT JOIN M_SECTION_LANG 
+                 ON M_SECTION.COMPANY_CD = M_SECTION_LANG.COMPANY_CD
+                AND M_SECTION.SECTION_CD = M_SECTION_LANG.SECTION_CD
+                AND M_SECTION_LANG.VALID_START_DATE = M_SECTION.VALID_START_DATE
+                AND M_SECTION_LANG.VALID_END_DATE = M_SECTION.VALID_END_DATE
+                AND M_SECTION_LANG.LANGUAGE_IND = '${@fw.security.SecurityUtil@getCompanyUseLanguageIndByEscapeSql()}'
+          LEFT JOIN M_ITEM_KIND_LANG LANG_L 
+                 ON M_ITEM_KIND.COMPANY_CD = LANG_L.COMPANY_CD
+                AND M_ITEM_KIND.ITEM_CLASS_L = LANG_L.ITEM_CLASS_L
+                AND TRIM(LANG_L.ITEM_CLASS_M) IS NULL
+                AND TRIM(LANG_L.ITEM_CLASS_S) IS NULL
+                AND LANG_L.LANGUAGE_IND = '${@fw.security.SecurityUtil@getCompanyUseLanguageIndByEscapeSql()}'
+          LEFT JOIN M_ITEM_KIND_LANG LANG_M 
+                 ON M_ITEM_KIND.COMPANY_CD = LANG_M.COMPANY_CD
+                AND M_ITEM_KIND.ITEM_CLASS_L = LANG_M.ITEM_CLASS_L
+                AND M_ITEM_KIND.ITEM_CLASS_M = LANG_M.ITEM_CLASS_M
+                AND TRIM(LANG_M.ITEM_CLASS_S) IS NULL
+                AND LANG_M.LANGUAGE_IND = '${@fw.security.SecurityUtil@getCompanyUseLanguageIndByEscapeSql()}'
+          LEFT JOIN M_ITEM_KIND_LANG LANG_S 
+                 ON M_ITEM_KIND.COMPANY_CD = LANG_S.COMPANY_CD
+                AND M_ITEM_KIND.ITEM_CLASS_L = LANG_S.ITEM_CLASS_L
+                AND M_ITEM_KIND.ITEM_CLASS_M = LANG_S.ITEM_CLASS_M
+                AND M_ITEM_KIND.ITEM_CLASS_S = LANG_S.ITEM_CLASS_S
+                AND LANG_S.ITEM_CLASS_S != ' '
+                AND LANG_S.LANGUAGE_IND = '${@fw.security.SecurityUtil@getCompanyUseLanguageIndByEscapeSql()}'
+       <where>
+            (M_ITEM_KIND.COMPANY_CD,M_ITEM_KIND.ITEM_CLASS_L,M_ITEM_KIND.ITEM_CLASS_M,M_ITEM_KIND.ITEM_CLASS_S) IN
+            <foreach collection="searchCondition.page.keyDomainEntityList" item="keyList" open="(" separator="," close=")">
+            (#{keyList.companyCd},#{keyList.itemClassL},#{keyList.itemClassM},#{keyList.itemClassS})
+            </foreach>
+            <include refid="listKeyIdentityWhereCondition"/>
+       </where>
+       ORDER BY ${searchCondition.columnOrder.columnOrder()}
+    </select>
+</mapper>

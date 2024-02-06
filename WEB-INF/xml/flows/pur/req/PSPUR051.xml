@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<flow xmlns="http://www.springframework.org/schema/webflow"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.springframework.org/schema/webflow
+        http://www.springframework.org/schema/webflow/spring-webflow-2.0.xsd"
+    parent="base">
+    
+    <var name="purAplIdentify" class="fw.domain.slip.purreq.everypurreq.purreqmng.PurAplIdentify" />
+    
+    <input name="searchCondition" />
+    <input name="isCurrentPageSearch" />
+    <input name="appUnitNo"/>
+
+    <decision-state id="isSearchByKey">
+       <if test="flowScope.isCurrentPageSearch" then="searchByKey" else="searchByCondition" />
+    </decision-state>
+    
+    <action-state id="searchByCondition">
+        <evaluate expression="PSPUR051Service.init(searchCondition)" result="flowScope.itemList" />
+        <transition to="PSPUR051"/> 
+    </action-state>
+
+    <action-state  id="searchByKey" >
+        <evaluate expression="PSPUR051Service.page(searchCondition)" result="flowScope.itemList" />
+        <transition to="PSPUR051"/>
+    </action-state>
+     
+    <view-state id="PSPUR051" view="pur/req/PSPUR051" model="purAplIdentify">
+        <transition on="page" validate="false">
+            <evaluate expression="PSPUR051Service.page(searchCondition)"
+                result="flowScope.itemList" />
+        </transition>
+        <transition on="order" validate="false">
+            <evaluate expression="PSPUR051Service.order(searchCondition)"
+                result="flowScope.itemList" />
+        </transition>
+        <transition on="back" to="home" validate="false" />
+         
+        <transition on="detailValidate" validate="false">
+            <set name="flashScope.isShowDetail" value="true"></set>
+        </transition>
+         <transition on="historyValidate" validate="false">
+            <set name="flashScope.isShowHistory" value="true"></set>
+            <set name="flashScope.purAplSeqNo" value="requestParameters.purAplSeqNum"></set>
+            <set name="appUnitNo" value="requestParameters.purReqNo"></set>
+        </transition>
+        <transition on="detail" to="PSPUR040TOP" validate="false" />
+        <transition on="history" to="PSPUR010" validate="false" />
+    </view-state>
+    
+    <subflow-state id="PSPUR010" subflow="pur/req/PSPUR010History" >
+        <input name="patternName" value="'History'" />
+        <input name="purAplSeqNo" value="requestParameters.purAplSeqNo" />
+        <input name="appUnitNo" value="appUnitNo" />
+        <input name="isInitIndividualApr" value="true" />
+    </subflow-state>
+    <subflow-state id="PSPUR040TOP" subflow="pur/req/PSPUR040TOP" >
+        <input name="identify" value="purAplIdentify" />
+    </subflow-state>
+
+</flow> 

@@ -1,0 +1,1266 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="ps.dataaccess.options.budget.sectionbudget.SectionBudgetMapper">
+
+    <sql id="listKeyWhereCondition">
+        COMPANY_CD = '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}'
+        AND SECTION_PLACE_CD = '${@fw.security.SecurityUtil@getSectionPlaceCdByEscapeSql()}'
+
+        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(sectionCd)">
+            AND SECTION_CD 
+            ${@fw.common.util.SearchModeUtil@getSearchSQL("fw.domain.options.budget.sectionbudgetlist.SectionBudgetListSearchCondition","sectionCd")}
+        </if>
+           <if test="@org.apache.commons.lang.StringUtils@isNotBlank(subjectCd)">
+               AND SUBJECT_CD = #{subjectCd, jdbcType=VARCHAR}
+           </if>
+           <if test='"　".equals(subjectCd)'>
+               <!-- 検索されないようにする -->
+               AND SUBJECT_CD IS NULL
+           </if>
+        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(fiscalYear)">
+            AND BUDGET_YEAR = #{fiscalYear, jdbcType=VARCHAR}
+        </if>
+        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(budgetName)">
+            AND BUDGET_NAME
+            ${@fw.common.util.SearchModeUtil@getSearchSQL("fw.domain.options.budget.sectionbudgetlist.SectionBudgetListSearchCondition","budgetName")}
+        </if>
+	    <if test="@org.apache.commons.lang.StringUtils@isNotBlank(budgetOverOnly)">
+            AND budgetOverFlg = '1'
+        </if>
+    </sql>
+
+    <sql id="listKeyDetailWhereCondition">
+        (
+            t_section_budget.COMPANY_CD = '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}'
+            AND t_section_budget.SECTION_PLACE_CD = '${@fw.security.SecurityUtil@getSectionPlaceCdByEscapeSql()}'
+
+            <if test="@org.apache.commons.lang.StringUtils@isNotBlank(sectionCd)">
+                AND t_section_budget.SECTION_CD = #{sectionCd, jdbcType=VARCHAR}
+            </if>
+            <if test="@org.apache.commons.lang.StringUtils@isNotBlank(subjectCd)">
+                AND t_section_budget.SUBJECT_CD = #{subjectCd, jdbcType=VARCHAR}
+            </if>
+            <if test='"　".equals(subjectCd)'>
+                <!-- 検索されないようにする -->
+                AND t_section_budget.SUBJECT_CD IS NULL
+            </if>
+            <if test="@org.apache.commons.lang.StringUtils@isNotBlank(fiscalYear)">
+                AND t_section_budget.BUDGET_YEAR = #{fiscalYear, jdbcType=VARCHAR}
+            </if>
+            <if test="@org.apache.commons.lang.StringUtils@isNotBlank(budgetName)">
+                AND t_section_budget.BUDGET_NAME = #{budgetName, jdbcType=VARCHAR}
+            </if>
+        )
+        <if test="@org.apache.commons.lang.StringUtils@isBlank(budgetName)">
+            OR
+            (
+                t_section_results.COMPANY_CD = '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}'
+                AND t_section_results.SECTION_PLACE_CD = '${@fw.security.SecurityUtil@getSectionPlaceCdByEscapeSql()}'
+
+                <if test="@org.apache.commons.lang.StringUtils@isNotBlank(sectionCd)">
+                    AND t_section_results.SECTION_CD = #{sectionCd, jdbcType=VARCHAR}
+                </if>
+                <if test="@org.apache.commons.lang.StringUtils@isNotBlank(subjectCd)">
+                    AND t_section_results.SUBJECT_CD = #{subjectCd, jdbcType=VARCHAR}
+                </if>
+                <if test="@org.apache.commons.lang.StringUtils@isNotBlank(fiscalYear)">
+                    AND t_section_results.BUDGET_YEAR = #{fiscalYear, jdbcType=VARCHAR}
+                </if>
+            )
+        </if>
+    </sql>
+
+    <sql id="keyWhereCondition">
+        (
+            COMPANY_CD
+            ,SECTION_PLACE_CD
+            ,SECTION_CD
+            ,SUBJECT_CD
+            ,BUDGET_YEAR
+        ) in
+        <foreach collection="searchCondition.page.keyDomainEntityList" item="keyList" open="(" separator="," close=")">
+            (
+                #{keyList.section.company.companyCd},
+                #{keyList.section.sectionPlace.sectionPlaceCd},
+                #{keyList.section.sectionCd},
+                <if test="@org.apache.commons.lang.StringUtils@isNotBlank(keyList.subject.subjectCd)">
+                    #{keyList.subject.subjectCd},
+                </if>
+                <if test="@org.apache.commons.lang.StringUtils@isBlank(keyList.subject.subjectCd)">
+                    '　',
+                </if>
+                #{keyList.budgetYear}
+            )
+        </foreach>
+    </sql>
+
+    <sql id="keyWhereConditionNotSubjectCd">
+        (
+            COMPANY_CD
+            ,SECTION_PLACE_CD
+            ,SECTION_CD
+            ,BUDGET_YEAR
+        ) in
+        <foreach collection="searchCondition.page.keyDomainEntityList" item="keyList" open="(" separator="," close=")">
+            (
+                #{keyList.section.company.companyCd},
+                #{keyList.section.sectionPlace.sectionPlaceCd},
+                #{keyList.section.sectionCd},
+                #{keyList.budgetYear}
+            )
+        </foreach>
+    </sql>
+
+    <sql id="keyWhereSectionBudget">
+	    (
+	        T_SECTION_BUDGET.COMPANY_CD
+	        ,T_SECTION_BUDGET.SECTION_PLACE_CD
+	        ,T_SECTION_BUDGET.SECTION_CD
+	        ,T_SECTION_BUDGET.SUBJECT_CD
+	        ,T_SECTION_BUDGET.BUDGET_YEAR
+	    ) =
+	    ((
+	        '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}'
+	        ,'${@fw.security.SecurityUtil@getSectionPlaceCdByEscapeSql()}'
+	        ,#{sectionBudget.sectionBudgetIdentify.section.sectionCd}
+	        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(sectionBudget.sectionBudgetIdentify.subject.subjectCd)">
+	            ,#{sectionBudget.sectionBudgetIdentify.subject.subjectCd}
+	        </if>
+	        <if test="@org.apache.commons.lang.StringUtils@isBlank(sectionBudget.sectionBudgetIdentify.subject.subjectCd)">
+	            ,'　'
+	        </if>
+	        ,#{sectionBudget.sectionBudgetIdentify.budgetYear}
+	    ))
+    </sql>
+
+    <sql id="sectionBudgetTable">
+        (SELECT
+		    COMPANY_CD
+		    , SECTION_PLACE_CD
+		    , SECTION_CD
+		    , SUBJECT_CD
+		    , BUDGET_YEAR
+		    , SECTION_NAME
+		    , SUBJECT_NAME
+		    , BUDGET_NAME
+		    , CURRENCY_CD
+		    , SEC_TOTAL_CHK_IND
+		    , START_MONTH
+		    , START_YEAR_MONTH
+		    , DIFF_MAX_AMOUNT
+		    , BUDGET_AMOUNT_1
+		    , BUDGET_AMOUNT_2
+		    , BUDGET_AMOUNT_3
+		    , BUDGET_AMOUNT_4
+		    , BUDGET_AMOUNT_5
+		    , BUDGET_AMOUNT_6
+		    , BUDGET_AMOUNT_7
+		    , BUDGET_AMOUNT_8
+		    , BUDGET_AMOUNT_9
+		    , BUDGET_AMOUNT_10
+		    , BUDGET_AMOUNT_11
+		    , BUDGET_AMOUNT_12
+		    , BUDGET_AMOUNT_T
+		    , PUR_REQ_SUM_AMOUNT_1
+		    , ORDER_DIFF_SUM_AMOUNT_1
+		    , PUR_REQ_SUM_AMOUNT_2
+		    , ORDER_DIFF_SUM_AMOUNT_2
+		    , PUR_REQ_SUM_AMOUNT_3
+		    , ORDER_DIFF_SUM_AMOUNT_3
+		    , PUR_REQ_SUM_AMOUNT_4
+		    , ORDER_DIFF_SUM_AMOUNT_4
+		    , PUR_REQ_SUM_AMOUNT_5
+		    , ORDER_DIFF_SUM_AMOUNT_5
+		    , PUR_REQ_SUM_AMOUNT_6
+		    , ORDER_DIFF_SUM_AMOUNT_6
+		    , PUR_REQ_SUM_AMOUNT_7
+		    , ORDER_DIFF_SUM_AMOUNT_7
+		    , PUR_REQ_SUM_AMOUNT_8
+		    , ORDER_DIFF_SUM_AMOUNT_8
+		    , PUR_REQ_SUM_AMOUNT_9
+		    , ORDER_DIFF_SUM_AMOUNT_9
+		    , PUR_REQ_SUM_AMOUNT_10
+		    , ORDER_DIFF_SUM_AMOUNT_10
+		    , PUR_REQ_SUM_AMOUNT_11
+		    , ORDER_DIFF_SUM_AMOUNT_11
+		    , PUR_REQ_SUM_AMOUNT_12
+		    , ORDER_DIFF_SUM_AMOUNT_12
+		    , PUR_REQ_SUM_AMOUNT_T
+		    , ORDER_DIFF_SUM_AMOUNT_T
+            , ACCEPT_SUM_AMOUNT_1
+            , ACCEPT_SUM_AMOUNT_2
+            , ACCEPT_SUM_AMOUNT_3
+            , ACCEPT_SUM_AMOUNT_4
+            , ACCEPT_SUM_AMOUNT_5
+            , ACCEPT_SUM_AMOUNT_6
+            , ACCEPT_SUM_AMOUNT_7
+            , ACCEPT_SUM_AMOUNT_8
+            , ACCEPT_SUM_AMOUNT_9
+            , ACCEPT_SUM_AMOUNT_10
+            , ACCEPT_SUM_AMOUNT_11
+            , ACCEPT_SUM_AMOUNT_12
+		    ,CASE
+		        WHEN SEC_TOTAL_CHK_IND = '0' AND (
+		                   NVL(BUDGET_AMOUNT_1, 0) - NVL(PUR_REQ_SUM_AMOUNT_1, 0) + NVL(ORDER_DIFF_SUM_AMOUNT_1, 0) <![CDATA[<]]> 0
+		                OR NVL(BUDGET_AMOUNT_2, 0) - NVL(PUR_REQ_SUM_AMOUNT_2, 0) + NVL(ORDER_DIFF_SUM_AMOUNT_2, 0) <![CDATA[<]]> 0
+		                OR NVL(BUDGET_AMOUNT_3, 0) - NVL(PUR_REQ_SUM_AMOUNT_3, 0) + NVL(ORDER_DIFF_SUM_AMOUNT_3, 0) <![CDATA[<]]> 0
+		                OR NVL(BUDGET_AMOUNT_4, 0) - NVL(PUR_REQ_SUM_AMOUNT_4, 0) + NVL(ORDER_DIFF_SUM_AMOUNT_4, 0) <![CDATA[<]]> 0
+		                OR NVL(BUDGET_AMOUNT_5, 0) - NVL(PUR_REQ_SUM_AMOUNT_5, 0) + NVL(ORDER_DIFF_SUM_AMOUNT_5, 0) <![CDATA[<]]> 0
+		                OR NVL(BUDGET_AMOUNT_6, 0) - NVL(PUR_REQ_SUM_AMOUNT_6, 0) + NVL(ORDER_DIFF_SUM_AMOUNT_6, 0) <![CDATA[<]]> 0
+		                OR NVL(BUDGET_AMOUNT_7, 0) - NVL(PUR_REQ_SUM_AMOUNT_7, 0) + NVL(ORDER_DIFF_SUM_AMOUNT_7, 0) <![CDATA[<]]> 0
+		                OR NVL(BUDGET_AMOUNT_8, 0) - NVL(PUR_REQ_SUM_AMOUNT_8, 0) + NVL(ORDER_DIFF_SUM_AMOUNT_8, 0) <![CDATA[<]]> 0
+		                OR NVL(BUDGET_AMOUNT_9, 0) - NVL(PUR_REQ_SUM_AMOUNT_9, 0) + NVL(ORDER_DIFF_SUM_AMOUNT_9, 0) <![CDATA[<]]> 0
+		                OR NVL(BUDGET_AMOUNT_10, 0) - NVL(PUR_REQ_SUM_AMOUNT_10, 0) + NVL(ORDER_DIFF_SUM_AMOUNT_10, 0) <![CDATA[<]]> 0
+		                OR NVL(BUDGET_AMOUNT_11, 0) - NVL(PUR_REQ_SUM_AMOUNT_11, 0) + NVL(ORDER_DIFF_SUM_AMOUNT_11, 0) <![CDATA[<]]> 0
+		                OR NVL(BUDGET_AMOUNT_12, 0) - NVL(PUR_REQ_SUM_AMOUNT_12, 0) + NVL(ORDER_DIFF_SUM_AMOUNT_12, 0) <![CDATA[<]]> 0
+		            ) THEN '1'
+		        WHEN SEC_TOTAL_CHK_IND = '1'
+		            AND (NVL(BUDGET_AMOUNT_T, 0) + NVL(DIFF_MAX_AMOUNT, 0))
+		                                - NVL(PUR_REQ_SUM_AMOUNT_T, 0) + NVL(ORDER_DIFF_SUM_AMOUNT_T, 0) <![CDATA[<]]> 0
+		            THEN '1'
+		        WHEN SEC_TOTAL_CHK_IND IS NULL
+		            THEN '1'
+		        ELSE '0'
+		    END as budgetOverFlg
+            , budget_amount_f_t
+            , budget_amount_m_t
+		    , accept_sum_amount_t
+            , order_sum_amount_t
+            , RESULTS_LAST_UPD_DATE
+            , BUDGET_LAST_UPD_DATE
+            , SECTION_NOTE
+		FROM
+		    (
+		        SELECT
+		            T_SECTION_BUDGET.COMPANY_CD
+		            , T_SECTION_BUDGET.SECTION_PLACE_CD
+		            , T_SECTION_BUDGET.SECTION_CD
+		            , T_SECTION_BUDGET.SUBJECT_CD
+		            , T_SECTION_BUDGET.BUDGET_YEAR
+		            , T_SECTION_BUDGET.SECTION_NAME
+		            , T_SECTION_BUDGET.SUBJECT_NAME
+		            , T_SECTION_BUDGET.BUDGET_NAME
+		            , T_SECTION_BUDGET.CURRENCY_CD
+		            , T_SECTION_BUDGET.SEC_TOTAL_CHK_IND
+		            , T_SECTION_BUDGET.START_MONTH
+		            , T_SECTION_BUDGET.START_YEAR_MONTH
+		            , T_SECTION_BUDGET.DIFF_MAX_AMOUNT
+		            , T_SECTION_BUDGET.BUDGET_AMOUNT_1
+		            , T_SECTION_BUDGET.BUDGET_AMOUNT_2
+		            , T_SECTION_BUDGET.BUDGET_AMOUNT_3
+		            , T_SECTION_BUDGET.BUDGET_AMOUNT_4
+		            , T_SECTION_BUDGET.BUDGET_AMOUNT_5
+		            , T_SECTION_BUDGET.BUDGET_AMOUNT_6
+		            , T_SECTION_BUDGET.BUDGET_AMOUNT_7
+		            , T_SECTION_BUDGET.BUDGET_AMOUNT_8
+		            , T_SECTION_BUDGET.BUDGET_AMOUNT_9
+		            , T_SECTION_BUDGET.BUDGET_AMOUNT_10
+		            , T_SECTION_BUDGET.BUDGET_AMOUNT_11
+		            , T_SECTION_BUDGET.BUDGET_AMOUNT_12
+		            , T_SECTION_BUDGET.BUDGET_AMOUNT_T
+		            , T_SECTION_RESULTS.PUR_REQ_SUM_AMOUNT_1
+		            , T_SECTION_RESULTS.ORDER_DIFF_SUM_AMOUNT_1
+		            , T_SECTION_RESULTS.PUR_REQ_SUM_AMOUNT_2
+		            , T_SECTION_RESULTS.ORDER_DIFF_SUM_AMOUNT_2
+		            , T_SECTION_RESULTS.PUR_REQ_SUM_AMOUNT_3
+		            , T_SECTION_RESULTS.ORDER_DIFF_SUM_AMOUNT_3
+		            , T_SECTION_RESULTS.PUR_REQ_SUM_AMOUNT_4
+		            , T_SECTION_RESULTS.ORDER_DIFF_SUM_AMOUNT_4
+		            , T_SECTION_RESULTS.PUR_REQ_SUM_AMOUNT_5
+		            , T_SECTION_RESULTS.ORDER_DIFF_SUM_AMOUNT_5
+		            , T_SECTION_RESULTS.PUR_REQ_SUM_AMOUNT_6
+		            , T_SECTION_RESULTS.ORDER_DIFF_SUM_AMOUNT_6
+		            , T_SECTION_RESULTS.PUR_REQ_SUM_AMOUNT_7
+		            , T_SECTION_RESULTS.ORDER_DIFF_SUM_AMOUNT_7
+		            , T_SECTION_RESULTS.PUR_REQ_SUM_AMOUNT_8
+		            , T_SECTION_RESULTS.ORDER_DIFF_SUM_AMOUNT_8
+		            , T_SECTION_RESULTS.PUR_REQ_SUM_AMOUNT_9
+		            , T_SECTION_RESULTS.ORDER_DIFF_SUM_AMOUNT_9
+		            , T_SECTION_RESULTS.PUR_REQ_SUM_AMOUNT_10
+		            , T_SECTION_RESULTS.ORDER_DIFF_SUM_AMOUNT_10
+		            , T_SECTION_RESULTS.PUR_REQ_SUM_AMOUNT_11
+		            , T_SECTION_RESULTS.ORDER_DIFF_SUM_AMOUNT_11
+		            , T_SECTION_RESULTS.PUR_REQ_SUM_AMOUNT_12
+		            , T_SECTION_RESULTS.ORDER_DIFF_SUM_AMOUNT_12
+		            , T_SECTION_RESULTS.PUR_REQ_SUM_AMOUNT_T
+		            , T_SECTION_RESULTS.ORDER_DIFF_SUM_AMOUNT_T
+                    , t_section_results.accept_sum_amount_1
+                    , t_section_results.accept_sum_amount_2
+                    , t_section_results.accept_sum_amount_3
+                    , t_section_results.accept_sum_amount_4
+                    , t_section_results.accept_sum_amount_5
+                    , t_section_results.accept_sum_amount_6
+                    , t_section_results.accept_sum_amount_7
+                    , t_section_results.accept_sum_amount_8
+                    , t_section_results.accept_sum_amount_9
+                    , t_section_results.accept_sum_amount_10
+                    , t_section_results.accept_sum_amount_11
+                    , t_section_results.accept_sum_amount_12
+                    , t_section_budget.budget_amount_f_t
+                    , t_section_budget.budget_amount_m_t
+                    , t_section_results.accept_sum_amount_t
+                    , t_section_results.order_sum_amount_t
+		            , t_section_results.LAST_UPD_DATE RESULTS_LAST_UPD_DATE
+		            , t_section_budget.LAST_UPD_DATE BUDGET_LAST_UPD_DATE
+                    , T_SECTION_BUDGET.SECTION_NOTE
+                FROM
+                    T_SECTION_BUDGET
+                    LEFT OUTER JOIN
+                    T_SECTION_RESULTS
+                    ON
+                        T_SECTION_RESULTS.COMPANY_CD = T_SECTION_BUDGET.COMPANY_CD AND
+                        T_SECTION_RESULTS.SECTION_PLACE_CD = T_SECTION_BUDGET.SECTION_PLACE_CD AND
+                        T_SECTION_RESULTS.SECTION_CD = T_SECTION_BUDGET.SECTION_CD AND
+                        T_SECTION_RESULTS.SUBJECT_CD = T_SECTION_BUDGET.SUBJECT_CD AND
+                        T_SECTION_RESULTS.BUDGET_YEAR = T_SECTION_BUDGET.BUDGET_YEAR
+                WHERE
+                    T_SECTION_BUDGET.SUBJECT_CD <![CDATA[<>]]> '　'
+		        UNION ALL
+		        SELECT
+		            T_SECTION_BUDGET.COMPANY_CD
+		            , T_SECTION_BUDGET.SECTION_PLACE_CD
+		            , T_SECTION_BUDGET.SECTION_CD
+		            , MAX(T_SECTION_BUDGET.SUBJECT_CD)
+		            , T_SECTION_BUDGET.BUDGET_YEAR
+		            , MAX(T_SECTION_BUDGET.SECTION_NAME)
+		            , MAX(T_SECTION_BUDGET.SUBJECT_NAME)
+		            , MAX(T_SECTION_BUDGET.BUDGET_NAME)
+		            , MAX(T_SECTION_BUDGET.CURRENCY_CD)
+		            , MAX(T_SECTION_BUDGET.SEC_TOTAL_CHK_IND)
+		            , MAX(T_SECTION_BUDGET.START_MONTH)
+		            , MAX(T_SECTION_BUDGET.START_YEAR_MONTH)
+		            , MAX(T_SECTION_BUDGET.DIFF_MAX_AMOUNT)
+		            , MAX(T_SECTION_BUDGET.BUDGET_AMOUNT_1)
+		            , MAX(T_SECTION_BUDGET.BUDGET_AMOUNT_2)
+		            , MAX(T_SECTION_BUDGET.BUDGET_AMOUNT_3)
+		            , MAX(T_SECTION_BUDGET.BUDGET_AMOUNT_4)
+		            , MAX(T_SECTION_BUDGET.BUDGET_AMOUNT_5)
+		            , MAX(T_SECTION_BUDGET.BUDGET_AMOUNT_6)
+		            , MAX(T_SECTION_BUDGET.BUDGET_AMOUNT_7)
+		            , MAX(T_SECTION_BUDGET.BUDGET_AMOUNT_8)
+		            , MAX(T_SECTION_BUDGET.BUDGET_AMOUNT_9)
+		            , MAX(T_SECTION_BUDGET.BUDGET_AMOUNT_10)
+		            , MAX(T_SECTION_BUDGET.BUDGET_AMOUNT_11)
+		            , MAX(T_SECTION_BUDGET.BUDGET_AMOUNT_12)
+		            , MAX(T_SECTION_BUDGET.BUDGET_AMOUNT_T)
+		            , SUM(T_SECTION_RESULTS.PUR_REQ_SUM_AMOUNT_1)
+		            , SUM(T_SECTION_RESULTS.ORDER_DIFF_SUM_AMOUNT_1)
+		            , SUM(T_SECTION_RESULTS.PUR_REQ_SUM_AMOUNT_2)
+		            , SUM(T_SECTION_RESULTS.ORDER_DIFF_SUM_AMOUNT_2)
+		            , SUM(T_SECTION_RESULTS.PUR_REQ_SUM_AMOUNT_3)
+		            , SUM(T_SECTION_RESULTS.ORDER_DIFF_SUM_AMOUNT_3)
+		            , SUM(T_SECTION_RESULTS.PUR_REQ_SUM_AMOUNT_4)
+		            , SUM(T_SECTION_RESULTS.ORDER_DIFF_SUM_AMOUNT_4)
+		            , SUM(T_SECTION_RESULTS.PUR_REQ_SUM_AMOUNT_5)
+		            , SUM(T_SECTION_RESULTS.ORDER_DIFF_SUM_AMOUNT_5)
+		            , SUM(T_SECTION_RESULTS.PUR_REQ_SUM_AMOUNT_6)
+		            , SUM(T_SECTION_RESULTS.ORDER_DIFF_SUM_AMOUNT_6)
+		            , SUM(T_SECTION_RESULTS.PUR_REQ_SUM_AMOUNT_7)
+		            , SUM(T_SECTION_RESULTS.ORDER_DIFF_SUM_AMOUNT_7)
+		            , SUM(T_SECTION_RESULTS.PUR_REQ_SUM_AMOUNT_8)
+		            , SUM(T_SECTION_RESULTS.ORDER_DIFF_SUM_AMOUNT_8)
+		            , SUM(T_SECTION_RESULTS.PUR_REQ_SUM_AMOUNT_9)
+		            , SUM(T_SECTION_RESULTS.ORDER_DIFF_SUM_AMOUNT_9)
+		            , SUM(T_SECTION_RESULTS.PUR_REQ_SUM_AMOUNT_10)
+		            , SUM(T_SECTION_RESULTS.ORDER_DIFF_SUM_AMOUNT_10)
+		            , SUM(T_SECTION_RESULTS.PUR_REQ_SUM_AMOUNT_11)
+		            , SUM(T_SECTION_RESULTS.ORDER_DIFF_SUM_AMOUNT_11)
+		            , SUM(T_SECTION_RESULTS.PUR_REQ_SUM_AMOUNT_12)
+		            , SUM(T_SECTION_RESULTS.ORDER_DIFF_SUM_AMOUNT_12)
+		            , SUM(T_SECTION_RESULTS.PUR_REQ_SUM_AMOUNT_T)
+		            , SUM(T_SECTION_RESULTS.ORDER_DIFF_SUM_AMOUNT_T)
+                    , SUM(t_section_results.accept_sum_amount_1)
+                    , SUM(t_section_results.accept_sum_amount_2)
+                    , SUM(t_section_results.accept_sum_amount_3)
+                    , SUM(t_section_results.accept_sum_amount_4)
+                    , SUM(t_section_results.accept_sum_amount_5)
+                    , SUM(t_section_results.accept_sum_amount_6)
+                    , SUM(t_section_results.accept_sum_amount_7)
+                    , SUM(t_section_results.accept_sum_amount_8)
+                    , SUM(t_section_results.accept_sum_amount_9)
+                    , SUM(t_section_results.accept_sum_amount_10)
+                    , SUM(t_section_results.accept_sum_amount_11)
+                    , SUM(t_section_results.accept_sum_amount_12)
+                    , MAX(t_section_budget.budget_amount_f_t)
+                    , MAX(t_section_budget.budget_amount_m_t)
+                    , SUM(t_section_results.accept_sum_amount_t)
+                    , SUM(t_section_results.order_sum_amount_t)
+                    , MAX(t_section_results.LAST_UPD_DATE)
+                    , MAX(t_section_budget.LAST_UPD_DATE)
+                    , MAX(T_SECTION_BUDGET.SECTION_NOTE)
+                FROM
+                    T_SECTION_BUDGET
+                    LEFT OUTER JOIN
+                    T_SECTION_RESULTS
+                    ON
+		                T_SECTION_RESULTS.COMPANY_CD = T_SECTION_BUDGET.COMPANY_CD AND
+		                T_SECTION_RESULTS.SECTION_PLACE_CD = T_SECTION_BUDGET.SECTION_PLACE_CD AND
+		                T_SECTION_RESULTS.SECTION_CD = T_SECTION_BUDGET.SECTION_CD AND
+		                T_SECTION_RESULTS.BUDGET_YEAR = T_SECTION_BUDGET.BUDGET_YEAR
+                WHERE
+                    T_SECTION_BUDGET.SUBJECT_CD = '　'
+		        GROUP BY
+		            T_SECTION_BUDGET.COMPANY_CD, T_SECTION_BUDGET.SECTION_PLACE_CD, T_SECTION_BUDGET.SECTION_CD, T_SECTION_BUDGET.BUDGET_YEAR
+		        UNION ALL
+		        SELECT
+		            T_SECTION_RESULTS.COMPANY_CD
+		            , T_SECTION_RESULTS.SECTION_PLACE_CD
+		            , T_SECTION_RESULTS.SECTION_CD
+		            , T_SECTION_RESULTS.SUBJECT_CD
+		            , T_SECTION_RESULTS.BUDGET_YEAR
+		            , T_SECTION_RESULTS.SECTION_NAME
+		            , T_SECTION_RESULTS.SUBJECT_NAME
+		            , null
+		            , T_SECTION_RESULTS.CURRENCY_CD
+		            , null
+		            , T_SECTION_RESULTS.START_MONTH
+		            , T_SECTION_RESULTS.START_YEAR_MONTH
+		            , 0
+		            , 0
+		            , 0
+		            , 0
+		            , 0
+		            , 0
+		            , 0
+		            , 0
+		            , 0
+		            , 0
+		            , 0
+		            , 0
+		            , 0
+		            , 0
+		            , T_SECTION_RESULTS.PUR_REQ_SUM_AMOUNT_1
+		            , T_SECTION_RESULTS.ORDER_DIFF_SUM_AMOUNT_1
+		            , T_SECTION_RESULTS.PUR_REQ_SUM_AMOUNT_2
+		            , T_SECTION_RESULTS.ORDER_DIFF_SUM_AMOUNT_2
+		            , T_SECTION_RESULTS.PUR_REQ_SUM_AMOUNT_3
+		            , T_SECTION_RESULTS.ORDER_DIFF_SUM_AMOUNT_3
+		            , T_SECTION_RESULTS.PUR_REQ_SUM_AMOUNT_4
+		            , T_SECTION_RESULTS.ORDER_DIFF_SUM_AMOUNT_4
+		            , T_SECTION_RESULTS.PUR_REQ_SUM_AMOUNT_5
+		            , T_SECTION_RESULTS.ORDER_DIFF_SUM_AMOUNT_5
+		            , T_SECTION_RESULTS.PUR_REQ_SUM_AMOUNT_6
+		            , T_SECTION_RESULTS.ORDER_DIFF_SUM_AMOUNT_6
+		            , T_SECTION_RESULTS.PUR_REQ_SUM_AMOUNT_7
+		            , T_SECTION_RESULTS.ORDER_DIFF_SUM_AMOUNT_7
+		            , T_SECTION_RESULTS.PUR_REQ_SUM_AMOUNT_8
+		            , T_SECTION_RESULTS.ORDER_DIFF_SUM_AMOUNT_8
+		            , T_SECTION_RESULTS.PUR_REQ_SUM_AMOUNT_9
+		            , T_SECTION_RESULTS.ORDER_DIFF_SUM_AMOUNT_9
+		            , T_SECTION_RESULTS.PUR_REQ_SUM_AMOUNT_10
+		            , T_SECTION_RESULTS.ORDER_DIFF_SUM_AMOUNT_10
+		            , T_SECTION_RESULTS.PUR_REQ_SUM_AMOUNT_11
+		            , T_SECTION_RESULTS.ORDER_DIFF_SUM_AMOUNT_11
+		            , T_SECTION_RESULTS.PUR_REQ_SUM_AMOUNT_12
+		            , T_SECTION_RESULTS.ORDER_DIFF_SUM_AMOUNT_12
+		            , T_SECTION_RESULTS.PUR_REQ_SUM_AMOUNT_T
+		            , T_SECTION_RESULTS.ORDER_DIFF_SUM_AMOUNT_T
+                    , t_section_results.accept_sum_amount_1
+                    , t_section_results.accept_sum_amount_2
+                    , t_section_results.accept_sum_amount_3
+                    , t_section_results.accept_sum_amount_4
+                    , t_section_results.accept_sum_amount_5
+                    , t_section_results.accept_sum_amount_6
+                    , t_section_results.accept_sum_amount_7
+                    , t_section_results.accept_sum_amount_8
+                    , t_section_results.accept_sum_amount_9
+                    , t_section_results.accept_sum_amount_10
+                    , t_section_results.accept_sum_amount_11
+                    , t_section_results.accept_sum_amount_12
+                    , 0
+                    , 0
+                    , t_section_results.accept_sum_amount_t
+                    , t_section_results.order_sum_amount_t
+                    , t_section_results.LAST_UPD_DATE
+                    , null
+                    , null
+                FROM
+                    T_SECTION_RESULTS
+                WHERE
+                    NOT EXISTS(
+                        SELECT *
+                        FROM T_SECTION_BUDGET
+                        WHERE
+                            T_SECTION_RESULTS.COMPANY_CD = T_SECTION_BUDGET.COMPANY_CD AND
+                            T_SECTION_RESULTS.SECTION_PLACE_CD = T_SECTION_BUDGET.SECTION_PLACE_CD AND
+                            T_SECTION_RESULTS.SECTION_CD = T_SECTION_BUDGET.SECTION_CD AND
+                            T_SECTION_RESULTS.SUBJECT_CD = T_SECTION_BUDGET.SUBJECT_CD AND
+                            T_SECTION_RESULTS.BUDGET_YEAR = T_SECTION_BUDGET.BUDGET_YEAR
+                	)
+                	AND
+					NOT EXISTS(
+                        SELECT *
+                        FROM T_SECTION_BUDGET
+                        WHERE
+                            T_SECTION_RESULTS.COMPANY_CD = T_SECTION_BUDGET.COMPANY_CD AND
+                            T_SECTION_RESULTS.SECTION_PLACE_CD = T_SECTION_BUDGET.SECTION_PLACE_CD AND
+                            T_SECTION_RESULTS.SECTION_CD = T_SECTION_BUDGET.SECTION_CD AND
+			   				T_SECTION_BUDGET.SUBJECT_CD = '　' AND
+                            T_SECTION_RESULTS.BUDGET_YEAR = T_SECTION_BUDGET.BUDGET_YEAR
+	               )
+		    )
+	   )
+    </sql>
+    <resultMap id="listKeyIdentity_Map" type="fw.domain.options.budget.sectionbudget.SectionBudgetIdentify">
+		<id column="COMPANY_CD" property="section.company.companyCd" />
+		<id column="SECTION_PLACE_CD" property="section.sectionPlace.sectionPlaceCd" />
+		<id column="SECTION_CD" property="section.sectionCd" />
+		<id column="SUBJECT_CD" property="subject.subjectCd" />
+		<id column="BUDGET_YEAR" property="budgetYear" />
+    </resultMap>
+
+    <resultMap id="listPageItem_Map" type="fw.domain.options.budget.sectionbudgetlist.SectionBudgetListItem">
+        <id column="COMPANY_CD" property="sectionBudget.sectionBudgetIdentify.section.company.companyCd" />
+        <id column="COMPANY_CD" property="sectionBudgetIdentify.section.company.companyCd" />
+        <id column="SECTION_PLACE_CD" property="sectionBudget.sectionBudgetIdentify.section.sectionPlace.sectionPlaceCd" />
+        <id column="SECTION_PLACE_CD" property="sectionBudgetIdentify.section.sectionPlace.sectionPlaceCd" />
+        <id column="SECTION_CD" property="sectionBudget.sectionBudgetIdentify.section.sectionCd" />
+        <id column="SECTION_CD" property="sectionBudgetIdentify.section.sectionCd" />
+        <id column="SECTION_NAME" property="sectionBudget.sectionBudgetIdentify.section.sectionName" />
+        <id column="SUBJECT_CD" property="sectionBudget.sectionBudgetIdentify.subject.subjectCd" />
+        <id column="SUBJECT_CD" property="sectionBudgetIdentify.subject.subjectCd" />
+        <id column="SUBJECT_NAME" property="sectionBudget.sectionBudgetIdentify.subject.subjectName" />
+        <id column="BUDGET_YEAR" property="sectionBudget.sectionBudgetIdentify.budgetYear" />
+        <id column="BUDGET_YEAR" property="sectionBudgetIdentify.budgetYear" />
+        <id column="BUDGET_NAME" property="sectionBudget.budgetName" />
+        <id column="CURRENCY_CD" property="sectionResults.currency.currencyCd" />
+        <id column="BUDGET_AMOUNT_F_T" property="sectionBudget.budgetAmountFT.amount" />
+        <id column="BUDGET_AMOUNT_M_T" property="sectionBudget.budgetAmountMT.amount" />
+        <id column="BUDGET_AMOUNT_T" property="sectionBudget.budgetAmountT.amount" />
+        <id column="ACCEPT_SUM_AMOUNT_T" property="sectionResults.acceptSumAmountT.amount" />
+        <id column="BUDGET_BAL_RES" property="budgetBalRes.amount" />
+        <id column="PROGRESS_RATE_RES" property="progressRateRes.vol" />
+        <id column="PUR_REQ_SUM_AMOUNT_T" property="sectionResults.purReqSumAmountT.amount" />
+        <id column="BUDGET_BAL_EST" property="budgetBalEst.amount" />
+        <id column="PROGRESS_RATE_EST" property="progressRateEst.vol" />
+        <id column="ORDER_SUM_AMOUNT_T" property="sectionResults.orderSumAmountT.amount" />
+        <id column="ORDER_DIFF_SUM_AMOUNT_T" property="sectionResults.orderDiffSumAmountT.amount" />
+        <id column="ACCEPT_SUM_AMOUNT_1" property="acceptSumAmount1.amount" />
+        <id column="ACCEPT_SUM_AMOUNT_2" property="acceptSumAmount2.amount" />
+        <id column="ACCEPT_SUM_AMOUNT_3" property="acceptSumAmount3.amount" />
+        <id column="ACCEPT_SUM_AMOUNT_4" property="acceptSumAmount4.amount" />
+        <id column="ACCEPT_SUM_AMOUNT_5" property="acceptSumAmount5.amount" />
+        <id column="ACCEPT_SUM_AMOUNT_6" property="acceptSumAmount6.amount" />
+        <id column="ACCEPT_SUM_AMOUNT_7" property="acceptSumAmount7.amount" />
+        <id column="ACCEPT_SUM_AMOUNT_8" property="acceptSumAmount8.amount" />
+        <id column="ACCEPT_SUM_AMOUNT_9" property="acceptSumAmount9.amount" />
+        <id column="ACCEPT_SUM_AMOUNT_10" property="acceptSumAmount10.amount" />
+        <id column="ACCEPT_SUM_AMOUNT_11" property="acceptSumAmount11.amount" />
+        <id column="ACCEPT_SUM_AMOUNT_12" property="acceptSumAmount12.amount" />
+        <id column="BUDGET_AMOUNT_1" property="sectionBudget.budgetAmount1.amount" />
+        <id column="BUDGET_AMOUNT_2" property="sectionBudget.budgetAmount2.amount" />
+        <id column="BUDGET_AMOUNT_3" property="sectionBudget.budgetAmount3.amount" />
+        <id column="BUDGET_AMOUNT_4" property="sectionBudget.budgetAmount4.amount" />
+        <id column="BUDGET_AMOUNT_5" property="sectionBudget.budgetAmount5.amount" />
+        <id column="BUDGET_AMOUNT_6" property="sectionBudget.budgetAmount6.amount" />
+        <id column="BUDGET_AMOUNT_7" property="sectionBudget.budgetAmount7.amount" />
+        <id column="BUDGET_AMOUNT_8" property="sectionBudget.budgetAmount8.amount" />
+        <id column="BUDGET_AMOUNT_9" property="sectionBudget.budgetAmount9.amount" />
+        <id column="BUDGET_AMOUNT_10" property="sectionBudget.budgetAmount10.amount" />
+        <id column="BUDGET_AMOUNT_11" property="sectionBudget.budgetAmount11.amount" />
+        <id column="BUDGET_AMOUNT_12" property="sectionBudget.budgetAmount12.amount" />
+        <id column="SEC_TOTAL_CHK_IND" property="sectionBudget.secTotalChkInd" />
+        <id column="SEC_TOTAL_CHK" property="sectionBudget.secTotalChk" />
+        <id column="DIFF_MAX_AMOUNT" property="sectionBudget.diffMaxAmount.amount" />
+        <id column="START_MONTH" property="sectionBudget.startMonth" />
+        <id column="RESULTS_LAST_UPD_DATE" property="sectionResults.sectionResultsIdentify.lastUpdDate" />
+        <id column="BUDGET_LAST_UPD_DATE" property="sectionBudget.sectionBudgetIdentify.lastUpdDate" />
+        <id column="budgetOverFlg" property="budgetOverFlg" />
+        <id column="SECTION_NOTE" property="sectionBudget.notes.comment" />
+    </resultMap>
+
+    <select id="listKeyIdentity"
+        parameterType="fw.domain.options.budget.sectionbudgetlist.SectionBudgetListSearchCondition"
+        resultMap="listKeyIdentity_Map">
+        <include refid="pageHeader"/>
+        <include refid="listKeyIdentitySql"/>
+        <include refid="pageFooder"/>
+        ORDER BY ${searchCondition.columnOrder.columnOrder()}
+    </select>
+
+    <sql id="listKeyIdentitySql">
+        SELECT
+            company_cd,
+            section_place_cd,
+            section_cd,
+            section_name,
+            subject_cd,
+            subject_name,
+            budget_year,
+            budget_name,
+            currency_cd,
+            NVL(budget_amount_f_t, 0) budget_amount_f_t,
+            NVL(budget_amount_m_t, 0) budget_amount_m_t,
+            NVL(budget_amount_t, 0) budget_amount_t,
+            NVL(accept_sum_amount_t, 0) accept_sum_amount_t,
+            NVL(pur_req_sum_amount_t, 0) pur_req_sum_amount_t,
+            NVL(order_sum_amount_t, 0) order_sum_amount_t,
+            NVL(order_diff_sum_amount_t, 0) order_diff_sum_amount_t,
+            sec_total_chk_ind,
+            sec_total_chk_ind_lang.code_name sec_total_chk,
+            NVL(diff_max_amount, 0) diff_max_amount,
+            NVL(budget_amount_t, 0) - NVL(accept_sum_amount_t, 0) AS budget_bal_res,
+            TO_CHAR(
+                ${@fw.common.util.options.budget.OptionBudgetUtil@getFrcIndSqlFuncName(@fw.security.SecurityUtil@getCompanyCd())}(
+                    NVL(
+                        NVL(accept_sum_amount_t, 0) / NULLIF(budget_amount_t, 0), 0) * 100), '999,999,999,999,990') as progress_rate_res,
+            NVL(budget_amount_t, 0) - NVL(pur_req_sum_amount_t, 0) + NVL(order_diff_sum_amount_t, 0) AS budget_bal_est,
+            TO_CHAR(
+                ${@fw.common.util.options.budget.OptionBudgetUtil@getFrcIndSqlFuncName(@fw.security.SecurityUtil@getCompanyCd())}(
+                    NVL(
+                        (NVL(pur_req_sum_amount_t, 0) - NVL(order_diff_sum_amount_t, 0)) / NULLIF(budget_amount_t, 0), 0) * 100), '999,999,999,999,990') as progress_rate_est,
+            budgetOverFlg
+            , RESULTS_LAST_UPD_DATE
+            , BUDGET_LAST_UPD_DATE
+            , NVL(BUDGET_AMOUNT_1, 0) BUDGET_AMOUNT_1
+            , NVL(BUDGET_AMOUNT_2, 0) BUDGET_AMOUNT_2
+            , NVL(BUDGET_AMOUNT_3, 0) BUDGET_AMOUNT_3
+            , NVL(BUDGET_AMOUNT_4, 0) BUDGET_AMOUNT_4
+            , NVL(BUDGET_AMOUNT_5, 0) BUDGET_AMOUNT_5
+            , NVL(BUDGET_AMOUNT_6, 0) BUDGET_AMOUNT_6
+            , NVL(BUDGET_AMOUNT_7, 0) BUDGET_AMOUNT_7
+            , NVL(BUDGET_AMOUNT_8, 0) BUDGET_AMOUNT_8
+            , NVL(BUDGET_AMOUNT_9, 0) BUDGET_AMOUNT_9
+            , NVL(BUDGET_AMOUNT_10, 0) BUDGET_AMOUNT_10
+            , NVL(BUDGET_AMOUNT_11, 0) BUDGET_AMOUNT_11
+            , NVL(BUDGET_AMOUNT_12, 0) BUDGET_AMOUNT_12
+	        , NVL(ACCEPT_SUM_AMOUNT_1, 0) ACCEPT_SUM_AMOUNT_1
+	        , NVL(ACCEPT_SUM_AMOUNT_2, 0) ACCEPT_SUM_AMOUNT_2
+	        , NVL(ACCEPT_SUM_AMOUNT_3, 0) ACCEPT_SUM_AMOUNT_3
+	        , NVL(ACCEPT_SUM_AMOUNT_4, 0) ACCEPT_SUM_AMOUNT_4
+	        , NVL(ACCEPT_SUM_AMOUNT_5, 0) ACCEPT_SUM_AMOUNT_5
+	        , NVL(ACCEPT_SUM_AMOUNT_6, 0) ACCEPT_SUM_AMOUNT_6
+	        , NVL(ACCEPT_SUM_AMOUNT_7, 0) ACCEPT_SUM_AMOUNT_7
+	        , NVL(ACCEPT_SUM_AMOUNT_8, 0) ACCEPT_SUM_AMOUNT_8
+	        , NVL(ACCEPT_SUM_AMOUNT_9, 0) ACCEPT_SUM_AMOUNT_9
+	        , NVL(ACCEPT_SUM_AMOUNT_10, 0) ACCEPT_SUM_AMOUNT_10
+	        , NVL(ACCEPT_SUM_AMOUNT_11, 0) ACCEPT_SUM_AMOUNT_11
+	        , NVL(ACCEPT_SUM_AMOUNT_12, 0) ACCEPT_SUM_AMOUNT_12
+	        , SECTION_NOTE
+            , START_MONTH
+        FROM
+            <include refid="sectionBudgetTable"/> sectionBudgetTable
+            LEFT OUTER JOIN
+                m_code_name_lang SEC_TOTAL_CHK_IND_LANG
+            ON
+                sectionBudgetTable.SEC_TOTAL_CHK_IND = SEC_TOTAL_CHK_IND_LANG.CODE_VALUE AND
+                'SEC_TOTAL_CHK_IND' = SEC_TOTAL_CHK_IND_LANG.CODE_KEY AND
+                '${@fw.security.SecurityUtil@getUseLanguageIndByEscapeSql()}' = SEC_TOTAL_CHK_IND_LANG.LANGUAGE_IND
+        <where>
+            <include refid="listKeyWhereCondition"/>
+        </where>
+        ORDER BY ${searchCondition.columnOrder.columnOrder()}
+    </sql>
+
+    <select id="listPageItem"
+        parameterType="fw.domain.options.budget.sectionbudgetlist.SectionBudgetListSearchCondition"
+        resultMap="listPageItem_Map">
+        <include refid="pageHeader"/>
+        <include refid="listPageItemSql"/>
+        <where>
+            <include refid="keyWhereCondition"/>
+        </where>
+        <include refid="pageFooder"/>
+        ORDER BY ${searchCondition.columnOrder.columnOrder()}
+    </select>
+
+    <sql id="listPageItemSql">
+        SELECT
+            company_cd,
+            section_place_cd,
+            section_cd,
+            section_name,
+            ltrim(subject_cd, '　') subject_cd,
+            subject_name,
+            budget_year,
+            budget_name,
+            currency_cd,
+            NVL(budget_amount_f_t, 0) budget_amount_f_t,
+            NVL(budget_amount_m_t, 0) budget_amount_m_t,
+            NVL(budget_amount_t, 0) budget_amount_t,
+            NVL(accept_sum_amount_t, 0) accept_sum_amount_t,
+            NVL(pur_req_sum_amount_t, 0) pur_req_sum_amount_t,
+            NVL(order_sum_amount_t, 0) order_sum_amount_t,
+            NVL(order_diff_sum_amount_t, 0) order_diff_sum_amount_t,
+            sec_total_chk_ind,
+            sec_total_chk,
+            NVL(diff_max_amount, 0) diff_max_amount,
+            NVL(budget_bal_res, 0) budget_bal_res,
+            NVL(progress_rate_res, 0) progress_rate_res,
+            NVL(budget_bal_est, 0) budget_bal_est,
+            NVL(progress_rate_est, 0) progress_rate_est,
+            budgetOverFlg
+            , RESULTS_LAST_UPD_DATE
+            , BUDGET_LAST_UPD_DATE
+            , NVL(BUDGET_AMOUNT_1, 0) BUDGET_AMOUNT_1
+            , NVL(BUDGET_AMOUNT_2, 0) BUDGET_AMOUNT_2
+            , NVL(BUDGET_AMOUNT_3, 0) BUDGET_AMOUNT_3
+            , NVL(BUDGET_AMOUNT_4, 0) BUDGET_AMOUNT_4
+            , NVL(BUDGET_AMOUNT_5, 0) BUDGET_AMOUNT_5
+            , NVL(BUDGET_AMOUNT_6, 0) BUDGET_AMOUNT_6
+            , NVL(BUDGET_AMOUNT_7, 0) BUDGET_AMOUNT_7
+            , NVL(BUDGET_AMOUNT_8, 0) BUDGET_AMOUNT_8
+            , NVL(BUDGET_AMOUNT_9, 0) BUDGET_AMOUNT_9
+            , NVL(BUDGET_AMOUNT_10, 0) BUDGET_AMOUNT_10
+            , NVL(BUDGET_AMOUNT_11, 0) BUDGET_AMOUNT_11
+            , NVL(BUDGET_AMOUNT_12, 0) BUDGET_AMOUNT_12
+            , NVL(ACCEPT_SUM_AMOUNT_1, 0) ACCEPT_SUM_AMOUNT_1
+            , NVL(ACCEPT_SUM_AMOUNT_2, 0) ACCEPT_SUM_AMOUNT_2
+            , NVL(ACCEPT_SUM_AMOUNT_3, 0) ACCEPT_SUM_AMOUNT_3
+            , NVL(ACCEPT_SUM_AMOUNT_4, 0) ACCEPT_SUM_AMOUNT_4
+            , NVL(ACCEPT_SUM_AMOUNT_5, 0) ACCEPT_SUM_AMOUNT_5
+            , NVL(ACCEPT_SUM_AMOUNT_6, 0) ACCEPT_SUM_AMOUNT_6
+            , NVL(ACCEPT_SUM_AMOUNT_7, 0) ACCEPT_SUM_AMOUNT_7
+            , NVL(ACCEPT_SUM_AMOUNT_8, 0) ACCEPT_SUM_AMOUNT_8
+            , NVL(ACCEPT_SUM_AMOUNT_9, 0) ACCEPT_SUM_AMOUNT_9
+            , NVL(ACCEPT_SUM_AMOUNT_10, 0) ACCEPT_SUM_AMOUNT_10
+            , NVL(ACCEPT_SUM_AMOUNT_11, 0) ACCEPT_SUM_AMOUNT_11
+            , NVL(ACCEPT_SUM_AMOUNT_12, 0) ACCEPT_SUM_AMOUNT_12
+            , SECTION_NOTE
+            , START_MONTH
+        FROM
+        (
+           <include refid="listKeyIdentitySql"/>
+        )
+    </sql>
+
+    <select id="sectionBudgetListDownload"
+    parameterType="fw.domain.options.budget.sectionbudgetlist.SectionBudgetListSearchCondition"
+        resultMap="listPageItem_Map">
+        <include refid="pageHeader"/>
+        <include refid="listPageItemSql"/>
+        <include refid="pageRoot"/>
+        ORDER BY ${searchCondition.columnOrder.columnOrder()}
+    </select>
+
+    <sql id="pageHeader">
+       SELECT * FROM (
+    </sql>
+    <sql id="pageFooder">
+       )
+    </sql>
+    <sql id="pageRoot">
+        ) WHERE  ROWNUM &lt;=${@fw.common.util.PropertiesUtil@getLong("DOWNLOAD_MAXCNT")}
+    </sql>
+    <sql id="sysYmd">
+        (SELECT TO_CHAR(SYSDATE, 'yyyymmdd') FROM dual)
+    </sql>
+
+    <resultMap type="fw.domain.options.budget.sectionbudget.SectionBudget" id="SectionBudget_Map">
+        <id column="COMPANY_CD" property="sectionBudgetIdentify.section.company.companyCd" />
+        <id column="SECTION_PLACE_CD" property="sectionBudgetIdentify.section.sectionPlace.sectionPlaceCd" />
+        <id column="SECTION_CD" property="sectionBudgetIdentify.section.sectionCd" />
+        <id column="SUBJECT_CD" property="sectionBudgetIdentify.subject.subjectCd" />
+        <id column="BUDGET_YEAR" property="sectionBudgetIdentify.budgetYear" />
+        <id column="SECTION_NAME" property="sectionBudgetIdentify.section.sectionName" />
+        <id column="SUBJECT_NAME" property="sectionBudgetIdentify.subject.subjectName" />
+        <id column="BUDGET_NAME" property="budgetName" />
+        <id column="CURRENCY_CD" property="currency.currencyCd" />
+        <id column="SEC_TOTAL_CHK_IND" property="secTotalChkInd" />
+        <id column="SECTION_NOTE" property="notes.comment" />
+        <id column="START_MONTH" property="startMonth" />
+        <id column="DIFF_MAX_AMOUNT" property="diffMaxAmount.amount" />
+        <id column="BUDGET_AMOUNT_F_1" property="budgetAmountF1.amount" />
+        <id column="BUDGET_AMOUNT_M_1" property="budgetAmountM1.amount" />
+        <id column="BUDGET_AMOUNT_1" property="budgetAmount1.amount" />
+        <id column="BUDGET_AMOUNT_F_2" property="budgetAmountF2.amount" />
+        <id column="BUDGET_AMOUNT_M_2" property="budgetAmountM2.amount" />
+        <id column="BUDGET_AMOUNT_2" property="budgetAmount2.amount" />
+        <id column="BUDGET_AMOUNT_F_3" property="budgetAmountF3.amount" />
+        <id column="BUDGET_AMOUNT_M_3" property="budgetAmountM3.amount" />
+        <id column="BUDGET_AMOUNT_3" property="budgetAmount3.amount" />
+        <id column="BUDGET_AMOUNT_F_4" property="budgetAmountF4.amount" />
+        <id column="BUDGET_AMOUNT_M_4" property="budgetAmountM4.amount" />
+        <id column="BUDGET_AMOUNT_4" property="budgetAmount4.amount" />
+        <id column="BUDGET_AMOUNT_F_5" property="budgetAmountF5.amount" />
+        <id column="BUDGET_AMOUNT_M_5" property="budgetAmountM5.amount" />
+        <id column="BUDGET_AMOUNT_5" property="budgetAmount5.amount" />
+        <id column="BUDGET_AMOUNT_F_6" property="budgetAmountF6.amount" />
+        <id column="BUDGET_AMOUNT_M_6" property="budgetAmountM6.amount" />
+        <id column="BUDGET_AMOUNT_6" property="budgetAmount6.amount" />
+        <id column="BUDGET_AMOUNT_F_7" property="budgetAmountF7.amount" />
+        <id column="BUDGET_AMOUNT_M_7" property="budgetAmountM7.amount" />
+        <id column="BUDGET_AMOUNT_7" property="budgetAmount7.amount" />
+        <id column="BUDGET_AMOUNT_F_8" property="budgetAmountF8.amount" />
+        <id column="BUDGET_AMOUNT_M_8" property="budgetAmountM8.amount" />
+        <id column="BUDGET_AMOUNT_8" property="budgetAmount8.amount" />
+        <id column="BUDGET_AMOUNT_F_9" property="budgetAmountF9.amount" />
+        <id column="BUDGET_AMOUNT_M_9" property="budgetAmountM9.amount" />
+        <id column="BUDGET_AMOUNT_9" property="budgetAmount9.amount" />
+        <id column="BUDGET_AMOUNT_F_10" property="budgetAmountF10.amount" />
+        <id column="BUDGET_AMOUNT_M_10" property="budgetAmountM10.amount" />
+        <id column="BUDGET_AMOUNT_10" property="budgetAmount10.amount" />
+        <id column="BUDGET_AMOUNT_F_11" property="budgetAmountF11.amount" />
+        <id column="BUDGET_AMOUNT_M_11" property="budgetAmountM11.amount" />
+        <id column="BUDGET_AMOUNT_11" property="budgetAmount11.amount" />
+        <id column="BUDGET_AMOUNT_F_12" property="budgetAmountF12.amount" />
+        <id column="BUDGET_AMOUNT_M_12" property="budgetAmountM12.amount" />
+        <id column="BUDGET_AMOUNT_12" property="budgetAmount12.amount" />
+        <id column="BUDGET_AMOUNT_F_T" property="budgetAmountFT.amount" />
+        <id column="BUDGET_AMOUNT_M_T" property="budgetAmountMT.amount" />
+        <id column="BUDGET_AMOUNT_T" property="budgetAmountT.amount" />
+        <id column="LAST_UPD_DATE" property="sectionBudgetIdentify.lastUpdDate" />
+        <id column="CURRENCY_CD" property="currency.currencyCd" />
+        <id column="CURRENCY_MARK" property="currency.currencyMark" />
+    </resultMap>
+
+    <select id="searchSectionBudget"
+        parameterType="fw.domain.options.budget.sectionbudget.SectionBudgetIdentify"
+        resultMap="SectionBudget_Map">
+        SELECT
+            T_SECTION_BUDGET.COMPANY_CD
+            , T_SECTION_BUDGET.SECTION_PLACE_CD
+            , T_SECTION_BUDGET.SECTION_CD
+            , T_SECTION_BUDGET.SUBJECT_CD
+            , T_SECTION_BUDGET.BUDGET_YEAR
+            , T_SECTION_BUDGET.SECTION_NAME
+            , T_SECTION_BUDGET.SUBJECT_NAME
+            , T_SECTION_BUDGET.BUDGET_NAME
+            , T_SECTION_BUDGET.CURRENCY_CD
+            , T_SECTION_BUDGET.SEC_TOTAL_CHK_IND
+            , T_SECTION_BUDGET.DIFF_MAX_AMOUNT
+            , T_SECTION_BUDGET.SECTION_NOTE
+            , T_SECTION_BUDGET.START_MONTH
+		    , T_SECTION_BUDGET.BUDGET_AMOUNT_F_1
+		    , T_SECTION_BUDGET.BUDGET_AMOUNT_M_1
+		    , T_SECTION_BUDGET.BUDGET_AMOUNT_1
+		    , T_SECTION_BUDGET.BUDGET_AMOUNT_F_2
+		    , T_SECTION_BUDGET.BUDGET_AMOUNT_M_2
+		    , T_SECTION_BUDGET.BUDGET_AMOUNT_2
+		    , T_SECTION_BUDGET.BUDGET_AMOUNT_F_3
+		    , T_SECTION_BUDGET.BUDGET_AMOUNT_M_3
+		    , T_SECTION_BUDGET.BUDGET_AMOUNT_3
+		    , T_SECTION_BUDGET.BUDGET_AMOUNT_F_4
+		    , T_SECTION_BUDGET.BUDGET_AMOUNT_M_4
+		    , T_SECTION_BUDGET.BUDGET_AMOUNT_4
+		    , T_SECTION_BUDGET.BUDGET_AMOUNT_F_5
+		    , T_SECTION_BUDGET.BUDGET_AMOUNT_M_5
+		    , T_SECTION_BUDGET.BUDGET_AMOUNT_5
+		    , T_SECTION_BUDGET.BUDGET_AMOUNT_F_6
+		    , T_SECTION_BUDGET.BUDGET_AMOUNT_M_6
+		    , T_SECTION_BUDGET.BUDGET_AMOUNT_6
+		    , T_SECTION_BUDGET.BUDGET_AMOUNT_F_7
+		    , T_SECTION_BUDGET.BUDGET_AMOUNT_M_7
+		    , T_SECTION_BUDGET.BUDGET_AMOUNT_7
+		    , T_SECTION_BUDGET.BUDGET_AMOUNT_F_8
+		    , T_SECTION_BUDGET.BUDGET_AMOUNT_M_8
+		    , T_SECTION_BUDGET.BUDGET_AMOUNT_8
+		    , T_SECTION_BUDGET.BUDGET_AMOUNT_F_9
+		    , T_SECTION_BUDGET.BUDGET_AMOUNT_M_9
+		    , T_SECTION_BUDGET.BUDGET_AMOUNT_9
+		    , T_SECTION_BUDGET.BUDGET_AMOUNT_F_10
+		    , T_SECTION_BUDGET.BUDGET_AMOUNT_M_10
+		    , T_SECTION_BUDGET.BUDGET_AMOUNT_10
+		    , T_SECTION_BUDGET.BUDGET_AMOUNT_F_11
+		    , T_SECTION_BUDGET.BUDGET_AMOUNT_M_11
+		    , T_SECTION_BUDGET.BUDGET_AMOUNT_11
+		    , T_SECTION_BUDGET.BUDGET_AMOUNT_F_12
+		    , T_SECTION_BUDGET.BUDGET_AMOUNT_M_12
+		    , T_SECTION_BUDGET.BUDGET_AMOUNT_12
+            , T_SECTION_BUDGET.BUDGET_AMOUNT_F_T
+            , T_SECTION_BUDGET.BUDGET_AMOUNT_M_T
+            , T_SECTION_BUDGET.BUDGET_AMOUNT_T
+            , T_SECTION_BUDGET.LAST_UPD_DATE
+            , T_SECTION_BUDGET.CURRENCY_CD
+            , M_CURRENCY.CURRENCY_MARK
+        FROM
+           T_SECTION_BUDGET
+           LEFT JOIN
+                M_CURRENCY
+            ON
+                T_SECTION_BUDGET.CURRENCY_CD = M_CURRENCY.CURRENCY_CD
+        <where>
+	        (
+	            T_SECTION_BUDGET.COMPANY_CD
+	            ,T_SECTION_BUDGET.SECTION_PLACE_CD
+	            ,T_SECTION_BUDGET.SECTION_CD
+	            ,T_SECTION_BUDGET.SUBJECT_CD
+	            ,T_SECTION_BUDGET.BUDGET_YEAR
+	            <if test="@org.apache.commons.lang.StringUtils@isNotBlank(lastUpdDate)">
+	                ,T_SECTION_BUDGET.LAST_UPD_DATE
+	            </if>
+	        ) =
+	        ((
+	            '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}'
+	            ,'${@fw.security.SecurityUtil@getSectionPlaceCdByEscapeSql()}'
+	            ,#{section.sectionCd}
+	            <if test="@org.apache.commons.lang.StringUtils@isNotBlank(subject.subjectCd)">
+	                ,#{subject.subjectCd}
+	            </if>
+	            <if test="@org.apache.commons.lang.StringUtils@isBlank(subject.subjectCd)">
+	                ,'　'
+	            </if>
+	            ,#{budgetYear}
+	            <if test="@org.apache.commons.lang.StringUtils@isNotBlank(lastUpdDate)">
+	                ,#{lastUpdDate}
+	            </if>
+	        ))
+        </where>
+    </select>
+
+    <resultMap type="fw.domain.options.budget.sectionbudget.SectionResults" id="SectionResults_Map">
+        <id column="COMPANY_CD" property="sectionResultsIdentify.section.company.companyCd" />
+        <id column="SECTION_PLACE_CD" property="sectionResultsIdentify.section.sectionPlace.sectionPlaceCd" />
+        <id column="SECTION_CD" property="sectionResultsIdentify.section.sectionCd" />
+        <id column="SUBJECT_CD" property="sectionResultsIdentify.subject.subjectCd" />
+        <id column="BUDGET_YEAR" property="sectionResultsIdentify.budgetYear" />
+        <id column="START_MONTH" property="startMonth" />
+        <id column="PUR_REQ_SUM_AMOUNT_T" property="purReqSumAmountT.amount" />
+        <id column="ORDER_DIFF_SUM_AMOUNT_T" property="orderDiffSumAmountT.amount" />
+        <id column="PUR_REQ_SUM_AMOUNT_1" property="purReqSumAmount1.amount" />
+        <id column="ORDER_DIFF_SUM_AMOUNT_1" property="orderDiffSumAmount1.amount" />
+        <id column="PUR_REQ_SUM_AMOUNT_2" property="purReqSumAmount2.amount" />
+        <id column="ORDER_DIFF_SUM_AMOUNT_2" property="orderDiffSumAmount2.amount" />
+        <id column="PUR_REQ_SUM_AMOUNT_3" property="purReqSumAmount3.amount" />
+        <id column="ORDER_DIFF_SUM_AMOUNT_3" property="orderDiffSumAmount3.amount" />
+        <id column="PUR_REQ_SUM_AMOUNT_4" property="purReqSumAmount4.amount" />
+        <id column="ORDER_DIFF_SUM_AMOUNT_4" property="orderDiffSumAmount4.amount" />
+        <id column="PUR_REQ_SUM_AMOUNT_5" property="purReqSumAmount5.amount" />
+        <id column="ORDER_DIFF_SUM_AMOUNT_5" property="orderDiffSumAmount5.amount" />
+        <id column="PUR_REQ_SUM_AMOUNT_6" property="purReqSumAmount6.amount" />
+        <id column="ORDER_DIFF_SUM_AMOUNT_6" property="orderDiffSumAmount6.amount" />
+        <id column="PUR_REQ_SUM_AMOUNT_7" property="purReqSumAmount7.amount" />
+        <id column="ORDER_DIFF_SUM_AMOUNT_7" property="orderDiffSumAmount7.amount" />
+        <id column="PUR_REQ_SUM_AMOUNT_8" property="purReqSumAmount8.amount" />
+        <id column="ORDER_DIFF_SUM_AMOUNT_8" property="orderDiffSumAmount8.amount" />
+        <id column="PUR_REQ_SUM_AMOUNT_9" property="purReqSumAmount9.amount" />
+        <id column="ORDER_DIFF_SUM_AMOUNT_9" property="orderDiffSumAmount9.amount" />
+        <id column="PUR_REQ_SUM_AMOUNT_10" property="purReqSumAmount10.amount" />
+        <id column="ORDER_DIFF_SUM_AMOUNT_10" property="orderDiffSumAmount10.amount" />
+        <id column="PUR_REQ_SUM_AMOUNT_11" property="purReqSumAmount11.amount" />
+        <id column="ORDER_DIFF_SUM_AMOUNT_11" property="orderDiffSumAmount11.amount" />
+        <id column="PUR_REQ_SUM_AMOUNT_12" property="purReqSumAmount12.amount" />
+        <id column="ORDER_DIFF_SUM_AMOUNT_12" property="orderDiffSumAmount12.amount" />
+    </resultMap>
+
+   <select id="searchSectionResults"
+        parameterType="fw.domain.options.budget.sectionbudget.SectionBudgetIdentify"
+        resultMap="SectionResults_Map">
+        SELECT
+            T_SECTION_RESULTS.COMPANY_CD
+            , T_SECTION_RESULTS.SECTION_PLACE_CD
+            , T_SECTION_RESULTS.SECTION_CD
+            , T_SECTION_RESULTS.BUDGET_YEAR
+            , T_SECTION_RESULTS.START_MONTH
+            , T_SECTION_RESULTS.SUBJECT_CD
+            , T_SECTION_RESULTS.PUR_REQ_SUM_AMOUNT_T
+            , T_SECTION_RESULTS.ORDER_DIFF_SUM_AMOUNT_T
+            , T_SECTION_RESULTS.PUR_REQ_SUM_AMOUNT_1
+            , T_SECTION_RESULTS.ORDER_DIFF_SUM_AMOUNT_1
+            , T_SECTION_RESULTS.PUR_REQ_SUM_AMOUNT_2
+            , T_SECTION_RESULTS.ORDER_DIFF_SUM_AMOUNT_2
+            , T_SECTION_RESULTS.PUR_REQ_SUM_AMOUNT_3
+            , T_SECTION_RESULTS.ORDER_DIFF_SUM_AMOUNT_3
+            , T_SECTION_RESULTS.PUR_REQ_SUM_AMOUNT_4
+            , T_SECTION_RESULTS.ORDER_DIFF_SUM_AMOUNT_4
+            , T_SECTION_RESULTS.PUR_REQ_SUM_AMOUNT_5
+            , T_SECTION_RESULTS.ORDER_DIFF_SUM_AMOUNT_5
+            , T_SECTION_RESULTS.PUR_REQ_SUM_AMOUNT_6
+            , T_SECTION_RESULTS.ORDER_DIFF_SUM_AMOUNT_6
+            , T_SECTION_RESULTS.PUR_REQ_SUM_AMOUNT_7
+            , T_SECTION_RESULTS.ORDER_DIFF_SUM_AMOUNT_7
+            , T_SECTION_RESULTS.PUR_REQ_SUM_AMOUNT_8
+            , T_SECTION_RESULTS.ORDER_DIFF_SUM_AMOUNT_8
+            , T_SECTION_RESULTS.PUR_REQ_SUM_AMOUNT_9
+            , T_SECTION_RESULTS.ORDER_DIFF_SUM_AMOUNT_9
+            , T_SECTION_RESULTS.PUR_REQ_SUM_AMOUNT_10
+            , T_SECTION_RESULTS.ORDER_DIFF_SUM_AMOUNT_10
+            , T_SECTION_RESULTS.PUR_REQ_SUM_AMOUNT_11
+            , T_SECTION_RESULTS.ORDER_DIFF_SUM_AMOUNT_11
+            , T_SECTION_RESULTS.PUR_REQ_SUM_AMOUNT_12
+            , T_SECTION_RESULTS.ORDER_DIFF_SUM_AMOUNT_12
+        FROM
+           T_SECTION_RESULTS
+        <where>
+            (
+                T_SECTION_RESULTS.COMPANY_CD
+                ,T_SECTION_RESULTS.SECTION_PLACE_CD
+                ,T_SECTION_RESULTS.SECTION_CD
+                ,T_SECTION_RESULTS.BUDGET_YEAR
+                <if test='@org.apache.commons.lang.StringUtils@isNotBlank(subject.subjectCd)'>
+                    <if test='!"　".equals(subject.subjectCd)'>
+		                ,T_SECTION_RESULTS.SUBJECT_CD
+                    </if>
+                </if>
+            ) =
+            ((
+                '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}'
+                ,'${@fw.security.SecurityUtil@getSectionPlaceCdByEscapeSql()}'
+                ,#{section.sectionCd}
+                ,#{budgetYear}
+                <if test='@org.apache.commons.lang.StringUtils@isNotBlank(subject.subjectCd)'>
+                    <if test='!"　".equals(subject.subjectCd)'>
+	                    ,#{subject.subjectCd}
+                    </if>
+                </if>
+            ))
+        </where>
+    </select>
+
+    <!-- 登録 -->
+    <insert id="insertSectionBudget" >
+		INSERT INTO T_SECTION_BUDGET
+		(
+		     COMPANY_CD
+		   , SECTION_PLACE_CD
+		   , SECTION_CD
+		   , SUBJECT_CD
+		   , BUDGET_YEAR
+		   , SECTION_NAME
+		   , SUBJECT_NAME
+		   , BUDGET_NAME
+		   , CURRENCY_CD
+		   , SEC_TOTAL_CHK_IND
+		   , DIFF_MAX_AMOUNT
+		   , SECTION_NOTE
+		   , START_MONTH
+		   , START_YEAR_MONTH
+		   , BUDGET_AMOUNT_F_1
+		   , BUDGET_AMOUNT_M_1
+		   , BUDGET_AMOUNT_1
+		   , BUDGET_AMOUNT_F_2
+		   , BUDGET_AMOUNT_M_2
+		   , BUDGET_AMOUNT_2
+		   , BUDGET_AMOUNT_F_3
+		   , BUDGET_AMOUNT_M_3
+		   , BUDGET_AMOUNT_3
+		   , BUDGET_AMOUNT_F_4
+		   , BUDGET_AMOUNT_M_4
+		   , BUDGET_AMOUNT_4
+		   , BUDGET_AMOUNT_F_5
+		   , BUDGET_AMOUNT_M_5
+		   , BUDGET_AMOUNT_5
+		   , BUDGET_AMOUNT_F_6
+		   , BUDGET_AMOUNT_M_6
+		   , BUDGET_AMOUNT_6
+		   , BUDGET_AMOUNT_F_7
+		   , BUDGET_AMOUNT_M_7
+		   , BUDGET_AMOUNT_7
+		   , BUDGET_AMOUNT_F_8
+		   , BUDGET_AMOUNT_M_8
+		   , BUDGET_AMOUNT_8
+		   , BUDGET_AMOUNT_F_9
+		   , BUDGET_AMOUNT_M_9
+		   , BUDGET_AMOUNT_9
+		   , BUDGET_AMOUNT_F_10
+		   , BUDGET_AMOUNT_M_10
+		   , BUDGET_AMOUNT_10
+		   , BUDGET_AMOUNT_F_11
+		   , BUDGET_AMOUNT_M_11
+		   , BUDGET_AMOUNT_11
+		   , BUDGET_AMOUNT_F_12
+		   , BUDGET_AMOUNT_M_12
+		   , BUDGET_AMOUNT_12
+		   , BUDGET_AMOUNT_F_T
+		   , BUDGET_AMOUNT_M_T
+		   , BUDGET_AMOUNT_T
+		   , AUTO_DELETE_FLG
+		   , AUTO_DELETE_DATE
+		   , LAST_UPD_DATE
+		   , LAST_UPD_COMPANY_CD
+		   , LAST_UPD_SECTION_CD
+		   , LAST_UPD_USER_ID
+		   , REG_DATE
+		   , REG_COMPANY_CD
+		   , REG_SECTION_CD
+		   , REG_USER_ID
+		)
+        VALUES (
+				#{sectionBudget.sectionBudgetIdentify.section.company.companyCd jdbcType=VARCHAR},
+				#{sectionBudget.sectionBudgetIdentify.section.sectionPlace.sectionPlaceCd jdbcType=VARCHAR},
+				#{sectionBudget.sectionBudgetIdentify.section.sectionCd jdbcType=VARCHAR},
+				NVL(#{sectionBudget.sectionBudgetIdentify.subject.subjectCd jdbcType=VARCHAR}, '　'),
+				#{sectionBudget.sectionBudgetIdentify.budgetYear jdbcType=VARCHAR},
+				#{sectionBudget.sectionBudgetIdentify.section.sectionName, jdbcType=VARCHAR},
+				#{sectionBudget.sectionBudgetIdentify.subject.subjectName, jdbcType=VARCHAR},
+				#{sectionBudget.budgetName, jdbcType=VARCHAR},
+				#{sectionBudget.currency.currencyCd, jdbcType=VARCHAR},
+				NVL(#{sectionBudget.secTotalChkInd, jdbcType=VARCHAR}, '0'),
+				NVL(#{sectionBudget.diffMaxAmount.amount, jdbcType=VARCHAR}, '0'),
+				#{sectionBudget.notes.comment, jdbcType=VARCHAR},
+				#{sectionBudget.startMonth, jdbcType=VARCHAR},
+				#{sectionBudget.calcStartYearMonth, jdbcType=VARCHAR},
+				NVL(#{sectionBudget.budgetAmountItems[0].budgetAmountF.amount, jdbcType=VARCHAR}, '0'),
+				NVL(#{sectionBudget.budgetAmountItems[0].budgetAmountM.amount, jdbcType=VARCHAR}, '0'),
+				NVL(#{sectionBudget.budgetAmountItems[0].budgetAmount.amount, jdbcType=VARCHAR}, '0'),
+				NVL(#{sectionBudget.budgetAmountItems[1].budgetAmountF.amount, jdbcType=VARCHAR}, '0'),
+				NVL(#{sectionBudget.budgetAmountItems[1].budgetAmountM.amount, jdbcType=VARCHAR}, '0'),
+				NVL(#{sectionBudget.budgetAmountItems[1].budgetAmount.amount, jdbcType=VARCHAR}, '0'),
+				NVL(#{sectionBudget.budgetAmountItems[2].budgetAmountF.amount, jdbcType=VARCHAR}, '0'),
+				NVL(#{sectionBudget.budgetAmountItems[2].budgetAmountM.amount, jdbcType=VARCHAR}, '0'),
+				NVL(#{sectionBudget.budgetAmountItems[2].budgetAmount.amount, jdbcType=VARCHAR}, '0'),
+				NVL(#{sectionBudget.budgetAmountItems[3].budgetAmountF.amount, jdbcType=VARCHAR}, '0'),
+				NVL(#{sectionBudget.budgetAmountItems[3].budgetAmountM.amount, jdbcType=VARCHAR}, '0'),
+				NVL(#{sectionBudget.budgetAmountItems[3].budgetAmount.amount, jdbcType=VARCHAR}, '0'),
+				NVL(#{sectionBudget.budgetAmountItems[4].budgetAmountF.amount, jdbcType=VARCHAR}, '0'),
+				NVL(#{sectionBudget.budgetAmountItems[4].budgetAmountM.amount, jdbcType=VARCHAR}, '0'),
+				NVL(#{sectionBudget.budgetAmountItems[4].budgetAmount.amount, jdbcType=VARCHAR}, '0'),
+				NVL(#{sectionBudget.budgetAmountItems[5].budgetAmountF.amount, jdbcType=VARCHAR}, '0'),
+				NVL(#{sectionBudget.budgetAmountItems[5].budgetAmountM.amount, jdbcType=VARCHAR}, '0'),
+				NVL(#{sectionBudget.budgetAmountItems[5].budgetAmount.amount, jdbcType=VARCHAR}, '0'),
+				NVL(#{sectionBudget.budgetAmountItems[6].budgetAmountF.amount, jdbcType=VARCHAR}, '0'),
+				NVL(#{sectionBudget.budgetAmountItems[6].budgetAmountM.amount, jdbcType=VARCHAR}, '0'),
+				NVL(#{sectionBudget.budgetAmountItems[6].budgetAmount.amount, jdbcType=VARCHAR}, '0'),
+				NVL(#{sectionBudget.budgetAmountItems[7].budgetAmountF.amount, jdbcType=VARCHAR}, '0'),
+				NVL(#{sectionBudget.budgetAmountItems[7].budgetAmountM.amount, jdbcType=VARCHAR}, '0'),
+				NVL(#{sectionBudget.budgetAmountItems[7].budgetAmount.amount, jdbcType=VARCHAR}, '0'),
+				NVL(#{sectionBudget.budgetAmountItems[8].budgetAmountF.amount, jdbcType=VARCHAR}, '0'),
+				NVL(#{sectionBudget.budgetAmountItems[8].budgetAmountM.amount, jdbcType=VARCHAR}, '0'),
+				NVL(#{sectionBudget.budgetAmountItems[8].budgetAmount.amount, jdbcType=VARCHAR}, '0'),
+				NVL(#{sectionBudget.budgetAmountItems[9].budgetAmountF.amount, jdbcType=VARCHAR}, '0'),
+				NVL(#{sectionBudget.budgetAmountItems[9].budgetAmountM.amount, jdbcType=VARCHAR}, '0'),
+				NVL(#{sectionBudget.budgetAmountItems[9].budgetAmount.amount, jdbcType=VARCHAR}, '0'),
+				NVL(#{sectionBudget.budgetAmountItems[10].budgetAmountF.amount, jdbcType=VARCHAR}, '0'),
+				NVL(#{sectionBudget.budgetAmountItems[10].budgetAmountM.amount, jdbcType=VARCHAR}, '0'),
+				NVL(#{sectionBudget.budgetAmountItems[10].budgetAmount.amount, jdbcType=VARCHAR}, '0'),
+				NVL(#{sectionBudget.budgetAmountItems[11].budgetAmountF.amount, jdbcType=VARCHAR}, '0'),
+				NVL(#{sectionBudget.budgetAmountItems[11].budgetAmountM.amount, jdbcType=VARCHAR}, '0'),
+				NVL(#{sectionBudget.budgetAmountItems[11].budgetAmount.amount, jdbcType=VARCHAR}, '0'),
+				NVL(#{sectionBudget.budgetAmountFT.amount, jdbcType=VARCHAR}, '0'),
+				NVL(#{sectionBudget.budgetAmountMT.amount, jdbcType=VARCHAR}, '0'),
+				NVL(#{sectionBudget.budgetAmountT.amount, jdbcType=VARCHAR}, '0'),
+				'0',
+				'',
+				'${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}',
+				'${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}',
+				'${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}',
+				'${@fw.security.SecurityUtil@getUserIdByEscapeSql()}',
+				'${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}',
+				'${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}',
+				'${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}',
+				'${@fw.security.SecurityUtil@getUserIdByEscapeSql()}')
+    </insert>
+    <!-- 削除 -->
+    <delete id="deleteSectionBudget" >
+        DELETE T_SECTION_BUDGET
+        <where>
+            <include refid="keyWhereSectionBudget"/>
+        </where>
+     </delete>
+    <!-- 更新 -->
+    <update id="updateSectionBudget">
+        UPDATE
+            T_SECTION_BUDGET
+        SET
+
+            BUDGET_NAME        =    #{sectionBudget.budgetName},
+            CURRENCY_CD        =    #{sectionBudget.currency.currencyCd},
+            SEC_TOTAL_CHK_IND  =    NVL(#{sectionBudget.secTotalChkInd}, '0'),
+            DIFF_MAX_AMOUNT    =    NVL(#{sectionBudget.diffMaxAmount.amount}, '0'),
+            SECTION_NOTE       =    #{sectionBudget.notes.comment},
+            BUDGET_AMOUNT_F_1  =    NVL(#{sectionBudget.budgetAmountItems[0].budgetAmountF.amount}, '0'),
+            BUDGET_AMOUNT_M_1  =    NVL(#{sectionBudget.budgetAmountItems[0].budgetAmountM.amount}, '0'),
+            BUDGET_AMOUNT_1    =    NVL(#{sectionBudget.budgetAmountItems[0].budgetAmount.amount}, '0'),
+            BUDGET_AMOUNT_F_2  =    NVL(#{sectionBudget.budgetAmountItems[1].budgetAmountF.amount}, '0'),
+            BUDGET_AMOUNT_M_2  =    NVL(#{sectionBudget.budgetAmountItems[1].budgetAmountM.amount}, '0'),
+            BUDGET_AMOUNT_2    =    NVL(#{sectionBudget.budgetAmountItems[1].budgetAmount.amount}, '0'),
+            BUDGET_AMOUNT_F_3  =    NVL(#{sectionBudget.budgetAmountItems[2].budgetAmountF.amount}, '0'),
+            BUDGET_AMOUNT_M_3  =    NVL(#{sectionBudget.budgetAmountItems[2].budgetAmountM.amount}, '0'),
+            BUDGET_AMOUNT_3    =    NVL(#{sectionBudget.budgetAmountItems[2].budgetAmount.amount}, '0'),
+            BUDGET_AMOUNT_F_4  =    NVL(#{sectionBudget.budgetAmountItems[3].budgetAmountF.amount}, '0'),
+            BUDGET_AMOUNT_M_4  =    NVL(#{sectionBudget.budgetAmountItems[3].budgetAmountM.amount}, '0'),
+            BUDGET_AMOUNT_4    =    NVL(#{sectionBudget.budgetAmountItems[3].budgetAmount.amount}, '0'),
+            BUDGET_AMOUNT_F_5  =    NVL(#{sectionBudget.budgetAmountItems[4].budgetAmountF.amount}, '0'),
+            BUDGET_AMOUNT_M_5  =    NVL(#{sectionBudget.budgetAmountItems[4].budgetAmountM.amount}, '0'),
+            BUDGET_AMOUNT_5    =    NVL(#{sectionBudget.budgetAmountItems[4].budgetAmount.amount}, '0'),
+            BUDGET_AMOUNT_F_6  =    NVL(#{sectionBudget.budgetAmountItems[5].budgetAmountF.amount}, '0'),
+            BUDGET_AMOUNT_M_6  =    NVL(#{sectionBudget.budgetAmountItems[5].budgetAmountM.amount}, '0'),
+            BUDGET_AMOUNT_6    =    NVL(#{sectionBudget.budgetAmountItems[5].budgetAmount.amount}, '0'),
+            BUDGET_AMOUNT_F_7  =    NVL(#{sectionBudget.budgetAmountItems[6].budgetAmountF.amount}, '0'),
+            BUDGET_AMOUNT_M_7  =    NVL(#{sectionBudget.budgetAmountItems[6].budgetAmountM.amount}, '0'),
+            BUDGET_AMOUNT_7    =    NVL(#{sectionBudget.budgetAmountItems[6].budgetAmount.amount}, '0'),
+            BUDGET_AMOUNT_F_8  =    NVL(#{sectionBudget.budgetAmountItems[7].budgetAmountF.amount}, '0'),
+            BUDGET_AMOUNT_M_8  =    NVL(#{sectionBudget.budgetAmountItems[7].budgetAmountM.amount}, '0'),
+            BUDGET_AMOUNT_8    =    NVL(#{sectionBudget.budgetAmountItems[7].budgetAmount.amount}, '0'),
+            BUDGET_AMOUNT_F_9  =    NVL(#{sectionBudget.budgetAmountItems[8].budgetAmountF.amount}, '0'),
+            BUDGET_AMOUNT_M_9  =    NVL(#{sectionBudget.budgetAmountItems[8].budgetAmountM.amount}, '0'),
+            BUDGET_AMOUNT_9    =    NVL(#{sectionBudget.budgetAmountItems[8].budgetAmount.amount}, '0'),
+            BUDGET_AMOUNT_F_10 =    NVL(#{sectionBudget.budgetAmountItems[9].budgetAmountF.amount}, '0'),
+            BUDGET_AMOUNT_M_10 =    NVL(#{sectionBudget.budgetAmountItems[9].budgetAmountM.amount}, '0'),
+            BUDGET_AMOUNT_10   =    NVL(#{sectionBudget.budgetAmountItems[9].budgetAmount.amount}, '0'),
+            BUDGET_AMOUNT_F_11 =    NVL(#{sectionBudget.budgetAmountItems[10].budgetAmountF.amount}, '0'),
+            BUDGET_AMOUNT_M_11 =    NVL(#{sectionBudget.budgetAmountItems[10].budgetAmountM.amount}, '0'),
+            BUDGET_AMOUNT_11   =    NVL(#{sectionBudget.budgetAmountItems[10].budgetAmount.amount}, '0'),
+            BUDGET_AMOUNT_F_12 =    NVL(#{sectionBudget.budgetAmountItems[11].budgetAmountF.amount}, '0'),
+            BUDGET_AMOUNT_M_12 =    NVL(#{sectionBudget.budgetAmountItems[11].budgetAmountM.amount}, '0'),
+            BUDGET_AMOUNT_12   =    NVL(#{sectionBudget.budgetAmountItems[11].budgetAmount.amount}, '0'),
+            BUDGET_AMOUNT_F_T  =    NVL(#{sectionBudget.budgetAmountFT.amount}, '0'),
+            BUDGET_AMOUNT_M_T  =    NVL(#{sectionBudget.budgetAmountMT.amount}, '0'),
+            BUDGET_AMOUNT_T    =    NVL(#{sectionBudget.budgetAmountT.amount}, '0'),
+            AUTO_DELETE_FLG    =    '0',
+            AUTO_DELETE_DATE   =    '',
+            LAST_UPD_DATE      =    '${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}',
+            LAST_UPD_COMPANY_CD=    '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}',
+            LAST_UPD_SECTION_CD=    '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}',
+            LAST_UPD_USER_ID   =    '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}'
+        <where>
+            <include refid="keyWhereSectionBudget"/>
+        </where>
+    </update>
+    <select id="searchSectionResultsForUpdate"
+        parameterType="fw.domain.options.budget.sectionbudget.SectionBudgetIdentify"
+        resultMap="SectionResults_Map">
+        SELECT
+            T_SECTION_RESULTS.COMPANY_CD
+            , T_SECTION_RESULTS.SECTION_PLACE_CD
+            , T_SECTION_RESULTS.SECTION_CD
+            , T_SECTION_RESULTS.BUDGET_YEAR
+            , T_SECTION_RESULTS.START_MONTH
+            , T_SECTION_RESULTS.SUBJECT_CD
+            , T_SECTION_RESULTS.PUR_REQ_SUM_AMOUNT_T
+            , T_SECTION_RESULTS.ORDER_DIFF_SUM_AMOUNT_T
+            , T_SECTION_RESULTS.PUR_REQ_SUM_AMOUNT_1
+            , T_SECTION_RESULTS.ORDER_DIFF_SUM_AMOUNT_1
+            , T_SECTION_RESULTS.PUR_REQ_SUM_AMOUNT_2
+            , T_SECTION_RESULTS.ORDER_DIFF_SUM_AMOUNT_2
+            , T_SECTION_RESULTS.PUR_REQ_SUM_AMOUNT_3
+            , T_SECTION_RESULTS.ORDER_DIFF_SUM_AMOUNT_3
+            , T_SECTION_RESULTS.PUR_REQ_SUM_AMOUNT_4
+            , T_SECTION_RESULTS.ORDER_DIFF_SUM_AMOUNT_4
+            , T_SECTION_RESULTS.PUR_REQ_SUM_AMOUNT_5
+            , T_SECTION_RESULTS.ORDER_DIFF_SUM_AMOUNT_5
+            , T_SECTION_RESULTS.PUR_REQ_SUM_AMOUNT_6
+            , T_SECTION_RESULTS.ORDER_DIFF_SUM_AMOUNT_6
+            , T_SECTION_RESULTS.PUR_REQ_SUM_AMOUNT_7
+            , T_SECTION_RESULTS.ORDER_DIFF_SUM_AMOUNT_7
+            , T_SECTION_RESULTS.PUR_REQ_SUM_AMOUNT_8
+            , T_SECTION_RESULTS.ORDER_DIFF_SUM_AMOUNT_8
+            , T_SECTION_RESULTS.PUR_REQ_SUM_AMOUNT_9
+            , T_SECTION_RESULTS.ORDER_DIFF_SUM_AMOUNT_9
+            , T_SECTION_RESULTS.PUR_REQ_SUM_AMOUNT_10
+            , T_SECTION_RESULTS.ORDER_DIFF_SUM_AMOUNT_10
+            , T_SECTION_RESULTS.PUR_REQ_SUM_AMOUNT_11
+            , T_SECTION_RESULTS.ORDER_DIFF_SUM_AMOUNT_11
+            , T_SECTION_RESULTS.PUR_REQ_SUM_AMOUNT_12
+            , T_SECTION_RESULTS.ORDER_DIFF_SUM_AMOUNT_12
+        FROM
+           T_SECTION_RESULTS
+        <where>
+            (
+                T_SECTION_RESULTS.COMPANY_CD
+                ,T_SECTION_RESULTS.SECTION_PLACE_CD
+                ,T_SECTION_RESULTS.SECTION_CD
+                ,T_SECTION_RESULTS.BUDGET_YEAR
+                <if test='@org.apache.commons.lang.StringUtils@isNotBlank(subject.subjectCd)'>
+                    <if test='!"　".equals(subject.subjectCd)'>
+                        ,T_SECTION_RESULTS.SUBJECT_CD
+                    </if>
+                </if>
+            ) =
+            ((
+                '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}'
+                ,'${@fw.security.SecurityUtil@getSectionPlaceCdByEscapeSql()}'
+                ,#{section.sectionCd}
+                ,#{budgetYear}
+                <if test='@org.apache.commons.lang.StringUtils@isNotBlank(subject.subjectCd)'>
+                    <if test='!"　".equals(subject.subjectCd)'>
+                        ,#{subject.subjectCd}
+                    </if>
+                </if>
+            ))
+        </where>
+        FOR UPDATE NOWAIT
+    </select>
+</mapper>

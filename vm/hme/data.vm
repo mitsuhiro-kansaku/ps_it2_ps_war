@@ -1,0 +1,2295 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<title>$!procuresuite</title>
+<meta http-equiv="Content-type" content="text/html; charset=UTF-8">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Content-script-type" content="text/javascript">
+<link id="CSS_FONT" rel="stylesheet" href="../include/FontS.css"
+    type="text/css">
+<link rel="stylesheet" href="../include/Layout.css" type="text/css">
+<link rel="stylesheet" href="../include/Color.css" type="text/css">
+<script language="javascript" type="text/javascript"
+    src="../include/common.js"></script>
+<script language="javascript" type="text/javascript"
+    src="../include/check.js"></script>
+<script language="javascript" type="text/javascript"
+    src="../include/date.js"></script>
+<script language="javascript" type="text/javascript" src="../include/jquery-1.7.2.min.js"></script>
+<script language="javascript" type="text/javascript">
+<!--
+    #parse("./common/common_js.vm")
+    parent.backUrl="../hme/data";
+    top.homeUrl="";
+
+    function onLoad() {
+        #optionalScriptList('PS_HOME_ONLOAD_PRE')
+        #if($authHelper.isNotEmpty())
+        getObj("refreshButton").focus();
+        #end
+        top.document.title = document.title;
+        top.setText("SectionName", "#jsEscape($!loginUser.user.section.company.companyName)" + " " + "#jsEscape($!sectioned.section.sectionPlace.sectionPlaceName)" + " " + "#jsEscape($!sectioned.section.sectionCd)" + " " + "#jsEscape($!sectioned.section.sectionName)");
+        top.setText("UserName", "#jsEscape($!loginUser.user.userName)");
+        top.setText("RoleName", "(" + "#jsEscape($!sectioned.roleItem.roleName)" + ")");
+        top.setText("NowDate", "#jsEscape($!loginDate)");
+        top.setMenuButton();
+        #if($!passwordChangeAlertValid)
+        if(confirm("#customMessageArgs('W049',["$!passwordValidDate"])")){
+            top.iframeChange('../lgn/login/PSLGN020','pageid','PSLGN020');
+            return;
+        }
+        #end
+        quickLinkCountByAjax();
+        #optionalScriptList('PS_HOME_ONLOAD_POST')
+    }
+    function changeUrl() {
+        document.Body.action = "../hme/sectionUpdate";
+        document.Body.submit();
+    }
+    function refresh() {
+        buttonDisable();
+        document.Body.action = "../hme/sectionUpdate";
+        document.Body.submit();
+    }
+var $ajaxs=[];
+## クイックリンク件数を取得し、セットします。
+function quickLinkCountByAjax(){
+    $('td.MenuDetail').each(function(){
+        var ids=[];
+        $(this).find('span.QuickLinkId').each(function(){
+            ids.push(cleanXss($(this).attr('id')));
+        });
+        if(ids.length==0){return;}
+        $ajax=$.ajax({
+            type:"POST",
+            url:"../quickLinkCountController/getCount",
+            data:{ids:ids.toString()},
+            success:function(data){
+                for(var key in data.map){
+                	if ($('span:[id=\"'+key+'\"]').text() == '#customSpringMessage('PAGING_COUNTING')'){
+                	    $('span:[id=\"'+key+'\"]').text(data.map[key]);
+                	}
+                }
+            },
+            error:function(xhr,textStatus,errorThrown){
+                if(textStatus=="timeout"){
+                    top.location.href="$!requestContext.contextPath/layout/sessiontimeout"
+                }
+            }
+        });
+        $ajaxs.push($ajax);
+    });
+};
+## アンロードされる直前に発生します。
+window.addEventListener('beforeunload',function(e){
+    $.each($ajaxs,function(index,value){
+        value.abort();## キャンセルする
+    });
+},false);
+//-->
+</script>
+<style>
+.Box_sample {
+    -moz-border-radius: 15px;
+    -webkit-border-radius: 15px;
+    border-radius: 15px;
+    -moz-box-shadow: 10px 10px 20px #000;
+    -webkit-box-shadow: 10px 10px 20px #000;
+    box-shadow: 10px 10px 20px #000;
+    behavior: url("../include/ie-css3.htc");
+    position: relative;
+    zoom: 1;
+}
+
+.HomeBox1 {
+    background-color: #000066;
+    border: 4px solid #000066;
+    -moz-border-radius: 16px;
+    -webkit-border-radius: 16px;
+    border-radius: 16px;
+    behavior: url("../include/ie-css3.htc");
+    position: relative;
+    zoom: 1;
+    box-shadow: 6px 6px 6px #999999;
+}
+
+.HomeBox2 {
+    background-color: #FFFFFF;
+    border: 1px solid #666666;
+    -moz-border-radius: 8px;
+    -webkit-border-radius: 8px;
+    border-radius: 8px;
+    behavior: url("../include/ie-css3.htc");
+    zoom: 1;
+    box-shadow: 3px 3px 3px #666666;
+}
+
+.HomeBox3 {
+    background-color: #FFFFFF;
+    border: 1px solid #000000;
+    -moz-border-radius: 8px;
+    -webkit-border-radius: 8px;
+    border-radius: 4px;
+    behavior: url("../include/ie-css3.htc");
+    zoom: 1;
+    box-shadow: 3px 3px 3px #000000;
+}
+</style>
+
+</head>
+<body class="HomeBody" onload="onLoad();">
+    <form name="Body" method="post">
+        <br>
+        <table class="HomeMain" width="98%">
+            <tr>
+                <td class="LeftArea" width="70%">
+                #if($authHelper.isNotEmpty())
+                    <table class="HomeBox1" width="100%">
+                        <tr>
+                            <td align="left">
+                                <table width="100%">
+                                    <tr>
+                                        <td class="FontBigBold" style="color: white;">
+                                            <!-- メニュー -->#customSpringMessage('MENU')
+                                        </td>
+                                        <td align="right"><!--最新の情報に更新 -->
+                                            <input id="refreshButton" type="button" class="MiniButton" name="infoupd" value="#customSpringMessage('ACTION_REFRESH')" onclick="refresh();">
+                                        </td>
+                                    </tr>
+                                </table>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td class="MenuHeader" align="left">
+                            #if($authHelper.contain('420'))<!-- 照会業務権限 -->
+                                <span class="CornerTopBrown"><span class="Corner1"></span><span class="Corner2"></span><span
+                                    class="Corner3"></span><span class="Corner4"></span></span>
+                                <table class="CornerMidBrown" width="100%">
+                                    <tr>
+                                        <td>&nbsp;&nbsp;
+                                        #if($authHelper.contain('430'))<!-- 伝票照会（依頼元）権限 -->
+                                            <a class="FontMiddleBold" href="javascript:top.iframeChange('../viw/slip/PSVIW010','pageid','PSVIW010');">
+                                                <!-- 伝票照会 -->#customSpringMessage('VOUCHER_REFE')</a>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+                                        #if($authHelper.contain('1430'))
+                                            <a class="FontMiddleBold" href="javascript:top.iframeChange('../viw/slip/PSVIW070','pageid','PSVIW070');">
+                                                <!-- 伝票照会（全検索） -->#customSpringMessage('VOUCHER_REFE_ALL')</a>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+                                        #end#end
+                                            <a class="FontMiddleBold" href="javascript:top.iframeChange('../cmn/print/PSCMN040','pageid','PSCMN040');">
+                                                <!-- 印刷一覧 -->#customSpringMessage('PRINT_LIST')</a>
+                                        </td>
+                                    </tr>
+                                </table>
+                                <span class="CornerBtmBrown"><span class="Corner4"></span><span class="Corner3"></span><span
+                                    class="Corner2"></span><span class="Corner1"></span></span>
+                            #end
+
+                            #if($authHelper.contain('10'))<!-- 依頼元業務権限 -->
+                                <table id="Menu0" width="100%">
+                                    <tr>
+                                        <td class="MenuCatagoly" colspan="6">
+                                            <span class="FontBigBold" style="color: brown;"><!--依頼元業務 -->#customSpringMessage('REQ_BUSINESS')</span>
+                                        </td>
+                                    </tr>
+                                    #if($authHelper.contain('20'))
+                                    <!-- 見積取得情報参照権限 -->
+                                    <tr>
+                                        <td class="MenuCatagoly"></td>
+                                        <td class="MenuCatagoly" colspan="5">
+                                            <span class="FontLargeAnkBold" style="color: brown;"><!-- 見積取得依頼 -->#customSpringMessage('QUOT_ACQ_REQ')</span>
+                                        </td>
+                                    </tr>
+                                #if($authHelper.contain('30'))<!-- 見積取得依頼更新権限 -->
+                                    <tr>
+                                        <td class="MenuTitle"></td>
+                                        <td class="MenuTitle" colspan="3">
+                                            <img src="../image/mnu2.gif" align="left">
+                                            <span class="FontMiddle" style="color: darkgreen;">
+                                                <a class="MenuLink" href="javascript:top.iframeChange('../req/est/PSREQ010','pageid','PSREQ010','pattern','new','isInitIndividualApr','true');">
+                                                    <!-- 見積取得依頼入力 -->#customSpringMessage('QUOT_ACQ_REQ_INPUT')</a>
+                                            </span>
+                                        </td>
+                                        <td class="MenuTitle"><!-- 履歴 -->
+                                            <input class="MiniButton" name="history" type="button" value="#customSpringMessage('HISTORY')"
+                                                onclick="javascript:buttonDisable();top.iframeChange('../req/est/PSREQ050','pageid','PSREQ050');">
+                                        </td>
+                                        <td class="MenuDetail"><span class="FontMini">
+                                        #if($!aprlinkReqDispInd == '1')<!-- 見積取得依頼クイックリンク表示設定 -->
+                                            <a href="javascript:top.iframeChange('../req/est/PSREQ031Search','pageid','PSREQ031Search','quickLinkId','All');">
+                                                <!--全 -->#customSpringMessage('PAGING_TOTAL')
+                                                <span class="FontBigAnkBold Black QuickLinkId" id="1.1.1.1">#customSpringMessage('PAGING_COUNTING')</span>
+                                                <!-- 件 -->#customSpringMessage('PAGING_COUNT')</a>&nbsp;（
+                                        #end
+                                            <a href="javascript:top.iframeChange('../req/est/PSREQ031Search','pageid','PSREQ031Search','quickLinkId','SendBack');">
+                                                <!--差戻し -->#customSpringMessage('RETURN')・・
+                                                <span class="FontMiddleAnkBold Black QuickLinkId" id="1.1.1.2">#customSpringMessage('PAGING_COUNTING')</span>
+                                                <!-- 件 -->#customSpringMessage('PAGING_COUNT')</a>&nbsp;|&nbsp;
+                                        #if($!aprlinkReqDispInd == '1')<!-- 見積取得依頼クイックリンク表示設定 -->
+                                            <a  href="javascript:top.iframeChange('../req/est/PSREQ031Search','pageid','PSREQ031Search','quickLinkId','AppWait');">
+                                                <!--承認待ち -->#customSpringMessage('APP_WAIT')・・
+                                                <span class="FontMiddleAnkBold Black QuickLinkId" id="1.1.1.3">#customSpringMessage('PAGING_COUNTING')</span>
+                                                <!-- 件 -->#customSpringMessage('PAGING_COUNT')</a>&nbsp;|&nbsp;
+                                            <a href="javascript:top.iframeChange('../req/est/PSREQ031Search','pageid','PSREQ031Search','quickLinkId','AppNow');">
+                                                <!--承認中 -->#customSpringMessage('APP_NOW')・・
+                                                <span class="FontMiddleAnkBold Black QuickLinkId" id="1.1.1.4">#customSpringMessage('PAGING_COUNTING')</span>
+                                                <!-- 件 -->#customSpringMessage('PAGING_COUNT')</a>&nbsp;|&nbsp;
+                                        #end
+                                            <a href="javascript:top.iframeChange('../req/est/PSREQ031Search','pageid','PSREQ031Search','quickLinkId','TempSave');">
+                                                <!--一時保存 -->#customSpringMessage('TEMPORARY_PRESERVATION')・・
+                                                <span class="FontMiddleAnkBold Black QuickLinkId" id="1.1.1.5">#customSpringMessage('PAGING_COUNTING')</span>
+                                                <!-- 件 -->#customSpringMessage('PAGING_COUNT')</a>#if($!aprlinkReqDispInd == '1')）#end
+                                        </span></td>
+                                    </tr>
+                                #end
+                                    <tr>
+                                        <td class="MenuTitle"></td>
+                                        <td class="MenuTitle" colspan="4">
+                                            <img src="../image/mnu2.gif" align="left">
+                                            <a class="MenuLink" href="javascript:top.iframeChange('../req/est/PSREQ060','pageid','PSREQ060');">
+                                                <!-- 見積状況一覧 -->#customSpringMessage('QUOT_STATUS_LIST')</a>
+                                        </td>
+                                        <td class="MenuDetail"><span class="FontMini">
+                                            <a href="javascript:top.iframeChange('../req/est/PSREQ060','pageid','PSREQ060','quickLinkId','ReplyFinish','quotReqStatus','06');">
+                                                <!-- 回答済み -->#customSpringMessage('DELIV_SETTLED')・・
+                                                <span class="FontMiddleAnkBold Black QuickLinkId" id="1.1.1.6">#customSpringMessage('PAGING_COUNTING')</span>
+                                                <!-- 件 -->#customSpringMessage('PAGING_COUNT')</a>
+                                        </span></td>
+                                    </tr>
+                                #if($authHelper.contain('1400'))<!-- 見積取得情報参照（全検索）権限 -->
+                                    <tr>
+                                        <td class="MenuTitle"></td>
+                                        <td class="MenuTitle" colspan="5">
+                                            <img src="../image/mnu2.gif" align="left">
+                                            <a class="MenuLink" href="javascript:top.iframeChange('../req/est/PSREQ070','pageid','PSREQ070');">
+                                                <!-- 見積状況一覧（全検索） -->#customSpringMessage('QUOT_STATUS_LIST_ALL')</a>
+                                        </td>
+                                    </tr>
+                                #end
+                            #end<!-- 依頼元業務権限 -->
+
+                            #if($authHelper.contain('50') || $authHelper.contain('60'))<!-- カタログ購入申請更新権限 / 都度購入依頼更新権限 -->
+                                    <tr>
+                                        <td class="MenuCatagoly"></td>
+                                        <td class="MenuCatagoly" colspan="5">
+                                            <span class="FontLargeAnkBold" style="color: brown;"><!-- 購入依頼 -->#customSpringMessage('PUR_REQ')</span>
+                                        </td>
+                                    </tr>
+                                #if($authHelper.contain('50'))<!-- カタログ購入申請更新権限 -->
+                                    <tr>
+                                        <td class="MenuTitle"></td>
+                                        <td class="MenuTitle" colspan="4">
+                                            <img src="../image/mnu2.gif" align="left">
+                                            <a class="MenuLink" href="javascript:top.iframeChange('../cat/catalog/PSCAT010Search','pageid','PSCAT010Search','fromPattern','Home');">
+                                                <!--カタログ購入依頼入力-->#customSpringMessage('CATALOG_PUR_REQ_INPUT')</a>
+                                        </td>
+                                        <td class="MenuDetail"><span class="FontMini">
+                                        #if($!aprlinkCatDispInd == '1')<!-- カタログ購入依頼クイックリンク表示設定 -->
+                                            <a href="javascript:top.iframeChange('../cat/catalog/PSCAT051Search','pageid','PSCAT051Search','quickLinkId','All','status','ALL','quickLink',true);">
+                                                <!-- 全 -->#customSpringMessage('PAGING_TOTAL')
+                                                <span class="FontBigAnkBold Black QuickLinkId" id="1.2.1.1">#customSpringMessage('PAGING_COUNTING')</span>
+                                                <!-- 件 -->#customSpringMessage('PAGING_COUNT')</a>&nbsp;（
+                                        #end
+                                            <a href="javascript:top.iframeChange('../cat/catalog/PSCAT051Search','pageid','PSCAT051Search','quickLinkId','SendBack','status','03','quickLink',true);">
+                                                <!-- 差戻し -->#customSpringMessage('RETURN')・・
+                                                <span class="FontMiddleAnkBold Black QuickLinkId" id="1.2.1.2">#customSpringMessage('PAGING_COUNTING')</span>
+                                                <!-- 件 -->#customSpringMessage('PAGING_COUNT')</a>&nbsp;|&nbsp;
+                                        #if($!aprlinkCatDispInd == '1')<!-- カタログ購入依頼クイックリンク表示設定 -->
+                                            <a href="javascript:top.iframeChange('../cat/catalog/PSCAT051Search','pageid','PSCAT051Search','quickLinkId','AppWait','status','01','quickLink',true);">
+                                                <!-- 承認待ち -->#customSpringMessage('APP_WAIT')・・
+                                                <span class="FontMiddleAnkBold Black QuickLinkId" id="1.2.1.3">#customSpringMessage('PAGING_COUNTING')</span>
+                                                <!-- 件 -->#customSpringMessage('PAGING_COUNT')</a>&nbsp;|&nbsp;
+                                            <a href="javascript:top.iframeChange('../cat/catalog/PSCAT051Search','pageid','PSCAT051Search','quickLinkId','AppNow','status','02','quickLink',true);">
+                                                <!-- 承認中 -->#customSpringMessage('APP_NOW')・・
+                                                <span class="FontMiddleAnkBold Black QuickLinkId" id="1.2.1.4">#customSpringMessage('PAGING_COUNTING')</span>
+                                                <!-- 件 -->#customSpringMessage('PAGING_COUNT')</a>&nbsp;|&nbsp;
+                                        #end
+                                            <a href="javascript:top.iframeChange('../cat/catalog/PSCAT051Search','pageid','PSCAT051Search','quickLinkId','TempSave','status','04','quickLink',true);">
+                                                <!-- 一時保存 -->#customSpringMessage('TEMPORARY_PRESERVATION')・・
+                                                <span class="FontMiddleAnkBold Black QuickLinkId" id="1.2.1.5">#customSpringMessage('PAGING_COUNTING')</span>
+                                                <!-- 件 -->#customSpringMessage('PAGING_COUNT')</a>#if($!aprlinkCatDispInd == '1')）#end
+                                        </span></td>
+                                    </tr>
+                                #end
+                                #if($authHelper.contain('60'))<!-- 都度購入依頼更新権限 -->
+                                    <tr>
+                                        <td class="MenuTitle"></td>
+                                        <td class="MenuTitle" colspan="3">
+                                            <img src="../image/mnu2.gif" align="left">
+                                            <span class="FontMiddle" style="color: darkgreen;">
+                                                <a class="MenuLink" href="javascript:top.iframeChange('../pur/req/PSPUR010New','pageid','MENU','pattern','create','patternName','New','isInitIndividualApr', 'true','isFromHome','true');">
+                                                    <!-- 都度購入依頼入力 -->#customSpringMessage('EVERY_PUR_REQ_INPUT')</a>
+                                            </span>
+                                        </td>
+                                        <td class="MenuTitle"><!--履歴 -->
+                                            <input class="MiniButton" name="history" type="button" value="#customSpringMessage('HISTORY')"
+                                                onclick="javascript:buttonDisable();top.iframeChange('../pur/req/PSPUR050','pageid','PSPUR050');">
+                                        </td>
+                                        <td class="MenuDetail"><span class="FontMini">
+                                            #if($!aprlinkPurDispInd == '1')<!-- 都度購入依頼クイックリンク表示設定 -->
+                                                <a href="javascript:top.iframeChange('../pur/req/PSPUR031Search','pageid','PSPUR031Search','purReqStatus','','quickLinkId','All');">
+                                                    <!-- 全 -->#customSpringMessage('PAGING_TOTAL')
+                                                    <span class="FontBigAnkBold Black QuickLinkId" id="1.2.2.1">#customSpringMessage('PAGING_COUNTING')</span>
+                                                    <!-- 件 -->#customSpringMessage('PAGING_COUNT')</a>&nbsp;（
+                                            #end
+                                                <a href="javascript:top.iframeChange('../pur/req/PSPUR031Search','pageid','PSPUR031Search','purReqStatus','1','quickLinkId','SendBack');">
+                                                    <!--差戻し -->#customSpringMessage('RETURN')・・
+                                                    <span class="FontMiddleAnkBold Black QuickLinkId" id="1.2.2.2">#customSpringMessage('PAGING_COUNTING')</span>
+                                                    <!-- 件 -->#customSpringMessage('PAGING_COUNT')</a>&nbsp;|&nbsp;
+                                            #if($!aprlinkPurDispInd == '1')<!-- 都度購入依頼クイックリンク表示設定 -->
+                                                <a href="javascript:top.iframeChange('../pur/req/PSPUR031Search','pageid','PSPUR031Search','purReqStatus','2','quickLinkId','AppWait');">
+                                                    <!--承認待ち -->#customSpringMessage('APP_WAIT')・・
+                                                    <span class="FontMiddleAnkBold Black QuickLinkId" id="1.2.2.3">#customSpringMessage('PAGING_COUNTING')</span>
+                                                    <!-- 件 -->#customSpringMessage('PAGING_COUNT')</a>&nbsp;|&nbsp;
+                                                <a href="javascript:top.iframeChange('../pur/req/PSPUR031Search','pageid','PSPUR031Search','purReqStatus','3','quickLinkId','AppNow');">
+                                                    <!--承認中 -->#customSpringMessage('APP_NOW')・・
+                                                    <span class="FontMiddleAnkBold Black QuickLinkId" id="1.2.2.4">#customSpringMessage('PAGING_COUNTING')</span>
+                                                    <!-- 件 -->#customSpringMessage('PAGING_COUNT')</a>&nbsp;|&nbsp;
+                                            #end
+                                                <a href="javascript:top.iframeChange('../pur/req/PSPUR031Search','pageid','PSPUR031Search','purReqStatus','4','quickLinkId','TempSave');">
+                                                    <!-- 一時保存 -->#customSpringMessage('TEMPORARY_PRESERVATION')・・
+                                                    <span class="FontMiddleAnkBold Black QuickLinkId" id="1.2.2.5">#customSpringMessage('PAGING_COUNTING')</span>
+                                                    <!-- 件 -->#customSpringMessage('PAGING_COUNT')</a>#if($!aprlinkPurDispInd == '1')）#end
+                                        </span></td>
+                                    </tr>
+                                #if($authHelper.contain('65'))<!-- 都度購入依頼一括アップロード権限 -->
+                                    <tr>
+                                        <td class="MenuCatagoly"></td>
+                                        <td class="MenuCatagoly" colspan="5">
+                                            <span class="FontLargeAnkBold" style="color: brown;"><!-- アップロード -->#customSpringMessage("ACTION_UPLOAD")</span>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td class="MenuTitle"></td>
+                                        <td class="MenuTitle" colspan="5">
+                                            <img src="../image/mnu2.gif" align="left">
+                                            <a class="MenuLink" href="javascript:top.iframeChange('../pur/req/PSPUR060','pageid','PSPUR060');">
+                                                <!-- 都度購入依頼一括アップロード -->#customSpringMessage("PUR_REQ_UPLOAD")</a>
+                                        </td>
+                                    </tr>
+                                #end
+                            #end
+                        #end
+
+                            #if($authHelper.contain('70'))<!-- 請求書払い参照権限 -->
+                                    <tr>
+                                        <td class="MenuCatagoly"></td>
+                                        <td class="MenuCatagoly" colspan="5">
+                                            <span class="FontLargeAnkBold" style="color: brown;"><!-- 支払請求 -->#customSpringMessage('PAY_CLAIM')</span>
+                                        </td>
+                                    </tr>
+                                #if($authHelper.contain('80'))<!-- 請求書払い更新権限 -->
+                                    <tr>
+                                        <td class="MenuTitle"></td>
+                                        <td class="MenuTitle" colspan="3">
+                                            <img src="../image/mnu2.gif" align="left">
+                                            <span class="FontMiddle" style="color: darkgreen;">
+                                                <a class="MenuLink" href="javascript:top.iframeChange('../pay/claim/PSPAY010','pageid','PSPAY010','pattern','new','isFromList','true');">
+                                                    <!-- 支払請求入力 -->#customSpringMessage('PAY_REQ_INPUT')</a>
+                                            </span>
+                                        </td>
+                                        <td class="MenuTitle"><!-- 履歴 -->
+                                            <input class="MiniButton" name="history" type="button" value="#customSpringMessage('HISTORY')"
+                                                onclick="javascript:buttonDisable();top.iframeChange('../pay/claim/PSPAY060','pageid','PSPAY060');">
+                                        </td>
+                                        <td class="MenuDetail"><span class="FontMini">
+                                            #if($aprlinkPayclaimDispInd == '1')<!-- 支払請求登録クイックリンク表示設定 -->
+                                                <a href="javascript:top.iframeChange('../pay/claim/PSPAY041Search','pageid','PSPAY041Search','status','ALL','quickLinkId','All');">
+                                                    <!-- 全 -->#customSpringMessage('PAGING_TOTAL')
+                                                    <span class="FontBigAnkBold Black QuickLinkId" id="1.3.1.1">#customSpringMessage('PAGING_COUNTING')</span>
+                                                    <!-- 件 -->#customSpringMessage('PAGING_COUNT')</a>&nbsp;（
+                                            #end
+                                                <a href="javascript:top.iframeChange('../pay/claim/PSPAY041Search','pageid','PSPAY041Search','status','03','quickLinkId','SendBack');">
+                                                    <!-- 差戻し -->#customSpringMessage('RETURN')・・
+                                                    <span class="FontMiddleAnkBold Black QuickLinkId" id="1.3.1.2">#customSpringMessage('PAGING_COUNTING')</span>
+                                                    <!-- 件 -->#customSpringMessage('PAGING_COUNT')</a>&nbsp;|&nbsp;
+                                            #if($aprlinkPayclaimDispInd == '1')<!-- 支払請求登録クイックリンク表示設定 -->
+                                                <a href="javascript:top.iframeChange('../pay/claim/PSPAY041Search','pageid','PSPAY041Search','status','01','quickLinkId','AppWait');">
+                                                    <!-- 承認待ち -->#customSpringMessage('APP_WAIT')・・
+                                                    <span class="FontMiddleAnkBold Black QuickLinkId" id="1.3.1.3">#customSpringMessage('PAGING_COUNTING')</span>
+                                                    <!-- 件 -->#customSpringMessage('PAGING_COUNT')</a>&nbsp;|&nbsp;
+                                                <a href="javascript:top.iframeChange('../pay/claim/PSPAY041Search','pageid','PSPAY041Search','status','02','quickLinkId','AppNow');">
+                                                    <!-- 承認中 -->#customSpringMessage('APP_NOW')・・
+                                                    <span class="FontMiddleAnkBold Black QuickLinkId" id="1.3.1.4">#customSpringMessage('PAGING_COUNTING')</span>
+                                                    <!-- 件 -->#customSpringMessage('PAGING_COUNT')</a>&nbsp;|&nbsp;
+                                            #end
+                                                <a href="javascript:top.iframeChange('../pay/claim/PSPAY041Search','pageid','PSPAY041Search','status','04','quickLinkId','TempSave');">
+                                                    <!-- 一時保存 -->#customSpringMessage('TEMPORARY_PRESERVATION')・・
+                                                    <span class="FontMiddleAnkBold Black QuickLinkId" id="1.3.1.5">#customSpringMessage('PAGING_COUNTING')</span>
+                                                    <!-- 件 -->#customSpringMessage('PAGING_COUNT')</a>#if($!aprlinkPayclaimDispInd == '1')）#end
+                                        </span></td>
+                                    </tr>
+                                #end
+                                    <tr>
+                                        <td class="MenuTitle"></td>
+                                        <td class="MenuTitle" colspan="5">
+                                            <img src="../image/mnu2.gif" align="left">
+                                            <a class="MenuLink" href="javascript:top.iframeChange('../pay/ref/PSPAY140','pageid','PSPAY140');">
+                                                <!-- 支払伝票照会 -->#customSpringMessage('PAY_VOUCHER_REFERENCE')</a>
+                                        </td>
+                                    </tr>
+                                #if($authHelper.contain('80'))<!-- 請求書払い更新権限 -->
+                                    <tr>
+                                        <td class="MenuTitle"></td>
+                                        <td class="MenuTitle" colspan="4">
+                                            <img src="../image/mnu2.gif" align="left">
+                                            <a class="MenuLink" href="javascript:top.iframeChange('../pay/print/PSPAY150','pageid','PSPAY150');">
+                                                <!-- 支払依頼書発行 -->#customSpringMessage('SCREEN_PAY_PRINT')</a>
+                                        </td>
+                                        <td class="MenuDetail"><span class="FontMini">
+                                            <a href="javascript:top.iframeChange('../pay/print/PSPAY150','pageid','PSPAY150','isQuickLink','true');">
+                                                <!-- 未発行 -->#customSpringMessage('NOT_ISSUE')・・
+                                                <span class="FontMiddleAnkBold Black QuickLinkId" id="1.3.2.1">#customSpringMessage('PAGING_COUNTING')</span>
+                                                <!-- 件 -->#customSpringMessage('PAGING_COUNT')</a>
+                                        </span></td>
+                                    </tr>
+                                #end
+                            #end<!-- 請求書払い参照権限 -->
+
+                                #if($authHelper.contain('460'))<!-- 納期照会（依頼元）権限  -->
+                                    <tr>
+                                        <td class="MenuCatagoly"></td>
+                                        <td class="MenuCatagoly" colspan="5">
+                                            <span class="FontLargeAnkBold" style="color: brown;"><!-- 納期管理 -->#customSpringMessage('DELIVERY_MANAGEMENT')</span>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td class="MenuTitle"></td>
+                                        <td class="MenuTitle" colspan="5">
+                                            <img src="../image/mnu2.gif" align="left">
+                                            <a class="MenuLink" href="javascript:top.iframeChange('../dlv/chk/PSDLV010','pageid','PSDLV010_15','isBuyer',false);">
+                                                <!-- 納期照会 -->#customSpringMessage('DELIV_REFE')</a>
+                                        </td>
+                                    </tr>
+                                #end
+                                #optionalMenuList('PS_REQ_BUSINESS')
+                                </table>
+                        #end<!-- 依頼元業務権限 -->
+
+                                <table id="Menu1" width="100%">
+                        #if($authHelper.contain('90'))<!-- 購買業務権限 -->
+                                    <tr>
+                                        <td class="MenuCatagoly" colspan="4">
+                                            <span class="FontBigBold" style="color: brown;"><!--購買業務 -->#customSpringMessage('BUYER_BUSINESS')</span>
+                                        </td>
+                                    </tr>
+                            #if($authHelper.contain('100'))<!-- 見積依頼参照権限 -->
+                                    <tr>
+                                        <td class="MenuCatagoly"></td>
+                                        <td class="MenuCatagoly" colspan="3">
+                                            <span class="FontLargeAnkBold" style="color: brown;"><!-- 見積 -->#customSpringMessage('QUOT')</span>
+                                        </td>
+                                    </tr>
+                                #if($authHelper.contain('120'))<!-- 見積取得依頼受付 -->
+                                    <tr>
+                                        <td class="MenuTitle"></td>
+                                        <td class="MenuTitle" colspan="2">
+                                            <img src="../image/mnu2.gif" align="left">
+                                            <a class="MenuLink" href="javascript:top.iframeChange('../qot/unqot/PSQOT010','pageid','PSQOT010');">
+                                                <!-- 見積取得依頼受付 -->#customSpringMessage('RECEIPT_QUOT_ACQ_REQ')</a>
+                                        </td>
+                                        <td class="MenuDetail"><span class="FontMini"> 
+                                             <a href="javascript:top.iframeChange('../qot/unqot/PSQOT010','pageid','PSQOT010','slipStatus','0213','quickLinkId','SendBack');">
+                                                <!-- 差戻し -->#customSpringMessage('RETURN')・・
+                                                <span class="FontMiddleAnkBold Black QuickLinkId" id="2.1.2.3">#customSpringMessage('PAGING_COUNTING')</span>
+                                                <!-- 件 -->#customSpringMessage('PAGING_COUNT')</a>&nbsp;|&nbsp;
+                                              <a href="javascript:top.iframeChange('../qot/unqot/PSQOT010','pageid','PSQOT010','slipStatus','0211','quickLinkId','UnReceipt');">
+                                                <!-- 未受付 -->#customSpringMessage('NOT_RCV')・・
+                                                <span class="FontMiddleAnkBold Black QuickLinkId" id="2.1.2.4">#customSpringMessage('PAGING_COUNTING')</span>
+                                                <!-- 件 -->#customSpringMessage('PAGING_COUNT')</a>
+                                        </span></td>
+                                    </tr>
+                                #end
+                                #if($authHelper.contain('130'))<!-- 見積担当者変更 -->
+                                    <tr>
+                                        <td class="MenuTitle"></td>
+                                        <td class="MenuTitle" colspan="3">
+                                            <img src="../image/mnu2.gif" align="left">
+                                            <a class="MenuLink" href="javascript:top.iframeChange('../qot/unqot/PSQOT050','pageid','PSQOT050');">
+                                                <!-- 見積依頼担当変更 -->#customSpringMessage('QUOT_USER_CHANGE')</a>
+                                        </td>
+                                    </tr>
+                                #end
+                                #if($authHelper.contain('110'))<!-- 見積依頼更新権限 -->
+                                    <tr>
+                                        <td class="MenuTitle"></td>
+                                        <td class="MenuTitle" colspan="2">
+                                            <img src="../image/mnu2.gif" align="left">
+                                            <a class="MenuLink" href="javascript:top.iframeChange('../qot/unqot/PSQOT030','pageid','PSQOT030');">
+                                                <!-- 未処理見積依頼一覧 -->#customSpringMessage('NOT_ACTION_QUOT_REQ_LIST')</a>
+                                        </td>
+                                        <td class="MenuDetail"><span class="FontMini">
+                                            <a href="javascript:top.iframeChange('../qot/unqot/PSQOT030','pageid','PSQOT030','urgentInd','0','quickLinkId','All')">
+                                                <!-- 全 -->#customSpringMessage('PAGING_TOTAL')
+                                                <span class="FontBigAnkBold Black QuickLinkId" id="2.1.2.1">#customSpringMessage('PAGING_COUNTING')</span>
+                                                <!-- 件 -->#customSpringMessage('PAGING_COUNT')</a>&nbsp;（
+                                            <a href="javascript:top.iframeChange('../qot/unqot/PSQOT030','pageid','PSQOT030','urgentInd','1','quickLinkId','Urgent')">
+                                                <!-- 緊急 -->#customSpringMessage('EMERGENCY')・・
+                                                <span class="FontMiddleAnkBold Black QuickLinkId" id="2.1.2.2">#customSpringMessage('PAGING_COUNTING')</span>
+                                                <!-- 件 -->#customSpringMessage('PAGING_COUNT')</a>&nbsp;）
+                                        </span></td>
+                                    </tr>
+                                #end
+                                #if($authHelper.contain('110') || $authHelper.contain('115'))<!-- 見積依頼更新権限 / 参考見積作成権限 -->
+                                    <tr>
+                                        <td class="MenuTitle"></td>
+                                        <td class="MenuTitle" colspan="2">
+                                            <img src="../image/mnu2.gif" align="left">
+                                        #if($authHelper.contain('115'))<!-- 参考見積作成権限 -->
+                                            <span class="FontMiddle" style="color: darkgreen;">
+                                                <a class="MenuLink" href="javascript:top.iframeChange('../qot/est/PSQOT040','pageid','PSQOT040','patternName','0','isInitIndividualApr','true');">
+                                                <!-- 見積依頼作成 -->#customSpringMessage('CREATE_QUOT_REQ')</a>
+                                            </span>
+                                        #else
+                                            <span class="FontMiddle" style="color: darkgreen;">
+                                                <a class="MenuLink" href="javascript:top.iframeChange('../qot/ref/PSQOT060','pageid','PSQOT060','quotReqStatus','01020304','quotAdoStatus','','quickLinkId','UnApp');">
+                                                <!-- 見積依頼一覧（未承認） -->#customSpringMessage('QUOT_REQUEST_LIST_NOT_YET')</a>
+                                            </span>
+                                        #end
+                                        </td>
+                                    #if($authHelper.contain('110'))<!-- 見積依頼更新権限 -->
+                                        <td class="MenuDetail"><span class="FontMini">
+                                        #if($!aprlinkQotDispInd == '1')<!-- 見積依頼クイックリンク表示設定 -->
+                                            <a href="javascript:top.iframeChange('../qot/ref/PSQOT060','pageid','PSQOT060','quotReqStatus','03','quotAdoStatus','','quickLinkId','SendBack')">
+                                                <!-- 差戻し -->#customSpringMessage('RETURN')・・
+                                                <span class="FontMiddleAnkBold Black QuickLinkId" id="2.1.4.8">#customSpringMessage('PAGING_COUNTING')</span>
+                                                <!-- 件 -->#customSpringMessage('PAGING_COUNT')</a>&nbsp;|&nbsp;
+                                            <a href="javascript:top.iframeChange('../qot/ref/PSQOT060','pageid','PSQOT060','quotReqStatus','01','quotAdoStatus','','quickLinkId','AppWait')">
+                                                <!-- 承認待ち -->#customSpringMessage('APP_WAIT')・・
+                                                <span class="FontMiddleAnkBold Black QuickLinkId" id="2.1.4.9">#customSpringMessage('PAGING_COUNTING')</span>
+                                                <!-- 件 -->#customSpringMessage('PAGING_COUNT')</a>&nbsp;|&nbsp;
+                                            <a href="javascript:top.iframeChange('../qot/ref/PSQOT060','pageid','PSQOT060','quotReqStatus','02','quotAdoStatus','','quickLinkId','AppNow')">
+                                                <!--承認中 -->#customSpringMessage('APP_NOW')・・
+                                                <span class="FontMiddleAnkBold Black QuickLinkId" id="2.1.4.10">#customSpringMessage('PAGING_COUNTING')</span>
+                                                <!-- 件 -->#customSpringMessage('PAGING_COUNT')</a>&nbsp;|&nbsp;
+                                        #end
+                                            <a href="javascript:top.iframeChange('../qot/ref/PSQOT060','pageid','PSQOT060','quotReqStatus','04','quotAdoStatus','','quickLinkId','TempSave')">
+                                                <!-- 一時保存 -->#customSpringMessage('TEMPORARY_PRESERVATION')・・
+                                                <span class="FontMiddleAnkBold Black QuickLinkId" id="2.1.4.11">#customSpringMessage('PAGING_COUNTING')</span>
+                                                <!-- 件 -->#customSpringMessage('PAGING_COUNT')</a>
+                                        </span></td>
+                                    #else
+                                        <td class="MenuDetail">&nbsp;</td>
+                                    #end
+                                    </tr>
+                                #end
+                                    <tr>
+                                        <td class="MenuTitle"></td>
+                                        <td class="MenuTitle" colspan="2">
+                                            <img src="../image/mnu2.gif" align="left">
+                                            <a class="MenuLink" href="javascript:top.iframeChange('../qot/ref/PSQOT060','pageid','PSQOT060');">
+                                                <!--見積状況一覧 -->#customSpringMessage('QUOT_STATUS_LIST')</a>
+                                        </td>
+                                    #if($authHelper.contain('110'))<!-- 見積依頼更新権限 -->
+                                        <td class="MenuDetail" nowrap colspan="2"><span class="FontMini">
+                                            <a href="javascript:top.iframeChange('../qot/ref/PSQOT060','pageid','PSQOT060','quotReqStatus','050607','quotAdoStatus','','quickLinkId','QuotNow')">
+                                                <!-- 見積中 -->#customSpringMessage('QUOT_MIDST')・・
+                                                <span class="FontBigAnkBold Black QuickLinkId" id="2.1.4.1">#customSpringMessage('PAGING_COUNTING')</span>
+                                                <!-- 件 -->#customSpringMessage('PAGING_COUNT')</a>&nbsp;（
+                                            <a href="javascript:top.iframeChange('../qot/ref/PSQOT060','pageid','PSQOT060','quotReqStatus','05','quotAdoStatus','','quickLinkId','UnAnswer')">
+                                                <!-- 未回答 -->#customSpringMessage('NOTHING_RCV')・・
+                                                <span class="FontMiddleAnkBold Black QuickLinkId" id="2.1.4.14">#customSpringMessage('PAGING_COUNTING')</span>
+                                                <!-- 件 -->#customSpringMessage('PAGING_COUNT')</a>&nbsp;|&nbsp;
+                                            <a href="javascript:top.iframeChange('../qot/ref/PSQOT060','pageid','PSQOT060','quotReqStatus','06','quotAdoStatus','','quickLinkId','PartsReply')">
+                                                <!-- 一部回答 -->#customSpringMessage('PARTS_RESP')・・
+                                                <span class="FontMiddleAnkBold Black QuickLinkId" id="2.1.4.15">#customSpringMessage('PAGING_COUNTING')</span>
+                                                <!-- 件 -->#customSpringMessage('PAGING_COUNT')</a>&nbsp;|&nbsp;
+                                            <a href="javascript:top.iframeChange('../qot/ref/PSQOT060','pageid','PSQOT060','quotReqStatus','07','quotAdoStatus','','quickLinkId','ReplyFinish')">
+                                                <!-- 回答済み -->#customSpringMessage('DELIV_SETTLED')・・
+                                                <span class="FontMiddleAnkBold Black QuickLinkId" id="2.1.4.3">#customSpringMessage('PAGING_COUNTING')</span>
+                                                <!-- 件 -->#customSpringMessage('PAGING_COUNT')</a>&nbsp;）
+                                            <a href="javascript:top.iframeChange('../qot/ref/PSQOT060','pageid','PSQOT060','quotReqStatus','15','quotAdoStatus','','quickLinkId','NewReply')">
+                                                <!-- 新着回答あり -->#customSpringMessage('NEW_RESP')・・
+                                                <span class="FontMiddleAnkBold Black QuickLinkId" id="2.1.4.2">#customSpringMessage('PAGING_COUNTING')</span>
+                                                <!-- 件 -->#customSpringMessage('PAGING_COUNT')</a><br>
+                                        #if($!aprlinkQotadoDispInd == '1')<!-- 見積採否クイックリンク表示設定 -->
+                                            <a href="javascript:top.iframeChange('../qot/ref/PSQOT060','pageid','PSQOT060','quotReqStatus','','quotAdoStatus','16','quickLinkId','QuotAdo')">
+                                                <!-- 見積採否 -->#customSpringMessage('QUOT_ADOPTION')・・
+                                                <span class="FontBigAnkBold Black QuickLinkId" id="2.1.4.16">#customSpringMessage('PAGING_COUNTING')</span>
+                                                <!-- 件 -->#customSpringMessage('PAGING_COUNT')</a>&nbsp;（
+                                            <a href="javascript:top.iframeChange('../qot/ref/PSQOT060','pageid','PSQOT060','quotAdoStatus','13','quotReqStatus','','quickLinkId','AdoSendBack')">
+                                                <!-- 採否差戻し -->#customSpringMessage('ADO_RETURN')・・
+                                                <span class="FontMiddleAnkBold Black QuickLinkId" id="2.1.4.4">#customSpringMessage('PAGING_COUNTING')</span>
+                                                <!-- 件 -->#customSpringMessage('PAGING_COUNT')</a>&nbsp;|&nbsp;
+                                            <a href="javascript:top.iframeChange('../qot/ref/PSQOT060','pageid','PSQOT060','quotAdoStatus','11','quotReqStatus','','quickLinkId','AdoAppWait')">
+                                                <!-- 採否承認待ち -->#customSpringMessage('ADO_APP_WAIT')・・
+                                                <span class="FontMiddleAnkBold Black QuickLinkId" id="2.1.4.5">#customSpringMessage('PAGING_COUNTING')</span>
+                                                <!-- 件 -->#customSpringMessage('PAGING_COUNT')</a>&nbsp;|&nbsp;
+                                            <a href="javascript:top.iframeChange('../qot/ref/PSQOT060','pageid','PSQOT060','quotAdoStatus','12','quotReqStatus','','quickLinkId','AdoAppNow')">
+                                                <!-- 採否承認中 -->#customSpringMessage('ADO_APP_NOW')・・
+                                                <span class="FontMiddleAnkBold Black QuickLinkId" id="2.1.4.6">#customSpringMessage('PAGING_COUNTING')</span>
+                                                <!-- 件 -->#customSpringMessage('PAGING_COUNT')</a>&nbsp;）
+                                        #end
+                                            <a href="javascript:top.iframeChange('../qot/ref/PSQOT060','pageid','PSQOT060','quotAdoStatus','21','quotReqStatus','','quickLinkId','AdoFinish')">
+                                                <!-- 採用済み -->#customSpringMessage('FINISH_ADO')・・
+                                                <span class="FontMiddleAnkBold Black QuickLinkId" id="2.1.4.7">#customSpringMessage('PAGING_COUNTING')</span>
+                                                <!-- 件 -->#customSpringMessage('PAGING_COUNT')</a>
+                                        </span></td> 
+                                    #else
+                                        <td class="MenuDetail">&nbsp;</td>
+                                    #end
+                                    </tr>
+                                #if($authHelper.contain('1410'))<!-- 見積依頼参照（全検索）権限 -->
+                                    <tr>
+                                        <td class="MenuTitle"></td>
+                                        <td class="MenuTitle" colspan="3">
+                                            <img src="../image/mnu2.gif" align="left">
+                                            <a class="MenuLink" href="javascript:top.iframeChange('../qot/ref/PSQOT090','pageid','PSQOT090');">
+                                                <!--見積状況一覧（全検索） -->#customSpringMessage('QUOT_STATUS_LIST_ALL')
+                                            </a>
+                                        </td>
+                                    </tr>
+                                #end
+                                #if($authHelper.contain('110'))<!-- 見積依頼更新権限 -->
+                                    <tr>
+                                        <td class="MenuTitle"></td>
+                                        <td class="MenuTitle" colspan="2">
+                                            <img src="../image/mnu2.gif" align="left">
+                                            <a class="MenuLink" href="javascript:top.iframeChange('../qot/print/PSQOT170','pageid','PSQOT170');">
+                                                <!-- 見積依頼書発行 -->#customSpringMessage('QUOT_REQ_ISSUE')</a>
+                                        </td>
+                                        <td class="MenuDetail"><span class="FontMini">
+                                            <a href="javascript:top.iframeChange('../qot/print/PSQOT170','pageid','PSQOT170','quickLink','1','quickLinkId','UnIssue')">
+                                                <!-- 未発行 -->#customSpringMessage('NOT_ISSUE')<!-- (NON-EDIのみ) -->#customSpringMessage('ONLY_NON_EDI')・・
+                                                <span class="FontMiddleAnkBold Black QuickLinkId" id="2.1.5.1">#customSpringMessage('PAGING_COUNTING')</span>
+                                                <!-- 件 -->#customSpringMessage('PAGING_COUNT')</a>
+                                        </span></td>
+                                    </tr>
+                                #end
+                            #end<!-- 見積依頼参照権限 -->
+
+                        #if($authHelper.contain('140'))<!-- 注文参照権限 -->
+                                    <tr>
+                                        <td class="MenuCatagoly"></td>
+                                        <td class="MenuCatagoly" colspan="3">
+                                            <span class="FontLargeAnkBold" style="color: brown;"><!-- 注文 -->#customSpringMessage('PUR_ORDER')</span>
+                                        </td>
+                                    </tr>
+                                #if($authHelper.contain('160'))<!-- 購入依頼購買受付 -->
+                                    <tr>
+                                        <td class="MenuTitle"></td>
+                                        <td class="MenuTitle" colspan="2">
+                                            <img src="../image/mnu2.gif" align="left">
+                                            <a class="MenuLink" href="javascript:top.iframeChange('../ord/unord/PSORD010','pageid','PSORD010');">
+                                                <!-- 購入依頼受付 -->#customSpringMessage('PUR_REQ_RCV')</a>
+                                        </td>
+                                        <td class="MenuDetail"><span class="FontMini">
+                                            <a href="javascript:top.iframeChange('../ord/unord/PSORD010','pageid','PSORD010','slipStatus','1','quickLinkId','SendBack');">
+                                                <!-- 差戻し -->#customSpringMessage('RETURN')・・
+                                                <span class="FontMiddleAnkBold Black QuickLinkId" id="2.2.2.7">#customSpringMessage('PAGING_COUNTING')</span>
+                                                <!-- 件 -->#customSpringMessage('PAGING_COUNT')</a>&nbsp;|&nbsp;
+                                            <a href="javascript:top.iframeChange('../ord/unord/PSORD010','pageid','PSORD010','slipStatus','2','quickLinkId','UnReceipt');">
+                                                <!-- 未受付 -->#customSpringMessage('NOT_RCV')・・
+                                                <span class="FontMiddleAnkBold Black QuickLinkId" id="2.2.2.8">#customSpringMessage('PAGING_COUNTING')</span>
+                                                <!-- 件 -->#customSpringMessage('PAGING_COUNT')</a>
+                                        </span></td>
+                                    </tr>
+                                #end
+                                #if($authHelper.contain('170'))<!-- 注文購買担当者変更 -->
+                                    <tr>
+                                        <td class="MenuTitle"></td>
+                                        <td class="MenuTitle" colspan="3">
+                                            <img src="../image/mnu2.gif" align="left">
+                                            <a class="MenuLink" href="javascript:top.iframeChange('../ord/unord/PSORD050','pageid','PSORD050');">
+                                                <!-- 購買担当変更 -->#customSpringMessage('SCREEN_BUYER_USER_CHANGE')
+                                            </a>
+                                        </td>
+                                    </tr>
+                                #end
+                                #if($authHelper.contain('150'))<!-- 注文更新権限 -->
+                                    <tr>
+                                        <td class="MenuTitle"></td>
+                                        <td class="MenuTitle" colspan="2">
+                                            <img src="../image/mnu2.gif" align="left">
+                                            <a class="MenuLink" href="javascript:top.iframeChange('../ord/unord/PSORD030','pageid','PSORD030');">
+                                                <!-- 未処理購入依頼一覧  -->#customSpringMessage('NOT_ACTION_PUR_REQ_LIST')</a>
+                                        </td>
+                                        <td class="MenuDetail"><span class="FontMini">
+                                            <a href="javascript:top.iframeChange('../ord/unord/PSORD030','pageid','PSORD030','purReqStatus','7','quickLinkId','All');">
+                                                <!-- 全 -->#customSpringMessage('PAGING_TOTAL')
+                                                <span class="FontBigAnkBold Black QuickLinkId" id="2.2.2.1">#customSpringMessage('PAGING_COUNTING')</span>
+                                                <!-- 件 -->#customSpringMessage('PAGING_COUNT')</a>&nbsp;（
+                                            <a href="javascript:top.iframeChange('../ord/unord/PSORD030','pageid','PSORD030','purReqStatus','1','quickLinkId','UnAction');">
+                                                <!-- 未処理 -->#customSpringMessage('UN_ACTION')・・
+                                                <span class="FontMiddleAnkBold Black QuickLinkId" id="2.2.2.2">#customSpringMessage('PAGING_COUNTING')</span>
+                                                <!-- 件 -->#customSpringMessage('PAGING_COUNT')</a>&nbsp;|&nbsp;
+                                            <a href="javascript:top.iframeChange('../ord/unord/PSORD030','pageid','PSORD030','purReqStatus','2','quickLinkId','QuotNow');">
+                                                <!-- 見積依頼中 -->#customSpringMessage('QUOT_NOW')・・
+                                                <span class="FontMiddleAnkBold Black QuickLinkId" id="2.2.2.3">#customSpringMessage('PAGING_COUNTING')</span>
+                                                <!-- 件 -->#customSpringMessage('PAGING_COUNT')</a>&nbsp;|&nbsp;
+                                            <a href="javascript:top.iframeChange('../ord/unord/PSORD030','pageid','PSORD030','purReqStatus','3','quickLinkId','QuotReply');">
+                                                <!-- 見積回答 -->#customSpringMessage('QUOT_REPLY')・・
+                                                <span class="FontMiddleAnkBold Black QuickLinkId" id="2.2.2.4">#customSpringMessage('PAGING_COUNTING')</span>
+                                                <!-- 件 -->#customSpringMessage('PAGING_COUNT')</a>&nbsp;|&nbsp;
+                                            <a href="javascript:top.iframeChange('../ord/unord/PSORD030','pageid','PSORD030','purReqStatus','4','quickLinkId','OrderWait');">
+                                                <!-- 注文待ち -->#customSpringMessage('ORDER_WAIT')・・
+                                                <span class="FontMiddleAnkBold Black QuickLinkId" id="2.2.2.5">#customSpringMessage('PAGING_COUNTING')</span>
+                                                <!-- 件 -->#customSpringMessage('PAGING_COUNT')</a>&nbsp;）
+                                            <a href="javascript:top.iframeChange('../ord/unord/PSORD030','pageid','PSORD030','purReqStatus','5','quickLinkId','Urgent');">
+                                                <!-- 緊急 -->#customSpringMessage('EMERGENCY')・・
+                                                <span class="FontMiddleAnkBold Black QuickLinkId" id="2.2.2.6">#customSpringMessage('PAGING_COUNTING')</span>
+                                                <!-- 件 -->#customSpringMessage('PAGING_COUNT')</a>
+                                        </span></td>
+                                    </tr>
+                                #end
+                                #if($authHelper.contain('1290'))<!-- 注文一括登録権限 -->
+                                    <tr>
+                                        <td class="MenuTitle"></td>
+                                        <td class="MenuTitle" colspan="3">
+                                            <img src="../image/mnu2.gif" align="left">
+                                            <a class="MenuLink" href="javascript:top.iframeChange('../ord/ordpckg/PSORD080','pageid','PSORD080');">
+                                                <!-- 注文一括登録 -->#customSpringMessage('ORDER_PACKAGE_REG')</a>
+                                        </td>
+                                    </tr>
+                                #end
+                                    <tr>
+                                        <td class="MenuTitle"></td>
+                                        <td class="MenuTitle" colspan="2">
+                                            <img src="../image/mnu2.gif" align="left">
+                                            <a class="MenuLink" href="javascript:top.iframeChange('../ord/order/PSORD060','pageid','PSORD060_070');">
+                                                <!-- 注文一覧（未承認） -->#customSpringMessage('SCREEN_ORDER_LIST_NOT_YET')</a>
+                                        </td>
+                                #if($authHelper.contain('150'))<!-- 注文更新権限 -->
+                                        <td class="MenuDetail"><span class="FontMini"> 
+                                        #if($!aprlinkOrdDispInd == '1')<!-- 注文クイックリンク表示設定 -->
+                                            <a href="javascript:top.iframeChange('../ord/order/PSORD060','pageid','PSORD060_070','status','03','quickLinkId','SendBack')">
+                                                <!-- 差戻し -->#customSpringMessage('RETURN')・・
+                                                <span class="FontMiddleAnkBold Black QuickLinkId" id="2.2.3.2">#customSpringMessage('PAGING_COUNTING')</span>
+                                                <!-- 件 -->#customSpringMessage('PAGING_COUNT')</a>&nbsp;|&nbsp;
+                                            <a href="javascript:top.iframeChange('../ord/order/PSORD060','pageid','PSORD060_070','status','01','quickLinkId','AppWait')">
+                                                <!-- 承認待ち -->#customSpringMessage('APP_WAIT')・・
+                                                <span class="FontMiddleAnkBold Black QuickLinkId" id="2.2.3.1">#customSpringMessage('PAGING_COUNTING')</span>
+                                                <!-- 件 -->#customSpringMessage('PAGING_COUNT')</a>&nbsp;|&nbsp;
+                                            <a href="javascript:top.iframeChange('../ord/order/PSORD060','pageid','PSORD060_070','status','02','quickLinkId','Apping')">
+                                                <!-- 承認中 -->#customSpringMessage('APP_NOW')・・
+                                                <span class="FontMiddleAnkBold Black QuickLinkId" id="2.2.3.5">#customSpringMessage('PAGING_COUNTING')</span>
+                                                <!-- 件 -->#customSpringMessage('PAGING_COUNT')</a>&nbsp;|&nbsp;
+                                        #end
+                                            <a href="javascript:top.iframeChange('../ord/order/PSORD060','pageid','PSORD060_070','status','04','quickLinkId','TempSave')">
+                                                <!-- 一時保存 -->#customSpringMessage('TEMPORARY_PRESERVATION')・・
+                                                <span class="FontMiddleAnkBold Black QuickLinkId" id="2.2.3.3">#customSpringMessage('PAGING_COUNTING')</span>
+                                                <!-- 件 -->#customSpringMessage('PAGING_COUNT')</a>
+                                        </span></td> 
+                                #else 
+                                        <td class="MenuDetail">&nbsp;</td>
+                                #end
+                                    </tr>
+                                    <tr>
+                                        <td class="MenuTitle"></td>
+                                        <td class="MenuTitle" colspan="2">
+                                            <img src="../image/mnu2.gif" align="left">
+                                            <a class="MenuLink" href="javascript:top.iframeChange('../ord/order/PSORD070','pageid','PSORD060_070','hasOrdered','true','status','');">
+                                                <!-- 注文一覧（発注済） -->#customSpringMessage('SCREEN_ORDER_LIST_ORDERED')</a>
+                                        </td>
+                                        <td class="MenuDetail"><span class="FontMini"> 
+                                            <a href="javascript:top.iframeChange('../ord/order/PSORD070','pageid','PSORD060_070','hasOrdered','true','status','05','quickLinkId','ThisMonthPriceUndec')">
+                                                <!-- 当月単価未定一覧 -->#customSpringMessage('PRICE_UNDEC_LIST_MONTH')・・
+                                                <span class="FontMiddleAnkBold Black QuickLinkId" id="2.2.3.4">#customSpringMessage('PAGING_COUNTING')</span>
+                                                <!-- 件 -->#customSpringMessage('PAGING_COUNT')</a>
+                                    #if($authHelper.contain('100'))<!-- 見積依頼参照権限 -->
+                                        ## 自動見積の場合
+                                        #if($isAutoQuot)
+                                            &nbsp;<!-- 単価未定 -->#customSpringMessage('PRICE_UNDEC')（
+                                            <a href="javascript:top.iframeChange('../qot/ref/PSQOT060','pageid','PSQOT060','quotReqStatus','050607','quotAdoStatus','','fromKubun','PSORD','quickLinkId','QuotMidstFromOrder')">
+                                                <!-- 見積中 -->#customSpringMessage('QUOT_MIDST')・・
+                                                <span class="FontMiddleAnkBold Black QuickLinkId" id="2.1.4.12">#customSpringMessage('PAGING_COUNTING')</span>
+                                                <!-- 件 -->#customSpringMessage('PAGING_COUNT')</a>&nbsp;|&nbsp;
+                                        <!-- 見積採否クイックリンク表示設定 -->
+                                        #if($!aprlinkQotadoDispInd == '1')
+                                            <a href="javascript:top.iframeChange('../qot/ref/PSQOT060','pageid','PSQOT060','quotReqStatus','','quotAdoStatus','16','fromKubun','PSORD','quickLinkId','QuotAdoptionFromOrder')">
+                                                <!-- 見積採否 -->#customSpringMessage('QUOT_ADOPTION')・・
+                                                <span class="FontMiddleAnkBold Black QuickLinkId" id="2.1.4.13">#customSpringMessage('PAGING_COUNTING')</span>
+                                                <!-- 件 -->#customSpringMessage('PAGING_COUNT')</a>&nbsp;|&nbsp;
+                                        #end
+                                            <a href="javascript:top.iframeChange('../qot/ref/PSQOT060','pageid','PSQOT060','quotReqStatus','21','quotAdoStatus','','fromKubun','PSORD','quickLinkId','FinishAdoFromOrder')">
+                                                <!-- 採用済み -->#customSpringMessage('FINISH_ADO')・・
+                                                <span class="FontMiddleAnkBold Black QuickLinkId" id="2.1.4.17">#customSpringMessage('PAGING_COUNTING')</span>
+                                                <!-- 件 -->#customSpringMessage('PAGING_COUNT')</a>&nbsp;）
+                                        #end
+                                    #end
+                                        </span></td>
+                                    </tr>
+                                #if($authHelper.contain('150'))<!-- 注文更新権限 -->
+                                    <tr>
+                                        <td class="MenuTitle"></td>
+                                        <td class="MenuTitle" colspan="2">
+                                            <img src="../image/mnu2.gif" align="left">
+                                            <a class="MenuLink" href="javascript:top.iframeChange('../ord/print/PSORD120','pageid','PSORD120');">
+                                                <!-- 注文書・納品書発行 -->#customSpringMessage('ORDER_DELEV_LIST')</a>
+                                        </td>
+                                        <td class="MenuDetail"><span class="FontMini">
+                                            <a href="javascript:top.iframeChange('../ord/print/PSORD120','pageid','PSORD120','quickLink',true,'quickLinkId','UnIssueOnlyNonEdi');">
+                                                <!-- 未発行 -->#customSpringMessage('NOT_ISSUE')<!--(NON-EDIのみ) -->#customSpringMessage('ONLY_NON_EDI')・・
+                                                <span class="FontMiddleAnkBold Black QuickLinkId" id="2.2.4.1">#customSpringMessage('PAGING_COUNTING')</span>
+                                                <!-- 件 -->#customSpringMessage('PAGING_COUNT')</a>
+                                        </span></td>
+                                    </tr>
+                                #end
+                            #end<!-- 注文参照権限 -->
+
+                                #if($authHelper.contain('117'))<!-- 見積依頼一括アップロード権限 -->
+                                    <tr>
+                                        <td class="MenuCatagoly"></td>
+                                        <td class="MenuCatagoly" colspan="3">
+                                            <span class="FontLargeAnkBold" style="color: brown;"><!-- アップロード -->#customSpringMessage("ACTION_UPLOAD")</span>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td class="MenuTitle"></td>
+                                        <td class="MenuTitle" colspan="3">
+                                            <img src="../image/mnu2.gif" align="left">
+                                            <a class="MenuLink" href="javascript:top.iframeChange('../qot/est/PSQOT110','pageid','PSQOT110');">
+                                                <!-- 見積依頼一括アップロード -->#customSpringMessage("QUOT_REQ_UPLOAD")</a>
+                                        </td>
+                                    </tr>
+                                #end
+
+                            #if($authHelper.contain('470'))<!-- 納期照会（購買）権限 -->
+                                    <tr>
+                                        <td class="MenuCatagoly"></td>
+                                        <td class="MenuCatagoly" colspan="3">
+                                            <span class="FontLargeAnkBold" style="color: brown;"><!-- 納期管理 -->#customSpringMessage('DELIVERY_MANAGEMENT')</span>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td class="MenuTitle"></td>
+                                        <td class="MenuTitle" colspan="2">
+                                            <img src="../image/mnu2.gif" align="left">
+                                            <a class="MenuLink" href="javascript:top.iframeChange('../dlv/chk/PSDLV015','pageid','PSDLV010_15','isBuyer',true,'delivConfirmInput',$authHelper.contain('420'));">
+                                                <!-- 納期照会 -->#customSpringMessage('DELIV_REFE')</a>
+                                        </td>
+                                        <td class="MenuDetail"><span class="FontMini">
+                                            <a href="javascript:top.iframeChange('../dlv/chk/PSDLV015','pageid','PSDLV010_15','isBuyer',true,'quickLinkId','New');">
+                                                <!-- 新着 -->#customSpringMessage('NEW_INFO')・・
+                                                <span class="FontMiddleAnkBold Black QuickLinkId" id="2.3.1.1">#customSpringMessage('PAGING_COUNTING')</span>
+                                                <!-- 件 -->#customSpringMessage('PAGING_COUNT')</a>
+                                        </span></td>
+                                    </tr>
+                                #if($authHelper.contain('190'))<!-- 納期確認入力権限 -->
+                                    <tr>
+                                        <td class="MenuTitle"></td>
+                                        <td class="MenuTitle" colspan="3">
+                                            <img src="../image/mnu2.gif" align="left">
+                                            <a class="MenuLink" href="javascript:top.iframeChange('../dlv/chk/PSDLV030','pageid','PSDLV030','isQuickLink','');">
+                                                <!-- 納期確認入力 -->#customSpringMessage('DELIV_CHECK_INPUT')</a>
+                                        </td>
+                                    </tr>
+                                #end
+                                #if($authHelper.contain('200'))<!-- 納期回答入力権限 -->
+                                    <tr>
+                                        <td class="MenuTitle"></td>
+                                        <td class="MenuTitle" colspan="3">
+                                            <img src="../image/mnu2.gif" align="left">
+                                            <a class="MenuLink" href="javascript:top.iframeChange('../dlv/ans/PSDLV040','pageId','PSDLV040');">
+                                                <!-- 納期回答一覧 -->#customSpringMessage('DELIV_RCV_INPUT')</a>
+                                        </td>
+                                    </tr>
+                                #end
+                            #end<!-- 納期照会（購買）権限 -->
+
+                        #if($authHelper.contain('280'))<!-- 検収業務権限 -->
+                                    <tr>
+                                        <td class="MenuCatagoly"></td>
+                                        <td class="MenuCatagoly" colspan="3">
+                                            <span class="FontLargeAnkBold" style="color: brown;"><!-- 検収 -->#customSpringMessage('ACCEPT')</span>
+                                        </td>
+                                    </tr>
+                                #if($authHelper.contain('300'))<!-- 検収入力権限 -->
+                                    <tr>
+                                        <td class="MenuTitle"></td>
+                                        <td class="MenuTitle" colspan="2">
+                                            <img src="../image/mnu2.gif" align="left">
+                                            <a class="MenuLink" href="javascript:top.iframeChange('../acp/acc/PSACP010','pageid','PSACP010','quotReqStatus','07');">
+                                                <!-- 未検収一覧 -->#customSpringMessage('ACCEPT_INPUT')</a>
+                                        </td>
+                                        <td class="MenuDetail"><span class="FontMini">
+                                            <a href="javascript:top.iframeChange('../acp/acc/PSACP010','pageid','PSACP010','delivStatus','2104','quickLinkId','UnAccept');">
+                                                <!-- 未検収 -->#customSpringMessage('UN_ACCEPT')・・
+                                                <span class="FontMiddleAnkBold Black QuickLinkId" id="2.5.1.1">#customSpringMessage('PAGING_COUNTING')</span>
+                                                <!-- 件 -->#customSpringMessage('PAGING_COUNT')</a>
+                                        </span></td>
+                                    </tr>
+                                #end
+                                #if($authHelper.contain('1310'))<!-- 検収一括登録権限 -->
+                                    <tr>
+                                        <td class="MenuTitle"></td>
+                                        <td class="MenuTitle" colspan="3">
+                                            <img src="../image/mnu2.gif" align="left">
+                                            <a class="MenuLink" href="javascript:top.iframeChange('../acp/acppckg/PSACP060','pageid','PSACP060');">
+                                                <!-- 検収一括登録 -->#customSpringMessage('ACCEPT_PACKAGE_REG')</a>
+                                        </td>
+                                    </tr>
+                                #end
+                                #if($authHelper.contain('290'))<!-- 検収参照権限 -->
+                                    <tr>
+                                        <td class="MenuTitle"></td>
+                                        <td class="MenuTitle" colspan="2">
+                                            <img src="../image/mnu2.gif" align="left">
+                                            <a class="MenuLink" href="javascript:top.iframeChange('../acp/acc/PSACP040','pageid','PSACP040');">
+                                                <!-- 検収済一覧 -->#customSpringMessage('INSPECTION_SETTLED_LIST')</a>
+                                        </td>
+                                    #if($authHelper.contain('300'))<!-- 検収入力権限 -->
+                                        <td class="MenuDetail"><span class="FontMini">
+                                        #if($!aprlinkAcpDispInd == '1')<!-- 検収クイックリンク表示設定 -->
+                                            <a href="javascript:top.iframeChange('../acp/acc/PSACP080Search','pageid','PSACP080Search','status','','quickLinkId','All')">
+                                                <!-- 全 -->#customSpringMessage('PAGING_TOTAL')
+                                                <span class="FontBigAnkBold Black QuickLinkId" id="2.5.1.2">#customSpringMessage('PAGING_COUNTING')</span>
+                                                <!-- 件 -->#customSpringMessage('PAGING_COUNT')</a>&nbsp;（
+                                            <a href="javascript:top.iframeChange('../acp/acc/PSACP080Search','pageid','PSACP080Search','status','03','quickLinkId','SendBack')">
+                                                <!-- 差戻し -->#customSpringMessage('RETURN')・・
+                                                <span class="FontMiddleAnkBold Black QuickLinkId" id="2.5.1.5">#customSpringMessage('PAGING_COUNTING')</span>
+                                                <!-- 件 -->#customSpringMessage('PAGING_COUNT')</a>&nbsp;|&nbsp;
+                                            <a href="javascript:top.iframeChange('../acp/acc/PSACP080Search','pageid','PSACP080Search','status','01','quickLinkId','AppWait')">
+                                                <!-- 承認待ち -->#customSpringMessage('APP_WAIT')・・
+                                                <span class="FontMiddleAnkBold Black QuickLinkId" id="2.5.1.3">#customSpringMessage('PAGING_COUNTING')</span>
+                                                <!-- 件 -->#customSpringMessage('PAGING_COUNT')</a>&nbsp;|&nbsp;
+                                            <a href="javascript:top.iframeChange('../acp/acc/PSACP080Search','pageid','PSACP080Search','status','02','quickLinkId','AppNow')">
+                                                <!-- 承認中 -->#customSpringMessage('APP_NOW')・・
+                                                <span class="FontMiddleAnkBold Black QuickLinkId" id="2.5.1.4">#customSpringMessage('PAGING_COUNTING')</span>
+                                                <!-- 件 -->#customSpringMessage('PAGING_COUNT')</a>&nbsp;）
+                                        #else&nbsp;#end
+                                        </span></td> 
+                                    #else 
+                                        <td class="MenuDetail">&nbsp;</td>
+                                    #end
+                                    </tr>
+                                #end
+                                #if($authHelper.contain('1260'))<!-- 検収通知書発行権限 -->
+                                    <tr>
+                                        <td class="MenuTitle"></td>
+                                        <td class="MenuTitle" colspan="2">
+                                            <img src="../image/mnu2.gif" align="left">
+                                            <a class="MenuLink" href="javascript:top.iframeChange('../acp/print/PSACP090','pageid','PSACP090');">
+                                                <!-- 検収通知書発行 -->#customSpringMessage('SCREEN_ACCEPTANCE_PRINT')</a>
+                                        </td>
+                                        <td class="MenuDetail"><span class="FontMini"> 
+                                            <a href="javascript:top.iframeChange('../acp/print/PSACP090','pageid','PSACP090','quickLink','true','quickLinkId','UnIssueOnlyNonEdi');">
+                                                <!-- 未発行 -->#customSpringMessage('NOT_ISSUE')<!-- (NON-EDIのみ) -->#customSpringMessage('ONLY_NON_EDI')・・
+                                                <span class="FontMiddleAnkBold Black QuickLinkId" id="2.5.3.1">#customSpringMessage('PAGING_COUNTING')</span>
+                                                <!-- 件 -->#customSpringMessage('PAGING_COUNT')</a>
+                                        </span></td>
+                                    </tr>
+                                #end
+                            #if($authHelper.contain('305'))<!-- 検収明細参照権限 -->
+                                    <tr>
+                                        <td class="MenuTitle"></td>
+                                        <td class="MenuTitle" colspan="3">
+                                            <img src="../image/mnu2.gif" align="left">
+                                            <a class="MenuLink" href="javascript:top.iframeChange('../acp/accdtl/PSACP100','pageid','PSACP100');">
+                                                <!-- 検収明細表 -->#customSpringMessage('FAX_IND_ACCPAY')</a>
+                                        </td>
+                                    </tr>
+                                #if($authHelper.contain('1420'))<!-- 検収明細参照（全検索）権限 -->
+                                    <tr>
+                                        <td class="MenuTitle"></td>
+                                        <td class="MenuTitle" colspan="3">
+                                            <img src="../image/mnu2.gif" align="left">
+                                            <a class="MenuLink" href="javascript:top.iframeChange('../acp/accdtl/PSACP110','pageid','PSACP110');">
+                                                <!-- 検収明細表（全検索） -->#customSpringMessage('FAX_IND_ACCPAY_ALL')</a>
+                                        </td>
+                                    </tr>
+                                #end
+                            #end
+                        #end<!-- 検収業務権限 -->
+                    #end<!-- 購買業務権限 -->
+
+                            #if($authHelper.contain('310'))<!-- 購買価格マスタ業務 -->
+                                    <tr>
+                                        <td class="MenuCatagoly"></td>
+                                        <td class="MenuCatagoly" colspan="3">
+                                            <span class="FontLargeAnkBold" style="color: brown;"><!--価格マスタ -->#customSpringMessage('M_PRICE')</span>
+                                        </td>
+                                    </tr>
+                                #if($authHelper.contain('340'))<!-- 購買価格マスタ参照権限 -->
+                                    <tr>
+                                        <td class="MenuTitle"></td>
+                                        <td class="MenuTitle" colspan="2">
+                                            <img src="../image/mnu2.gif" align="left">
+                                            <a class="MenuLink" href="javascript:top.iframeChange('../prc/price/PSPRC010','pageid','PSPRC010','status','','quickLinkId','');">
+                                                <!-- 価格マスタ一覧 -->#customSpringMessage('PRICE_M_REGISTER')</a>
+                                        </td>
+                                    #if($authHelper.contain('350'))<!-- 購買価格マスタ更新権限 -->
+                                        <td class="MenuDetail"><span class="FontMini">
+                                        #if($!aprlinkPrcDispInd == '1')<!-- 価格マスタ登録クイックリンク表示設定 -->
+                                            <a href="javascript:top.iframeChange('../prc/price/PSPRC010','pageid','PSPRC010','status','ALL','quickLinkId','All');">
+                                                <!-- 全 -->#customSpringMessage('PAGING_TOTAL')
+                                                <span class="FontBigAnkBold Black QuickLinkId" id="2.4.4.1">#customSpringMessage('PAGING_COUNTING')</span>
+                                                <!-- 件 -->#customSpringMessage('PAGING_COUNT')</a>&nbsp;（
+                                            <a href="javascript:top.iframeChange('../prc/price/PSPRC010','pageid','PSPRC010','status','3','quickLinkId','SendBack');">
+                                                <!-- 差戻し -->#customSpringMessage('RETURN')・・
+                                                <span class="FontMiddleAnkBold Black QuickLinkId" id="2.4.4.3">#customSpringMessage('PAGING_COUNTING')</span>
+                                                <!-- 件 -->#customSpringMessage('PAGING_COUNT')</a>&nbsp;|&nbsp;
+                                            <a href="javascript:top.iframeChange('../prc/price/PSPRC010','pageid','PSPRC010','status','0','quickLinkId','AppWait');">
+                                                <!-- 承認待ち -->#customSpringMessage('APP_WAIT')・・
+                                                <span class="FontMiddleAnkBold Black QuickLinkId" id="2.4.4.2">#customSpringMessage('PAGING_COUNTING')</span>
+                                                <!-- 件 -->#customSpringMessage('PAGING_COUNT')</a>&nbsp;|&nbsp;
+                                            <a href="javascript:top.iframeChange('../prc/price/PSPRC010','pageid','PSPRC010','status','1','quickLinkId','AppNow');">
+                                                <!-- 承認中 -->#customSpringMessage('APP_NOW')・・
+                                                <span class="FontMiddleAnkBold Black QuickLinkId" id="2.4.4.4">#customSpringMessage('PAGING_COUNTING')</span>
+                                                <!-- 件 -->#customSpringMessage('PAGING_COUNT')</a>&nbsp;）
+                                        #else&nbsp;#end
+                                        </span></td> 
+                                    #else 
+                                         <td class="MenuDetail">&nbsp;</td>
+                                    #end
+                                    </tr>
+                                #end
+                                #if($authHelper.contain('360'))<!-- 購買価格マスタアップロード権限 -->
+                                    <tr>
+                                        <td class="MenuTitle"></td>
+                                        <td class="MenuTitle" colspan="2">
+                                            <img src="../image/mnu2.gif" align="left">
+                                            <a class="MenuLink" href="javascript:top.iframeChange('../prc/upload/PSPRC070','pageid','PSPRC070');">
+                                                <!-- 価格マスタ一括登録 -->#customSpringMessage('PRICE_M_PACKAGE_REGISTER')</a>
+                                        </td>
+                                        <td class="MenuDetail"><span class="FontMini">
+                                        #if($!aprlinkPrcupdDispInd == '1')<!-- 新規価格表アップロードクイックリンク表示設定 -->
+                                            <a href="javascript:top.iframeChange('../prc/upload/PSPRC060','pageid','PSPRC060','status','ALL','isQuickLink','true','quickLinkId','All');">
+                                                <!-- 全 -->#customSpringMessage('PAGING_TOTAL')
+                                                <span class="FontBigAnkBold Black QuickLinkId" id="2.4.5.1">#customSpringMessage('PAGING_COUNTING')</span>
+                                                <!-- 件 -->#customSpringMessage('PAGING_COUNT')</a>&nbsp;（
+                                            <a href="javascript:top.iframeChange('../prc/upload/PSPRC060','pageid','PSPRC060','status','01','isQuickLink','true','quickLinkId','SendBack');">
+                                                <!-- 差戻し -->#customSpringMessage('RETURN')・・
+                                                <span class="FontMiddleAnkBold Black QuickLinkId" id="2.4.5.3">#customSpringMessage('PAGING_COUNTING')</span>
+                                                <!-- 件 -->#customSpringMessage('PAGING_COUNT')</a>&nbsp;|&nbsp;
+                                            <a href="javascript:top.iframeChange('../prc/upload/PSPRC060','pageid','PSPRC060','status','00','isQuickLink','true','quickLinkId','AppWait');">
+                                                <!-- 承認待ち -->#customSpringMessage('APP_WAIT')・・
+                                                <span class="FontMiddleAnkBold Black QuickLinkId" id="2.4.5.4">#customSpringMessage('PAGING_COUNTING')</span>
+                                                <!-- 件 -->#customSpringMessage('PAGING_COUNT')</a>&nbsp;|&nbsp;
+                                            <a href="javascript:top.iframeChange('../prc/upload/PSPRC060','pageid','PSPRC060','status','02','isQuickLink','true','quickLinkId','AppNow');"> 
+                                                <!-- 承認中 -->#customSpringMessage('APP_NOW')・・
+                                                <span class="FontMiddleAnkBold Black QuickLinkId" id="2.4.5.2">#customSpringMessage('PAGING_COUNTING')</span>
+                                                <!-- 件 -->#customSpringMessage('PAGING_COUNT')</a>&nbsp;）
+                                        #else&nbsp;#end
+                                        </span></td>
+                                    </tr>
+                                #end
+                                #if($authHelper.contain('370'))<!-- 価格改定依頼更新権限 -->
+                                    <tr>
+                                        <td class="MenuTitle"></td>
+                                        <td class="MenuTitle" colspan="3">
+                                            <img src="../image/mnu2.gif" align="left">
+                                            <a class="MenuLink" href="javascript:top.iframeChange('../prc/rev/PSPRC080','pageid','PSPRC080');">
+                                                <!-- 価格改定表作成 -->#customSpringMessage('PRICE_CREATE_AMEND')</a>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td class="MenuTitle"></td>
+                                        <td class="MenuTitle" colspan="3">
+                                            <img src="../image/mnu2.gif" align="left">
+                                            <a class="MenuLink" href="javascript:top.iframeChange('../prc/rev/PSPRC100','pageid','PSPRC100');">
+                                                <!-- 価格改定表登録 -->#customSpringMessage('PRICE_CREATE_REGISTER')</a>
+                                        </td>
+                                    </tr>
+                                    #if($!aprlinkPrcrevDispInd == '1')<!-- 価格改定依頼クイックリンク表示設定 -->
+                                    <tr>
+                                        <td class="MenuTitle"></td>
+                                        <td class="MenuTitle" colspan="2">
+                                            <img src="../image/mnu2.gif" align="left">
+                                            <a class="MenuLink" href="javascript:top.iframeChange('../prc/rev/PSPRC090','pageid','PSPRC090');">
+                                                <!-- 価格改定表一覧 -->#customSpringMessage('PRICE_REV_SHEET_LIST')</a>
+                                        </td>
+                                        <td class="MenuDetail"><span class="FontMini">
+                                            <a href="javascript:top.iframeChange('../prc/rev/PSPRC090','pageid','PSPRC090','status','01','quickLinkId','SendBack');">
+                                                <!-- 差戻し -->#customSpringMessage('RETURN')・・
+                                                <span class="FontMiddleAnkBold Black QuickLinkId" id="2.4.6.1">#customSpringMessage('PAGING_COUNTING')</span>
+                                                <!-- 件 -->#customSpringMessage('PAGING_COUNT')</a>&nbsp;|&nbsp;
+                                            <a href="javascript:top.iframeChange('../prc/rev/PSPRC090','pageid','PSPRC090','status','00','quickLinkId','AppWait');">
+                                                <!-- 承認待ち -->#customSpringMessage('APP_WAIT')・・
+                                                <span class="FontMiddleAnkBold Black QuickLinkId" id="2.4.6.2">#customSpringMessage('PAGING_COUNTING')</span>
+                                                <!-- 件 -->#customSpringMessage('PAGING_COUNT')</a>
+                                        </span></td>
+                                    </tr>
+                                    #end
+                                    <tr>
+                                        <td class="MenuTitle"></td>
+                                        <td class="MenuTitle" colspan="3">
+                                            <img src="../image/mnu2.gif" align="left">
+                                            <a class="MenuLink" href="javascript:top.iframeChange('../prc/revans/PSPRC110','pageid','PSPRC110');">
+                                                <!-- 回答価格改定表ダウンロード -->#customSpringMessage('PRICE_REV_ANS_DNLOAD')</a>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td class="MenuTitle"></td>
+                                        <td class="MenuTitle" colspan="3">
+                                            <img src="../image/mnu2.gif" align="left">
+                                            <a class="MenuLink" href="javascript:top.iframeChange('../prc/revans/PSPRC120','pageid','PSPRC120');">
+                                                <!-- 回答価格改定表登録 -->#customSpringMessage('RESP_PRICE_LIST_REG')</a>
+                                        </td>
+                                    </tr>
+                                    #if($!aprlinkPrcrevansDispInd == '1')<!-- 回答価格改定クイックリンク表示設定 -->
+                                    <tr>
+                                        <td class="MenuTitle"></td>
+                                        <td class="MenuTitle" colspan="2">
+                                            <img src="../image/mnu2.gif" align="left">
+                                            <a class="MenuLink" href="javascript:top.iframeChange('../prc/revans/PSPRC130','pageid','PSPRC130');">
+                                                <!-- 回答価格改定一覧 -->#customSpringMessage('RCV_PRICE_LIST')</a>
+                                        </td>
+                                        <td class="MenuDetail"><span class="FontMini">
+                                            <a href="javascript:top.iframeChange('../prc/revans/PSPRC130','pageid','PSPRC130','status','22','quickLinkId','SendBack');">
+                                                <!-- 差戻し -->#customSpringMessage('RETURN')・・
+                                                <span class="FontMiddleAnkBold Black QuickLinkId" id="2.4.7.1">#customSpringMessage('PAGING_COUNTING')</span>
+                                                <!-- 件 -->#customSpringMessage('PAGING_COUNT')</a>&nbsp;|&nbsp;
+                                            <a href="javascript:top.iframeChange('../prc/revans/PSPRC130','pageid','PSPRC130','status','21','quickLinkId','AppWait');">
+                                                <!-- 承認待ち-->#customSpringMessage('APP_WAIT')・・
+                                                <span class="FontMiddleAnkBold Black QuickLinkId" id="2.4.7.2">#customSpringMessage('PAGING_COUNTING')</span>
+                                                <!-- 件 -->#customSpringMessage('PAGING_COUNT')</a>
+                                        </span></td>
+                                    </tr>
+                                    #end
+                                #end
+                            #end<!-- 購買価格マスタ業務 -->
+
+                            #if($authHelper.contain('440'))<!-- 伝票照会（購買）権限 -->
+                                    <tr>
+                                        <td class="MenuCatagoly"></td>
+                                        <td class="MenuCatagoly" colspan="3">
+                                            <span class="FontLargeAnkBold" style="color: brown;"><!-- 伝票照会 -->#customSpringMessage('VOUCHER_REFE')</span>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td class="MenuTitle"></td>
+                                        <td class="MenuTitle" colspan="3">
+                                            <img src="../image/mnu2.gif" align="left">
+                                            <a class="MenuLink" href="javascript:top.iframeChange('../viw/slip/PSVIW040','pageid','PSVIW040');">
+                                                <!-- 伝票照会 -->#customSpringMessage('VOUCHER_REFE')</a>
+                                        </td>
+                                    </tr>
+                                #if($authHelper.contain('1440'))<!-- 伝票照会（購買）（全検索）権限 -->
+                                    <tr>
+                                        <td class="MenuCatagoly"></td>
+                                        <td class="MenuCatagoly" colspan="3">
+                                            <span class="FontLargeAnkBold" style="color: brown;"><!-- 伝票照会（全検索） -->#customSpringMessage('VOUCHER_REFE_ALL')</span>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td class="MenuTitle"></td>
+                                        <td class="MenuTitle" colspan="3">
+                                            <img src="../image/mnu2.gif" align="left">
+                                            <a class="MenuLink" href="javascript:top.iframeChange('../viw/slip/PSVIW100','pageid','PSVIW100');">
+                                                <!-- 伝票照会（全検索） -->#customSpringMessage('VOUCHER_REFE_ALL')</a>
+                                        </td>
+                                    </tr>
+                                #end
+                            #end
+
+                            #if($authHelper.contain('450'))<!-- 履歴照会権限 -->
+                                    <tr>
+                                        <td class="MenuCatagoly"></td>
+                                        <td class="MenuCatagoly" colspan="3">
+                                            <span class="FontLargeAnkBold" style="color: brown;"><!-- 履歴照会 -->#customSpringMessage('HISTORY_REFE')</span>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td class="MenuTitle"></td>
+                                        <td class="MenuTitle" colspan="3">
+                                            <img src="../image/mnu2.gif" align="left">
+                                            <a class="MenuLink" href="javascript:top.iframeChange('../his/history/PSHIS150','pageid','PSHIS150');">
+                                                <!-- 履歴照会 -->#customSpringMessage('HISTORY_REFE')</a>
+                                        </td>
+                                    </tr>
+                                #if($authHelper.contain('1450'))<!-- 履歴照会（全検索）権限 -->
+                                    <tr>
+                                        <td class="MenuCatagoly"></td>
+                                        <td class="MenuCatagoly" colspan="3">
+                                            <span class="FontLargeAnkBold" style="color: brown;"><!-- 履歴照会（全検索） -->#customSpringMessage('HISTORY_REFE_ALL')</span>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td class="MenuTitle"></td>
+                                        <td class="MenuTitle" colspan="3">
+                                            <img src="../image/mnu2.gif" align="left">
+                                            <a class="MenuLink" href="javascript:top.iframeChange('../his/history/PSHIS160','pageid','PSHIS160');">
+                                                <!-- 履歴照会（全検索） -->#customSpringMessage('HISTORY_REFE_ALL')</a>
+                                        </td>
+                                    </tr>
+                                #end
+                            #end<!-- 履歴照会権限 -->
+                            #if($authHelper.contain('90'))<!-- 購買業務権限 -->
+                                #optionalMenuList('PS_BUYER_BUSINESS')
+                            #end
+                                </table>
+
+                            #if($authHelper.contain('220'))<!-- 受入・検査業務権限 -->
+                                <table id="Menu1" width="100%">
+                                    <tr>
+                                        <td class="MenuCatagoly" colspan="2">
+                                            <span class="FontBigBold" style="color: brown;"><!-- 受入・検査業務  -->#customSpringMessage('RECIVE_ACCEPT_WORK')</span>
+                                        </td>
+                                    </tr>
+                                #if($authHelper.contain('240'))<!-- 受入入力権限 -->
+                                    <tr>
+                                        <td class="MenuTitle" colspan="2">
+                                            <img src="../image/mnu2.gif" align="left">
+                                            <a class="MenuLink" href="javascript:top.iframeChange('../rcv/rcvqr/PSRCV020','pageid','PSRCV020');">
+                                                <!-- 受入ＱＲ入力 -->#customSpringMessage('RCV_QR_INPUT')</a>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td class="MenuTitle">
+                                            <img src="../image/mnu2.gif" align="left">
+                                            <a class="MenuLink" href="javascript:top.iframeChange('../rcv/rcv/PSRCV010','pageid','PSRCV010');">
+                                                <!-- 未受入一覧 -->#customSpringMessage('SCREEN_RCV_INPUT')</a>
+                                        </td>
+                                        <td class="MenuDetail"><span class="FontMini">
+                                            <a href="javascript:top.iframeChange('../rcv/rcv/PSRCV010','pageid','PSRCV010','linkFlag','1','quickLinkId','UnRecive');">
+                                                <!-- 未受入 -->#customSpringMessage('UN_RECIVE')・・
+                                                <span class="FontMiddleAnkBold Black QuickLinkId" id="3.1.2.1">#customSpringMessage('PAGING_COUNTING')</span>
+                                                <!-- 件 -->#customSpringMessage('PAGING_COUNT')</a>
+                                        </span></td>
+                                    </tr>
+                                #end
+                                #if($authHelper.contain('1300'))<!-- 受入一括登録権限 -->
+                                    <tr>
+                                        <td class="MenuTitle" colspan="2">
+                                            <img src="../image/mnu2.gif" align="left">
+                                            <a class="MenuLink" href="javascript:top.iframeChange('../rcv/rcvpckg/PSRCV060','pageid','PSRCV060');">
+                                                <!-- 受入一括登録 -->#customSpringMessage('RCV_PACKAGE_REG')</a>
+                                        </td>
+                                    </tr>
+                                #end
+                                #if($authHelper.contain('230'))<!-- 受入参照権限 -->
+                                    <tr>
+                                        <td class="MenuTitle">
+                                            <img src="../image/mnu2.gif" align="left">
+                                            <a class="MenuLink" href="javascript:top.iframeChange('../rcv/rcv/PSRCV040','pageid','PSRCV040');">
+                                                <!-- 受入済一覧 -->#customSpringMessage('RCV_SETTLED_LIST')</a>
+                                        </td>
+                                    #if($authHelper.contain('240'))<!-- 受入入力権限 -->
+                                        <td class="MenuDetail"><span class="FontMini"><!-- 受入クイックリンク表示設定 -->
+                                        #if($!aprlinkRcvDispInd == '1')
+                                            <a href="javascript:top.iframeChange('../rcv/rcv/PSRCV070Search','pageid','PSRCV070Search','arrivalStatus','','quickLinkId','All');">
+                                                <!-- 全 -->#customSpringMessage('PAGING_TOTAL')
+                                                <span class="FontBigAnkBold Black QuickLinkId" id="3.1.2.2">#customSpringMessage('PAGING_COUNTING')</span>
+                                                <!-- 件 -->#customSpringMessage('PAGING_COUNT')</a>&nbsp;（
+                                            <a href="javascript:top.iframeChange('../rcv/rcv/PSRCV070Search','pageid','PSRCV070Search','arrivalStatus','03','quickLinkId','SendBack')">
+                                                <!--差戻し -->#customSpringMessage('RETURN')・・
+                                                <span class="FontMiddleAnkBold Black QuickLinkId" id="3.1.2.3">#customSpringMessage('PAGING_COUNTING')</span>
+                                                <!-- 件 -->#customSpringMessage('PAGING_COUNT')</a>&nbsp;|&nbsp;
+                                            <a href="javascript:top.iframeChange('../rcv/rcv/PSRCV070Search','pageid','PSRCV070Search','arrivalStatus','01','quickLinkId','AppWait')">
+                                                <!--承認待ち -->#customSpringMessage('APP_WAIT')・・
+                                                <span class="FontMiddleAnkBold Black QuickLinkId" id="3.1.2.4">#customSpringMessage('PAGING_COUNTING')</span>
+                                                <!-- 件 -->#customSpringMessage('PAGING_COUNT')</a>&nbsp;|&nbsp;
+                                            <a href="javascript:top.iframeChange('../rcv/rcv/PSRCV070Search','pageid','PSRCV070Search','arrivalStatus','02','quickLinkId','AppNow')">
+                                                <!-- 承認中 -->#customSpringMessage('APP_NOW')・・
+                                                <span class="FontMiddleAnkBold Black QuickLinkId" id="3.1.2.5">#customSpringMessage('PAGING_COUNTING')</span>
+                                                <!-- 件 -->#customSpringMessage('PAGING_COUNT')</a>&nbsp;）
+                                        #else&nbsp;#end
+                                        </span></td>
+                                    #end
+                                    </tr>
+                                #end
+                                #if($authHelper.contain('1250'))<!-- 入荷通知書発行権限 -->
+                                    <tr>
+                                        <td class="MenuTitle">
+                                            <img src="../image/mnu2.gif" align="left">
+                                            <a class="MenuLink" href="javascript:top.iframeChange('../rcv/print/PSRCV080','pageid','PSRCV080');">
+                                                <!-- 入荷リスト発行 -->#customSpringMessage('SCREEN_ARRIV_LIST_PRINT')</a>
+                                        </td>
+                                        <td class="MenuDetail"><span class="FontMini">
+                                            <a href="javascript:top.iframeChange('../rcv/print/PSRCV080','pageid','PSRCV080','linkFlag','1','quickLinkId','UnIssue');">
+                                                <!-- 未発行 -->#customSpringMessage('NOT_ISSUE')<!-- (NON-EDIのみ) -->#customSpringMessage('ONLY_NON_EDI')・・
+                                                <span class="FontMiddleAnkBold Black QuickLinkId" id="3.1.3.1">#customSpringMessage('PAGING_COUNTING')</span>
+                                                <!-- 件 -->#customSpringMessage('PAGING_COUNT')</a>
+                                            </span></td>
+                                    </tr>
+                                #end
+                                #if($authHelper.contain('270'))<!-- 検査入力権限 -->
+                                    <tr>
+                                        <td class="MenuTitle">
+                                            <img src="../image/mnu2.gif" align="left">
+                                            <a class="MenuLink" href="javascript:top.iframeChange('../tst/ins/PSTST010','pageid','PSTST010');">
+                                                <!-- 未検査一覧 -->#customSpringMessage('INSPECT_INPUT')</a>
+                                        </td>
+                                        <td class="MenuDetail"><span class="FontMini">
+                                            <a href="javascript:top.iframeChange('../tst/ins/PSTST010','pageid','PSTST010','quickLink','true');">
+                                                <!-- 未検査 -->#customSpringMessage('UN_INSPECT')・・
+                                                <span class="FontMiddleAnkBold Black QuickLinkId" id="3.1.4.1">#customSpringMessage('PAGING_COUNTING')</span>
+                                                <!-- 件 -->#customSpringMessage('PAGING_COUNT')</a>
+                                        </span></td>
+                                    </tr>
+                                #end
+                                #if($authHelper.contain('260'))<!-- 検査参照権限 -->
+                                    <tr>
+                                        <td class="MenuTitle">
+                                            <img src="../image/mnu2.gif" align="left">
+                                            <a class="MenuLink" href="javascript:top.iframeChange('../tst/ins/PSTST040','pageid','PSTST040')">
+                                                <!-- 検査済一覧 -->#customSpringMessage('INSPECT_LIST')</a>
+                                        </td>
+                                    #if($authHelper.contain('270'))<!-- 検査入力権限 -->
+                                        <td class="MenuDetail"><span class="FontMini">
+                                        #if($!aprlinkTstDispInd == '1')<!-- 検査クイックリンク表示設定 -->
+                                            <a href="javascript:top.iframeChange('../tst/ins/PSTST070Search','pageid','PSTST070Search','status','','quickLinkId','All')">
+                                                <!-- 全 -->#customSpringMessage('PAGING_TOTAL')
+                                                <span class="FontBigAnkBold Black QuickLinkId" id="3.1.4.2">#customSpringMessage('PAGING_COUNTING')</span>
+                                                <!-- 件 -->#customSpringMessage('PAGING_COUNT')</a>&nbsp;（
+                                            <a  href="javascript:top.iframeChange('../tst/ins/PSTST070Search','pageid','PSTST070Search','status','03','quickLinkId','SendBack')">
+                                                <!-- 差戻し -->#customSpringMessage('RETURN')・・
+                                                <span class="FontMiddleAnkBold Black QuickLinkId" id="3.1.4.5">#customSpringMessage('PAGING_COUNTING')</span>
+                                                <!-- 件 -->#customSpringMessage('PAGING_COUNT')</a>&nbsp;|&nbsp;
+                                            <a href="javascript:top.iframeChange('../tst/ins/PSTST070Search','pageid','PSTST070Search','status','01','quickLinkId','AppWait')">
+                                                <!-- 承認待ち -->#customSpringMessage('APP_WAIT')・・
+                                                <span class="FontMiddleAnkBold Black QuickLinkId" id="3.1.4.3">#customSpringMessage('PAGING_COUNTING')</span>
+                                                <!-- 件 -->#customSpringMessage('PAGING_COUNT')</a>&nbsp;|&nbsp;
+                                            <a href="javascript:top.iframeChange('../tst/ins/PSTST070Search','pageid','PSTST070Search','status','02','quickLinkId','AppNow')">
+                                                <!-- 承認中 -->#customSpringMessage('APP_NOW')・・
+                                                <span class="FontMiddleAnkBold Black QuickLinkId" id="3.1.4.4">#customSpringMessage('PAGING_COUNTING')</span>
+                                                <!-- 件 -->#customSpringMessage('PAGING_COUNT')</a>&nbsp;）
+                                        #else&nbsp;#end
+                                        </span></td>
+                                    #end
+                                    </tr>
+                                #end
+                                #optionalMenuList('PS_RECIVE_ACCEPT_WORK')
+                                </table>
+                            #end<!-- 受入・検査業務権限 -->
+
+                        #if($authHelper.contain('480'))<!-- 支払処理権限 -->
+                                <table id="Menu1" width="100%">
+                                    <tr>
+                                        <td class="MenuCatagoly" colspan="6">
+                                            <span class="FontBigBold" style="color: brown;"><!-- 請求書処理 -->#customSpringMessage('PAY_SLIP_BUSINESS')</span>
+                                        </td>
+                                    </tr>
+                            #if($authHelper.contain('490'))<!-- 請求書払(会計)参照権限 -->
+                                    <tr>
+                                        <td class="MenuCatagoly"></td>
+                                        <td class="MenuCatagoly" colspan="5">
+                                            <span class="FontLargeAnkBold" style="color: brown;"><!-- 支払請求処理 -->#customSpringMessage('PAY_BUSINESS')</span>
+                                        </td>
+                                    </tr>
+                                #if($authHelper.contain('500'))<!-- 請求書払(会計)更新権限 -->
+                                    <tr>
+                                        <td class="MenuTitle"></td>
+                                        <td class="MenuTitle" colspan="4">
+                                            <img src="../image/mnu2.gif" align="left">
+                                            <a class="MenuLink" href="javascript:top.iframeChange('../pay/claim/PSPAY070','pageid','PSPAY070')">
+                                                <!-- 支払請求受付 -->#customSpringMessage('PAY_REQ_RCV')</a>
+                                        </td>
+                                        <td class="MenuDetail"><span class="FontMini">
+                                            <a href="javascript:top.iframeChange('../pay/claim/PSPAY070','pageid','PSPAY070','status','13','quickLinkId','SendBack')">
+                                                <!-- 差戻し -->#customSpringMessage('RETURN')・・
+                                                <span class="FontMiddleAnkBold Black QuickLinkId" id="1.3.1.6">#customSpringMessage('PAGING_COUNTING')</span>
+                                                <!-- 件 -->#customSpringMessage('PAGING_COUNT')</a>&nbsp;|&nbsp;
+                                            <a href="javascript:top.iframeChange('../pay/claim/PSPAY070','pageid','PSPAY070','status','11','quickLinkId','UnReceipt')">
+                                                <!-- 未受付 -->#customSpringMessage('NOT_RCV')・・
+                                                <span class="FontMiddleAnkBold Black QuickLinkId" id="1.3.1.7">#customSpringMessage('PAGING_COUNTING')</span>
+                                                <!-- 件 -->#customSpringMessage('PAGING_COUNT')</a>
+                                        </span></td>
+                                    </tr>
+                                    <tr>
+                                        <td class="MenuTitle"></td>
+                                        <td class="MenuTitle" colspan="5">
+                                            <img src="../image/mnu2.gif" align="left">
+                                            <a class="MenuLink" href="javascript:top.iframeChange('../pay/slip/PSPAY080','pageid','PSPAY080','','');">
+                                                <!-- 経理担当者変更 -->#customSpringMessage('SCREEN_ACC_USER_CHANGE')</a>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td class="MenuTitle"></td>
+                                        <td class="MenuTitle" colspan="5">
+                                            <img src="../image/mnu2.gif" align="left">
+                                            <a class="MenuLink" href="javascript:top.iframeChange('../pay/slip/PSPAY090','pageid','PSPAY090','','');">
+                                                <!-- カタログ購入依頼承認 -->#customSpringMessage('SCREEN_NOT_ACTION_PAY_LIST')</a>
+                                        </td>
+                                    </tr>
+                                    #if($!aprlinkPaycheckDispInd == '1')<!-- 支払伝票登録クイックリンク表示設定 -->
+                                    <tr>
+                                        <td class="MenuTitle"></td>
+                                        <td class="MenuTitle" colspan="4">
+                                            <img src="../image/mnu2.gif" align="left">
+                                            <a class="MenuLink" href="javascript:top.iframeChange('../pay/slip/PSPAY120','pageid','PSPAY120','status','');">
+                                                <!-- 支払伝票一覧 -->#customSpringMessage('PAY_SLIP_LIST')</a>
+                                        </td>
+                                        <td class="MenuDetail"><span class="FontMini">
+                                            <a href="javascript:top.iframeChange('../pay/slip/PSPAY120','pageid','PSPAY120','status','ALL','quickLinkId','All');">
+                                                <!-- 全 -->#customSpringMessage('PAGING_TOTAL')
+                                                <span class="FontBigAnkBold Black QuickLinkId" id="4.1.2.1">#customSpringMessage('PAGING_COUNTING')</span>
+                                                <!-- 件 -->#customSpringMessage('PAGING_COUNT')</a>&nbsp;（
+                                            <a href="javascript:top.iframeChange('../pay/slip/PSPAY120','pageid','PSPAY120','status','03','quickLinkId','SendBack');">
+                                                <!-- 差戻し -->#customSpringMessage('RETURN')・・
+                                                <span class="FontMiddleAnkBold Black QuickLinkId" id="4.1.2.2">#customSpringMessage('PAGING_COUNTING')</span>
+                                                <!-- 件 -->#customSpringMessage('PAGING_COUNT')</a>&nbsp;|&nbsp;
+                                            <a href="javascript:top.iframeChange('../pay/slip/PSPAY120','pageid','PSPAY120','status','01','quickLinkId','AppWait');">
+                                                <!-- 承認待ち -->#customSpringMessage('APP_WAIT')・・
+                                                <span class="FontMiddleAnkBold Black QuickLinkId" id="4.1.2.3">#customSpringMessage('PAGING_COUNTING')</span>
+                                                <!-- 件 -->#customSpringMessage('PAGING_COUNT')</a>&nbsp;|&nbsp;
+                                            <a href="javascript:top.iframeChange('../pay/slip/PSPAY120','pageid','PSPAY120','status','02','quickLinkId','AppNow');">
+                                                <!-- 承認中 -->#customSpringMessage('APP_NOW')・・
+                                                <span class="FontMiddleAnkBold Black QuickLinkId" id="4.1.2.4">#customSpringMessage('PAGING_COUNTING')</span>
+                                                <!-- 件 -->#customSpringMessage('PAGING_COUNT')</a>&nbsp;）
+                                        </span></td>
+                                    </tr>
+                                    #end
+                                #end
+                                    <tr>
+                                        <td class="MenuTitle"></td>
+                                        <td class="MenuTitle" colspan="5">
+                                            <img src="../image/mnu2.gif" align="left">
+                                            <a class="MenuLink" href="javascript:top.iframeChange('../pay/ref/PSPAY142','pageid','PSPAY142');">
+                                                <!-- 支払伝票照会 -->#customSpringMessage('PAY_VOUCHER_REFERENCE')</a>
+                                        </td>
+                                    </tr>
+                            #end
+                            #if($authHelper.contain('1270'))<!-- 支払データダウンロード権限 -->
+                                    <tr>
+                                        <td class="MenuTitle"></td>
+                                        <td class="MenuTitle" colspan="5">
+                                            <img src="../image/mnu2.gif" align="left">
+                                            <a class="MenuLink" href="javascript:top.iframeChange('../pay/download/PSPAY160','pageid','PSPAY160');">
+                                                <!-- 支払データダウンロード -->#customSpringMessage('PAY_DATA_DOWNLOAD')</a>
+                                        </td>
+                                    </tr>
+                            #end
+                                #optionalMenuList('PS_PAY_SLIP_BUSINESS')
+                                </table>
+                        #end<!-- 支払処理権限 --> 
+
+                            #if($authHelper.contain('680'))<!-- 運用業務権限 -->
+                                <table id="Menu3" width="100%">
+                                    <tr>
+                                        <td class="MenuCatagoly" colspan="3">
+                                            <span class="FontBigBold" style="color: brown;"><!-- 運用 -->#customSpringMessage('OPERATION')</span>
+                                        </td>
+                                    </tr>
+                                #if($authHelper.contain('690')||$authHelper.contain('700'))
+                                    <tr>
+                                    #if($authHelper.contain('690'))<!-- お知らせ情報更新権限 -->
+                                        <td class="MenuTitle">
+                                            <img src="../image/mnu2.gif" align="left"><a class="MenuLink" href="javascript:top.iframeChange('../mst/news/search','pageid','newsSearch');">
+                                                <!-- お知らせ情報 -->#customSpringMessage('T_NEWS')</a>
+                                        </td>
+                                    #end
+                                    #if($authHelper.contain('700'))<!-- ライブラリ情報更新権限 -->
+                                        <td class="MenuTitle">
+                                            <img src="../image/mnu2.gif" align="left"><a class="MenuLink" href="javascript:top.iframeChange('../mst/library/search','pageid','librarySearch');">
+                                                <!-- ライブラリ管理 -->#customSpringMessage('LIBRALY_MANAGER')</a>
+                                        </td>
+                                    #end
+                                    #foreach($i in $authHelper.containList('690,700'))
+                                        <td class="MenuDetail">&nbsp;</td>
+                                    #end
+                                        <td class="MenuDetail">&nbsp;</td>
+                                    </tr>
+                                #end
+                                #if($authHelper.contain('880')||$authHelper.contain('1050'))
+                                    <tr>
+                                    #if($authHelper.contain('880'))<!-- 締日カレンダマスタ参照権限 -->
+                                        
+                                        <td class="MenuTitle">
+                                            <img src="../image/mnu2.gif" align="left">
+                                            <a class="MenuLink" href="javascript:top.iframeChange('../mst/cutoffdate/search','pageid','rateSearch');">
+                                                <!-- 締日カレンダーマスタ -->#customSpringMessage('M_CUTOFF_DATE')</a>
+                                        </td>
+                                    #end
+                                    #if($authHelper.contain('1050'))<!-- レートマスタ参照権限 -->
+                                        <td class="MenuTitle">
+                                            <img src="../image/mnu2.gif" align="left">
+                                            <a class="MenuLink" href="javascript:top.iframeChange('../mst/rate/search','pageid','rateSearch');">
+                                                <!-- レートマスタ -->#customSpringMessage('M_RATE')</a>
+                                        </td> 
+                                    #end
+                                    #foreach($i in $authHelper.containList('880,1050'))
+                                        <td class="MenuDetail">&nbsp;</td>
+                                    #end
+                                        <td class="MenuDetail">&nbsp;</td>
+                                    </tr>
+                                #end
+                                #optionalMenuList('PS_OPERATION')
+                                </table>
+                            #end<!-- 運用業務権限 --> 
+
+                            #if($authHelper.contain('510'))<!-- 承認業務権限 -->
+                                <table id="Menu2" width="100%">
+                                    <tr>
+                                        <td class="MenuCatagoly" colspan="2">
+                                            <span class="FontBigBold" style="color: brown;"><!-- 承認 -->#customSpringMessage('APPROVAL')</span>
+                                        </td>
+                                    </tr>
+                                #if($authHelper.contain('520'))<!-- 見積取得依頼承認権限 -->
+                                    <tr>
+                                        <td class="MenuTitle">
+                                            <img src="../image/mnu2.gif" align="left">
+                                            <a class="MenuLink" href="javascript:top.iframeChange('../apr/req/PSAPR040','pageid','PSAPR040');">
+                                                <!-- 見積取得依頼承認 -->#customSpringMessage('QUOT_REQ_ACQ_APP')</a>
+                                        </td>
+                                        <td class="MenuDetail"><span class="FontMini">
+                                            <a href="javascript:top.iframeChange('../apr/req/PSAPR040','pageid','PSAPR040','isQuickLink','1');">
+                                                <!-- 未承認 -->#customSpringMessage('NOT_APP_YET')・・
+                                                <span class="FontMiddleAnkBold Black QuickLinkId" id="5.1.1.1">#customSpringMessage('PAGING_COUNTING')</span>
+                                                <!-- 件 -->#customSpringMessage('PAGING_COUNT')</a>
+                                        </span></td>
+                                    </tr>
+                                #end
+                                #if($authHelper.contain('560'))<!-- 見積依頼承認権限 -->
+                                    <tr>
+                                        <td class="MenuTitle">
+                                            <img src="../image/mnu2.gif" align="left">
+                                            <a class="MenuLink" href="javascript:top.iframeChange('../apr/qot/PSAPR050','pageid','PSAPR050');">
+                                                <!-- 見積依頼承認 -->#customSpringMessage('QUOT_REQ_APP')</a>
+                                        </td>
+                                        <td class="MenuDetail"><span class="FontMini">
+                                            <a href="javascript:top.iframeChange('../apr/qot/PSAPR050','pageid','PSAPR050','isQuickLink','true');">
+                                                <!-- 未承認 -->#customSpringMessage('NOT_APP_YET')・・
+                                                <span class="FontMiddleAnkBold Black QuickLinkId" id="5.1.2.1">#customSpringMessage('PAGING_COUNTING')</span>
+                                                <!-- 件 -->#customSpringMessage('PAGING_COUNT')</a>
+                                        </span></td>
+                                    </tr>
+                                #end
+                                #if($authHelper.contain('560'))<!-- 見積依頼承認権限 -->
+                                    <tr>
+                                        <td class="MenuTitle">
+                                            <img src="../image/mnu2.gif" align="left">
+                                            <a class="MenuLink" href="javascript:top.iframeChange('../apr/qotado/PSAPR060','pageid','PSAPR060','isQuickLink','');">
+                                                <!-- 見積採否承認 -->#customSpringMessage('QUOT_ADO_APP')</a>
+                                        </td>
+                                        <td class="MenuDetail"><span class="FontMini">
+                                        <a href="javascript:top.iframeChange('../apr/qotado/PSAPR060','pageid','PSAPR060','isQuickLink','true')">
+                                            <!-- 未承認 -->#customSpringMessage('NOT_APP_YET')・・
+                                            <span class="FontMiddleAnkBold Black QuickLinkId" id="5.1.4.1">#customSpringMessage('PAGING_COUNTING')</span>
+                                            <!-- 件 -->#customSpringMessage('PAGING_COUNT')</a>
+                                        </span></td>
+                                    </tr>
+                                #end
+                                #if($authHelper.contain('530'))<!-- カタログ購入申請承認権限 -->
+                                    <tr>
+                                        <td class="MenuTitle">
+                                            <img src="../image/mnu2.gif" align="left">
+                                            <a class="MenuLink" href="javascript:top.iframeChange('../apr/cat/PSAPR010','pageid','PSAPR010','isQuickLink','false');">
+                                                <!-- カタログ購入依頼承認 -->#customSpringMessage('CATALOG_PUR_REQ_APP')</a>
+                                        </td>
+                                        <td class="MenuDetail"><span class="FontMini">
+                                            <a href="javascript:top.iframeChange('../apr/cat/PSAPR010','pageid','PSAPR011','isQuickLink','true');">
+                                                <!-- 未承認 -->#customSpringMessage('NOT_APP_YET')・・
+                                                <span class="FontMiddleAnkBold Black QuickLinkId" id="5.1.6.1">#customSpringMessage('PAGING_COUNTING')</span>
+                                                <!-- 件 -->#customSpringMessage('PAGING_COUNT')</a>
+                                        </span></td>
+                                    </tr>
+                                #end
+                                #if($authHelper.contain('540'))<!-- 都度購入依頼承認権限 -->
+                                    <tr>
+                                        <td class="MenuTitle">
+                                            <img src="../image/mnu2.gif" align="left">
+                                            <a class="MenuLink" href="javascript:top.iframeChange('../apr/pur/PSAPR020','pageid','PSAPR020');">
+                                                <!-- 都度購入依頼承認 -->#customSpringMessage('EVERY_PUR_REQ_APP')</a>
+                                        </td>
+                                        <td class="MenuDetail"><span class="FontMini">
+                                            <a href="javascript:top.iframeChange('../apr/pur/PSAPR020','pageid','PSAPR020','isQuickLink','1');">
+                                                <!-- 未承認 -->#customSpringMessage('NOT_APP_YET')・・
+                                                <span class="FontMiddleAnkBold Black QuickLinkId" id="5.1.7.1">#customSpringMessage('PAGING_COUNTING')</span>
+                                                <!-- 件 -->#customSpringMessage('PAGING_COUNT')</a>
+                                        </span></td>
+                                    </tr>
+                                #end
+                                #if($authHelper.contain('570'))<!-- 注文承認権限 -->
+                                    <tr>
+                                        <td class="MenuTitle">
+                                            <img src="../image/mnu2.gif" align="left">
+                                            <a class="MenuLink" href="javascript:top.iframeChange('../apr/ord/PSAPR030','pageid','PSAPR030','isQuickLink','');">
+                                                <!-- 注文承認 -->#customSpringMessage('ORDER_APP')</a>
+                                        </td>
+                                        <td class="MenuDetail"><span class="FontMini">
+                                            <a href="javascript:top.iframeChange('../apr/ord/PSAPR030','pageid','PSAPR030','isQuickLink','true')">
+                                                <!-- 未承認 -->#customSpringMessage('NOT_APP_YET')・・
+                                                <span class="FontMiddleAnkBold Black QuickLinkId" id="5.1.8.1">#customSpringMessage('PAGING_COUNTING')</span>
+                                                <!-- 件 -->#customSpringMessage('PAGING_COUNT')</a>
+                                        </span></td>
+                                    </tr>
+                                #end
+                                #if($authHelper.contain('580'))<!-- 受入承認権限 -->
+                                    <tr>
+                                        <td class="MenuTitle">
+                                            <img src="../image/mnu2.gif" align="left">
+                                            <a class="MenuLink" href="javascript:top.iframeChange('../apr/rcv/PSAPR070','pageid','PSAPR070','isQuickLink','');">
+                                                <!-- 受入承認 -->#customSpringMessage('RCV_APP')</a>
+                                        </td>
+                                        <td class="MenuDetail"><span class="FontMini">
+                                            <a href="javascript:top.iframeChange('../apr/rcv/PSAPR070','pageid','PSAPR070','isQuickLink','true');">
+                                                <!-- 未承認 -->#customSpringMessage('NOT_APP_YET')・・
+                                                <span class="FontMiddleAnkBold Black QuickLinkId" id="5.1.9.1">#customSpringMessage('PAGING_COUNTING')</span>
+                                                <!-- 件 -->#customSpringMessage('PAGING_COUNT')</a>
+                                        </span></td>
+                                    </tr>
+                                #end
+                                #if($authHelper.contain('590'))<!-- 検査承認権限 -->
+                                    <tr>
+                                        <td class="MenuTitle">
+                                            <img src="../image/mnu2.gif" align="left">
+                                            <a class="MenuLink" href="javascript:top.iframeChange('../apr/tst/PSAPR080','pageid','PSAPR080','isQuickLink','false');">
+                                                <!-- 検査承認 -->#customSpringMessage('INS_APP')</a>
+                                        </td>
+                                        <td class="MenuDetail"><span class="FontMini">
+                                            <a href="javascript:top.iframeChange('../apr/tst/PSAPR080','pageid','PSAPR081','isQuickLink','true');">
+                                                <!-- 未承認 -->#customSpringMessage('NOT_APP_YET')・・
+                                                <span class="FontMiddleAnkBold Black QuickLinkId" id="5.1.10.1">#customSpringMessage('PAGING_COUNTING')</span>
+                                                <!-- 件 -->#customSpringMessage('PAGING_COUNT')</a>
+                                        </span></td>
+                                    </tr>
+                                #end
+                                #if($authHelper.contain('600'))<!-- 検収承認権限 -->
+                                    <tr>
+                                        <td class="MenuTitle">
+                                            <img src="../image/mnu2.gif" align="left">
+                                            <a class="MenuLink" href="javascript:top.iframeChange('../apr/acp/PSAPR090','pageid','PSAPR090');">
+                                                <!-- 検収承認 -->#customSpringMessage('ACCEPT_APP')</a>
+                                        </td>
+                                        <td class="MenuDetail"><span class="FontMini">
+                                            <a href="javascript:top.SearchFlg=true;javascript:top.iframeChange('../apr/acp/PSAPR090','pageid','PSAPR090','isQuickLink','true')">
+                                                <!-- 未承認 -->#customSpringMessage('NOT_APP_YET')・・
+                                                <span class="FontMiddleAnkBold Black QuickLinkId" id="5.1.11.1">#customSpringMessage('PAGING_COUNTING')</span>
+                                                <!-- 件 -->#customSpringMessage('PAGING_COUNT')</a>
+                                        </span></td>
+                                    </tr>
+                                #end
+                                #if($authHelper.contain('550'))<!-- 請求書払承認権限 -->
+                                    <tr>
+                                        <td class="MenuTitle">
+                                            <img src="../image/mnu2.gif" align="left">
+                                            <a class="MenuLink" href="javascript:top.iframeChange('../apr/payclaim/PSAPR130','pageid','PSAPR130');">
+                                                <!-- 支払請求登録承認 -->#customSpringMessage('PAY_CLAIM_APP')</a>
+                                        </td>
+                                        <td class="MenuDetail"><span class="FontMini">
+                                            <a href="javascript:top.SearchFlg=true;javascript:top.iframeChange('../apr/payclaim/PSAPR130','pageid','PSAPR130','isQuickLink','true')">
+                                                <!-- 未承認 -->#customSpringMessage('NOT_APP_YET')・・
+                                                <span class="FontMiddleAnkBold Black QuickLinkId" id="5.1.12.1">#customSpringMessage('PAGING_COUNTING')</span>
+                                                <!-- 件 -->#customSpringMessage('PAGING_COUNT')</a>
+                                        </span></td>
+                                    </tr>
+                                #end
+                                #if($authHelper.contain('670'))<!-- 請求書払(会計)承認権限 -->
+                                    <tr>
+                                        <td class="MenuTitle">
+                                            <img src="../image/mnu2.gif" align="left">
+                                            <a class="MenuLink" href="javascript:top.iframeChange('../apr/paycheck/PSAPR140','pageid','PSAPR140');">
+                                                <!-- 支払伝票登録承認 -->#customSpringMessage('PAY_CHECK_APP')</a>
+                                        </td>
+                                        <td class="MenuDetail"><span class="FontMini">
+                                            <a href="javascript:top.SearchFlg=true;javascript:top.iframeChange('../apr/paycheck/PSAPR140','pageid','PSAPR140','isQuickLink','true')">
+                                                <!-- 未承認 -->#customSpringMessage('NOT_APP_YET')・・
+                                                <span class="FontMiddleAnkBold Black QuickLinkId" id="5.1.13.1">#customSpringMessage('PAGING_COUNTING')</span>
+                                                <!-- 件 -->#customSpringMessage('PAGING_COUNT')</a>
+                                        </span></td>
+                                    </tr>
+                                #end
+                                #if($authHelper.contain('620'))<!-- 購買価格承認権限 -->
+                                    <tr>
+                                        <td class="MenuTitle">
+                                            <img src="../image/mnu2.gif" align="left">
+                                            <a class="MenuLink" href="javascript:top.iframeChange('../apr/prc/PSAPR120','pageid','PSAPR120','isQuickLink','');">
+                                                <!-- 価格マスタ登録承認 -->#customSpringMessage('PRICE_M_REGISTER_APP')</a>
+                                        </td>
+                                        <td class="MenuDetail"><span class="FontMini">
+                                            <a href="javascript:top.iframeChange('../apr/prc/PSAPR120','pageid','PSAPR120','isQuickLink','true')">
+                                                <!-- 未承認 -->#customSpringMessage('NOT_APP_YET')・・
+                                                <span class="FontMiddleAnkBold Black QuickLinkId" id="5.1.14.1">#customSpringMessage('PAGING_COUNTING')</span>
+                                                <!-- 件 -->#customSpringMessage('PAGING_COUNT')</a>
+                                        </span></td>
+                                    </tr>
+                                #end
+                                #if($authHelper.contain('630'))<!-- 購買価格マスタアップロード承認権限 -->
+                                    <tr>
+                                        <td class="MenuTitle">
+                                            <img src="../image/mnu2.gif" align="left">
+                                            <a class="MenuLink" href="javascript:top.iframeChange('../apr/prcupd/PSAPR170','pageid','PSAPR170');">
+                                                <!-- 価格マスタ一括登録承認 -->#customSpringMessage('M_PRICE_PACKAGE_REG_APP')</a>
+                                        </td>
+                                        <td class="MenuDetail"><span class="FontMini">
+                                            <a href="javascript:top.iframeChange('../apr/prcupd/PSAPR170','pageid','PSAPR170','isQuickLink','1');">
+                                                <!-- 未承認 -->#customSpringMessage('NOT_APP_YET')・・
+                                                <span class="FontMiddleAnkBold Black QuickLinkId" id="5.1.15.1">#customSpringMessage('PAGING_COUNTING')</span>
+                                                <!-- 件 -->#customSpringMessage('PAGING_COUNT')</a>
+                                        </span></td>
+                                    </tr>
+                                #end
+                                #if($authHelper.contain('640'))<!-- 価格改定依頼承認権限 -->
+                                    <tr>
+                                        <td class="MenuTitle">
+                                            <img src="../image/mnu2.gif" align="left">
+                                            <a class="MenuLink" href="javascript:top.iframeChange('../apr/prcrev/PSAPR100','pageid','PSAPR100','isQuickLink','false');">
+                                                <!-- 価格改定依頼承認 -->#customSpringMessage('PRICE_REQ_APP')</a>
+                                        </td>
+                                        <td class="MenuDetail"><span class="FontMini">
+                                            <a href="javascript:top.SearchFlg=true;javascript:top.iframeChange('../apr/prcrev/PSAPR100','pageid','PSAPR100','isQuickLink','true')">
+                                                <!-- 未承認 -->#customSpringMessage('NOT_APP_YET')・・
+                                                <span class="FontMiddleAnkBold Black QuickLinkId" id="5.1.16.1">#customSpringMessage('PAGING_COUNTING')</span>
+                                                <!-- 件 -->#customSpringMessage('PAGING_COUNT')</a>
+                                        </span></td>
+                                    </tr>
+                                    <tr>
+                                        <td class="MenuTitle">
+                                            <img src="../image/mnu2.gif" align="left">
+                                            <a class="MenuLink" href="javascript:top.iframeChange('../apr/prcrevans/PSAPR110','pageid','PSAPR110','isQuickLink','false');">
+                                                <!-- 回答価格改定承認 -->#customSpringMessage('RESP_PRICE_APP')</a>
+                                        </td>
+                                        <td class="MenuDetail"><span class="FontMini">
+                                            <a href="javascript:top.SearchFlg=true;javascript:top.iframeChange('../apr/prcrevans/PSAPR110','pageid','PSAPR110','isQuickLink','true')">
+                                                <!-- 未承認 -->#customSpringMessage('NOT_APP_YET')・・
+                                                <span class="FontMiddleAnkBold Black QuickLinkId" id="5.1.17.1">#customSpringMessage('PAGING_COUNTING')</span>
+                                                <!-- 件 -->#customSpringMessage('PAGING_COUNT')</a>
+                                        </span></td>
+                                    </tr>
+                                #end
+                                #optionalMenuList('PS_APPROVAL')
+                                </table>
+                            #end<!-- 承認業務権限 --> 
+
+                        #if($customMacroRequestContext.isActiveProfile('budget'))
+                            #if($authHelper.contain('2230'))<!-- 予算管理業務権限 -->
+                                <table id="Menu11" width="100%">
+                                    <tr>
+                                        <td class="MenuCatagoly" colspan="2">
+                                            <span class="FontBigBold" style="color: brown;"><!-- 予算業務 -->#customSpringMessage('BUDGET_WORK')</span>
+                                        </td>
+                                    </tr>
+                                #if($authHelper.contain('2240') || $authHelper.contain('2250'))
+                                    <tr>
+                                        <td class="MenuCatagoly" style="width:2px;"></td>
+                                        <td class="MenuCatagoly">
+                                            <span class="FontLargeAnkBold" style="color: brown;"><!-- 部門予算 -->#customSpringMessage('SECTION_BUDGET')</span></td>
+                                    </tr>
+                                #end
+                                #if($authHelper.contain('2250'))<!-- 部門予算更新権限 -->
+                                    <tr>
+                                        <td class="MenuTitle"></td>
+                                        <td class="MenuTitle">
+                                            <img src="../image/mnu2.gif" align="left">
+                                            <a class="MenuLink" href="javascript:top.iframeChange('../options/budget/PSBDT010','pageid','PSBDT010','pattern','new','isInitIndividualApr','true');">
+                                                <!-- 部門予算入力 -->#customSpringMessage('SECTION_BUDGET_INPUT')</a>
+                                        </td>
+                                    </tr>
+                                #end
+                                #if($authHelper.contain('2240'))<!-- 部門予算参照権限 -->
+                                    <tr>
+                                        <td class="MenuTitle"></td>
+                                        <td class="MenuTitle">
+                                            <img src="../image/mnu2.gif" align="left">
+                                            <a class="MenuLink" href="javascript:top.iframeChange('../options/budget/PSBDT020','pageid','PSBDT020');">
+                                                <!-- 部門予算一覧 -->#customSpringMessage('SECTION_BUDGET_LIST')</a>
+                                        </td>
+                                    </tr>
+                                #end
+                                #if($authHelper.contain('2260') || $authHelper.contain('2270'))
+                                    <tr>
+                                        <td class="MenuCatagoly" style="width:2px;"></td>
+                                        <td class="MenuCatagoly"><span
+                                            class="FontLargeAnkBold" style="color: brown;"><!--稟議予算 -->#customSpringMessage('RINGI_BUDGET')</span>
+                                        </td>
+                                    </tr>
+                                #end
+                                #if($authHelper.contain('2270'))<!-- 稟議予算更新権限 -->
+                                    <tr>
+                                        <td class="MenuTitle"></td>
+                                        <td class="MenuTitle">
+                                            <img src="../image/mnu2.gif" align="left">
+                                            <a class="MenuLink" href="javascript:top.iframeChange('../options/budget/PSBDT040','pageid','PSBDT040','pattern','new','isInitIndividualApr','true');">
+                                                <!-- 稟議予算入力 -->#customSpringMessage('RINGI_BUDGET_INPUT')</a>
+                                        </td>
+                                    </tr>
+                                #end
+                                #if($authHelper.contain('2260'))<!-- 稟議予算参照権限 -->
+                                    <tr>
+                                        <td class="MenuTitle"></td>
+                                        <td class="MenuTitle">
+                                            <img src="../image/mnu2.gif" align="left">
+                                            <a class="MenuLink" href="javascript:top.iframeChange('../options/budget/PSBDT050','pageid','PSBDT050', 'isInitIndividualApr','true');">
+                                                <!-- 稟議予算一覧 -->#customSpringMessage('RINGI_BUDGET_LIST')</a>
+                                        </td>
+                                    </tr>
+                                #end
+                                #if($authHelper.contain('2280'))<!-- 予算一括アップロード更新権限 -->
+                                    <tr>
+                                        <td class="MenuCatagoly"></td>
+                                        <td class="MenuCatagoly">
+                                            <span class="FontLargeAnkBold" style="color: brown;"><!-- 一括予算 -->#customSpringMessage('PACKAGE_BUDGET')</span></td>
+                                    </tr>
+                                    <tr>
+                                        <td class="MenuTitle" style="width:2px;"></td>
+                                        <td class="MenuTitle">
+                                            <img src="../image/mnu2.gif" align="left">
+                                            <a class="MenuLink" href="javascript:top.iframeChange('../options/budget/PSBDT100','pageid','PSBDT100');">
+                                                <!-- 予算アップロード -->#customSpringMessage('BUDGET_UPLOAD')</a>
+                                        </td>
+                                    </tr>
+                                #end
+                                </table>
+                            #end<!-- 予算管理業務権限 -->
+                        #end
+
+                        #if($customMacroRequestContext.isActiveProfile('stock'))
+                            #if($authHelper.contain('3000'))<!-- 在庫業務権限 -->
+                                <table id="Menu12" width="100%">
+                                    <tr>
+                                        <td class="MenuCatagoly" colspan="2">
+                                            <span class="FontBigBold" style="color: brown;"><!-- 在庫業務 -->#customSpringMessage('STOCK_WORK')</span>
+                                        </td>
+                                    </tr>
+                                #if($authHelper.contain('3010'))<!-- 出庫更新権限 -->
+                                    <tr>
+                                        <td class="MenuCatagoly" style="width:2px;"></td>
+                                        <td class="MenuCatagoly">
+                                            <span class="FontLargeAnkBold" style="color: brown;"><!-- 出庫業務 -->#customSpringMessage('SHIP_WORK')</span>
+                                        </td>
+                                    </tr>
+                                #end
+                                #if($authHelper.contain('3010'))<!-- 出庫更新権限 -->
+                                    <tr>
+                                        <td class="MenuTitle"></td>
+                                        <td class="MenuTitle">
+                                            <img src="../image/mnu2.gif" align="left">
+                                            <a class="MenuLink" href="javascript:top.iframeChange('../options/stock/PSSTK010','pageid','PSSTK010');">
+                                                <!-- 出庫入力 -->#customSpringMessage('SHIP_INPUT')</a>
+                                        </td>
+                                    </tr>
+                                #end
+                                #if($authHelper.contain('3020'))<!-- 入庫更新権限 -->
+                                    <tr>
+                                        <td class="MenuCatagoly" style="width:2px;"></td>
+                                        <td class="MenuCatagoly">
+                                            <span class="FontLargeAnkBold" style="color: brown;"><!-- 入庫業務 -->#customSpringMessage('STRG_WORK')</span>
+                                        </td>
+                                    </tr>
+                                #end
+                                #if($authHelper.contain('3020'))<!-- 入庫更新権限 -->
+                                    <tr>
+                                        <td class="MenuTitle"></td>
+                                        <td class="MenuTitle">
+                                            <img src="../image/mnu2.gif" align="left">
+                                            <a class="MenuLink" href="javascript:top.iframeChange('../options/stock/PSSTK020','pageid','PSSTK020');">
+                                                <!-- 入庫入力 -->#customSpringMessage('STRG_INPUT')</a>
+                                        </td>
+                                    </tr>
+                                #end
+                                #if($authHelper.contain('3030'))<!-- 入出庫実績照会権限 -->
+                                    <tr>
+                                        <td class="MenuCatagoly"></td>
+                                        <td class="MenuCatagoly">
+                                            <span class="FontLargeAnkBold" style="color: brown;"><!--入出庫実績 -->#customSpringMessage('STRG_SHIP_RESULTS')</span>
+                                        </td>
+                                    </tr>
+                                #end
+                                #if($authHelper.contain('3030'))<!-- 入出庫実績照会権限 -->
+                                    <tr>
+                                        <td class="MenuTitle"></td>
+                                        <td class="MenuTitle">
+                                            <img src="../image/mnu2.gif" align="left">
+                                            <a class="MenuLink" href="javascript:top.iframeChange('../options/stock/PSSTK030','pageid','PSSTK030');">
+                                                <!--入出庫実績一覧 -->#customSpringMessage('STRG_SHIP_RESULTS_LIST')</a>
+                                        </td>
+                                    </tr>
+                                #end
+                                #if($authHelper.contain('3050'))<!-- 在庫照会権限 -->
+                                    <tr>
+                                        <td class="MenuCatagoly" style="width:2px;"></td>
+                                        <td class="MenuCatagoly">
+                                            <span class="FontLargeAnkBold" style="color: brown;"><!-- 在庫照会 -->#customSpringMessage('STOCK_REFERENCE')</span>
+                                        </td>
+                                    </tr>
+                                #end
+                                #if($authHelper.contain('3050'))<!-- 在庫照会権限 -->
+                                    <tr>
+                                        <td class="MenuTitle"></td>
+                                        <td class="MenuTitle">
+                                            <img src="../image/mnu2.gif" align="left">
+                                            <a class="MenuLink" href="javascript:top.iframeChange('../options/stock/PSSTK060','pageid','PSSTK060');">
+                                                <!-- 在庫一覧 -->#customSpringMessage('STOCK_LIST')</a>
+                                        </td>
+                                    </tr>
+                                #end
+                                #if($authHelper.contain('3070'))<!-- 棚卸参照権限 -->
+                                    <tr>
+                                        <td class="MenuCatagoly" style="width:2px;"></td>
+                                        <td class="MenuCatagoly">
+                                            <span class="FontLargeAnkBold" style="color: brown;"><!-- 棚卸業務 -->#customSpringMessage('INVENTORY_WORK')</span>
+                                        </td>
+                                    </tr>
+                                #end
+                                #if($authHelper.contain('3070'))<!-- 棚卸参照権限 -->
+                                    <tr>
+                                        <td class="MenuTitle"></td>
+                                        <td class="MenuTitle">
+                                            <img src="../image/mnu2.gif" align="left">
+                                            <a class="MenuLink" href="javascript:top.iframeChange('../options/stock/PSSTK070','pageid','PSSTK070');">
+                                                <!-- 棚卸開始 -->#customSpringMessage('INVENTORY_START')</a>
+                                        </td>
+                                    </tr>
+                                #end
+                                #if($authHelper.contain('3070'))<!-- 棚卸参照権限 -->
+                                    <tr>
+                                        <td class="MenuTitle" style="width:2px;"></td>
+                                        <td class="MenuTitle">
+                                            <img src="../image/mnu2.gif" align="left">
+                                            <a class="MenuLink" href="javascript:top.iframeChange('../options/stock/PSSTK080','pageid','PSSTK080');">
+                                                <!--- 棚卸結果入力 -->#customSpringMessage('INV_RESULT_INPUT')</a>
+                                        </td>
+                                    </tr>
+                                #end
+                                #if($authHelper.contain('3070'))<!-- 棚卸参照権限 -->
+                                    <tr>
+                                        <td class="MenuTitle"></td>
+                                        <td class="MenuTitle">
+                                            <img src="../image/mnu2.gif" align="left">
+                                            <a class="MenuLink" href="javascript:top.iframeChange('../options/stock/PSSTK090','pageid','PSSTK090');">
+                                                <!-- 棚卸決済 -->#customSpringMessage('INVENTORY_SETTLE')</a>
+                                        </td>
+                                    </tr>
+                                #end
+                                #optionalMenuList('PS_STOCK_BUSINESS')
+                                </table>
+                            #end<!-- 在庫業務権限 -->
+                        #end
+
+                        #if($authHelper.contain('710'))<!-- マスタメンテナンス業務権限 -->
+                                <table id="Menu4" width="100%">
+                                    <tr>
+                                        <td class="MenuCatagoly" colspan="3">
+                                            <span class="FontBigBold" style="color: brown;"><!-- マスタ保守 -->#customSpringMessage('MASTER_BUSINESS')</span>
+                                        </td>
+                                    </tr>
+                                #if($authHelper.contain('720')||$authHelper.contain('740')||$authHelper.contain('760'))
+                                    <tr>
+                                    #if($authHelper.contain('720'))<!-- 会社マスタ参照権限 -->
+                                        <td class="MenuTitle">
+                                            <img src="../image/mnu2.gif" align="left">
+                                            <a class="MenuLink" href="javascript:top.iframeChange('../mst/company/search','pageid','companySearch');">
+                                                <!-- 会社マスタ -->#customSpringMessage('M_COMPANY')</a>
+                                        </td>
+                                    #end
+                                    #if($authHelper.contain('740'))<!-- 事業所マスタ参照権限 -->
+                                        <td class="MenuTitle">
+                                            <img src="../image/mnu2.gif" align="left">
+                                            <a class="MenuLink" href="javascript:top.iframeChange('../mst/sectionPlace/search','pageid','sectionPlaceSearch');">
+                                                <!-- 事業所マスタ -->#customSpringMessage('M_SECTION_PLACE')</a>
+                                        </td>
+                                    #end
+                                    #if($authHelper.contain('760'))<!-- 部門マスタ参照権限 -->
+                                        <td class="MenuTitle">
+                                            <img src="../image/mnu2.gif" align="left">
+                                            <a class="MenuLink" href="javascript:top.iframeChange('../mst/section/search','pageid','sectionSearch');">
+                                                <!-- 部門マスタ -->#customSpringMessage('M_SECTION')</a>
+                                        </td>
+                                    #end
+                                    #foreach($i in $authHelper.containList('720,740,760'))
+                                        <td class="MenuDetail">&nbsp;</td>
+                                    #end
+                                    </tr>
+                                #end
+                                #if($authHelper.contain('780')||$authHelper.contain('800')||$authHelper.contain('820'))
+                                    <tr>
+                                    #if($authHelper.contain('780'))<!-- ユーザマスタ参照権限 -->
+                                        <td class="MenuTitle">
+                                            <img src="../image/mnu2.gif" align="left">
+                                            <a class="MenuLink" href="javascript:top.iframeChange('../mst/user/search','pageid','userSearch');">
+                                                <!-- ユーザーマスタ -->#customSpringMessage('M_USER')</a>
+                                        </td>
+                                    #end
+                                    #if($authHelper.contain('800'))<!-- ロールマスタ参照権限 -->
+                                        <td class="MenuTitle">
+                                            <img src="../image/mnu2.gif" align="left">
+                                            <a class="MenuLink" href="javascript:top.iframeChange('../mst/role/search','pageid','roleSearch');">
+                                                <!-- ロールマスタ -->#customSpringMessage('M_ROLE')</a>
+                                        </td>
+                                    #end
+                                    #if($authHelper.contain('820'))<!-- 承認ルート参照権限 -->
+                                        <td class="MenuTitle">
+                                            <img src="../image/mnu2.gif" align="left">
+                                            <a class="MenuLink" href="javascript:top.iframeChange('../mst/approute/search','pageid','approuteSearch');">
+                                                <!-- 承認ルートマスタ -->#customSpringMessage('M_APP_ROUTE')</a>
+                                        </td>
+                                    #end
+                                    #foreach($i in $authHelper.containList('780,800,820'))
+                                        <td class="MenuDetail">&nbsp;</td>
+                                    #end
+                                    </tr>
+                                #end
+                                #if($authHelper.contain('940')||$authHelper.contain('960')||$authHelper.contain('920'))
+                                    <tr>
+                                    #if($authHelper.contain('940'))<!-- 取引先マスタ参照権限 -->
+                                        <td class="MenuTitle">
+                                            <img src="../image/mnu2.gif" align="left">
+                                            <a class="MenuLink" href="javascript:top.iframeChange('../mst/supplier/search','pageid','supplierSearch');">
+                                                <!-- 取引先マスタ -->#customSpringMessage('M_SUPPLIER')</a>
+                                        </td>
+                                    #end
+                                    #if($authHelper.contain('920'))<!-- 統一取引先マスタ参照権限 -->
+                                        <td class="MenuTitle">
+                                            <img src="../image/mnu2.gif" align="left">
+                                            <a class="MenuLink" href="javascript:top.iframeChange('../mst/vendor/search','pageid','vedorSearch');">
+                                                <!-- 統一取引先マスタ -->#customSpringMessage('M_VENDOR')</a>
+                                        </td>
+                                    #end
+                                    #if($authHelper.contain('960'))<!-- 支払条件マスタ参照権限 -->
+                                        <td class="MenuTitle">
+                                            <img src="../image/mnu2.gif" align="left">
+                                            <a class="MenuLink" href="javascript:top.iframeChange('../mst/payCondition/search','pageid','payConditionSearch');">
+                                                <!-- 支払条件マスタ -->#customSpringMessage('M_PAY_CONDITION')</a>
+                                        </td>
+                                    #end
+                                    #foreach($i in $authHelper.containList('940,960,920'))
+                                        <td class="MenuDetail">&nbsp;</td>
+                                    #end
+                                    </tr>
+                                #end
+                                #if($authHelper.contain('1000')||$authHelper.contain('1090')||$authHelper.contain('1070'))
+                                    <tr>
+                                    #if($authHelper.contain('1000'))<!-- 品名マスタ参照権限 -->
+                                        <td class="MenuTitle">
+                                            <img src="../image/mnu2.gif" align="left">
+                                            <a class="MenuLink" href="javascript:top.iframeChange('../mst/item/search','pageid','itemSearch');">
+                                                <!-- 品名マスタ -->#customSpringMessage('M_ITEM')</a>
+                                        </td>
+                                    #end
+                                    #if($authHelper.contain('1090'))<!-- メーカーマスタ参照権限 -->
+                                        <td class="MenuTitle">
+                                            <img src="../image/mnu2.gif" align="left">
+                                            <a class="MenuLink" href="javascript:top.iframeChange('../mst/manufact/search','pageid','unitSearch');">
+                                                <!-- メーカーマスタ -->#customSpringMessage('M_MANUFACT')</a>
+                                        </td>
+                                    #end
+                                    #if($authHelper.contain('1070'))<!-- 単位マスタ参照権限 -->
+                                        <td class="MenuTitle">
+                                            <img src="../image/mnu2.gif" align="left">
+                                            <a class="MenuLink" href="javascript:top.iframeChange('../mst/unit/search','pageid','unitSearch');">
+                                                <!-- 単位マスタ -->#customSpringMessage('M_UNIT_NAME')</a>
+                                        </td>
+                                    #end
+                                    #foreach($i in $authHelper.containList('1000,1090,1070'))
+                                        <td class="MenuDetail">&nbsp;</td>
+                                    #end
+                                    </tr>
+                                #end
+                                #if($authHelper.contain('1170')||$authHelper.contain('980')||$authHelper.contain('840'))
+                                    <tr>
+                                    #if($authHelper.contain('1170'))<!-- 品名分類マスタ参照権限 -->
+                                        <td class="MenuTitle">
+                                            <img src="../image/mnu2.gif" align="left">
+                                            <a class="MenuLink" href="javascript:top.iframeChange('../mst/itemClass/search','pageid','itemClassSearch');">
+                                                <!-- 品名分類マスタ -->#customSpringMessage('M_PRODUCT_CLASS')</a>
+                                        </td>
+                                    #end
+                                    #if($authHelper.contain('980'))<!-- 品種マスタ参照権限 -->
+                                        <td class="MenuTitle">
+                                            <img src="../image/mnu2.gif" align="left">
+                                            <a class="MenuLink" href="javascript:top.iframeChange('../mst/itemKind/search','pageid','itemKindSearch');">
+                                                <!-- 品種マスタ -->#customSpringMessage('M_ITEM_KIND')</a>
+                                        </td>
+                                    #end
+                                    #if($authHelper.contain('840'))<!-- 納入先マスタ参照権限 -->
+                                        <td class="MenuTitle">
+                                            <img src="../image/mnu2.gif" align="left">
+                                            <a class="MenuLink" href="javascript:top.iframeChange('../mst/deliveryPlace/search','pageid','deliveryPlaceSearch');">
+                                                <!-- 納入先マスタ -->#customSpringMessage('M_DELIVERY_PLACE')</a>
+                                        </td>
+                                    #end
+                                    #foreach($i in $authHelper.containList('1170,980,840'))
+                                        <td class="MenuDetail">&nbsp;</td>
+                                    #end
+                                    </tr>
+                                #end
+                                #if($authHelper.contain('860')||$authHelper.contain('900')||$authHelper.contain('1030'))
+                                    <tr>
+                                    #if($authHelper.contain('860'))<!-- 科目マスタ参照権限 -->
+                                        <td class="MenuTitle">
+                                            <img src="../image/mnu2.gif" align="left">
+                                            <a class="MenuLink" href="javascript:top.iframeChange('../mst/subject/search','pageid','subjectSearch');">
+                                                <!-- 科目マスタ -->#customSpringMessage('M_SUBJECT')</a>
+                                        </td>
+                                    #end
+                                    #if($authHelper.contain('900'))<!-- 休日カレンダマスタ参照権限 -->
+                                        <td class="MenuTitle">
+                                            <img src="../image/mnu2.gif" align="left">
+                                            <a class="MenuLink" href="javascript:top.iframeChange('../mst/holiday/search','pageid','holidaySearch');">
+                                                <!- -休日カレンダーマスタ -->#customSpringMessage('M_HOLIDAY')</a>
+                                        </td>
+                                    #end
+                                    #if($authHelper.contain('1030'))<!-- 通貨マスタ参照権限 -->
+                                        <td class="MenuTitle">
+                                            <img src="../image/mnu2.gif" align="left">
+                                            <a class="MenuLink" href="javascript:top.iframeChange('../mst/currency/search','pageid','currencySearch');">
+                                                <!-- 通貨マスタ -->#customSpringMessage('M_CURRENCY')</a>
+                                        </td>
+                                    #end
+                                    #foreach($i in $authHelper.containList('860,900,1030'))
+                                        <td class="MenuDetail">&nbsp;</td>
+                                    #end
+                                    </tr>
+                                #end
+                                #if($authHelper.contain('1110')||$authHelper.contain('1130')||$authHelper.contain('1150'))
+                                    <tr>
+                                    #if($authHelper.contain('1110'))<!-- コード名称マスタ参照権限 -->
+                                        <td class="MenuTitle">
+                                            <img src="../image/mnu2.gif" align="left">
+                                            <a class="MenuLink" href="javascript:top.iframeChange('../mst/codeName/search','pageid','codeNameSearch');">
+                                                <!-- コード名称マスタ -->#customSpringMessage('M_CODE_NAME')</a>
+                                        </td>
+                                    #end
+                                    #if($authHelper.contain('1130'))<!-- メッセージマスタ参照権限 -->
+                                        <td class="MenuTitle">
+                                            <img src="../image/mnu2.gif" align="left">
+                                            <a class="MenuLink" href="javascript:top.iframeChange('../mst/message/search','pageid','messageSearch');">
+                                                <!-- メッセージマスタ -->#customSpringMessage('M_MESSAGE')</a>
+                                        </td>
+                                    #end
+                                    #if($authHelper.contain('1150'))<!-- 設定マスタ参照権限 -->
+                                        <td class="MenuTitle">
+                                            <img src="../image/mnu2.gif" align="left">
+                                            <a class="MenuLink" href="javascript:top.iframeChange('../mst/cond/search','pageid','condSearch');">
+                                                <!-- 設定マスタ -->#customSpringMessage('M_COND')</a>
+                                        </td>
+                                    #end
+                                    #foreach($i in $authHelper.containList('1110,1130,1150'))
+                                        <td class="MenuDetail">&nbsp;</td>
+                                    #end
+                                    </tr>
+                                #end
+                                #if($authHelper.contain('1190')||$authHelper.contain('1210')||$authHelper.contain('1230'))
+                                    <tr>
+                                    #if($authHelper.contain('1190'))<!-- 名称マスタ参照権限 -->
+                                        <td class="MenuTitle">
+                                            <img src="../image/mnu2.gif" align="left">
+                                            <a class="MenuLink" href="javascript:top.iframeChange('../mst/elementname/PSMST330','pageid','elementnameSearch');">
+                                                <!-- 名称マスタ -->#customSpringMessage('S_ELEMENT_NAME')</a>
+                                        </td>
+                                    #end
+                                    #if($authHelper.contain('1210'))<!-- 項目定義マスタ参照権限 -->
+                                        <td class="MenuTitle">
+                                            <img src="../image/mnu2.gif" align="left">
+                                            <a class="MenuLink" href="javascript:top.iframeChange('../mst/elementconfig/PSMST340','pageid','elementconfigSearch');">
+                                                <!-- 項目定義マスタ -->#customSpringMessage('S_ELEMENT_CONFIG')</a>
+                                        </td>
+                                    #end
+                                    #if($authHelper.contain('1230'))<!-- 伝票定義マスタ参照権限 -->
+                                        <td class="MenuTitle">
+                                            <img src="../image/mnu2.gif" align="left">
+                                            <a class="MenuLink" href="javascript:top.iframeChange('../mst/vchconf/PSMST350','pageid','PSMST350');">
+                                                <!-- 伝票定義マスタ -->#customSpringMessage('S_VOUCHER_CONFIG')</a>
+                                        </td>
+                                    #end
+                                    #foreach($i in $authHelper.containList('1190,1210,1230'))
+                                        <td class="MenuDetail">&nbsp;</td>
+                                    #end
+                                    </tr>
+                                #end
+                            #if($customMacroRequestContext.isActiveProfile('stock'))
+                                #if($authHelper.contain('1320'))
+                                    <tr>
+                                    #if($authHelper.contain('1320'))<!-- 在庫場所マスタ参照権限 -->
+                                        <td class="MenuTitle">
+                                            <img src="../image/mnu2.gif" align="left">
+                                            <a class="MenuLink" href="javascript:top.iframeChange('../options/stock/PSSTK200','pageid','PSSTK200');">
+                                                <!-- 在庫場所マスタ -->#customSpringMessage('M_STOCK_PLACE')</a>
+                                        </td>
+                                        <td class="MenuDetail">&nbsp;</td>
+                                        <td class="MenuDetail">&nbsp;</td>
+                                    #end
+                                    </tr>
+                                #end
+                            #end
+                                #optionalMenuList('PS_MASTER_BUSINESS')
+                                </table>
+                        #end<!-- マスタメンテナンス業務権限 -->
+
+                            #optionalMenuList('PS_OTHER')
+                            </td>
+                        </tr>
+                        <tr>
+                            <td></td>
+                        </tr>
+                    </table>
+                </td>
+                <td class="RightArea" witdh="30%">
+                #end
+                    <table class="NoBorder" width="100%">
+                        <tr>
+                            <td align="right" style="padding-bottom: 10px;">
+                                <table class="HomeBox2" width="100%">
+                                    <tr>
+                                        <td align="left" style="padding: 4px;"><span
+                                            class="CornerTopBlue"><span class="Corner1"></span><span
+                                                class="Corner2"></span><span class="Corner3"></span><span
+                                                class="Corner4"></span></span>
+                                            <table class="CornerMidBlue" width="100%">
+                                                <tr>
+                                                    <td class="FontMiniAnkBold" align="left">
+                                                        <!-- ログイン情報 -->#customSpringMessage('LOGIN_INFO'):<br>
+                                                        #customFormSingleSelect("searchCondition.loginUser.user.section.SectionCd"
+                                                        $loginSectionList "onchange='changeUrl();'")<br>
+                                                        <span style="padding: 4px;" class="FontMiniAnkBold">
+                                                        #out($!loginUser.user.userID)</span><br>
+                                                        <span class="FontBigBold"
+                                                        style="color: darkblue; padding: 4px;">
+                                                        #out($!loginUser.user.userName)</span>&nbsp;<span
+                                                        class="FontSmall" style="color: #666666;"></span> <br>
+                                                        <span id="RoleName" class="FontSmallBold"
+                                                        style="color: green; padding: 4px;">#out($!sectioned.roleItem.roleName)</span> <br>
+                                                    <span class="FontMini" style="color: brown; padding: 4px;">
+                                                            <!--前回ログイン -->#customSpringMessage('PREV_LOGIN')：
+                                                            #out($!lastLoginDate)
+                                                    </span> 
+                                                #if ($!passwordValidEnabled && $!passwordValidDate && $!passwordValidDate != "")
+                                                    <br><span class="FontMini" style="color: brown; padding: 4px;">
+                                                        <!--パスワード有効期限 -->#customSpringMessage('PASSWORD_LIMIT_TIME')：
+                                                    </span>
+                                                    #if ($!passwordChangeNoticeValid)
+                                                    <span class="FontSmallBold" style="color: Red; padding: 0px;">
+                                                    #else
+                                                    <span class="FontMini" style="color: brown; padding: 0px;">
+                                                    #end
+                                                        #out($!passwordValidDate)
+                                                    </span>
+                                                #end
+                                                    </td>
+                                                </tr>
+                                            </table> <span class="CornerBtmBlue"><span class="Corner4"></span><span
+                                                class="Corner3"></span><span class="Corner2"></span><span
+                                                class="Corner1"></span></span></td>
+                                    </tr>
+                                </table>
+                            </td>
+                        </tr>
+                    </table> <br>
+                    <table class="HomeBox2" width="100%">
+                        <tr>
+                            <td align="center" style="padding: 4px;"><span
+                                class="CornerTopYellow"><span class="Corner1"></span><span
+                                    class="Corner2"></span><span class="Corner3"></span><span
+                                    class="Corner4"></span></span>
+                                <table class="CornerMidYellow" width="100%">
+                                    <tr>
+                                        <td colspan="2" align="center"><img class="Button"
+                                            src="../image/mrkInfo.gif"><br> <span
+                                            class="FontMiddleAnkBold" style="color: brown;"><u>
+                                                    <!--Information -->#customSpringMessage('INFORMATION')
+                                            </u></span></td>
+                                    </tr>
+                                    #foreach( $newsItem in $newsList )
+                                    <tr>
+                                        <td class="NewsTitle">
+                                        <a class="FontSmallBold" href="javascript:window.open('../cmn/information/PSCMN050','informationPopup','width=600,height=420,left=400,top=250');top.iframeChange('../cmn/information/PSCMN050','newsSeq','#jsEscapeInHTML($!newsItem.newsIdentify.newsSeq)','informationPopup');">#out($!newsItem.title)</a><br>
+                                            <span class="FontMini">#out($newsItem.newsIdentify.lastUpdDateDispYMD)</span>
+                                        </td>
+                                        <td class="NewsTitle" align="right" valign="bottom"><span
+                                            class="FontMini" style="color: green;">#out($newsItem.sendUserName)</span></td>
+                                    </tr>
+                                    #end
+                                </table> <span class="CornerBtmYellow"><span class="Corner4"></span><span
+                                    class="Corner3"></span><span class="Corner2"></span><span
+                                    class="Corner1"></span></span></td>
+                        </tr>
+                    </table> <br>
+                    
+                    <table class="NoBorer">
+                    #foreach( $libraryItem in $libraryList )
+                        <tr>
+                            <td style="padding: 4px; vertical-align: top;"><img
+                                src="../image/mrkPaper.gif"></td>
+                            <td style="vertical-align: top;"><a
+                                class="FontMiddleAnkBold" href="../hme/download?helpNo=$!libraryItem.libraryIdentify.helpNo&lastUpdDate=$!libraryItem.libraryIdentify.lastUpdDate">#out($libraryItem.titleName)</a> <br>
+                            <span class="FontMini" style="color: brown;">#out($libraryItem.description)</span>
+                            </td>
+                        </tr>
+                    #end
+                    </table>
+                </td>
+            </tr>
+        </table>
+    </form>
+</body>
+</html>

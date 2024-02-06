@@ -1,0 +1,227 @@
+<!doctype html>
+<html LANG="ja">
+<head>
+<META http-equiv="Content-type" content="text/html; charset=UTF-8">
+#set($commonTitle = "#customSpringMessage('RINGI_BUDGET_LIST')")
+<title>$commonTitle</title><!--稟議予算一覧-->
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Content-script-type" CONTENT="text/javascript">
+<link id="CSS_FONT" rel="stylesheet" href="../../include/FontS.css" type="text/css">
+<link rel="stylesheet" href="../../include/Layout.css" type="text/css">
+<link rel="stylesheet" href="../../include/Color.css" type="text/css">
+<link rel="stylesheet" href="../../include/searchbox.css" type="text/css">
+<link rel="stylesheet" href="../../include/ime.css" type="text/css">
+
+<script language="javascript" type="text/javascript" src="../../include/jquery-1.7.2.min.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/common.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/date.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/check.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/searchbox.js"></script>
+<script language="javascript" type="text/javascript">
+<!--
+#set($searchViewStateID='PSBDT050')
+#set($listViewStateID='PSBDT051')
+var pinName="PSBDT050_Pin";
+#parse("./common/common_js.vm")
+
+function onLoad(){
+    //クイックリンクステータス
+
+    bodyLoad();
+    var alertMessage = "$!alertMessage";
+    if (alertMessage != ""){
+        alert(alertMessage);
+    }
+    var errorMsg = "$!errorMessage";
+    if (errorMsg != ""){
+       setErrorMessage("ERRORDIV", errorMsg, "DATAAREA");
+        return;
+    }
+    var isDownload = "#jsEscape($!isDownLoadValidate)";
+    if (isDownload == 'true') {
+       iframeChange("${flowExecutionUrl}&_eventId=download","pageid","PSBDT050","HIDDENAREA");
+    } else {
+        var isShowList = "#jsEscape($isShowList)";
+        if (isShowList == 'true'){
+            iframeChange("${flowExecutionUrl}&_eventId=search");
+        }
+    }
+
+}
+
+function execSearch(){
+    buttonDisable();
+    getObj("BodyForm").target="_self";
+    getObj('BodyForm').action = "${flowExecutionUrl}&_eventId=validate";
+    getObj('BodyForm').submit();
+}
+
+ function openSectionPop() {
+        sectionPopup.setObject(
+            getObj('reqSectionCd')
+            ,getObj('reqSectionName')
+        );
+    masterSearch('../../src/sectionPopup/search?pageid=sectionPopupSearch&popupPageid=PSBDT050','sectionSearch', '750', '500');
+ }
+
+ function clearSection() {
+    getObj("reqSectionName").value = "";
+ }
+
+ function openUserPop() {
+    userPopup.setObject(
+        getObj('planUserId'),
+        getObj('planUserName')
+    );
+    masterSearch('../../src/userPopup/search?pageid=userPopupSearch&popupPageid=PSBDT050',
+                                                  'UserSearch',
+                                                  '750',
+                                                  '500',
+                                                  document.getElementById('planUserId'),
+                                                  document.getElementById('planUserName'));
+ }
+
+ function clearUser() {
+    getObj("planUserName").value = "";
+ }
+
+ function doDownload() {
+    //メッセージは空設定
+    getObj("TR_ERROR").style.display = "none";
+    getObj("ERRORDIV").innerHTML="";
+    getObj("BodyForm").target = "HIDDENAREA";
+    buttonDisable();
+    setTimeout(buttonUsable,1000);
+    getObj("BodyForm").action = "${flowExecutionUrl}&_eventId=downloadValidate";
+
+    getObj("BodyForm").submit();
+ }
+
+ function checkBoxClear() {
+     searchConditionCheckBoxClear("budgetOverOnlyFlg");
+     searchConditionCheckBoxClear("endViewFlg");
+ }
+//-->
+</script>
+</head>
+<body topmargin="0" leftmargin="0" marginwidth="0" marginheight="0" align="center" width="100%" height="100%" onload="onLoad();" style="overflow-y:hidden;">
+<form id="BodyForm" name="Body" method="post">
+    #customFormHiddenInput("isClassify" "false")
+    <!-- ＊＊＊＊＊　カレンダーボックス　＊＊＊＊＊ -->
+    <iframe id="CALENDARBOX" class="CALENDARBOX" framespacing="0"scrolling="no" frameborder="0" src="../../sbxCalendar/body.vm"></iframe>
+    <table class="NoBorder" width="100%" height="100%">
+        <tr>
+            <td id="SEARCH_AREA" class="SearchArea"><!-- onLoadで変更 -->
+                #parse("./common/common_title_tran.vm")
+                <table width="100%">
+                    <tr id="SEARCH_AREA2">
+                        <td id="Adjust" align="right" valign="top">
+                            <!-- 検索条件入力部 -->
+                            <table class="NoBorder" width="100%">
+                                <tr><td align="left" colspan="4" nowrap>#customSpringMessage('PSBDT050_HEADER_COMMENT')</td></tr>
+                                <tr>
+                                    <td nowrap class="FontSmallBold" align="right">#customSpringMessage('BUDGET_NO')<span class="FontComment">＊</span></td><!--予算番号-->
+                                    <td nowrap class="FontSmall" align="left">
+                                        #springFormInput("searchCondition.budgetNo" 'class="Small noIME" maxlength="26" size="40"')
+                                    </td>
+                                    <td nowrap class="FontSmallBold" align="right">#customSpringMessage('REQ_SECTION')</td><!-- 依頼部門 -->
+                                    <td nowrap class="FontSmall" align="left">
+                                        #springFormInput("searchCondition.reqSectionCd" 'class="Small noIME" maxlength="12" size="20" onchange="clearSection();"')
+                                        #springFormInput("searchCondition.reqSectionName" 'class="SmallDsp" readonly tabIndex="-1" size="32"')
+                                        <img class="Icon" src="../../image/btnLupe.gif" onclick="openSectionPop();">
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td nowrap class="FontSmallBold" align="right">#customSpringMessage('BUDGET_TITLE_NAME')<span class="FontComment">％</span></td><!--予算件名-->
+                                    <td nowrap class="FontSmall" align="left">
+                                        #springFormInput("searchCondition.budgetTitleName" 'class="Small onIME" maxlength="30" size="95"')
+                                    </td>
+                                    <td nowrap class="FontSmallBold" align="right">#customSpringMessage('PLAN_USER')</td><!--起案者-->
+                                    <td nowrap class="FontSmallBold" align="left">
+                                        #springFormInput("searchCondition.planUserId" 'class="Small noIME" maxlength="12" size="20" onchange="clearUser();"')
+                                        #springFormInput("searchCondition.planUserName" 'class="SmallDsp" readonly tabIndex="-1" size="32"')
+                                        <img class="Icon" src="../../image/btnLupe.gif" onclick="openUserPop();">
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td nowrap class="FontSmallBold" align="right">#customSpringMessage('PERMIT_DATE')</td><!--許可日-->
+                                    <td class="FontSmallBold" align="left" nowrap colspan="3">
+                                        #springFormInput("searchCondition.permitDateFrom.dateOfymdFormat" "maxLength=8 size=12 class='SmallAnk noIME' onblur='dateOnBlur(this);' onfocus='dateOnFocus(this);' ")
+                                        <img class="Icon" src="../../image/btnCalendar.gif" onclick="initSearchBox(1,getObj('permitDateFrom.dateOfymdFormat'));">
+                                        &nbsp;～&nbsp;
+                                        #springFormInput("searchCondition.permitDateTo.dateOfymdFormat" "maxLength=8 size=12 class='SmallAnk noIME' onblur='dateOnBlur(this);' onfocus='dateOnFocus(this);' ")
+                                        <img class="Icon" src="../../image/btnCalendar.gif" onclick="initSearchBox(1,getObj('permitDateTo.dateOfymdFormat'));">
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td nowrap class="FontSmallBold" align="right">#customSpringMessage('END_EXP_DATE')</td><!--完了予定日-->
+                                    <td class="FontSmallBold" align="left" nowrap colspan="3">
+                                        #springFormInput("searchCondition.endExpDateFrom.dateOfymdFormat" "maxLength=8 size=12 class='SmallAnk noIME' onblur='dateOnBlur(this);' onfocus='dateOnFocus(this);' ")
+                                        <img class="Icon" src="../../image/btnCalendar.gif" onclick="initSearchBox(1,getObj('endExpDateFrom.dateOfymdFormat'));">
+                                        &nbsp;～&nbsp;
+                                        #springFormInput("searchCondition.endExpDateTo.dateOfymdFormat" "maxLength=8 size=12 class='SmallAnk noIME' onblur='dateOnBlur(this);' onfocus='dateOnFocus(this);' ")
+                                        <img class="Icon" src="../../image/btnCalendar.gif" onclick="initSearchBox(1,getObj('endExpDateTo.dateOfymdFormat'));">
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td nowrap class="FontSmallBold" align="right">#customSpringMessage('END_DATE')</td><!--完了-->
+                                    <td class="FontSmallBold" align="left" nowrap colspan="3">
+                                        #springFormInput("searchCondition.endDateFrom.dateOfymdFormat" "maxLength=8 size=12 class='SmallAnk noIME' onblur='dateOnBlur(this);' onfocus='dateOnFocus(this);' ")
+                                        <img class="Icon" src="../../image/btnCalendar.gif" onclick="initSearchBox(1,getObj('endDateFrom.dateOfymdFormat'));">
+                                        &nbsp;～&nbsp;
+                                        #springFormInput("searchCondition.endDateTo.dateOfymdFormat" "maxLength=8 size=12 class='SmallAnk noIME' onblur='dateOnBlur(this);' onfocus='dateOnFocus(this);' ")
+                                        <img class="Icon" src="../../image/btnCalendar.gif" onclick="initSearchBox(1,getObj('endDateTo.dateOfymdFormat'));">
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td nowrap class="FontSmallBold" align="right"></td>
+                                    <td nowrap class="FontSmallBold" align="left" colspan="3">
+                                        #customFormCheckbox("searchCondition.budgetOverOnlyFlg" "" "1" "")#customSpringMessage('BUDGET_OVER_ONLY')<!--予算オーバーのみ表示する-->
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td nowrap class="FontSmallBold" align="right"></td>
+                                    <td nowrap class="FontSmallBold" align="left" colspan="3">
+                                        #customFormCheckbox("searchCondition.endViewFlg" "" "1" "")#customSpringMessage('INCLUDE_FINISHED_BUDGET')<!--完了も表示する-->
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td align="left" colspan="4" nowrap class="FontComment">
+                                        #customSpringMessage("PSBDT050_FOOTER_COMMENT")<!--＊:前方一致 / ％:中間一致 / なし:完全一致-->
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+
+                        <td nowrap class="FontSmallBold" align="right" valign="top">
+                            <br>
+                            <!-- ＊＊＊＊＊　検索実行　＊＊＊＊＊ -->
+                            <input type="button" onclick="javascript:execSearch();" class="LargeButton" value="#customSpringMessage('ACTION_SEARCH')"><!--検索-->
+                            <br>
+                            <br><a href="javascript:clear();checkBoxClear();" id="clearSearch">#customSpringMessage("ACTION_CLEAR_SEARCH_CRITERIA")<!--検索条件をクリアする--></a>&nbsp;
+                        </td>
+                    </tr>
+                 </table>
+
+                        </td>
+                    </tr>
+                    <tr id="UPLOAD_AREA">
+                        <td class="UploadArea">
+                            #parse("./common/common_download.vm")
+                        </td>
+                    </tr>
+                    <tr id ="TR_ERROR" style="display:none;"><td class="error" style="height:0px;">
+                            <div id="ERRORDIV">$!errorMessage </div>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="NoBorder" style="height:auto;">
+                            <iframe id="DATAAREA" name="DATAAREA" framespacing="0" frameborder="0" src="../../layout/default.vm" scrolling="no" frameborder="no" style="position:static;width:100%;border:0px solid #999999;height:100%;z-index:0;"></iframe>
+                        </td>
+                   </tr>
+            </table>
+<iframe id="HIDDENAREA" name="HIDDENAREA" framespacing="0" frameborder="0" src="" scrolling="no" frameborder="no" style="display:none"></iframe>
+</form>
+</body>
+</html>
+

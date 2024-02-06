@@ -1,0 +1,341 @@
+<!doctype html>
+<html lang="ja">
+<head>
+#set($commonTitle = "#customSpringMessage('STRG_SHIP_RESULTS_LIST')")
+<title>$commonTitle</title><!--入出庫実績一覧-->
+<meta http-equiv="Content-type" content="text/html; charset=UTF-8">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Content-script-type" content="text/javascript">
+<link id="CSS_FONT" rel="stylesheet" href="../../include/FontS.css" type="text/css">
+<link rel="stylesheet" href="../../include/Layout.css" type="text/css">
+<link rel="stylesheet" href="../../include/Color.css" type="text/css">
+<link rel="stylesheet" href="../../include/searchbox.css" type="text/css">
+<link rel="stylesheet" href="../../include/ime.css" type="text/css">
+<script language="javascript" type="text/javascript" src="../../include/common.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/check.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/date.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/searchbox.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/jquery-1.7.2.min.js"></script>
+<script language="javascript" type="text/javascript">
+<!--
+#set($allSearchGrant = $LoginUser.hasAuth(${AuthNoConstant.getValue("STRG_SHIP_RESULTS_READ_ALLSEARCH_GRANT")}))## 全社入出庫実績照会権限
+#set($searchViewStateID = 'PSSTK030')
+#set($listViewStateID = 'PSSTK031')
+#parse("./common/common_js.vm")
+var pinName="PSSTK030_Pin";
+## ビューが初めて表示される直前に発生します。
+function onLoad(){
+    bodyLoad();
+    var alertMessage="$!alertMessage";
+    if(alertMessage!=""){
+        alert(alertMessage);
+    }
+    var errorMsg="$!errorMessage";
+    if(errorMsg!=""){
+        setErrorMessage("ERRORDIV",errorMsg,"DATAAREA");
+        return;
+    }
+    var isDownload="#jsEscape($!isDownLoadValidate)";
+    if(isDownload=="true"){
+        iframeChange("${flowExecutionUrl}&_eventId=download","pageid","PSSTK030","HIDDENAREA");
+        return;
+    }
+    var isShowList="#jsEscape($isShowList)";
+    if(isShowList=="true"){
+        iframeChange("${flowExecutionUrl}&_eventId=search","pageid","PSSTK030");
+        return;
+    }
+}
+## 「検索」ボタンをクリックしたとき発生します。
+function execSearch(){
+    setItemDisabled("itemClassM","itemClassS");
+    buttonDisable();
+    getObj("BodyForm").target="_self";
+    getObj("BodyForm").action="${flowExecutionUrl}&_eventId=validate";
+    getObj("BodyForm").submit();
+}
+## 「検索条件をクリアする」ボタンをクリックしたとき発生します。
+function clearSearch(){
+    resetProductClassBySession('itemClassL', 'itemClassM', 'itemClassS', '$!searchCondition.itemClassL', '$!searchCondition.itemClassM', '$!searchCondition.itemClassS', '');
+}
+## 「ダウンロード」ボタンをクリックしたとき発生します。
+function doDownload(){
+    setItemDisabled("itemClassM","itemClassS");
+    getObj("TR_ERROR").style.display = "none";
+    getObj("ERRORDIV").innerHTML="";
+    buttonDisable();
+    setTimeout(buttonUsable,1000);
+    getObj("BodyForm").target="HIDDENAREA";
+    getObj("BodyForm").action="${flowExecutionUrl}&_eventId=downloadValidate";
+    getObj("BodyForm").submit();
+}
+function checkBoxClear() {
+    searchConditionCheckBoxesClear("strgShipInd")
+}
+ 
+//-->
+</script>
+</head>
+<body topmargin="0" leftmargin="0" marginwidth="0" marginheight="0" align="center" width="100%" height="100%" onload="onLoad();" style="overflow-y:hidden;">
+<form id="BodyForm" name="Body" method="post">
+    <iframe id="CALENDARBOX" class="CALENDARBOX" framespacing="0"scrolling="no" frameborder="0" src="../../sbxCalendar/body.vm"></iframe>
+    #customFormHiddenInput("pageid" "PSSTK030")
+    <table class="NoBorder" width="100%" height="100%">
+        <tr>
+            <td id="SEARCH_AREA" class="SearchArea"><!--onLoadで変更-->
+                #parse("./common/common_title_tran_with_personal_setting.vm")
+                <table width="100%">
+                    <tr id="SEARCH_AREA2">
+                        <td id="Adjust">
+                            <!--検索条件入力部-->
+                            <table class="NoBorder" width="100%">
+                                <tr>
+                                    <td nowrap align="left" colspan="4">
+                                        #customSpringMessage('PSSTK030_HEADER_COMMENT')
+                                    </td>
+                                </tr>
+                                $!PSSTK030PageCreaterForSearch.build('_td_style_left','class="FontSmallBold" align="right"', '_td_style_right', 'class="FontSmall" align="left"', '_item_style','Small')
+                                #set($isReqSectionPlaceCd = false)
+                                #set($isSectionPlaceCd = false)
+                                #set($isShipSectionPlaceCd = false)
+                                #set($isStrgSectionPlaceCd = false)
+                                #set($isFirstItem = true)
+                                #foreach($!item in $!PSSTK030PageCreaterForSearch.getItemListForBody())
+                                    #set($currentOneRowFlag = $!PSSTK030PageCreaterForSearch.getOneRowFlag($!item))
+                                    #if($isFirstItem)
+                                        $!PSSTK030PageCreaterForSearch.printTRtag()
+                                    #elseif($currentOneRowFlag)
+                                        $!PSSTK030PageCreaterForSearch.printTDtag()
+                                        $!PSSTK030PageCreaterForSearch.printTRtagClose()
+                                        #set($isFirstItem = true)
+                                        $!PSSTK030PageCreaterForSearch.printTRtag()
+                                    #end
+                                    #if($!item.getColumnName()=="T_STRG_SHIP_RESULTS.STRG_SHIP_NO")
+                                        $!PSSTK030PageCreaterForSearch.printDefault($!item)
+                                    #elseif($!item.getColumnName()=="T_STRG_SHIP_RESULTS.STRG_SHIP_IND")
+                                        $!PSSTK030PageCreaterForSearch.printDefault($!item)
+                                    #elseif($!item.getColumnName()=="T_STRG_SHIP_RESULTS.STRG_SHIP_CLASS_IND")
+                                        $!PSSTK030PageCreaterForSearch.printDefault($!item)
+                                    #elseif($!item.getColumnName()=="T_STRG_SHIP_RESULTS.REQ_DATE")
+                                        $!PSSTK030PageCreaterForSearch.printDefault($!item)
+                                    #elseif($!item.getColumnName()=="T_STRG_SHIP_RESULTS.REQ_SECTION_PLACE_CD")
+                                        $!PSSTK030PageCreaterForSearch.printSpecial("REQ_SECTION_PLACE", "m33_inputSectionPlace", $!item
+                                            , 'popupPageid', 'PSSTK030'
+                                            , '_masterCdIme', 'noIME'
+                                            , '_termFlag', '1'
+                                            , '_validDateFlg', '1'
+                                        )
+                                        #set($isReqSectionPlaceCd = true)
+                                    #elseif($!item.getColumnName()=="T_STRG_SHIP_RESULTS.REQ_SECTION_CD")
+                                        $!PSSTK030PageCreaterForSearch.printSpecial("REQ_SECTION", "m03_inputSection", $!item
+                                            , 'popupPageid', 'PSSTK030'
+                                            , 'projectId', 'reqSection'
+                                            , '_masterCdIme','noIME'
+                                        )
+                                    #elseif($!item.getColumnName()=="T_STRG_SHIP_RESULTS.REQ_USER_ID")
+                                      #if($!allSearchGrant)## 全社入出庫実績照会権限
+                                        $!PSSTK030PageCreaterForSearch.printSpecial("CLIENT", "m13_inputUserForSearch" ,$!item
+                                            , "popupPageid", "PSSTK030"
+                                            , "projectId", "purReqUserForAllGrant"
+                                            , '_masterCdIme', 'Small noIME'
+                                        )
+                                      #else
+                                        $!PSSTK030PageCreaterForSearch.printSpecial("CLIENT", "m13_inputUserForSearch" ,$!item
+                                            , "popupPageid", "PSSTK030"
+                                            , "projectId", "purReqUser"
+                                            , '_masterCdIme', 'Small noIME'
+                                        )
+                                      #end
+                                    #elseif($!item.getColumnName()=="T_STRG_SHIP_RESULTS.REQ_USER_EXTENSION_NO")
+                                        $!PSSTK030PageCreaterForSearch.printDefault($!item)
+                                    #elseif($!item.getColumnName()=="T_STRG_SHIP_RESULTS.REQ_USER_TEL_NO")
+                                        $!PSSTK030PageCreaterForSearch.printDefault($!item)
+                                    #elseif($!item.getColumnName()=="T_STRG_SHIP_RESULTS.TITLE_NAME")
+                                        $!PSSTK030PageCreaterForSearch.printDefault($!item)
+                                    #elseif($!item.getColumnName()=="T_STRG_SHIP_RESULTS.ITEM_CLASS_S")
+                                        $!PSSTK030PageCreaterForSearch.printSpecial("PRODUCT_CLASS", "m29_inputItemProductClassSelect", $!item) 
+                                    #elseif($!item.getColumnName()=="T_STRG_SHIP_RESULTS.ITEM_CD")
+                                        $!PSSTK030PageCreaterForSearch.printSpecial("m11_inputItemCodeOnly", $!item
+                                            , "popupPageid", "PSSTK030"
+                                            , '_masterCdIme', 'Small noIME'
+                                        )
+                                    #elseif($!item.getColumnName()=="T_STRG_SHIP_RESULTS.ITEM_NAME")
+                                        $!PSSTK030PageCreaterForSearch.printDefault($!item)
+                                    #elseif($!item.getColumnName()=="T_STRG_SHIP_RESULTS.KATASHIKI")
+                                        $!PSSTK030PageCreaterForSearch.printDefault($!item)
+                                    #elseif($!item.getColumnName()=="T_STRG_SHIP_RESULTS.MANUFACT_CD")
+                                        $!PSSTK030PageCreaterForSearch.printSpecial("MANUFACT", "m09_inputManufact", $!item
+                                            , 'popupPageid', 'PSSTK030'
+                                            , '_masterCdIme', 'noIME'
+                                        )
+                                    #elseif($!item.getColumnName()=="T_STRG_SHIP_RESULTS.SECTION_PLACE_CD")
+                                      #if($!allSearchGrant)## 全社入出庫実績照会権限
+                                        $!PSSTK030PageCreaterForSearch.printSpecial("SECTION_PLACE", "m33_inputSectionPlace", $!item
+                                            , 'popupPageid', 'PSSTK030'
+                                            , '_masterCdIme', 'noIME'
+                                            , '_termFlag', '1'
+                                            , '_validDateFlg', '1'
+                                        )
+                                        #set($isSectionPlaceCd = true)
+                                      #end
+                                    #elseif($!item.getColumnName()=="T_STRG_SHIP_RESULTS.STOCK_PLACE_CD")
+                                      #if($!allSearchGrant)## 全社入出庫実績照会権限
+                                        $!PSSTK030PageCreaterForSearch.printSpecial("STOCK_PLACE", "m35_inputStockPlace", $!item
+                                            , 'popupPageid', 'PSSTK030'
+                                            , '_masterCdIme', 'noIME'
+                                            , '_referenceRangeFlg', '1'
+                                            , '_termFlag', '1'
+                                        )
+                                      #else
+                                        $!PSSTK030PageCreaterForSearch.printSpecial("STOCK_PLACE", "m35_inputStockPlace", $!item
+                                            , 'popupPageid', 'PSSTK030'
+                                            , '_masterCdIme', 'noIME'
+                                            , '_referenceRangeFlg', '2'
+                                            , '_termFlag', '1'
+                                        )
+                                      #end
+                                    #elseif($!item.getColumnName()=="T_STRG_SHIP_RESULTS.SHIP_SECTION_PLACE_CD")
+                                        $!PSSTK030PageCreaterForSearch.printSpecial("SHIP_SECTION_PLACE","m33_inputSectionPlace", $!item
+                                            , 'popupPageid', 'PSSTK030'
+                                            , '_masterCdIme', 'noIME'
+                                            , '_termFlag', '1'
+                                            , '_validDateFlg', '1'
+                                        )
+                                        #set($isShipSectionPlaceCd = true)
+                                    #elseif($!item.getColumnName()=="T_STRG_SHIP_RESULTS.SHIP_STOCK_PLACE_CD")
+                                      #if($!allSearchGrant)## 全社入出庫実績照会権限
+                                        $!PSSTK030PageCreaterForSearch.printSpecial("SHIP_STOCK_PLACE", "m35_inputStockPlace", $!item
+                                            , 'popupPageid', 'PSSTK030'
+                                            , '_masterCdIme', 'noIME'
+                                            , '_referenceRangeFlg', '1'
+                                            , '_termFlag', '1'
+                                        )
+                                      #else
+                                        $!PSSTK030PageCreaterForSearch.printSpecial("SHIP_STOCK_PLACE", "m35_inputStockPlace", $!item
+                                            , 'popupPageid', 'PSSTK030'
+                                            , '_masterCdIme', 'noIME'
+                                            , '_referenceRangeFlg', '2'
+                                            , '_termFlag', '1'
+                                        )
+                                      #end
+                                    #elseif($!item.getColumnName()=="T_STRG_SHIP_RESULTS.STRG_SECTION_PLACE_CD")
+                                        $!PSSTK030PageCreaterForSearch.printSpecial("STRG_SECTION_PLACE", "m33_inputSectionPlace", $!item
+                                            , 'popupPageid', 'PSSTK030'
+                                            , '_masterCdIme', 'noIME'
+                                            , '_termFlag', '1'
+                                            , '_validDateFlg', '1'
+                                        )
+                                        #set($isStrgSectionPlaceCd = true)
+                                    #elseif($!item.getColumnName()=="T_STRG_SHIP_RESULTS.STRG_STOCK_PLACE_CD")
+                                      #if($!allSearchGrant)## 全社入出庫実績照会権限
+                                        $!PSSTK030PageCreaterForSearch.printSpecial("STRG_STOCK_PLACE", "m35_inputStockPlace", $!item
+                                            , 'popupPageid', 'PSSTK030'
+                                            , '_masterCdIme', 'noIME'
+                                            , '_referenceRangeFlg', '1'
+                                            , '_termFlag', '1'
+                                        )
+                                      #else
+                                        $!PSSTK030PageCreaterForSearch.printSpecial("STRG_STOCK_PLACE", "m35_inputStockPlace", $!item
+                                            , 'popupPageid', 'PSSTK030'
+                                            , '_masterCdIme', 'noIME'
+                                            , '_referenceRangeFlg', '2'
+                                            , '_termFlag', '1'
+                                        )
+                                      #end
+                                    #elseif($!item.getColumnName()=="T_STRG_SHIP_RESULTS.SUBJECT_CD")
+                                        $!PSSTK030PageCreaterForSearch.printSpecial("SUBJECT", "m07_inputSubject", $!item
+                                            , 'popupPageid', 'PSSTK030'
+                                            , '_masterCdIme', 'noIME'
+                                        )
+                                    #elseif($!item.getColumnName()=="T_STRG_SHIP_RESULTS.STRG_SHIP_DATE")
+                                        $!PSSTK030PageCreaterForSearch.printDefault($!item)
+                                    #elseif($!item.getColumnName()=="T_STRG_SHIP_RESULTS.STRG_SHIP_VOL")
+                                        $!PSSTK030PageCreaterForSearch.printDefault($!item)
+                                    #elseif($!item.getColumnName()=="T_STRG_SHIP_RESULTS.UNIT_CD")
+                                        $!PSSTK030PageCreaterForSearch.printDefault($!item)
+                                    #elseif($!item.getColumnName()=="T_STRG_SHIP_RESULTS.CURRENCY_CD")
+                                        $!PSSTK030PageCreaterForSearch.printSpecial('m25_inputCurrency',$!item)
+                                    #elseif($!item.getColumnName()=="T_STRG_SHIP_RESULTS.STRG_SHIP_UNIT_PRICE")
+                                        $!PSSTK030PageCreaterForSearch.printDefault($!item)
+                                    #elseif($!item.getColumnName()=="T_STRG_SHIP_RESULTS.STRG_SHIP_AMOUNT")
+                                        $!PSSTK030PageCreaterForSearch.printDefault($!item)
+                                    #elseif($!item.getColumnName()=="T_STRG_SHIP_RESULTS.STRG_SHIP_NOTE")
+                                        $!PSSTK030PageCreaterForSearch.printDefault($!item)
+                                    #elseif($!item.getColumnName()=="T_STRG_SHIP_RESULTS.SETTLE_INV_IND")
+                                        $!PSSTK030PageCreaterForSearch.printDefault($!item)
+                                    #elseif($!item.getColumnName()=="T_STRG_SHIP_RESULTS.DELIV_KEY_NO")
+                                        $!PSSTK030PageCreaterForSearch.printDefault($!item)
+                                    #else
+                                        $!PSSTK030PageCreaterForSearch.printDefault($!item)
+                                    #end
+                                    #if($currentOneRowFlag)
+                                        $!PSSTK030PageCreaterForSearch.printTRtagClose()
+                                        #set($isFirstItem = true)
+                                    #else
+                                        #if($isFirstItem)
+                                            #set($isFirstItem = false)
+                                        #else
+                                            $!PSSTK030PageCreaterForSearch.printTRtagClose()
+                                            #set($isFirstItem = true)
+                                        #end
+                                    #end
+                                #end
+                                #if(!$isReqSectionPlaceCd)
+                                    #customFormHiddenInput("reqSectionPlaceCd" "$!searchCondition.reqSectionPlaceCd")
+                                    #customFormHiddenInput("reqSectionPlaceName" "$!searchCondition.reqSectionPlaceName")
+                                #end
+                                #if(!$isSectionPlaceCd)
+                                    #customFormHiddenInput("sectionPlaceCd" "$!searchCondition.sectionPlaceCd")
+                                    #customFormHiddenInput("sectionPlaceName" "$!searchCondition.sectionPlaceName")
+                                #end
+                                #if(!$isShipSectionPlaceCd)
+                                    #customFormHiddenInput("shipSectionPlaceCd" "$!searchCondition.shipSectionPlaceCd")
+                                    #customFormHiddenInput("shipSectionPlaceName" "$!searchCondition.shipSectionPlaceName")
+                                #end
+                                #if(!$isStrgSectionPlaceCd)
+                                    #customFormHiddenInput("strgSectionPlaceCd" "$!searchCondition.strgSectionPlaceCd")
+                                    #customFormHiddenInput("strgSectionPlaceName" "$!searchCondition.strgSectionPlaceName")
+                                #end
+                                #if(!$isFirstItem)
+                                    $!PSSTK030PageCreaterForSearch.printTDtag()
+                                    $!PSSTK030PageCreaterForSearch.printTRtagClose()
+                                #end
+                                <tr>
+                                    <td nowrap class="FontComment" align="left" colspan="4">
+                                        #customSpringMessage('PSSTK030_FOOTER_COMMENT')<!--＊:前方一致 / ％:中間一致 / なし:完全一致-->
+                                    </td>
+                                </tr>
+                            </table>
+                            <!--検索条件入力部-->
+                        </td>
+                        <td nowrap class="FontSmallBold" align="right" valign="top">
+                            <br>
+                            <input type="button" onclick="javascript:execSearch();" class="LargeButton" value="#customSpringMessage('ACTION_SEARCH')"><!--検索-->
+                            <br>
+                            <br>
+                            <a href="javascript:clear();clearSearch();searchConditionCheckBoxClearForExt();checkBoxClear();">#customSpringMessage('ACTION_CLEAR_SEARCH_CRITERIA')<!--検索条件をクリアする--></a>&nbsp;
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+        <tr id="UPLOAD_AREA">
+            <td class="UploadArea">
+                #parse('./common/common_download.vm')
+            </td>
+        </tr>
+        <tr id ="TR_ERROR" style="display:none;">
+            <td class="error" style="height:0px;">
+                <div id="ERRORDIV">$!errorMessage</div>
+            </td>
+        </tr>
+        <tr>
+            <td class="NoBorder" style="height:auto;">
+                <iframe id="DATAAREA" name="DATAAREA" class="DataArea" framespacing="0" frameborder="0" src="../../layout/default.vm" scrolling="no" frameborder="no"></iframe>
+            </td>
+        </tr>
+    </table>
+<iframe id="HIDDENAREA" name="HIDDENAREA" framespacing="0" frameborder="0" src="" scrolling="no" frameborder="no" style="display:none"></iframe>
+</form>
+</body>
+</html>

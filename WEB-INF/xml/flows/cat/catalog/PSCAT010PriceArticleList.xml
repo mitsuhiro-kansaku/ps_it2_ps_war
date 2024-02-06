@@ -1,0 +1,104 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<flow xmlns="http://www.springframework.org/schema/webflow"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.springframework.org/schema/webflow
+        http://www.springframework.org/schema/webflow/spring-webflow-2.0.xsd"
+    parent="base">
+
+    <var name="priceArticleIdentify" class="fw.domain.mst.material.material.PriceArticleIdentify" />
+    <var name="priceIdentify" class="fw.domain.slip.price.pricemasterlist.PriceIdentify" />
+
+    <input name="searchCondition" />
+    <input name="isCurrentPageSearch" />
+    <input name="fromPattern" />
+    <input name="SessionKey" />
+
+    <decision-state id="isSearchByKey">
+       <if test="flowScope.isCurrentPageSearch" then="searchByKey" else="searchByCondition" />
+    </decision-state>
+
+    <action-state id="searchByCondition">
+        <evaluate expression="PSCAT010PriceArticleListService.init(searchCondition)" result="flowScope.priceArticleList" />
+        <transition to="PSCAT010PriceArticleList"/>
+    </action-state>
+
+    <action-state  id="searchByKey" >
+        <evaluate expression="PSCAT010PriceArticleListService.page(searchCondition.searchCondition)" result="flowScope.priceArticleList" />
+        <transition to="PSCAT010PriceArticleList"/>
+    </action-state>
+
+    <view-state id="PSCAT010PriceArticleList" view="cat/catalog/PSCAT010PriceArticleList" model="priceArticleIdentify">
+        <transition on="addCart" validate="false">
+            <evaluate expression="PSCAT010PriceArticleListService.addCart(priceArticleIdentify)"/>
+        </transition>
+        <transition on="page" validate="false">
+            <evaluate expression="PSCAT010PriceArticleListService.page(searchCondition.searchCondition)"
+                result="flowScope.priceArticleList" />
+        </transition>
+        <transition on="order" validate="false">
+            <evaluate expression="PSCAT010PriceArticleListService.order(searchCondition.searchCondition)"
+                result="flowScope.priceArticleList" />
+        </transition>
+
+        <transition on="create" to="PSCAT020Insert" validate="false" />
+        <transition on="edit" to="PSCAT020Update" validate="false" />
+        <transition on="applyAgain" to="PSCAT020Correct" validate="false" />
+        <transition on="everyPurReq" to="PSPUR010" validate="false" />
+        <transition on="PSFAV010" to="PSFAV010" validate="false" />
+
+        <transition on="searchCategoryList" to="PSCAT010CategoryList" validate="false">
+            <evaluate expression="PSCAT010PriceArticleListService.resetSearchPath()" result="flowScope.priceArticleList"/>
+        </transition>
+        <transition on="searchPriceArticleList" validate="false">
+            <evaluate expression="PSCAT010PriceArticleListService.searchPriceArticleList()" result="flowScope.priceArticleList"/>
+        </transition>
+        <transition on="detail" to="PSPRC050" validate="false" >
+            <set name="priceIdentify.buyerCompanyCd" value="requestParameters.buyerCompanyCd"/>
+            <set name="priceIdentify.buyerSectionCd" value="requestParameters.buyerSectionCd"/>
+            <set name="priceIdentify.itemCd" value="requestParameters.itemCd"/>
+            <set name="priceIdentify.supCd" value="requestParameters.supCd"/>
+            <set name="priceIdentify.validStartDate.dateOfymd" value="requestParameters.validStartDate"/>
+            <set name="priceIdentify.validEndDate.dateOfymd" value="requestParameters.validEndDate"/>
+            <set name="priceIdentify.lastUpdDate" value="requestParameters.lastUpdDate"/>
+        </transition>
+        <transition on="back" to="home" validate="false" />
+    </view-state>
+
+    <subflow-state id="PSCAT020Insert" subflow="cat/catalog/PSCAT020Insert" >
+         <input name="fromPattern" value="fromPattern" />
+    </subflow-state>
+
+    <subflow-state id="PSCAT020Update" subflow="cat/catalog/PSCAT020Update" >
+         <input name="fromPattern" value="'Select'" />
+    </subflow-state>
+
+    <subflow-state id="PSCAT020Correct" subflow="cat/catalog/PSCAT020Correct" >
+         <input name="fromPattern" value="'Select'" />
+         <input name="SessionKey" value="SessionKey" />
+    </subflow-state>
+
+     <subflow-state id="PSPUR010" subflow="pur/req/PSPUR010New" >
+        <input name="patternName" value="'New'" />
+        <input name="isInitIndividualApr" value="true" />
+    </subflow-state>
+
+    <subflow-state id="PSCAT010CategoryList" subflow="cat/catalog/PSCAT010CategoryList" >
+        <input name="searchCondition" value="searchCondition" />
+        <input name="SessionKey" value="SessionKey" />
+        <input name="fromPattern" value="fromPattern" />
+    </subflow-state>
+
+     <subflow-state id="PSFAV010" subflow="fav/favorite/PSFAV010" >
+        <input name="buyerCompanyCd" value="requestParameters.buyerCompanyCd" />
+        <input name="buyerSectionCd" value="requestParameters.buyerSectionCd" />
+        <input name="itemCd" value="requestParameters.itemCd" />
+        <input name="supCd" value="requestParameters.supCd" />
+        <input name="validStartDate" value="requestParameters.validStartDate" />
+        <input name="validEndDate" value="requestParameters.validEndDate" />
+        <input name="eventType" value="'addFav'" />
+    </subflow-state>
+
+     <subflow-state id="PSPRC050" subflow="prc/price/PSPRC050" >
+        <input name="priceIdentify" value="priceIdentify" />
+    </subflow-state>
+</flow>

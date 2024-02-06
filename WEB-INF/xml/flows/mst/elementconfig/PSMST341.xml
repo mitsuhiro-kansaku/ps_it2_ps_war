@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<flow xmlns="http://www.springframework.org/schema/webflow"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.springframework.org/schema/webflow
+        http://www.springframework.org/schema/webflow/spring-webflow-2.0.xsd"
+    parent="base">
+
+    <var name="itemDefinitionIdentify" class="fw.domain.mst.resource.customize.elementconfig.mstmanagement.ItemDefinitionIdentify" />
+
+    <input name="itemDefinitionSearchCondition" />
+    <input name="isCurrentPageSearch" />
+
+    <decision-state id="isSearchByKey">
+       <if test="flowScope.isCurrentPageSearch" then="searchByKey" else="searchByCondition" />
+    </decision-state>
+    
+    <action-state id="searchByCondition">
+        <evaluate expression="PSMST341Service.init(itemDefinitionSearchCondition)"
+            result="flowScope.itemDefinitionList" />
+        <transition to="PSMST341" />
+    </action-state>
+
+    <action-state id="searchByKey">
+        <evaluate expression="PSMST341Service.page(itemDefinitionSearchCondition)"
+            result="flowScope.itemDefinitionList" />
+        <transition to="PSMST341" />
+    </action-state>
+
+    <view-state id="PSMST341" model="itemDefinitionIdentify"
+        view="mst/elementconfig/PSMST341">
+        <transition on="editValidate" validate="false">
+            <set name="flashScope.isShowUpdate" value="true"></set>
+        </transition>
+        <transition on="edit" to="PSMST342" validate="false" />
+        <transition on="deleteValidate" validate="false">
+            <set name="flashScope.isShowDelete" value="true"></set>
+        </transition>
+        <transition on="delete" to="PSMST344" validate="false" />
+        
+        <transition on="order" validate="false">
+            <evaluate expression="PSMST341Service.order(itemDefinitionSearchCondition)"
+                result="flowScope.itemDefinitionList" />
+        </transition>
+        <transition on="page" validate="false">
+            <evaluate expression="PSMST341Service.page(itemDefinitionSearchCondition)"
+                result="flowScope.itemDefinitionList" />
+        </transition>
+        <transition on="back" to="home" validate="false" />
+    </view-state>
+    
+    <subflow-state id="PSMST342" subflow="mst/elementconfig/PSMST342">
+        <input name="itemDefinitionIdentify" value="itemDefinitionIdentify" />
+    </subflow-state>
+
+    <subflow-state id="PSMST344" subflow="mst/elementconfig/PSMST344">
+        <input name="itemDefinitionIdentify" value="itemDefinitionIdentify" />
+    </subflow-state>
+
+</flow>

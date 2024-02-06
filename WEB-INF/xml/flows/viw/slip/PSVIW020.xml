@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<flow xmlns="http://www.springframework.org/schema/webflow"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.springframework.org/schema/webflow
+        http://www.springframework.org/schema/webflow/spring-webflow-2.0.xsd"
+	parent="base">
+
+    <var name="identify" class="fw.domain.slip.businesscommon.slipsearch.SlipSearchIdentify" />
+    <!-- 詳細情報 -->
+    <var name="slipSearchItem" class="fw.domain.slip.businesscommon.slipsearch.SlipSearchItem" />
+    
+	<input name="searchCondition" />
+	<input name="isCurrentPageSearch" />
+
+	<decision-state id="isSearchByKey">
+		<if test="flowScope.isCurrentPageSearch" then="searchByKey" else="searchByCondition" />
+	</decision-state>
+
+	<action-state id="searchByCondition">
+		<evaluate expression="PSVIW020Service.init(searchCondition)"
+			result="flowScope.itemList" />
+		<transition to="PSVIW020" />
+	</action-state>
+
+	<action-state id="searchByKey">
+		<evaluate expression="PSVIW020Service.page(searchCondition)"
+			result="flowScope.itemList" />
+		<transition to="PSVIW020" />
+	</action-state>
+
+	<view-state id="PSVIW020" model="slipSearchItem"
+		view="viw/slip/PSVIW020">
+		<transition on="order" validate="false">
+			<evaluate expression="PSVIW020Service.order(searchCondition)"
+				result="flowScope.itemList" />
+		</transition>
+		<transition on="page" validate="false">
+			<evaluate expression="PSVIW020Service.page(searchCondition)"
+				result="flowScope.itemList" />
+		</transition>
+		<transition on="back" to="home" validate="false" />
+	  <!--詳細 -->
+        <transition on="detailValidate" validate="true">
+           <set name="flashScope.isShowDetail" value="true"/>
+           <set name="slipSearchItem.purReqNo" value="requestParameters.purReqNo" />
+        </transition>
+        <transition on="detail" to="PSVIW030" validate="false" />
+      </view-state>
+
+    <!--詳細 -->
+    <subflow-state id="PSVIW030" subflow="viw/slip/PSVIW030" >
+        <input name="slipSearchItem" value="slipSearchItem" />
+    </subflow-state>
+</flow>

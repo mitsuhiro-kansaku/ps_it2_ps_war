@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<flow xmlns="http://www.springframework.org/schema/webflow"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.springframework.org/schema/webflow
+        http://www.springframework.org/schema/webflow/spring-webflow-2.0.xsd"
+    parent="base">
+    
+    <var name="dlFlg" class="java.lang.String" />
+    
+    <input name="orderIdentify" />
+    <input name="historyIdentify" />
+    <input name="isSearchByHistory" />
+    <input name="isSearchByAll" />
+    <input name="isSearchByHistoryAll" />
+
+    <decision-state id="isSearchByHistory">
+        <if test="isSearchByAll" then="searchByAll" />
+        <if test="isSearchByHistoryAll" then="searchByHistoryAll" />
+        <if test="isSearchByHistory" then="searchByHistory" else="searchByCondition" />
+    </decision-state>
+
+    <action-state id="searchByCondition">
+        <evaluate expression="PSORD090Service.init(orderIdentify)" result="flowScope.domain" />
+        <transition to="PSORD090"/> 
+    </action-state>
+
+    <action-state  id="searchByHistory" >
+        <evaluate expression="PSORD090Service.initFromHistory(historyIdentify.historySeq)" result="flowScope.domain" />
+        <transition to="PSORD090"/>
+    </action-state>
+
+    <action-state id="searchByAll">
+        <evaluate expression="PSORD090Service.initAll(orderIdentify)"
+            result="flowScope.domain" />
+        <transition to="PSORD090"> 
+            <set name="dlFlg" value="true"/>
+        </transition>
+    </action-state>
+
+    <action-state  id="searchByHistoryAll" >
+        <evaluate expression="PSORD090Service.initFromHistoryAll(historyIdentify.historySeq)" result="flowScope.domain" />
+        <transition to="PSORD090">
+            <set name="dlFlg" value="true"/>
+        </transition>
+    </action-state>
+
+    <view-state id="PSORD090" view="ord/order/PSORD090" model="order">
+        <transition on="download" to="downloadIf" />
+        <transition on="downloadext" validate="false">
+            <evaluate expression="PSORD090Service.downloadFileExt()"/>
+        </transition>
+        <transition on="refresh" validate="false">
+             <evaluate expression="PSORD090Service.init(orderIdentify)" result="flowScope.order" />
+        </transition>
+    </view-state> 
+
+    <decision-state id="downloadIf">
+        <if test="dlFlg" then="PSORD090_downloadAll" else="PSORD090_download"/>
+    </decision-state>
+
+    <action-state id="PSORD090_downloadAll" >
+        <evaluate expression="PSORD090Service.downloadByteFileAll()"/>
+        <transition to="PSORD090"/> 
+    </action-state> 
+    
+    <action-state id="PSORD090_download">
+        <evaluate expression="PSORD090Service.downloadByteFile()"/>
+        <transition to="PSORD090"/> 
+    </action-state> 
+    
+</flow> 

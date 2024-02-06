@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<flow xmlns="http://www.springframework.org/schema/webflow"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.springframework.org/schema/webflow
+        http://www.springframework.org/schema/webflow/spring-webflow-2.0.xsd"
+    parent="base">
+
+    <var name="domain" class="fw.domain.slip.order.order.ordpckg.OrderPackageRegItem" />
+    <var name="catalogIdentify" class="fw.domain.slip.purreq.purreqcatalog.CatalogIdentify" />
+    <var name="purAplIdentify" class="fw.domain.slip.purreq.everypurreq.purreqmng.PurAplIdentify" />
+    <var name="notActionPurReqIdentify" class="fw.domain.slip.order.order.unactionpurreq.NotActionPurReqIdentify" />
+
+    <var name="orderPackageRegList" class="fw.domain.slip.order.order.ordpckg.OrderPackageRegList" />
+    <var name="orderPackageRegIdentify" class="fw.domain.slip.order.order.ordpckg.OrderPackageRegIdentify" />
+
+    <var name="identify040" class="fw.domain.slip.purreq.everypurreq.purreqmng.PurAplIdentify" />
+    <var name="identify080" class="fw.domain.slip.quot.quotreq.quotdetail.QuotReqSummary" />
+
+    <input name="searchCondition" />
+    <input name="isCurrentPageSearch" />
+    <input name="isQuickLink" />
+    <input name="eventType" />
+
+    <decision-state id="isSearchByKey">
+       <if test="flowScope.isCurrentPageSearch" then="searchByKey" else="searchByCondition" />
+    </decision-state>
+    
+    <action-state id="searchByCondition">
+        <evaluate expression="PSORD081Service.init(searchCondition)" result="flowScope.itemList" />
+        <transition to="PSORD081"/>
+    </action-state>
+
+    <action-state  id="searchByKey" >
+        <evaluate expression="PSORD081Service.page(searchCondition)" result="flowScope.itemList" />
+        <transition to="PSORD081"/>
+    </action-state>
+
+    <view-state id="PSORD081" view="ord/ordpckg/PSORD081" model="itemList">
+        <!--一覧情報 -->
+        <transition on="order" validate="false">
+            <evaluate expression="PSORD081Service.order(searchCondition)" result="flowScope.itemList" />
+        </transition>
+        <transition on="page" validate="false">
+             <evaluate expression="PSORD081Service.page(searchCondition)" result="flowScope.itemList" /> 
+        </transition>
+        <transition on="back" to="home" validate="false" />
+
+        <transition on="detailCatValidate" validate="true" >
+            <set name="orderPackageRegIdentify.purAplSeq" value="requestParameters.purAplSeq"/>
+            <set name="catalogIdentify.purAplSeqNo" value="requestParameters.purAplSeq"/>
+            <set name="catalogIdentify.appUnitNo" value="requestParameters.purReqNo"/>
+            <set name="catalogIdentify.purReqNo.purReqNo" value="requestParameters.purReqNoNotUnit"/>
+            <set name="flashScope.isShowDetailCat" value="true"/>
+        </transition>
+        <transition on="detailPurReqValidate" validate="true" >
+            <set name="orderPackageRegIdentify.purAplSeq" value="requestParameters.purAplSeq"/>
+            <set name="identify040.purAplSeqNum" value="requestParameters.purAplSeq"/>
+            <set name="identify040.purReqNo" value="requestParameters.purReqNoNotUnit"/>
+            <set name="identify080.quotReqNo" value="requestParameters.quotReqNo"/>
+            <set name="flashScope.isShowDetailPurReq" value="true"/>
+        </transition>
+        <transition on="detailCat" to="PSCAT040" validate="false" />
+        <transition on="detailPur" to="PSORD082TOP" validate="false" />
+
+        <!-- 注文入力 -->
+        <transition on="acceptModifyValidate" validate="true">
+            <set name="notActionPurReqIdentify.purReqSeq" value="requestParameters.purReqSeq"/>
+            <set name="notActionPurReqIdentify.lastUpdDate" value="requestParameters.lastUpdDate"/>
+            <set name="flashScope.isShowOrderModify" value="true"/>
+        </transition>
+        <transition on="orderModify" to="PSORD040" validate="false"/>
+        
+        <!-- 一括登録 -->
+        <transition on="packageReg" validate="false" to="searchByKey">
+            <set name="eventType" value="'register'" />
+            <evaluate expression="PSORD081Service.packageReg(itemList)"/>
+            <set name="flashScope.isSuccess" value="true"/>
+        </transition>
+    </view-state>
+    
+    <!-- 詳細画面へ -->
+    <subflow-state id="PSCAT040" subflow="cat/catalog/PSCAT040TOP">
+        <input name="catalogIdentify" value="catalogIdentify" />
+    </subflow-state>
+    
+    <subflow-state id="PSORD082TOP" subflow="ord/ordpckg/PSORD082TOP">
+        <input name="identify040" value="identify040" />
+        <input name="identify080" value="identify080" />
+    </subflow-state>
+    
+    <!-- 注文入力 -->
+    <subflow-state id="PSORD040" subflow="ord/order/PSORD040" >
+        <input name="notActionPurReqIdentify" value="notActionPurReqIdentify" />
+        <input name="eventType" value="'register'" />
+        <input name="SessionKey" value="SessionKey" />
+    </subflow-state>
+
+</flow>

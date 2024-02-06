@@ -1,0 +1,160 @@
+
+//body画面
+function bodyLoad() {
+    // Chrome対策（検索エリアが縮んでしまう）
+    getObj("Adjust").style.width = getObj("SEARCH_AREA2").offsetWidth;
+    top.document.title = document.title;
+    document.getElementById("SEARCH_AREA").style.height = maxSearchHeight;
+    changeFontSize();
+    if(typeof(pinName)!="undefined"){
+        setPin(getCookie(pinName));
+    }
+}
+
+//popup data画面(ページがある)
+function popupDataLoadHasPage(url){
+    changeFontSize();
+    popupPaging(url);
+    setSortImg();
+    //TableSort.init();
+}
+
+function changeSize1() {
+    size+=5;
+    document.getElementById("SEARCH_AREA").style.height = size;
+    if( size >= maxSearchHeight ) {
+        getObj("SEARCH_AREA2").style.display = "";
+        // Chrome対策（検索エリアが縮んでしまう）
+        getObj("Adjust").style.width = getObj("SEARCH_AREA2").offsetWidth;
+    }
+}
+function changeSize2() {
+    size-=5;
+    document.getElementById("SEARCH_AREA").style.height = size;
+}
+
+function changeFontSize() {
+    changeFontSize0();
+    var dataArea=getObj("DATAAREA");
+    if(dataArea){
+        dataArea.contentWindow.changeFontSize();
+    }
+}
+
+var srtDownImg="<img STYLE='margin-left:3px;' height=10 width=10 src='../../image/srtDown.gif'>";
+var srtUpImg="<img STYLE='margin-left:3px;' height=10 width=10 src='../../image/srtUp.gif'>";
+
+function setSortImg(){
+    #if($searchCondition.searchCondition.columnOrder.chooseList)
+        #foreach($!item in $!searchCondition.searchCondition.columnOrder.chooseList.itemList)
+            var columnName=getObj("#jsEscape($!item.itemName)");
+            #if($searchCondition.searchCondition.columnOrder.chooseList.singleColumnSorting)
+                #set($colomuCount = "")
+            #else
+                #set($colomuCount = " " + $foreach.count)
+            #end
+            
+            if (columnName != null) {
+            #if($!item.ascOrder)
+                columnName.innerHTML= columnName.innerHTML+srtUpImg+"#out($!colomuCount)";
+            #else
+                columnName.innerHTML= columnName.innerHTML+srtDownImg+"#out($!colomuCount)";
+            #end
+            }
+        #end
+    #end
+}
+
+function popupPaging(url){
+    #if($searchCondition)
+        if(getObj("COUNT") != null){
+            setText("COUNT","#jsEscape($!searchCondition.searchCondition.page.totalRows)");
+            setText("PAGECOUNT","#jsEscape($!searchCondition.searchCondition.page.totalPages)");
+        }
+        if(getObj("COUNT2") != null){
+            setText("COUNT2","#jsEscape($!searchCondition.searchCondition.page.totalRows)");
+            setText("PAGECOUNT2","#jsEscape($!searchCondition.searchCondition.page.totalPages)");
+        }
+        var pageNow=parseInt("#jsEscape($!searchCondition.searchCondition.page.pageNow)");
+        if(document.Body.PageNo != null){
+            document.Body.PageNo.options.length = "#jsEscape($!searchCondition.searchCondition.page.totalPages)";
+            for(i=1; i<=document.Body.PageNo.options.length; i++) {
+                document.Body.PageNo.options[i-1] = new Option(i,i);
+            }
+            document.Body.PageNo.selectedIndex = pageNow-1;
+            document.Body.PageNo.onchange= new Function(" var num=document.Body.PageNo.selectedIndex+1;parent.iframeChange('"+url+"/page','pageNow',num)");
+        }
+        if(document.Body.PageNo2 != null){
+            document.Body.PageNo2.options.length = "#jsEscape($!searchCondition.searchCondition.page.totalPages)";
+            for(i=1; i<=document.Body.PageNo2.options.length; i++) {
+                document.Body.PageNo2.options[i-1] = new Option(i,i);
+            }
+            document.Body.PageNo2.selectedIndex = pageNow-1;
+            document.Body.PageNo2.onchange= new Function(" var num=document.Body.PageNo2.selectedIndex+1;parent.iframeChange('"+url+"/page','pageNow',num)");
+        }
+
+        #if($!searchCondition.searchCondition.page.hasPreviousPage=="true")
+            if(document.Body.PageFirst != null){
+                document.Body.PageFirst.style.display="none";
+                document.Body.PageFirstOn.style.display="";
+                document.Body.PageFirstOn.onclick = new Function("parent.iframeChange('"+url+"/page','pageNow','1')");
+                document.Body.PagePrev.style.display="none";
+                document.Body.PagePrevOn.style.display="";
+                document.Body.PagePrevOn.onclick = new Function("parent.iframeChange('"+url+"/page','pageNow','"+(pageNow-1)+"')");
+            }
+            if(document.Body.PageFirst2 != null){
+                document.Body.PageFirst2.style.display="none";
+                document.Body.PageFirstOn2.style.display="";
+                document.Body.PageFirstOn2.onclick = new Function("parent.iframeChange('"+url+"/page','pageNow','1')");
+                document.Body.PagePrev2.style.display="none";
+                document.Body.PagePrevOn2.style.display="";
+                document.Body.PagePrevOn2.onclick = new Function("parent.iframeChange('"+url+"/page','pageNow','"+(pageNow-1)+"')");
+            }
+         #else
+            if(document.Body.PageFirst != null){
+                document.Body.PageFirst.style.display="";
+                document.Body.PageFirstOn.style.display="none";
+                document.Body.PagePrev.style.display="";
+                document.Body.PagePrevOn.style.display="none";
+            }
+            if(document.Body.PageFirst2 != null){
+                document.Body.PageFirst2.style.display="";
+                document.Body.PageFirstOn2.style.display="none";
+                document.Body.PagePrev2.style.display="";
+                document.Body.PagePrevOn2.style.display="none";
+            }
+         #end
+             
+         #if($!searchCondition.searchCondition.page.hasNextPage=="true")
+            if(document.Body.PageNext != null){
+                document.Body.PageNext.style.display="none";
+                document.Body.PageNextOn.style.display="";
+                document.Body.PageNextOn.onclick = new Function("parent.iframeChange('"+url+"/page','pageNow','"+(pageNow+1)+"')");
+                document.Body.PageLast.style.display="none";
+                document.Body.PageLastOn.style.display="";
+                document.Body.PageLastOn.onclick = new Function("parent.iframeChange('"+url+"/page','pageNow','#jsEscape($!{searchCondition.searchCondition.page.totalPages})')");
+            }
+            if(document.Body.PageNext2 != null){
+                document.Body.PageNext2.style.display="none";
+                document.Body.PageNextOn2.style.display="";
+                document.Body.PageNextOn2.onclick = new Function("parent.iframeChange('"+url+"/page','pageNow','"+(pageNow+1)+"')");
+                document.Body.PageLast2.style.display="none";
+                document.Body.PageLastOn2.style.display="";
+                document.Body.PageLastOn2.onclick = new Function("parent.iframeChange('"+url+"/page','pageNow','#jsEscape($!{searchCondition.searchCondition.page.totalPages})')");
+            }
+         #else
+            if(document.Body.PageNext != null){
+                document.Body.PageNext.style.display="";
+                document.Body.PageNextOn.style.display="none";
+                document.Body.PageLast.style.display="";
+                document.Body.PageLastOn.style.display="none";
+            }
+            if(document.Body.PageNext2 != null){
+                document.Body.PageNext2.style.display="";
+                document.Body.PageNextOn2.style.display="none";
+                document.Body.PageLast2.style.display="";
+                document.Body.PageLastOn2.style.display="none";
+            }
+         #end
+    #end
+}

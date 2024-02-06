@@ -1,0 +1,123 @@
+<!doctype html>
+<html LANG="ja">
+<head>
+<title>#customSpringMessage('PRICE_CREATE_AMEND')</title><!--価格改定表作成-->
+<meta http-equiv="Content-type" content="text/html; charset=UTF-8">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Content-script-type" content="text/javascript">
+<link id="CSS_FONT" rel="stylesheet" href="../../include/FontS.css" type="text/css">
+<link id="CSS_CORNERS" rel="stylesheet" href="../../include/Layout.css" type="text/css">
+<link id="CSS_CORNERS" rel="stylesheet" href="../../include/Color.css" type="text/css">
+<link id="CSS_FONT" rel="stylesheet" href="../../include/FontS.css" type="text/css">
+<link rel="stylesheet" href="../../include/Layout.css" type="text/css">
+<link rel="stylesheet" href="../../include/Color.css" type="text/css">
+<script language="javascript" type="text/javascript" src="../../include/jquery-1.7.2.min.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/jquery.tablefix.js"></script>
+<script language="javascript" TYPE="text/javascript" src="../../include/common.js"></script>
+<script language="javascript" TYPE="text/javascript" src="../../include/check.js"></script>
+<script language="javascript" TYPE="text/javascript" src="../../include/date.js"></script>
+<script language="javascript" TYPE="text/javascript" src="../../include/tablesort.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/searchbox.js"></script>
+<script language="javascript" TYPE="text/javascript">
+<!--
+#set($commonTitle = "#customSpringMessage('PRICE_CREATE_AMEND')")
+#set($searchCondition = $priceRevCreateSearchCondition)
+#parse("./common/common_js.vm")
+
+function onLoad() {
+    TableSort.init();
+    dataLoadHasPage();
+    var alertMessage = "$!alertMessage";
+    if (alertMessage != ""){
+        ## +++++ 強化-00852-000 2013/05/27 ADD SBO_CHENCHENG START +++++
+        buttonUsableForList(alertMessage);
+        ## +++++ 強化-00852-000 2013/05/27 ADD SBO_CHENCHENG -END- +++++
+        alert(alertMessage);
+    }
+    var errorMsg = "$!errorMessage";
+    if (errorMsg != ""){
+        return;
+    }
+}
+//改定依頼表作成
+## +++++ 強化-00139-000 2013/03/11 ADD SBO_wangzf START +++++
+function downloadFile(supplierCd,nextUpdateYMFrom,nextUpdateYMTo,buyerUserId,no) {
+    #set( $m = "no" )
+## +++++  2013/08/16 ADD HOSHIKAWA START +++++
+    ## #set( $mm = "#customSpringMessage('ACTION_REGISTER')" )
+    #set( $mm = "#customSpringMessage('ACTION_DOWNLOAD')" )
+## +++++  2013/08/16 ADD HOSHIKAWA END +++++
+    var message =  "#customMessageArgs("W025",[$m,$mm])";
+    message = message.replace("no",no);
+    if( !confirm(message) ) {
+        return;
+    }
+    buttonDisable();
+    setTimeout(buttonUsable,1000);
+    parent.iframeChange("${flowExecutionUrl}&_eventId=download",'supplierCd',supplierCd,'nextUpdateYMFrom',nextUpdateYMFrom,'nextUpdateYMTo',nextUpdateYMTo,'buyerUserId',buyerUserId,'no',no,"DATAAREA");
+}
+## +++++ 強化-00139-000 2013/03/11 ADD SBO_wangzf START +++++
+## ----- 強化-00139-000 2013/03/11 DEL SBO_wangzf START -----
+#*
+function download(supplierCd,nextUpdateYMFrom,nextUpdateYMTo,buyerUserId,no) {
+    #set( $m = "#customSpringMessage('PRICE_CREATE_AMEND')" )
+    #set( $mm = "#customSpringMessage('ACTION_REGISTER')" )
+    if( !confirm("#customMessageArgs("W001",[$m,$mm])") ) {
+        return;
+    }
+    parent.iframeChange("${flowExecutionUrl}&_eventId=download",'supplierCd',supplierCd,'nextUpdateYMFrom',nextUpdateYMFrom,'nextUpdateYMTo',nextUpdateYMTo,'buyerUserId',buyerUserId,'no',no,"DATAAREA");
+}
+*#
+## ----- 強化-00139-000 2013/03/11 DEL SBO_wangzf END -----
+//-->
+</script>
+</head>
+<body id="BODY" topmargin="0" leftmargin="0" marginwidth="0" marginheight="0" align="left" onload="onLoad();setTablefix('#TABLEFIX', 1, 2);">
+#if($!errorMessage && $!errorMessage!="")
+<div class="error">
+    $!errorMessage
+</div>
+#end
+<form id="BodyForm" name="BodyForm"  method="post">
+#if($!itemList.priceRevCreateDetailList.size() > 0)
+<table id="TABLEFIX" class="ListArea" width="100%">
+    <thead>
+        <tr id="Header" style= "position:relative;overflow-y:auto;">
+            <th class="BoxHeaderCenter FontSmall">No.</th>
+            <th class="BoxHeaderCenter FontSmall">#customSpringMessage("PRICE_CREATE_AMEND")<!--価格改定表作成 --></th>
+            <th label="case" class="BoxHeaderCenter FontSmall" id="M_PUR_PRICE.SUP_CD" onclick="parent.iframeChange('${flowExecutionUrl}&_eventId=order','column','M_PUR_PRICE.SUP_CD')">#customSpringMessage("SUP_CD")<!--取引先コード--></th>
+            <th class="BoxHeaderCenter FontSmall">#customSpringMessage("SUP_NAME")<!--取引先名--></th>
+            <th class="BoxHeaderCenter FontSmall">#customSpringMessage("NEXT_UPD_YM")<!--次回見直時期--></th>
+            <th class="BoxHeaderCenter FontSmall">#customSpringMessage("ITEM_NAME_POINT")<!--品名点数--></th>
+        </tr>
+    </thead>
+    <tbody id="Tbody">
+        #foreach($!priceRevCreateDetail in $!itemList.priceRevCreateDetailList)
+          <tr id="Row_$velocityCount" #if($velocityCount % 2 == 0) bgcolor="#dce4ef" #else bgcolor="#ffffff" #end>
+            <td class="BoxDetailCenter FontList">#set( $index = $velocityCount + 1 )$index</td>
+            <td class="BoxDetailCenter">
+                 <input type="button" class="SmallButton" value="#customSpringMessage('PRICE_CREATE_AMEND')" onclick="downloadFile('#jsEscapeInHTML($!priceRevCreateDetail.supplierCd)','#jsEscapeInHTML($!priceRevCreateDetail.nextUpdateYMFrom.dateOfym)','#jsEscapeInHTML($!priceRevCreateDetail.nextUpdateYMTo.dateOfym)','#jsEscapeInHTML($!priceRevCreateDetail.buyerUserId)','#jsEscapeInHTML($index)');"/>
+            </td>
+            <td class="BoxDetailCenter FontList">#out($!priceRevCreateDetail.supplierCd)</td>
+            ## ----- 2013/06/10 DEL DAIKO_TAKEDA
+            ## <td class="BoxDetailLeft FontList">#out($!priceRevCreateDetail.supplierName)</td>
+            ## +++++ 2013/06/10 ADD DAIKO_TAKEDA
+            <td class="BoxDetailLeft FontList">#out($!priceRevCreateDetail.supplierAbbrName)</td>
+            <td class="BoxDetailCenter FontList">#out($!priceRevCreateDetail.nextUpdateYMFrom.dateOfymFormat)
+            #if("$!priceRevCreateDetail.nextUpdateYMFrom.dateOfym" != "" || "$!priceRevCreateDetail.nextUpdateYMTo.dateOfym" != "")
+                                                                         ～
+            #end
+            #out($!priceRevCreateDetail.nextUpdateYMTo.dateOfymFormat)
+            </td>
+            <td class="BoxDetailCenter FontList">#out($!priceRevCreateDetail.itemNamePoint)</td>
+          </tr>
+        #end
+    </tbody>
+</table>
+#end
+<br>
+<table id="WAIT" class="NoBorder" style="display:none;width:100%;"><tr><td style="text-align:center;"><br><br>
+<img src="../../image/wait.gif"><br><span class="FontMini"><br>#customSpringMessage('SEARCH_MESSAGE')</span></td></tr></table><!--問い合わせ中...-->
+</form>
+</body>
+</html>

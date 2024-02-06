@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<flow xmlns="http://www.springframework.org/schema/webflow"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.springframework.org/schema/webflow
+        http://www.springframework.org/schema/webflow/spring-webflow-2.0.xsd"
+    parent="base">
+    <!-- options/budget/PSBDT010.xml -->
+    <!-- 部門予算入力 -->
+
+    <var name="sectionBudget" class="fw.domain.options.budget.sectionbudget.SectionBudget" />
+
+    <input name="pattern" />
+    <input name="from" />
+    <input name="sectionBudgetListItem" />
+    <input name="isInitIndividualApr"/>
+    <input name="SessionKey"/>
+    <input name="searchCondition"/>
+
+    <decision-state id="isInitIndividualApr">
+        <if test="flowScope.isInitIndividualApr == null or flowScope.isInitIndividualApr" then="initDetail" else="back" />
+    </decision-state>
+
+    <action-state id="initDetail">
+        <evaluate expression="PSBDT010Service.init(sectionBudgetListItem)" result="flowScope.sectionBudget" />
+        <transition to="PSBDT010"/> 
+    </action-state>
+
+    <!-- 部門予算入力画面 -->
+    <view-state id="PSBDT010" view="options/budget/PSBDT010" model="sectionBudget">
+         <transition on="apply" validate="true">
+             <evaluate expression="PSBDT010Service.apply(sectionBudget)"/>
+             <set name="flashScope.isSuccess" value="true"></set>
+        </transition>
+         <transition on="edit" validate="true">
+             <evaluate expression="PSBDT010Service.update(sectionBudget)"/>
+             <set name="flashScope.isSuccess" value="true"></set>
+        </transition>
+        <transition on="showdetail" validate="false" to="isInitIndividualApr">
+             <set name="flowScope.from" value="requestParameters.from"></set>
+             <set name="flowScope.pattern" value="requestParameters.pattern"></set>
+             <set name="flowScope.isInitIndividualApr" value="true"></set>
+        </transition>
+        <transition on="backlist" validate="false" to="backlist"/>
+    </view-state>
+    <end-state id="backlist"/>
+</flow>

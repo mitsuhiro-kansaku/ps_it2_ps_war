@@ -1,0 +1,452 @@
+<!doctype html>
+<html lang="ja">
+<head>
+#set($commonTitle = "#customSpringMessage('INV_RESULT_INPUT')")
+<title>$commonTitle</title><!--棚卸結果入力-->
+<meta http-equiv="Content-type" content="text/html; charset=UTF-8">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Content-script-type" content="text/javascript">
+<link id="CSS_FONT" rel="stylesheet" href="../../include/FontS.css" type="text/css">
+<link rel="stylesheet" href="../../include/Layout.css" type="text/css">
+<link rel="stylesheet" href="../../include/Color.css" type="text/css">
+<link rel="stylesheet" href="../../include/searchbox.css" type="text/css">
+<link rel="stylesheet" href="../../include/ime.css" type="text/css">
+<script language="javascript" type="text/javascript" src="../../include/common.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/check.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/date.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/searchbox.js"></script>
+<script language="javascript" type="text/javascript" src="../../include/jquery-1.7.2.min.js"></script>
+<script language="javascript" type="text/javascript">
+<!--
+#set($allSearchGrant = $LoginUser.hasAuth(${AuthNoConstant.getValue("INVENTORY_READ_ALLSEARCH_GRANT")}))## 全社棚卸参照権限
+#parse("./common/common_js.vm")
+var isClickable=false;
+## オンロードより前に実行します。
+$(document).ready(function(){
+    var unitNameObj=getObj("item.unit.unitName");
+    if(unitNameObj){ $('.unitName').text(unitNameObj.value); }
+});
+## ビューが初めて表示される直前に発生します。
+function onLoad(){
+    setFocusForInput();
+    #if($!alertMessage != "" && $!isSuccess == "" && $!errorMessage == "")
+        #if($!alertMessage.indexOf('E035') != -1)
+            alert("$!alertMessage");
+        #else
+            if(confirm("$!alertMessage")){
+                buttonDisable();
+                getObj("Body").action="${flowExecutionUrl}&_eventId=apply&checkPass=1";
+                getObj("Body").submit();
+                return;
+            }
+        #end
+    #end
+    var errorMsg="$!errorMessage";
+    if(errorMsg!=""){
+        document.getElementById("TR_ERROR").style.display = "";
+        isClickable=true;
+        return;
+    }
+    var isSuccess="#jsEscape($!isSuccess)";
+    if(isSuccess=="true"){
+        #set($params = ["#customSpringMessage('INV_RESULTS')"])
+        alert("#customMessageArgs('I005',$params)");
+        buttonDisable();
+        top.iframeChange("${flowExecutionUrl}&_eventId=show","pageid","PSSTK082");
+        return;
+    }
+    isClickable=true;
+}
+## 「登録」ボタンをクリックしたとき発生します。
+function exec(){
+    if(!isClickable){
+        return;
+    }
+    #set($params = ["#customSpringMessage('INV_RESULTS')","#customSpringMessage('ACTION_REGISTER')"])
+    if(!confirm("#customMessageArgs('W001',$params)")){
+        return;
+    }
+    buttonDisable();
+    getObj("Body").action="${flowExecutionUrl}&_eventId=apply";
+    getObj("Body").submit();
+}
+var stockPlaceCd_x="";## 変更前の出庫場所コード
+## 在庫場所検索POPUP画面で「選択」ボタンをクリックしたとき発生します。
+function stockPlaceSelectAfterProc(){
+    latestInvYearMonthControllerByAjax();
+    inputStockVolControllerByAjax();
+}
+## 「在庫場所」を変更したとき発生します。
+function stockPlaceOnblur(){
+    var companyCdObj=getObj("stockPlace.company.companyCd");
+    var sectionPlaceCdObj=getObj("stockPlace.sectionPlace.sectionPlaceCd");
+    var sectionPlaceNameObj=getObj("stockPlace.sectionPlace.sectionPlaceName");
+    var stockPlaceNameObj=getObj("stockPlace.stockPlaceName");
+    var stockPlaceCd=getObj("stockPlace.stockPlaceCd").value;
+    if(stockPlaceCd==stockPlaceCd_x){
+        return;
+    }else{
+        stockPlaceCd_x=stockPlaceCd;
+    }
+    if(!stockPlaceCd){
+        if(stockPlaceNameObj){ stockPlaceNameObj.value=""; }
+    }else{
+        $.ajax({
+            type:"POST",
+            async:false,
+            url:"../../getStockPlaceInfoOnBlur",
+            data:{
+                termFlag:"0",
+                companyCd:cleanXss(companyCdObj.value),
+                sectionPlaceCd:cleanXss(sectionPlaceCdObj.value),
+                stockPlaceCd:cleanXss(stockPlaceCd)
+            },
+            success:function(data){
+                if(stockPlaceNameObj){ stockPlaceNameObj.value=data.stockPlaceName; }
+                if(sectionPlaceCdObj){ sectionPlaceCdObj.value=data.sectionPlaceCd; }
+                if(sectionPlaceNameObj){ sectionPlaceNameObj.value=data.sectionPlaceName; }
+            }
+        });
+    }
+    latestInvYearMonthControllerByAjax();
+    inputStockVolControllerByAjax();
+}
+## 「在庫場所」がフォーカスを受け取ったとき発生します。
+function stockPlaceCdGetfocus(obj){
+    stockPlaceCd_x=obj.value;
+}
+var itemCd_x="";## 変更前の品名コード
+## 品名検索POPUP画面で「選択」ボタンをクリックしたとき発生します。
+function itemSelectAfterProc(){
+    itemOnblur();
+}
+## 「品名コード」を変更したとき発生します。
+function itemOnblur(){
+    var companyCdObj=getObj("stockPlace.company.companyCd");
+    var sectionPlaceCdObj=getObj("stockPlace.sectionPlace.sectionPlaceCd");
+    var itemNameObj=getObj("item.itemName");
+    var katashikiObj=getObj("item.katashiki");
+    var manufactCdObj=getObj("item.manufact.manufactCd");
+    var manufactNameObj=getObj("item.manufact.manufactName");
+    var unitCdObj=getObj("item.unit.unitCd");
+    var unitNameObj=getObj("item.unit.unitName");
+    var itemCd=getObj("item.itemCd").value;
+    if(itemCd==itemCd_x){
+        return;
+    }else{
+        itemCd_x=itemCd;
+    }
+    if(!itemCd){
+        if(itemNameObj){ itemNameObj.value=""; }
+        if(katashikiObj){ katashikiObj.value=""; }
+        if(manufactCdObj){ manufactCdObj.value=""; }
+        if(manufactNameObj){ manufactNameObj.value=""; }
+        if(unitCdObj){ unitCdObj.value=""; }
+        if(unitNameObj){ unitNameObj.value=""; }
+        $('.itemName').text('');
+        $('.katashiki').text('');
+        $('.manufactCd').text('');
+        $('.manufactName').text('');
+        $('.unitName').text('');
+    }else{
+        $.ajax({
+            type:"POST",
+            async:false,
+            url:"../../getItemInfoOnBlur",
+            data:{
+                termFlag:"0",
+                companyCd:cleanXss(companyCdObj.value),
+                sectionPlaceCd:cleanXss(sectionPlaceCdObj.value),
+                itemCd:cleanXss(itemCd)
+            },
+            success:function(data){
+                if(itemNameObj){ itemNameObj.value=data.itemName; }
+                if(katashikiObj){ katashikiObj.value=data.katashiki; }
+                if(manufactCdObj){ manufactCdObj.value=data.manufactCd; }
+                if(manufactNameObj){ manufactNameObj.value=data.manufactName; }
+                if(unitCdObj){ unitCdObj.value=data.unitCd; }
+                if(unitNameObj){ unitNameObj.value=data.unitName; }
+                $('.itemName').text(data.itemName);
+                $('.katashiki').text(data.katashiki);
+                $('.manufactCd').text(data.manufactCd);
+                $('.manufactName').text(data.manufactName);
+                $('.unitName').text(data.unitName);
+            }
+        });
+    }
+    inputStockVolControllerByAjax();
+}
+## 「品名コード」がフォーカスを受け取ったとき発生します。
+function itemCdGetfocus(obj){
+    itemCd_x=obj.value;
+}
+## 「在庫場所コード」「棚卸年月」「品名コード」を元に「入力時在庫数量」を取得し、設定します。
+function inputStockVolControllerByAjax(){
+    var companyCdObj=getObj("stockPlace.company.companyCd");
+    var sectionPlaceCdObj=getObj("stockPlace.sectionPlace.sectionPlaceCd");
+    var stockPlaceCdObj=getObj("stockPlace.stockPlaceCd");
+    var invYearMonthObj=getObj("inventoryResultsIdentify.invYearMonth.dateOfymFormat");
+    var itemCdObj=getObj("item.itemCd");
+    var startStockVolObj=getObj("startStockVol.volFormat");
+    var inputStockVolObj=getObj("inputStockVol.volFormat");
+    var nextMonthStockVolObj=getObj("nextMonthStockVol.volFormat");
+    if(!stockPlaceCdObj||!itemCdObj){ return; }
+    var stockPlaceCd=stockPlaceCdObj.value;
+    var invYearMonth=convertYY_MM_DDtoYYMMDD(invYearMonthObj.value);## 日付表記除外
+    var itemCd=itemCdObj.value;
+    if(!stockPlaceCd||!invYearMonth||!itemCd){
+        if(startStockVolObj){ startStockVolObj.value=""; }
+        if(inputStockVolObj){ inputStockVolObj.value=""; }
+        if(nextMonthStockVolObj){ nextMonthStockVolObj.value=""; }
+        $('.startStockVol').text('');
+        $('.inputStockVol').text('');
+        $('.nextMonthStockVol').text('');
+    }else{
+        $.ajax({
+            type:"POST",
+            async:false,
+            url:"../../options/stock/stockUtilController/getStockVols",
+            data:{
+                companyCd:cleanXss(companyCdObj.value),
+                sectionPlaceCd:cleanXss(sectionPlaceCdObj.value),
+                stockPlaceCd:cleanXss(stockPlaceCd),
+                invYearMonth:cleanXss(invYearMonth),
+                itemCd:cleanXss(itemCd)
+            },
+            success:function(data){
+                if(startStockVolObj){ startStockVolObj.value=data.stockVol.volFormat; }
+                if(inputStockVolObj){ inputStockVolObj.value=data.stockVol.volFormat; }
+                if(nextMonthStockVolObj){ nextMonthStockVolObj.value=data.nextMonthStockVol.volFormat; }
+                $('.startStockVol').text(data.stockVol.volFormat);
+                $('.inputStockVol').text(data.stockVol.volFormat);
+                $('.nextMonthStockVol').text(data.nextMonthStockVol.volFormat);
+            }
+        });
+    }
+}
+## 「在庫場所コード」を元に「棚卸年月」を取得し、設定します。
+function latestInvYearMonthControllerByAjax(){
+    var companyCdObj=getObj("stockPlace.company.companyCd");
+    var sectionPlaceCdObj=getObj("stockPlace.sectionPlace.sectionPlaceCd");
+    var stockPlaceCdObj=getObj("stockPlace.stockPlaceCd");
+    var invYearMonthObj=getObj("inventoryResultsIdentify.invYearMonth.dateOfymFormat");
+    if(!stockPlaceCdObj||!invYearMonthObj){ return; }
+    var stockPlaceCd=stockPlaceCdObj.value;
+    var invYearMonth=convertYY_MM_DDtoYYMMDD(invYearMonthObj.value);## 日付表記除外
+    if(!stockPlaceCd){
+        return;
+    }else{
+        $.ajax({
+            type:"POST",
+            async:false,
+            url:"../../options/stock/stockUtilController/getLatestInvYearMonth",
+            data:{
+                companyCd:cleanXss(companyCdObj.value),
+                sectionPlaceCd:cleanXss(sectionPlaceCdObj.value),
+                stockPlaceCd:cleanXss(stockPlaceCd),
+                invYearMonth:cleanXss(invYearMonth)
+            },
+            success:function(data){
+                if(invYearMonthObj){ invYearMonthObj.value=data.dateOfymFormat; }
+            }
+        });
+    }
+}
+
+//-->
+</script>
+</head>
+<body class="CreateArea" onload="onLoad();">
+<form id="Body" name="Body" method="post">
+    <table class="HomeBox">
+        <tr>
+            <td style="padding: 16px 16px 16px 16px;">
+                <iframe id="CALENDARBOX" class="CALENDARBOX" framespacing="0" scrolling="no" frameborder="0" src="../../sbxCalendar/body.vm"></iframe>
+                <table>
+                    <tr>
+                        <td align="left">
+                            <table class="NoBorder" width="100%">
+                                <tr>
+                                    <td>
+                                        <u>
+                                            <img src="../../image/mrkCircle.gif">
+                                            <span id="StepTitle" class="FontStepTitle">$commonTitle</span>
+                                        </u>
+                                        <br><br>
+                                        <span id="STEPMSG" class="FontSmallBold DarkBlue">#customSpringMessage('PSSTK082_HEADER_COMMENT')</span>
+                                        <br><br>
+                                    </td>
+                                    <td align="right" valign="middle">
+                                        <input name="Button2" type="button" class="LargeButton" value="#customSpringMessage('ACTION_REGISTER')" onclick="exec();"><!--登録-->
+                                    </td>
+                                </tr>
+                                <tr id="status" style="display:none;">
+                                    <td>
+                                        <input id="sts" type="text">
+                                    </td>
+                                </tr>
+                                <tr id ="TR_ERROR" style="display:none;">
+                                    <td class="error" style="height:0px;">
+                                        $!errorMessage
+                                    </td>
+                                </tr>
+                            </table>
+                            <table class="Box1G" width="100%">
+                                <tbody class="Box1G">
+                                $!PSSTK082PageCreater.build('reg','_tr_style', '', '_td_style_left', 'class="Box1H FontBoxHeader"','_td_style_right', 'class="Box1D FontSmallAnk"', '_label_style', 'FontSmallAnk')
+                                #set($isCompanyCd = false)
+                                #set($isSectionPlaceCd = false)
+                                #set($isStockPlaceCd = false)
+                                #set($isInvYearMonth = false)
+                                #foreach($!item in $!PSSTK082PageCreater.getItemListForBody())
+                                    #if($!item.getColumnName()=="T_INVENTORY.COMPANY_CD")
+                                        $!PSSTK082PageCreater.printSpecial("COMPANY_NAME", "s00_label", $!item)
+                                    #elseif($!item.getColumnName()=="T_INVENTORY.SECTION_PLACE_CD")
+                                      #if($!allSearchGrant)## 全社棚卸参照権限
+                                        $!PSSTK082PageCreater.printSpecial("SECTION_PLACE", "m33_inputSectionPlace", $!item
+                                            , 'popupPageid', 'PSSTK082'
+                                            , '_masterCdIme', 'noIME'
+                                            , '_termFlag', '0'
+                                        )
+                                        #set($isSectionPlaceCd = true)
+                                      #else
+                                        $!PSSTK082PageCreater.printSpecial("SECTION_PLACE", "m34_showSectionPlace", $!item)
+                                      #end
+                                    #elseif($!item.getColumnName()=="T_INVENTORY.STOCK_PLACE_CD")
+                                     #if($!item.itemDefinitionDetail.inputMethod.regFlg.regFlg=='2')
+                                      #if($!allSearchGrant)## 全社棚卸参照権限
+                                        $!PSSTK082PageCreater.printSpecial("STOCK_PLACE", "m35_inputStockPlace", $!item
+                                            , 'popupPageid','PSSTK082'
+                                            , '_masterCdIme', 'noIME'
+                                            , '_referenceRangeFlg', '1'
+                                            , '_event', 'onblur="stockPlaceOnblur();" onfocus="stockPlaceCdGetfocus(this);"'
+                                        )
+                                      #else
+                                        $!PSSTK082PageCreater.printSpecial("STOCK_PLACE", "m35_inputStockPlace", $!item
+                                            , 'popupPageid','PSSTK082'
+                                            , '_masterCdIme', 'noIME'
+                                            , '_referenceRangeFlg', '2'
+                                            , '_event', 'onblur="stockPlaceOnblur();" onfocus="stockPlaceCdGetfocus(this);"'
+                                        )
+                                      #end
+                                      #set($isStockPlaceCd = true)
+                                     #else
+                                        $!PSSTK082PageCreater.printSpecial("STOCK_PLACE", "m36_showStockPlace", $!item)
+                                     #end
+                                    #elseif($!item.getColumnName()=="T_INVENTORY.INV_YEAR_MONTH")
+                                        $!PSSTK082PageCreater.printDefault($!item
+                                            , '_event', 'onblur="dateOnBlurYYYYMM(this);" onfocus="dateOnFocus(this);"'
+                                        )
+                                        #set($isInvYearMonth = true)
+                                    #elseif($!item.getColumnName()=="T_INVENTORY.ITEM_CD")
+                                        $!PSSTK082PageCreater.printSpecial("m11_inputItemCodeOnly", $!item
+                                            , 'popupPageid','PSSTK082'
+                                            , '_event', 'onblur="itemOnblur();" onfocus="itemCdGetfocus(this);"'
+                                        )
+                                        #customFormHiddenInput("item.unit.unitCd" "$!domain.item.unit.unitCd")
+                                        #customFormHiddenInput("item.unit.unitName" "$!domain.item.unit.unitName")
+                                    #elseif($!item.getColumnName()=="T_INVENTORY.ITEM_NAME")
+                                        $!PSSTK082PageCreater.printDefault($!item
+                                            ,'_label_style', 'FontSmallAnk itemName'
+                                        )
+                                    #elseif($!item.getColumnName()=="T_INVENTORY.KATASHIKI")
+                                        $!PSSTK082PageCreater.printDefault($!item
+                                            ,'_label_style', 'FontSmallAnk katashiki'
+                                        )
+                                    #elseif($!item.getColumnName()=="T_INVENTORY.MANUFACT_CD")
+                                    <tr>
+                                        <td class="Box1H FontBoxHeader">
+                                            #customSpringMessage('MANUFACT')
+                                        </td>
+                                        <td class="Box1D FontSmallAnk">
+                                            <span class="manufactCd">#out($!domain.item.manufact.manufactCd)</span>&nbsp;
+                                            <span class="manufactName">#out($!domain.item.manufact.manufactName)</span>
+                                        </td>
+                                    </tr>
+                                        #customFormHiddenInput("item.manufact.manufactCd" "$!domain.item.manufact.manufactCd")
+                                        #customFormHiddenInput("item.manufact.manufactName" "$!domain.item.manufact.manufactName")
+                                    #elseif($!item.getColumnName()=="T_INVENTORY.START_STOCK_VOL")
+                                    <tr>
+                                        <td class="Box1H FontBoxHeader">
+                                            #customSpringMessage($!item.itemDefinitionDetail.elementNameCd)
+                                        </td>
+                                        <td class="Box1D FontSmallAnk">
+                                            <span class="FontBigAnkBold startStockVol">#out($!domain.startStockVol.volFormat)</span>&nbsp;
+                                            <span class="unitName">#out($!domain.item.unit.unitName)</span>
+                                        </td>
+                                        #customFormHiddenInput("startStockVol.volFormat" "$!domain.startStockVol.volFormat")
+                                    </tr>
+                                    #elseif($!item.getColumnName()=="T_INVENTORY.INPUT_STOCK_VOL")
+                                    <tr>
+                                        <td class="Box1H FontBoxHeader">
+                                            #customSpringMessage($!item.itemDefinitionDetail.elementNameCd)
+                                        </td>
+                                        <td class="Box1D FontSmallAnk">
+                                            <span class="FontBigAnkBold inputStockVol">#out($!domain.inputStockVol.volFormat)</span>&nbsp;
+                                            <span class="unitName">#out($!domain.item.unit.unitName)</span>
+                                        </td>
+                                        #customFormHiddenInput("inputStockVol.volFormat" "$!domain.inputStockVol.volFormat")
+                                    </tr>
+                                    #elseif($!item.getColumnName()=="T_INVENTORY.NEXT_MONTH_STOCK_VOL")
+                                    <tr>
+                                        <td class="Box1H FontBoxHeader">
+                                            #customSpringMessage($!item.itemDefinitionDetail.elementNameCd)
+                                        </td>
+                                        <td class="Box1D FontSmallAnk">
+                                            <span class="FontBigAnkBold nextMonthStockVol">#out($!domain.nextMonthStockVol.volFormat)</span>&nbsp;
+                                            <span class="unitName">#out($!domain.item.unit.unitName)</span>
+                                        </td>
+                                        #customFormHiddenInput("nextMonthStockVol.volFormat" "$!domain.nextMonthStockVol.volFormat")
+                                    </tr>
+                                    #elseif($!item.getColumnName()=="T_INVENTORY.INVENTORY_VOL")
+                                        $!PSSTK082PageCreater.printSpecial('s21_volUnit',$!item
+                                            , '_event', 'onblur="editVal(this);" onfocus="deleteComma(this);"'
+                                            , 'unitValue','<span class="FontSmallAnk unitName"></span>'
+                                        )
+                                    #elseif($!item.getColumnName()=="T_INVENTORY.START_INV_DATE")
+                                        $!PSSTK082PageCreater.printDefault($!item)
+                                    #elseif($!item.getColumnName()=="T_INVENTORY.INPUT_INV_DATE")
+                                        $!PSSTK082PageCreater.printDefault($!item)
+                                    #elseif($!item.getColumnName()=="T_INVENTORY.SETTLE_INV_DATE")
+                                        $!PSSTK082PageCreater.printDefault($!item)
+                                    #else
+                                        $!PSSTK082PageCreater.printDefault($!item)
+                                    #end
+                                #end
+                                #if(!$isCompanyCd)
+                                    #customFormHiddenInput("stockPlace.company.companyCd" "$!domain.stockPlace.company.companyCd")
+                                    #customFormHiddenInput("stockPlace.company.companyName" "$!domain.stockPlace.company.companyName")
+                                #end
+                                #if(!$isSectionPlaceCd)
+                                    #customFormHiddenInput("stockPlace.sectionPlace.sectionPlaceCd" "$!domain.stockPlace.sectionPlace.sectionPlaceCd")
+                                    #customFormHiddenInput("stockPlace.sectionPlace.sectionPlaceName" "$!domain.stockPlace.sectionPlace.sectionPlaceName")
+                                #end
+                                #if(!$isStockPlaceCd)
+                                    #customFormHiddenInput("stockPlace.stockPlaceCd" "$!domain.stockPlace.stockPlaceCd")
+                                    #customFormHiddenInput("stockPlace.stockPlaceName" "$!domain.stockPlace.stockPlaceName")
+                                #end
+                                #if(!$isInvYearMonth)
+                                    #customFormHiddenInput("inventoryResultsIdentify.invYearMonth.dateOfymFormat" "$!domain.inventoryResultsIdentify.invYearMonth.dateOfymFormat")
+                                #end
+                                </tbody>
+                            </table>
+                            <br>
+                            <table class="NoBorder" width="100%">
+                                <tr>
+                                    <td>
+                                        <span class="FontWarn">#customSpringMessage('PSSTK082_FOOTER_COMMENT')</span><br>
+                                    </td>
+                                    <td align="right" valign="middle">
+                                        <input name="Button2" type="button" class="LargeButton" value="#customSpringMessage('ACTION_REGISTER')" onclick="exec();"><!--登録-->
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+</form>
+</body>
+</html>

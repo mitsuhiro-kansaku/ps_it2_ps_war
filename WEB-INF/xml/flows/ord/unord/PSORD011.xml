@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<flow xmlns="http://www.springframework.org/schema/webflow"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.springframework.org/schema/webflow
+        http://www.springframework.org/schema/webflow/spring-webflow-2.0.xsd"
+    parent="base">
+
+    <var name="itemList" class="fw.domain.slip.order.order.purreqaccept.PurReqAcceptList" />
+    <var name="identify" class="fw.domain.slip.order.order.purreqaccept.PurReqAcceptIdentify" />
+    <var name="catalogIdentify" class="fw.domain.slip.purreq.purreqcatalog.CatalogIdentify" />
+    <var name="purAplIdentify" class="fw.domain.slip.purreq.everypurreq.purreqmng.PurAplIdentify" />
+
+    <input name="searchCondition" />
+    <input name="isCurrentPageSearch" />
+    
+    <decision-state id="isSearchByKey">
+       <if test="flowScope.isCurrentPageSearch" then="searchByKey" else="searchByCondition" />
+    </decision-state>
+    
+    <action-state id="searchByCondition">
+        <evaluate expression="PSORD011Service.init(searchCondition)" result="flowScope.itemList" />
+        <transition to="PSORD011"/> 
+    </action-state>
+
+    <action-state  id="searchByKey" >
+        <evaluate expression="PSORD011Service.page(searchCondition)" result="flowScope.itemList" />
+        <transition to="PSORD011"/>
+    </action-state>
+
+    <view-state id="PSORD011" view="ord/unord/PSORD011" model="itemList">
+       <transition on="order" validate="false">
+            <evaluate expression="PSORD011Service.order(searchCondition)" 
+                 result="flowScope.itemList" />
+        </transition>
+        <transition on="page" validate="false">
+             <evaluate expression="PSORD011Service.page(searchCondition)" 
+                result="flowScope.itemList" /> 
+        </transition>
+        <transition on="execute" validate="false" to="searchByKey">
+             <evaluate expression="PSORD011Service.update(itemList)" /> 
+             <set name="flashScope.isSuccess" value="true"></set>
+        </transition>
+        <transition on="back" to="home" validate="false" />
+        <transition on="receipt" to="receipt" validate="false">
+         <!-- ＩＴ３-00116-000　2013/06/19 ADD SBO_KANGJW START -->
+         <evaluate expression="new fw.domain.slip.common.receipt.Remand(requestParameters.aprDisplayModel,requestParameters.aprRemandComment,requestParameters.companyCd,requestParameters.sectionCd,requestParameters.userId,requestParameters.authNo,requestParameters.backUserShowFlg)" result="flowScope.remand"></evaluate>
+          <!-- ＩＴ３-00116-000　2013/06/19 ADD SBO_KANGJW -END- -->
+            <!-- ＩＴ３-00116-000　2013/06/19 DEL SBO_KANGJW START -->
+            <!-- <evaluate expression="new fw.domain.slip.common.receipt.Remand(requestParameters.aprDisplayModel,requestParameters.aprRemandComment,requestParameters.companyCd,requestParameters.sectionCd,requestParameters.userId,requestParameters.authNo)" result="flowScope.remand"></evaluate> -->
+            <!-- ＩＴ３-00116-000　2013/06/19　DEL SBO_KANGJW END -->
+        </transition>
+        <transition on="detailValidate" validate="false">
+            <set name="catalogIdentify.purAplSeqNo" value="requestParameters.purAplSeq"/>
+            <set name="catalogIdentify.appUnitNo" value="requestParameters.appUnitNo"/>
+            <set name="catalogIdentify.purReqNo.purReqNo" value="requestParameters.purReqNo"/>
+            <set name="purAplIdentify.purAplSeqNum" value="requestParameters.purAplSeq"/>
+            <set name="purAplIdentify.purReqNo" value="requestParameters.purReqNo"/>
+            <set name="flashScope.reqTypeInd" value="requestParameters.reqTypeInd"></set>
+            <set name="flashScope.isShowDetail" value="true"></set>
+        </transition>
+        <transition on="detailCat" to="PSCAT040" validate="false" />
+        <transition on="detailPurReq" to="PSPUR040" validate="false" />
+    </view-state>
+    
+    <subflow-state id="PSCAT040" subflow="cat/catalog/PSCAT040TOP">
+        <input name="catalogIdentify" value="catalogIdentify" />
+    </subflow-state>
+    
+    <subflow-state id="PSPUR040" subflow="pur/req/PSPUR040TOP">
+        <input name="identify" value="purAplIdentify" />
+    </subflow-state>
+    
+    <subflow-state id="receipt" subflow="cmn/apr/PSCMN020">
+       <input name="remand" value="remand" />
+    </subflow-state>
+</flow>

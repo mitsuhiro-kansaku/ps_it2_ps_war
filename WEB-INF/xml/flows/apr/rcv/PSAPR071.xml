@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<flow xmlns="http://www.springframework.org/schema/webflow"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.springframework.org/schema/webflow
+        http://www.springframework.org/schema/webflow/spring-webflow-2.0.xsd"
+    parent="base">
+
+    <var name="domain" class="fw.domain.slip.receive.receive.receiveapp.ReceiveAppListItem" />
+    <var name="receiveAppIdentify" class="fw.domain.slip.receive.receive.receiveapp.ReceiveAppIdentify" />
+    <var name="identify090" class="fw.domain.slip.order.order.OrderIdentify" />
+    <var name="identify050" class="fw.domain.slip.common.identify.OrderNo" />
+
+    <input name="searchCondition" />
+    <input name="isCurrentPageSearch" />
+    
+    <decision-state id="isSearchByKey">
+       <if test="flowScope.isCurrentPageSearch" then="searchByKey" else="searchByCondition" />
+    </decision-state>
+    
+    <action-state id="searchByCondition">
+        <evaluate expression="PSAPR071Service.init(searchCondition)" result="flowScope.itemList" />
+        <transition to="PSAPR071"/> 
+    </action-state>
+
+    <action-state  id="searchByKey" >
+        <evaluate expression="PSAPR071Service.page(searchCondition)" 
+        result="flowScope.itemList" />
+        <transition to="PSAPR071"/>
+    </action-state>
+
+    <view-state id="PSAPR071" view="apr/rcv/PSAPR071" model="itemList">
+       <transition on="order" validate="false">
+            <evaluate expression="PSAPR071Service.order(searchCondition)" 
+                 result="flowScope.itemList" />
+        </transition>
+        <transition on="page" validate="false">
+             <evaluate expression="PSAPR071Service.page(searchCondition)" 
+                result="flowScope.itemList" /> 
+        </transition>
+        <transition on="packageApproval" validate="true" to="searchByKey">
+             <evaluate expression="PSAPR071Service.packageApproval(itemList)"/> 
+             <set name="flashScope.isSuccess" value="true"></set>
+        </transition>
+        
+         <!--個別承認 -->
+        <transition on="individualApprovalValidate" validate="true">
+         	<set name="receiveAppIdentify.receiveAppIdentify.orderSeq" value="requestParameters.orderSeq"/><!-- 注文シーケンス番号 -->
+            <set name="receiveAppIdentify.receiveAppIdentify.delivKeyNo.delivKeyNo" value="requestParameters.delivKeyNo"/><!-- 納品キー番号 -->
+            <set name="receiveAppIdentify.receiveAppIdentify.lastUpdDate" value="requestParameters.lastUpdDate"/><!-- 最終更新日時 -->
+            <set name="receiveAppIdentify.receiveAppIdentify.arrivalSeqNo" value="requestParameters.arrivalSeqNo"/><!-- 入荷シーケンス番号 -->
+            <set name="flashScope.isShowApproval" value="true"/>
+        </transition>
+        
+        <transition on="individualApproval" to="PSAPR072" validate="false">
+        
+        </transition>
+        <transition on="back" to="home" validate="false" />
+        <transition on="detailValidate" validate="true">
+            <set name="identify050.orderNo" value="requestParameters.orderNo"/>
+            <set name="identify090.orderSeq" value="requestParameters.orderSeq"/>
+            <set name="flashScope.isShowDetail" value="true"/>
+        </transition>
+        
+        <transition on="detail" to="PSRCV050" validate="false"/>
+    </view-state>
+    <!--個別承認 -->
+    <subflow-state id="PSAPR072" subflow="apr/rcv/PSAPR072" >
+        <input name="receiveAppIdentify" value="receiveAppIdentify" />
+        <input name="isInitIndividualApr" value="true" />
+        <input name="SessionKey" value="SessionKey" />
+        <input name="searchCondition" value="searchCondition.getSearchCondition()"/>
+    </subflow-state>
+
+    <subflow-state id="PSRCV050" subflow="rcv/rcv/PSRCV050TOP">
+        <input name="identify050" value="identify050" />
+        <input name="identify090" value="identify090" />
+        <!--  2013.01.09 DEL DAIKO_KANEKO
+        <input name="range" value="0"/>
+        <input name="approveFlg" value="1"/>
+        -->
+    </subflow-state>
+
+</flow>

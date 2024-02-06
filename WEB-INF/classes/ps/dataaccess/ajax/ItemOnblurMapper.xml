@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="ps.dataaccess.ajax.ItemOnblurMapper">
+
+    <resultMap type="fw.domain.mst.material.item.ItemPopupItem" id="ItemPopupItem_Map">
+        <id column="COMPANY_CD" property="priceArticleIdentify.buyerCompanyCd"/>
+        <id column="ITEM_CD" property="priceArticleIdentify.itemCd"/>
+    </resultMap>
+
+    <select id="getItemInfoOnBlur"
+            resultMap="ItemPopupItem_Map">
+        SELECT M_ITEM.COMPANY_CD,
+               M_ITEM.ITEM_CD,
+               M_ITEM_LANG.ITEM_NAME as "itemName",
+               (SELECT M_ITEM_CLASS_LANG.ITEM_CLASS_NAME
+                  FROM M_ITEM_CLASS_LANG 
+                 WHERE M_ITEM_CLASS_LANG.ITEM_CLASS_L = M_ITEM.ITEM_CLASS_L
+                   AND M_ITEM_CLASS_LANG.ITEM_CLASS_M = ' '
+                   AND M_ITEM_CLASS_LANG.ITEM_CLASS_S = ' '
+                   AND M_ITEM_CLASS_LANG.LANGUAGE_IND = '${@fw.security.SecurityUtil@getCompanyUseLanguageIndByEscapeSql()}') 
+                AS itemClassNameL,
+                (SELECT M_ITEM_CLASS_LANG.ITEM_CLASS_NAME
+                   FROM M_ITEM_CLASS_LANG 
+                  WHERE M_ITEM_CLASS_LANG.ITEM_CLASS_L = M_ITEM.ITEM_CLASS_L
+                    AND M_ITEM_CLASS_LANG.ITEM_CLASS_M = M_ITEM.ITEM_CLASS_M
+                    AND M_ITEM_CLASS_LANG.ITEM_CLASS_S = ' '
+                    AND M_ITEM_CLASS_LANG.LANGUAGE_IND = '${@fw.security.SecurityUtil@getCompanyUseLanguageIndByEscapeSql()}') 
+                AS itemClassNameM,
+                (SELECT M_ITEM_CLASS_LANG.ITEM_CLASS_NAME
+                   FROM M_ITEM_CLASS_LANG 
+                  WHERE M_ITEM_CLASS_LANG.ITEM_CLASS_L = M_ITEM.ITEM_CLASS_L
+                    AND M_ITEM_CLASS_LANG.ITEM_CLASS_M = M_ITEM.ITEM_CLASS_M
+                    AND M_ITEM_CLASS_LANG.ITEM_CLASS_S = M_ITEM.ITEM_CLASS_S
+                    AND M_ITEM_CLASS_LANG.ITEM_CLASS_S != ' '
+                    AND M_ITEM_CLASS_LANG.LANGUAGE_IND = '${@fw.security.SecurityUtil@getCompanyUseLanguageIndByEscapeSql()}') 
+                AS itemClassNameS,
+                M_ITEM.ITEM_CLASS_L as "itemClassL",
+                M_ITEM.ITEM_CLASS_M as "itemClassM",
+                M_ITEM.ITEM_CLASS_S as "itemClassS",
+                M_MANUFACT_LANG.MANUFACT_NAME as "manufactName",
+                M_ITEM.MANUFACT_CD as "manufactCd",
+                M_ITEM.KATASHIKI as "katashiki",
+                M_UNIT_NAME_LANG.UNIT_NAME as "unitName",
+                M_ITEM.UNIT_CD as "unitCd",
+                M_ITEM.SUBJECT_CD as "subjectCd",
+                M_SUBJECT_LANG.SUBJECT_NAME as "subjectName"
+           FROM M_ITEM
+           LEFT JOIN M_ITEM_LANG
+                  ON M_ITEM.COMPANY_CD = M_ITEM_LANG.COMPANY_CD
+                 AND M_ITEM.ITEM_CD = M_ITEM_LANG.ITEM_CD
+                 AND M_ITEM_LANG.LANGUAGE_IND = '${@fw.security.SecurityUtil@getCompanyUseLanguageIndByEscapeSql()}'
+           LEFT JOIN M_MANUFACT_LANG
+                  ON M_MANUFACT_LANG.MANUFACT_CD = M_ITEM.MANUFACT_CD
+                 AND M_MANUFACT_LANG.LANGUAGE_IND = '${@fw.security.SecurityUtil@getCompanyUseLanguageIndByEscapeSql()}'
+           LEFT JOIN M_UNIT_NAME_LANG
+                  ON M_UNIT_NAME_LANG.UNIT_CD = M_ITEM.UNIT_CD
+                 AND M_UNIT_NAME_LANG.LANGUAGE_IND = M_ITEM_LANG.LANGUAGE_IND
+                 AND M_UNIT_NAME_LANG.LANGUAGE_IND = '${@fw.security.SecurityUtil@getCompanyUseLanguageIndByEscapeSql()}'
+           LEFT JOIN M_SUBJECT_LANG
+                  ON M_SUBJECT_LANG.COMPANY_CD = M_ITEM.COMPANY_CD
+                 AND M_SUBJECT_LANG.SUBJECT_CD = M_ITEM.SUBJECT_CD
+                 AND M_SUBJECT_LANG.LANGUAGE_IND = M_ITEM_LANG.LANGUAGE_IND
+                 AND M_SUBJECT_LANG.LANGUAGE_IND = '${@fw.security.SecurityUtil@getCompanyUseLanguageIndByEscapeSql()}'
+          WHERE (M_ITEM.COMPANY_CD = #{companyCd}
+             OR M_ITEM.COMPANY_CD = '${@fw.common.constant.ApplicationConstant@COMPANY_CD_ALL}')
+            AND M_ITEM.ITEM_CD = #{itemCd}
+            <if test="@org.apache.commons.lang.StringUtils@isNotBlank(termFlag) and termFlag==0">
+            AND M_ITEM.TERM_FLG = #{termFlag, jdbcType=VARCHAR}
+            </if>
+    </select>
+</mapper>

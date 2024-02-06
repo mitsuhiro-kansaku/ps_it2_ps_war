@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<flow xmlns="http://www.springframework.org/schema/webflow"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.springframework.org/schema/webflow
+        http://www.springframework.org/schema/webflow/spring-webflow-2.0.xsd"
+    parent="base">
+   
+    <var name="domain" class="fw.domain.slip.receive.acceptance.acppckg.AcceptPackageRegItem" />
+    <var name="acp050Identify" class="fw.domain.slip.receive.acceptance.Identify" />
+    <var name="rcv050Identify" class="fw.domain.slip.common.identify.OrderNo" />
+    <var name="identify090" class="fw.domain.slip.order.order.OrderIdentify" />
+
+
+    <input name="searchCondition" />
+    <input name="isCurrentPageSearch" />
+    
+    <decision-state id="isSearchByKey">
+       <if test="flowScope.isCurrentPageSearch" then="searchByKey" else="searchByCondition" />
+    </decision-state>
+    
+    <action-state id="searchByCondition">
+        <evaluate expression="PSACP061Service.init(searchCondition)" result="flowScope.itemList"/>
+        <transition to="PSACP061"/> 
+    </action-state>
+
+    <action-state  id="searchByKey" >
+        <evaluate expression="PSACP061Service.page(searchCondition)" result="flowScope.itemList"/>
+        <transition to="PSACP061"/>
+    </action-state>
+
+    <view-state id="PSACP061" model="itemList" view="acp/acppckg/PSACP061">
+        <transition on="order" validate="false">
+            <evaluate expression="PSACP061Service.order(searchCondition)" result="flowScope.itemList"/>
+        </transition>
+        <transition on="page" validate="false">
+            <evaluate expression="PSACP061Service.page(searchCondition)" result="flowScope.itemList" /> 
+        </transition>
+        <transition on="back" to="home" validate="false" />
+        
+        <!-- 検収入力 -->
+        <transition on="openAcpValidate" validate="true">
+            <set name="acp050Identify.orderSeq" value="requestParameters.orderSeq" />
+            <set name="acp050Identify.delivKeyNo" value="requestParameters.delivKeyNo" />
+            <set name="flashScope.isShowAcceptInput" value="true" />
+        </transition>
+        <transition on="acceptInput" to="PSACP020" validate="false"/>
+
+        <!-- 詳細 -->
+        <transition on="detailValidate" validate="true">
+            <set name="acp050Identify.orderSeq" value="requestParameters.orderSeq" />
+            <set name="acp050Identify.orderNo" value="requestParameters.orderNo" />
+            <set name="acp050Identify.delivKeyNo" value="requestParameters.delivKeyNo" />
+            <set name="domain.acceptanceStatus" value="requestParameters.acceptanceStatus" />
+            <set name="domain.isShowInsFlg" value="requestParameters.isShowInsFlg" />
+            <set name="flashScope.isShowDetail" value="true" />
+        </transition>
+        <transition on="detail" to="PSACP050TOP" validate="false" >
+            <set name="rcv050Identify.orderNo" value="acp050Identify.orderNo"/>
+            <set name="identify090.orderSeq" value="acp050Identify.orderSeq"/>
+        </transition>
+
+        <!-- 一括登録 -->
+        <transition on="packageReg" validate="false" to="searchByKey">
+            <evaluate expression="PSACP061Service.packageReg(itemList)"/>
+            <set name="flashScope.isSuccess" value="true"/>
+        </transition>
+    </view-state>
+
+    <subflow-state id="PSACP050TOP" subflow="acp/acc/PSACP050TOP" >
+        <input name="acp050Identify" value="acp050Identify" /><!-- 検収詳細用 -->
+        <input name="identify050" value="rcv050Identify" /><!-- 受入詳細用 -->
+        <input name="identify090" value="identify090" /><!-- 注文詳細用 -->
+    </subflow-state>
+
+    <subflow-state id="PSACP020" subflow="acp/acc/PSACP020" >
+        <input name="identify" value="acp050Identify" />
+        <input name="patternName" value="'Input'" />
+    </subflow-state>
+</flow>

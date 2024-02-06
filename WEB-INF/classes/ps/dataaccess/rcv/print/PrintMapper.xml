@@ -1,0 +1,153 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="ps.dataaccess.rcv.print.PrintMapper">
+
+    <resultMap type="fw.domain.slip.receive.receive.receivelistreq.ArrivalListIssueIdentify" id="ArrivalIdentify_Map">
+        <id column="DELIV_KEY_NO" property="arrivalListIssueIdentify.delivKeyNo.delivKeyNo"/>
+        <id column="ARRIVAL_SEQ" property="arrivalListIssueIdentify.arrivalSeqNo"/>
+        <id column="ORDER_SEQ" property="arrivalListIssueIdentify.orderSeq"/>
+    </resultMap>
+    
+	<!-- SRC-00115-00 include化共通-->
+	<sql id="listKeyIdentityWhereCondition">
+        ${@ps.common.util.ItemSettingUtil@getItemSettingWhereSQL()}
+        AND T_ARRIVAL.ARRIVAL_STATUS = '04'
+        AND T_ORDER.NEW_APP_FLG = '1'
+        AND T_ORDER.DELETE_FLG = '0'
+        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(ediTransferMethod)">
+        AND T_ORDER.EDI_IND = #{ediTransferMethod}
+        </if>
+        <if test="!@org.apache.commons.lang.StringUtils@isNotBlank(ediTransferMethod)">
+        AND T_ORDER.EDI_IND IN ('0', '1')
+        </if>
+        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(reqTypeInd)">
+        AND T_ORDER.REQ_TYPE_IND = #{reqTypeInd}
+        </if>
+        <if test="!@org.apache.commons.lang.StringUtils@isNotBlank(reqTypeInd)">
+        AND T_ORDER.REQ_TYPE_IND IN ('2', '3' ,'9')
+        </if>
+        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(faxInd)">
+        AND T_ARRIVAL.FAX_SEND_IND = #{faxInd}
+        </if>
+        <if test="!@org.apache.commons.lang.StringUtils@isNotBlank(faxInd)">
+        AND T_ARRIVAL.FAX_SEND_IND IN ('0', '1' ,'9')
+        </if>
+        <if test="@org.apache.commons.lang.StringUtils@isNotBlank(issueStatus)">
+        AND T_ARRIVAL.PRINT_IND = #{issueStatus}
+        </if>
+        <if test="!@org.apache.commons.lang.StringUtils@isNotBlank(issueStatus)">
+        AND T_ARRIVAL.PRINT_IND IN ('0', '1')
+        </if>
+        AND T_ARRIVAL.DELETE_FLG = '0'
+        AND T_ORDER.BUYER_COMPANY_CD= '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}'
+        AND T_ORDER.BUYER_SECTION_CD= '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}'
+        <if test="@org.apache.commons.lang.StringUtils@equals('0',linkFlg)">
+            AND T_ORDER.BUYER_USER_ID= '${@fw.security.SecurityUtil@getUserIdByEscapeSql()}'
+        </if>
+	</sql>
+    <select id="listKeyIdentity"
+        parameterType="fw.domain.slip.receive.receive.receivelistreq.ArrivalListIssueSearchCondition"
+        resultMap="ArrivalIdentify_Map">
+        SELECT T_ARRIVAL.ARRIVAL_SEQ as "ARRIVAL_SEQ"
+		  FROM T_ARRIVAL
+		  <!-- 強化-00301-000 2013/04/01 ADD SBO_pangzhen START -->
+		  <!-- LEFT JOIN T_ORDER -->
+          <!-- 強化-00301-000 2013/04/01 ADD SBO_pangzhen -END- -->
+          <!-- 強化-00301-000 2013/04/01 DEL SBO_pangzhen START -->
+		  INNER JOIN T_ORDER
+          <!-- 強化-00301-000 2013/04/01 DEL SBO_pangzhen -END- -->
+		      ON T_ARRIVAL.ORDER_NO = T_ORDER.ORDER_NO
+		     <where>
+                <include refid="listKeyIdentityWhereCondition"/>
+		    </where>  
+		  ORDER BY ${searchCondition.columnOrder.columnOrder()}
+    </select>
+    
+    <resultMap type="fw.domain.slip.receive.receive.receivelistreq.ArrivalListItem" id="ArrivalItem_Map">
+        <!-- 2013/03/19 ADD DAIKO_TAKEDA START -->
+        <id column="ORDER_CANCEL_VOL" property="orderCancelVol.vol"/>
+        <!-- 2013/03/19 ADD DAIKO_TAKEDA -END- -->
+        <id column="DELIV_KEY_NO" property="arrivalListIssueIdentify.arrivalListIssueIdentify.delivKeyNo.delivKeyNo"/>
+        <id column="ARRIVAL_SEQ" property="arrivalListIssueIdentify.arrivalListIssueIdentify.arrivalSeqNo"/>
+        <id column="ORDER_SEQ" property="arrivalListIssueIdentify.arrivalListIssueIdentify.orderSeq"/>
+        <id column="LAST_UPDATE" property="arrivalListIssueIdentify.arrivalListIssueIdentify.lastUpdDate"/>
+      <id column="EXCLUSIVE_SLIP_NO" property="arrivalListIssueIdentify.arrivalListIssueIdentify.exclusiveSlipId.slipNo"/>
+      <id column="EXCLUSIVE_LAST_UPD_DATE" property="arrivalListIssueIdentify.arrivalListIssueIdentify.exclusiveSlipId.lastUpdDate"/>
+    </resultMap>
+    
+    <select id="listPageItem"
+    resultMap="ArrivalItem_Map">
+        SELECT T_ARRIVAL.DELIV_KEY_NO as "DELIV_KEY_NO",
+               T_ARRIVAL.DELIV_KEY_NO as "delivKeyNo",
+               T_ORDER.ORDER_SEQ as "ORDER_SEQ",
+               T_ORDER.ORDER_NO as "orderNo.orderNo",
+               T_ARRIVAL.ARRIVAL_SEQ as "ARRIVAL_SEQ",
+               T_ARRIVAL.CORRECT_CD as correctInd,
+               T_ARRIVAL.LAST_UPD_DATE as "LAST_UPDATE",
+               T_ARRIVAL.ARRIVAL_VERSION as historyNo,
+               T_ARRIVAL.PRINT_IND as issueInd,
+               T_ORDER.REQ_TYPE_IND as reqInd,
+               T_ORDER.SUP_CD as supplierFromCd,
+               T_ORDER.SUP_ABBR_NAME as supplierFromName,
+               T_ORDER.SUP_COMPANY_CD as supCompanyCd,
+               T_ORDER.SUBCON_IND as subcontract,
+               T_ORDER.EDI_IND as edi,
+               T_ARRIVAL.FAX_SEND_IND as faxSend,
+               T_ORDER.ITEM_CD as itemCd,
+               T_ORDER.ITEM_NAME as item,
+               T_ORDER.DELIV_PLACE_CD as delivPlaceCd,
+               T_ORDER.DELIV_PLACE_NAME as delivPlaceName,
+               T_ORDER.ORDER_VOL as "orderVol.vol",
+               <!-- 2013/03/19 ADD DAIKO_TAKEDA START -->
+               T_ORDER.ORDER_CANCEL_VOL,
+               <!-- 2013/03/19 ADD DAIKO_TAKEDA -END- -->
+               T_ARRIVAL.DELIV_VOL as "receiveVol.vol",
+               T_ARRIVAL.UNIT_NAME as unit,
+               T_ARRIVAL.ARRIV_EXP_DATE as "receiveDate.dateOfymd",
+               T_ARRIVAL.ARRIV_SECTION_CD as rcvSectionCd,
+               T_ARRIVAL.ARRIV_USER_ID as rcvUserId,
+               T_ARRIVAL.ARRIV_SECTION_NAME as rcvSectionName,
+               T_ARRIVAL.ARRIV_USER_NAME as rcvUserName,
+               ${@ps.common.util.ItemSettingUtil@getItemSettingSelectSQLDomainAliasNonBinary("T_ORDER", "searchResExtItemOrder")},
+               ${@ps.common.util.ItemSettingUtil@getItemSettingSelectSQLDomainAliasNonBinary("T_ARRIVAL", "searchResExtItemArrival")},
+               T_SLIP_MNG.SLIP_NO AS EXCLUSIVE_SLIP_NO,
+               T_SLIP_MNG.LAST_UPD_DATE AS EXCLUSIVE_LAST_UPD_DATE
+          FROM T_ARRIVAL
+          <!-- 強化-00301-000 2013/04/01 ADD SBO_pangzhen START -->
+          <!-- LEFT JOIN T_ORDER -->
+          <!-- 強化-00301-000 2013/04/01 ADD SBO_pangzhen -END- -->
+          <!-- 強化-00301-000 2013/04/01 DEL SBO_pangzhen START -->
+          INNER JOIN T_ORDER
+          <!-- 強化-00301-000 2013/04/01 DEL SBO_pangzhen -END- -->
+              ON T_ARRIVAL.ORDER_NO = T_ORDER.ORDER_NO
+          LEFT JOIN T_SLIP_MNG
+              ON T_SLIP_MNG.SLIP_NO = T_ORDER.ORDER_NO
+             AND T_SLIP_MNG.DELETE_FLG = '0'
+        <where>
+            <include refid="listKeyIdentityWhereCondition"/>
+            AND (T_ARRIVAL.ARRIVAL_SEQ) IN
+            <foreach collection="searchCondition.page.keyDomainEntityList" item="keyList"  open="(" separator="," close=")">  
+                #{keyList.arrivalListIssueIdentify.arrivalSeqNo}
+            </foreach>
+        </where>
+        ORDER BY ${searchCondition.columnOrder.columnOrder()}
+    </select>
+    
+    <update id="print">
+      UPDATE T_ARRIVAL 
+         SET
+             PRINT_IND='1',
+             LAST_UPD_DATE='${@fw.common.util.AppUtil@getSysDateYyyyMMddHHmmssSSS()}',
+             LAST_UPD_COMPANY_CD = '${@fw.security.SecurityUtil@getCompanyCdByEscapeSql()}',
+             LAST_UPD_SECTION_CD = '${@fw.security.SecurityUtil@getDefaultSectionCdByEscapeSql()}',
+             LAST_UPD_USER_ID='${@fw.security.SecurityUtil@getUserIdByEscapeSql()}'
+        WHERE ARRIVAL_SEQ IN 
+        <foreach item="seq" collection="seqList"
+          open="(" separator="," close=")">
+            #{seq}
+        </foreach>
+    </update>
+    
+</mapper>
